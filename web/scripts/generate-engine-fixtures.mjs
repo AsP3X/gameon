@@ -164,6 +164,7 @@ const SCENARIOS = [
   [8, 'rascal', 'swift', 'all'],
   [8, 'classic', 'brawl', 'base'], // 70 cards for 8: the schedule is capped at 8 cards
   [8, 'rascal', 'swift', 'abilities'],
+  [8, 'classic', 'classic', 'all'], // 74 cards for 8: the classic schedule is capped at 9 cards
 ].map(([players, scoring, format, expansions, tries]) => ({ players, scoring, format, expansions, tries: tries ?? 16 }));
 
 /** Small, eventful games used to fill coverage rows the main list left open. */
@@ -187,6 +188,8 @@ const REQUIRED = [
   'scoring:rascal',
   ...['base', 'loot', 'kraken', 'whale', 'abilities', 'all'].map((e) => `expansions:${e}`),
   'schedule:capped',
+  'schedule:capped:brawl:8', // 8 players, 70 cards: 6,7,8,8,8
+  'schedule:capped:classic:9', // 8 players, 74 cards: 1,2,3,4,5,6,7,8,9,9
   // tricks
   'trick:kraken',
   'trick:whale-number-wins',
@@ -313,7 +316,9 @@ function record(scenario, seed) {
 
   cover.add(`players:${n}`).add(`format:${settings.format}`).add(`scoring:${settings.scoring}`);
   cover.add(`expansions:${scenario.expansions}`);
-  if (state.schedule.some((cards, r) => cards < Rules.FORMATS[settings.format].seq[r])) cover.add('schedule:capped');
+  if (state.schedule.some((cards, r) => cards < Rules.FORMATS[settings.format].seq[r])) {
+    cover.add('schedule:capped').add(`schedule:capped:${settings.format}:${Math.max(...state.schedule)}`);
+  }
 
   const kind = (id) => deck[id].kind;
   const roleOf = (play) => Rules.role(deck[play.card], play.as);
