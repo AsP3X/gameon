@@ -1,0 +1,16 @@
+{
+  "id": "018f6b4a-6a2e-7c3a-8b1d-9e0f1a2b3c4e",
+  "hostName": "Anne",
+  "settings": {
+    "maxPlayers": 4,
+    "scoring": "classic",
+    "format": "brawl",
+    "loot": false,
+    "kraken": false,
+    "whale": false,
+    "abilities": false,
+    "botLevel": "normal",
+    "pace": "standard"
+  },
+  "players": 2
+}

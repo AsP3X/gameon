@@ -1,0 +1,176 @@
+//! HTTP entry for Skull King Tavern. Phase 0 serves health and the error envelope.
+
+use axum::Json;
+use axum::Router;
+use axum::http::{HeaderValue, StatusCode, header};
+use axum::response::{IntoResponse, Response};
+use axum::routing::get;
+use skt_protocol::{ErrorBody, ErrorCode, ErrorObject, Health};
+
+/// Routes mounted at `/api/v1`.
+pub fn router() -> Router {
+    Router::new()
+        .route("/api/v1/health", get(health).fallback(method_not_allowed))
+        .fallback(not_found)
+}
+
+async fn health() -> Json<Health> {
+    std::future::ready(Json(Health { ok: true })).await
+}
+
+async fn not_found() -> AppError {
+    std::future::ready(AppError::new(ErrorCode::NotFound)).await
+}
+
+async fn method_not_allowed() -> AppError {
+    std::future::ready(AppError::new(ErrorCode::Validation)).await
+}
+
+/// An HTTP error under `/api/v1`. The status comes from [`ErrorCode::status`].
+#[derive(Debug, Clone, Copy)]
+pub struct AppError {
+    code: ErrorCode,
+}
+
+impl AppError {
+    /// An error with the default player-safe message for `code`.
+    #[must_use]
+    pub const fn new(code: ErrorCode) -> Self {
+        Self { code }
+    }
+
+    /// The protocol code.
+    #[must_use]
+    pub const fn code(self) -> ErrorCode {
+        self.code
+    }
+}
+
+impl std::fmt::Display for AppError {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter.write_str(self.code.message())
+    }
+}
+
+impl std::error::Error for AppError {}
+
+impl IntoResponse for AppError {
+    fn into_response(self) -> Response {
+        let body = Json(ErrorBody {
+            error: ErrorObject {
+                code: self.code,
+                message: self.code.message().to_owned(),
+            },
+        });
+        let mut response = (http_status(self.code), body).into_response();
+        if self.code == ErrorCode::RateLimited {
+            response
+                .headers_mut()
+                .insert(header::RETRY_AFTER, HeaderValue::from_static("1"));
+        }
+        response
+    }
+}
+
+fn http_status(code: ErrorCode) -> StatusCode {
+    match code.status() {
+        400 => StatusCode::BAD_REQUEST,
+        401 => StatusCode::UNAUTHORIZED,
+        403 => StatusCode::FORBIDDEN,
+        404 => StatusCode::NOT_FOUND,
+        409 => StatusCode::CONFLICT,
+        426 => StatusCode::UPGRADE_REQUIRED,
+        429 => StatusCode::TOO_MANY_REQUESTS,
+        _ => StatusCode::INTERNAL_SERVER_ERROR,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use axum::body::Body;
+    use axum::http::{Request, StatusCode, header};
+    use axum::response::IntoResponse;
+    use http_body_util::BodyExt;
+    use skt_protocol::{ErrorBody, ErrorCode};
+    use tower::ServiceExt;
+
+    use super::{AppError, router};
+
+    #[tokio::test]
+    async fn health_is_ok() {
+        let response = router()
+            .oneshot(
+                Request::builder()
+                    .uri("/api/v1/health")
+                    .body(Body::empty())
+                    .expect("request"),
+            )
+            .await
+            .expect("response");
+        assert_eq!(response.status(), StatusCode::OK);
+        let bytes = response
+            .into_body()
+            .collect()
+            .await
+            .expect("body")
+            .to_bytes();
+        assert_eq!(bytes.as_ref(), br#"{"ok":true}"#);
+    }
+
+    #[tokio::test]
+    async fn unknown_path_uses_the_envelope() {
+        let response = router()
+            .oneshot(
+                Request::builder()
+                    .uri("/api/v1/missing")
+                    .body(Body::empty())
+                    .expect("request"),
+            )
+            .await
+            .expect("response");
+        assert_eq!(response.status(), StatusCode::NOT_FOUND);
+        let bytes = response
+            .into_body()
+            .collect()
+            .await
+            .expect("body")
+            .to_bytes();
+        let body: ErrorBody = serde_json::from_slice(&bytes).expect("json");
+        assert_eq!(body.error.code, ErrorCode::NotFound);
+        assert_eq!(body.error.message, ErrorCode::NotFound.message());
+    }
+
+    #[tokio::test]
+    async fn wrong_method_uses_the_envelope() {
+        let response = router()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/api/v1/health")
+                    .body(Body::empty())
+                    .expect("request"),
+            )
+            .await
+            .expect("response");
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+        let bytes = response
+            .into_body()
+            .collect()
+            .await
+            .expect("body")
+            .to_bytes();
+        let body: ErrorBody = serde_json::from_slice(&bytes).expect("json");
+        assert_eq!(body.error.code, ErrorCode::Validation);
+    }
+
+    #[test]
+    fn rate_limited_sets_retry_after() {
+        let response = AppError::new(ErrorCode::RateLimited).into_response();
+        assert_eq!(response.status(), StatusCode::TOO_MANY_REQUESTS);
+        let value = response.headers().get(header::RETRY_AFTER);
+        assert_eq!(
+            value.map(axum::http::HeaderValue::as_bytes),
+            Some(&b"1"[..])
+        );
+    }
+}

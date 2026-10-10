@@ -1,0 +1,31 @@
+[package]
+name = "skt-server"
+description = "Skull King Tavern HTTP and WebSocket server"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+[lib]
+name = "skt_server"
+path = "src/lib.rs"
+
+[[bin]]
+name = "skt-server"
+path = "src/main.rs"
+
+[dependencies]
+axum.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+skt-protocol = { path = "../skt-protocol" }
+thiserror.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+
+[dev-dependencies]
+http-body-util.workspace = true
+tower.workspace = true
+
+[lints]
+workspace = true

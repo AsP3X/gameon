@@ -1,0 +1,8 @@
+{
+  "bidMs": 45000,
+  "playMs": 30000,
+  "abilityMs": 30000,
+  "trickEndMs": 2500,
+  "roundEndMs": 20000,
+  "disconnectGraceMs": 60000
+}

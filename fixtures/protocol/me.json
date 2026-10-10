@@ -1,0 +1,20 @@
+{
+  "user": {
+    "id": "018f6b4a-6a2e-7c3a-8b1d-9e0f1a2b3c4d",
+    "name": "Anne",
+    "color": "#1cb0f6",
+    "tier": null
+  },
+  "guest": false,
+  "username": "Anne",
+  "active": null,
+  "cooldownUntil": null,
+  "stats": {
+    "games": 3,
+    "wins": 1,
+    "bidsMade": 4,
+    "bidsTotal": 10,
+    "bestScore": 240
+  },
+  "rating": null
+}

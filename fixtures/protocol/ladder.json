@@ -1,0 +1,25 @@
+{
+  "season": {
+    "id": 1,
+    "name": "Season 1",
+    "startsAt": 1700000000000,
+    "endsAt": 1700086400000
+  },
+  "entries": [
+    {
+      "rank": 1,
+      "user": {
+        "id": "018f6b4a-6a2e-7c3a-8b1d-9e0f1a2b3c4d",
+        "name": "Anne",
+        "color": "#ff9600",
+        "tier": null
+      },
+      "rating": {
+        "value": 1000,
+        "tier": "Sailor",
+        "provisional": true,
+        "games": 3
+      }
+    }
+  ]
+}
