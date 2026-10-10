@@ -32,6 +32,9 @@ TypeScript in `web/src/protocol/generated/` is generated from it.
 REST: the HTTP status plus `{ "error": { "code": string, "message": string } }`.
 Socket: `{ "t": "err", "re": number, "code": string, "message": string }`.
 
+An unknown path under `/api/v1` is `NOT_FOUND`. A known path called with the wrong method is
+`VALIDATION`, because this table has no separate status for that.
+
 The client branches on `code`. `message` is safe to show but not meant to be parsed.
 
 | Code | Status | Meaning |
@@ -72,11 +75,11 @@ All bodies are JSON. Unless marked *public*, a session is required.
 | `GET /health` | | `{ ok: true }` | *public* |
 | `GET /config` | | `ServerConfig` | *public* |
 | `POST /auth/guest` | | `Me` | *public*; creates a guest and sets the cookie. With a valid session it returns that user. |
-| `POST /auth/register` | `{ username, password }` | `Me` | With a guest session, upgrades that guest in place. |
-| `POST /auth/login` | `{ username, password }` | `Me` | *public*; replaces the session. |
+| `POST /auth/register` | `Credentials` | `Me` | With a guest session, upgrades that guest in place. |
+| `POST /auth/login` | `Credentials` | `Me` | *public*; replaces the session. |
 | `POST /auth/logout` | | `204` | Revokes the session, clears the cookie. |
 | `GET /me` | | `Me` | |
-| `PATCH /me` | `{ name?, color? }` | `Me` | |
+| `PATCH /me` | `ProfilePatch` | `Me` | Omitted fields are left unchanged. |
 | `GET /users/{id}` | | `Profile` | |
 | `GET /lobbies` | | `{ lobbies: LobbySummary[] }` | Open public lobbies. Phase 2. |
 | `GET /ladder?season=&limit=&after=` | | `{ season: Season, entries: LadderEntry[], next?: string }` | Phase 3. |
@@ -85,11 +88,14 @@ All bodies are JSON. Unless marked *public*, a session is required.
 type ServerConfig = {
   protocol: number;                 // 1
   build: string;                    // server build id
-  timers: Timers;                   // the defaults
-  standard: GameSettings;           // the quick-play and ranked ruleset
+  timers: Timers;                   // the defaults: 45s bid, 30s play, 30s ability, 2.5s trick end, 20s round end, 60s grace
+  standard: GameSettings;           // quick play and ranked, spelled out below
   season: Season | null;
-  emotes: string[];                 // the emote ids the server accepts
+  emotes: string[];                 // ids this process accepts; this draft does not fix the list
 };
+type TableColor =
+  | '#1cb0f6' | '#ff9600' | '#ce82ff' | '#ff4b4b'
+  | '#58cc02' | '#e5a400' | '#2b70c9' | '#ff5fbf';
 type Timers = { bidMs: number; playMs: number; abilityMs: number; trickEndMs: number; roundEndMs: number;
                 disconnectGraceMs: number };
 type Me = {
@@ -98,17 +104,27 @@ type Me = {
   cooldownUntil: number | null;
   stats: Stats; rating: Rating | null;
 };
-type User = { id: UserId; name: string; color: string; tier: string | null };
+type User = { id: UserId; name: string; color: TableColor; tier: string | null };
 type Profile = { user: User; stats: Stats; rating: Rating | null };
 type Stats = { games: number; wins: number; bidsMade: number; bidsTotal: number; bestScore: number | null };
 type Rating = { value: number; tier: string; provisional: boolean; games: number };
 type Season = { id: number; name: string; startsAt: number; endsAt: number };
 type LadderEntry = { rank: number; user: User; rating: Rating };
+type Credentials = { username: string; password: string };   // register and login
+type ProfilePatch = { name?: string; color?: TableColor };   // omitted fields are left unchanged
 ```
 
+`standard` is the quick-play and ranked ruleset: 4 players, classic scoring, format `brawl`, loot,
+kraken, whale and abilities off, `botLevel` `normal`, `pace` `standard`.
+
+`emotes` is the list the running server accepts. This draft does not name the ids. An empty list
+means the server currently accepts none. `game.emote` carries one id from that list; the sample
+uses the placeholder `"example"`, which is not an accepted id.
+
 Username: 3–16 characters of `A–Z a–z 0–9 _`, unique case-insensitively, not on the reserved list.
-`name` is the display name: 1–16 visible characters, trimmed, no control characters. `color` is one
-of the eight table colours.
+`name` is the display name: 1–16 visible characters, trimmed, no control characters. `color` is a
+`TableColor`: one of the eight legacy table colours `#1cb0f6`, `#ff9600`, `#ce82ff`, `#ff4b4b`,
+`#58cc02`, `#e5a400`, `#2b70c9`, `#ff5fbf`.
 
 ## 5. Socket
 
@@ -116,6 +132,10 @@ of the eight table colours.
 
 Client → server: `{ "t": string, "id": number, ...payload }`. `id` is a counter the client picks.
 Every client message gets exactly one reply, `{ "t": "ok", "re": id, ...result }` or an `err`.
+
+`ok` always has `t` and `re`. It includes `lobby` when a lobby action returns the lobby, `queue`
+when the player joins the queue, and `serverTime` on `ping` and any other reply that carries the
+clock. Those three fields are omitted when they do not apply. They are not sent as `null`.
 
 Server → client pushes have no `re`.
 
@@ -167,19 +187,19 @@ type Lobby = {
 };
 type Member =
   | { kind: 'human'; user: User; ready: boolean; connected: boolean }
-  | { kind: 'bot'; name: string; color: string; level: 'easy' | 'normal' | 'hard' };
+  | { kind: 'bot'; name: string; color: TableColor; level: 'easy' | 'normal' | 'hard' };
 type LobbySummary = { id: LobbyId; hostName: string; settings: GameSettings; players: number };
 ```
 
 | Client message | Payload | Who | Result |
 | -------------- | ------- | --- | ------ |
 | `lobby.create` | `{ visibility, settings }` | anyone not seated | `ok { lobby }` |
-| `lobby.join` | `{ code }` or `{ lobbyId }` | anyone not seated | `ok { lobby }` |
+| `lobby.join` | `{ code?: string, lobbyId?: string }` | anyone not seated | `ok { lobby }`. Send one. If both are present, `code` wins. |
 | `lobby.leave` | | member | `ok` |
 | `lobby.ready` | `{ ready: boolean }` | member | `ok` |
 | `lobby.settings` | `{ settings }` | host | `ok`; clears everyone's ready |
 | `lobby.addBot` | | host | `ok` |
-| `lobby.removeBot` | `{ index }` | host | `ok` |
+| `lobby.removeBot` | `{ index: number }` | host | `ok`. `index` is the index in `members` (join order), not a seat. |
 | `lobby.kick` | `{ userId }` | host | `ok` |
 | `lobby.start` | | host | `ok`; needs ≥ 2 seats and every human ready |
 
@@ -218,7 +238,7 @@ type Card =
   | { id: CardId; kind: 'num'; suit: 'green' | 'yellow' | 'purple' | 'black'; rank: number }
   | { id: CardId; kind: 'pirate'; ability: 'helm' | 'smuggler' | 'gambler' | 'seer' | 'giant' }
   | { id: CardId; kind: 'escape' | 'tigress' | 'sk' | 'mermaid' | 'loot' | 'kraken' | 'whale' };
-type SeatInfo = { name: string; color: string; bot: boolean; userId: UserId | null; tier: string | null };
+type SeatInfo = { name: string; color: TableColor; bot: boolean; userId: UserId | null; tier: string | null };
 
 type GameUpdate = {
   t: 'game.update';
@@ -244,6 +264,10 @@ Two events exist only online and are appended by the server:
 | { type: 'seatStatus'; seat: Seat; status: 'online' | 'offline' | 'away' | 'bot' }
 | { type: 'timedOut'; seat: Seat }      // the server played for this seat
 ```
+
+The generated TypeScript name `GameEvent` is this whole set: every engine event, plus `seatStatus`
+and `timedOut`. The engine-only list is generated as `EngineEvent`. Rust re-exports that engine
+enum as `EngineEvent` so the wire union can be called `GameEvent`.
 
 | Client message | Payload | Result |
 | -------------- | ------- | ------ |
@@ -312,4 +336,7 @@ Restated from `docs/agent-rules/server-authority.md`, because it is part of the 
 ## 7. Samples
 
 `fixtures/protocol/` holds one JSON file per message and DTO in this document, written by
-`skt-protocol`'s tests. The web test suite parses each against the generated types.
+`skt-protocol`. The web test suite parses each against the generated types.
+
+Regenerate both trees from `server/` with `cargo run -p skt-protocol --bin export-protocol`.
+Do not hand-edit `web/src/protocol/generated/` or `fixtures/protocol/`.

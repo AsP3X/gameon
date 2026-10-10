@@ -1,0 +1,9 @@
+{
+  "t": "queue.status",
+  "queue": {
+    "mode": "casual",
+    "since": 1700000000000,
+    "found": 2,
+    "needed": 4
+  }
+}

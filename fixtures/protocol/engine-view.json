@@ -1,0 +1,68 @@
+{
+  "me": 0,
+  "phase": "bidding",
+  "round": 0,
+  "rounds": 5,
+  "cards": 6,
+  "dealer": 1,
+  "turn": null,
+  "hand": [
+    0,
+    67
+  ],
+  "handCounts": [
+    6,
+    6
+  ],
+  "played": [],
+  "bids": [
+    2,
+    -1
+  ],
+  "won": [
+    0,
+    0
+  ],
+  "trick": {
+    "leader": 0,
+    "plays": []
+  },
+  "lastTrick": null,
+  "log": [
+    {
+      "cards": 6,
+      "bids": [
+        null,
+        null
+      ],
+      "tricks": [
+        null,
+        null
+      ],
+      "b14": [
+        0,
+        0
+      ],
+      "mp": [
+        0,
+        0
+      ],
+      "ps": [
+        0,
+        0
+      ],
+      "wager": [
+        0,
+        0
+      ],
+      "black14": -1,
+      "sm": -1,
+      "loot": [],
+      "destroyed": 0,
+      "giant": null,
+      "done": false
+    }
+  ],
+  "pending": null,
+  "legal": []
+}

@@ -1,0 +1,31 @@
+{
+  "t": "game.over",
+  "gameId": "018f6b4a-6a2e-7c3a-8b1d-9e0f1a2b3c4f",
+  "result": {
+    "totals": [
+      80,
+      20
+    ],
+    "places": [
+      1,
+      2
+    ],
+    "forfeited": [],
+    "rating": {
+      "before": {
+        "value": 1000,
+        "tier": "Sailor",
+        "provisional": true,
+        "games": 3
+      },
+      "after": {
+        "value": 1012,
+        "tier": "Sailor",
+        "provisional": true,
+        "games": 4
+      },
+      "delta": 12
+    },
+    "lobbyId": "018f6b4a-6a2e-7c3a-8b1d-9e0f1a2b3c4e"
+  }
+}

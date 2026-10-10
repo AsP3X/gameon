@@ -1,0 +1,25 @@
+{
+  "protocol": 1,
+  "build": "dev",
+  "timers": {
+    "bidMs": 45000,
+    "playMs": 30000,
+    "abilityMs": 30000,
+    "trickEndMs": 2500,
+    "roundEndMs": 20000,
+    "disconnectGraceMs": 60000
+  },
+  "standard": {
+    "maxPlayers": 4,
+    "scoring": "classic",
+    "format": "brawl",
+    "loot": false,
+    "kraken": false,
+    "whale": false,
+    "abilities": false,
+    "botLevel": "normal",
+    "pace": "standard"
+  },
+  "season": null,
+  "emotes": []
+}

@@ -1,0 +1,42 @@
+{
+  "t": "lobby.state",
+  "lobby": {
+    "id": "018f6b4a-6a2e-7c3a-8b1d-9e0f1a2b3c4e",
+    "code": "ABCDEF",
+    "mode": "custom",
+    "visibility": "private",
+    "hostId": "018f6b4a-6a2e-7c3a-8b1d-9e0f1a2b3c4d",
+    "settings": {
+      "maxPlayers": 4,
+      "scoring": "classic",
+      "format": "brawl",
+      "loot": false,
+      "kraken": false,
+      "whale": false,
+      "abilities": false,
+      "botLevel": "normal",
+      "pace": "standard"
+    },
+    "members": [
+      {
+        "kind": "human",
+        "user": {
+          "id": "018f6b4a-6a2e-7c3a-8b1d-9e0f1a2b3c4d",
+          "name": "Anne",
+          "color": "#1cb0f6",
+          "tier": null
+        },
+        "ready": true,
+        "connected": true
+      },
+      {
+        "kind": "bot",
+        "name": "Calico",
+        "color": "#ff9600",
+        "level": "normal"
+      }
+    ],
+    "state": "open",
+    "gameId": null
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "t": "game.play",
+  "id": 4,
+  "at": {
+    "round": 0,
+    "trick": 1
+  },
+  "card": 66,
+  "as": "pirate"
+}

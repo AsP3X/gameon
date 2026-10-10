@@ -1,0 +1,15 @@
+{
+  "rank": 1,
+  "user": {
+    "id": "018f6b4a-6a2e-7c3a-8b1d-9e0f1a2b3c4d",
+    "name": "Anne",
+    "color": "#1cb0f6",
+    "tier": null
+  },
+  "rating": {
+    "value": 1000,
+    "tier": "Sailor",
+    "provisional": true,
+    "games": 3
+  }
+}

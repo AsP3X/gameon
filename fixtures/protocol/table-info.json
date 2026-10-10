@@ -1,0 +1,18 @@
+{
+  "status": [
+    "online",
+    "bot"
+  ],
+  "deadline": {
+    "kind": "bid",
+    "seats": [
+      0,
+      1
+    ],
+    "at": 1700000045000
+  },
+  "ready": [
+    false,
+    false
+  ]
+}
