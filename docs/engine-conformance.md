@@ -55,6 +55,12 @@ Everything else is the same, including these easy-to-miss details:
   after the last trick.
 - The Smuggler draws up to two cards from the front of the pile and discards exactly as many as
   were drawn; the discards are removed from play and never shown.
+- `as` on a play is read only for the Tigress. On any other card it is ignored: the play is
+  accepted and the `cardPlayed` event carries no `as`.
+- The Seer's `choice` is not checked. Any value ends the ability and nothing is stored.
+- Checks run in the reference's order, and the first failure is the answer: phase, then seat, then
+  the value. A bid out of range from a seat that has already bid is `NOT_YOUR_TURN`; a card that is
+  not in the hand, played out of turn, is `NOT_YOUR_TURN`.
 
 ## 2. Fixtures
 
@@ -95,7 +101,12 @@ rejected with that code and leave every view unchanged. At the end compare `fina
 
 The set covers every player count, every format, both scoring modes, each expansion alone and all
 together, every ability with every choice, both beasts in one trick, and rejected actions of every
-kind. A gap found later is filled by a new fixture, requested through a handover.
+kind. `fixtures/engine/README.md`, written by the generator, lists the games and every coverage row
+with the files that fill it; the generator fails if a row is left open. A gap found later is filled
+by a new row and a new fixture, requested through a handover.
+
+The generator is `web/scripts/generate-engine-fixtures.mjs`. It pins the reference file by hash and
+is deterministic, so `--check` proves the files on disk are what the reference produces.
 
 ## 3. `EngineView`
 

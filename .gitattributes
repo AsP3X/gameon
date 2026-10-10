@@ -1,0 +1,2 @@
+# Generated test data: one line per game, never reviewed as a diff.
+fixtures/engine/*.json -diff linguist-generated
