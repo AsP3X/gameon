@@ -1,1 +1,10 @@
 server/target/
+
+# Web client
+/web/node_modules/
+/web/dist/
+
+# OS and editors
+.DS_Store
+.idea/
+*.swp
