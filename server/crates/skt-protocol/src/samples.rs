@@ -24,7 +24,7 @@ use crate::pushes::{
 };
 use crate::rest::{
     Active, Credentials, Health, LadderEntry, LadderPage, Me, Profile, ProfilePatch, Rating,
-    Season, ServerConfig, Stats, TableColor, Timers, User,
+    Season, ServerConfig, Stats, TableColor, Timers, User, emote_ids,
 };
 use crate::settings::GameSettings;
 use crate::table::{
@@ -63,7 +63,7 @@ fn rest(dir: &Path, write: bool) -> Result<(), ExportError> {
             timers: Timers::standard(),
             standard: GameSettings::standard(),
             season: None,
-            emotes: Vec::new(),
+            emotes: emote_ids(),
         },
     )?;
     put(

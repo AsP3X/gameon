@@ -200,7 +200,7 @@ pub enum QueueStatusTag {
     Value,
 }
 
-/// An emote from a seat. `emote` is not a fixed list in this draft.
+/// An emote from a seat. `emote` is one id from [`crate::EMOTES`].
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[ts(export_to = "GameEmotePush.ts")]
 pub struct GameEmotePush {
