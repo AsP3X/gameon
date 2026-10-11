@@ -3,11 +3,17 @@ You are Claude, the web engineer on Skull King Tavern (repo
 Rust server, Compose, deploy files and CI, and never edits `web/` except the generated protocol
 tree. You and Grok cannot see each other's sessions: the owner pastes handover prompts between you.
 This is handover 017, the answer to your 016. The three socket rules are in `docs/protocol.md`.
-Phase 1 is not open.
+The owner then asked for the next client slice in one package: plan items C5 and C6. Grok's
+column of Phase 1 stays closed.
 
 READ FIRST, IN THIS ORDER
-1. `AGENTS.md`, then `docs/agent-rules/protocol-contract.md` and `server-authority.md`.
-2. `docs/protocol.md` §5.2 and §5.5 on the commit named below.
+1. `AGENTS.md`, then `docs/agent-rules/protocol-contract.md`, `server-authority.md`,
+   `design-sync.md`, `web-quality.md`, `git.md` and `definition-of-done.md`.
+2. `docs/protocol.md` §2, §5.1, §5.2, §5.3 and §5.5 at commit `f9fc639`. Those sections are not on
+   `dev` yet. Read them from `feature/grok-reply-order`. Do not commit on that branch.
+3. `docs/multiplayer-plan.md` §5, your rows C5 and C6. C7 and C8 are the package after this one.
+4. `web/src/table/table.ts` on `dev`, and `web/src/protocol/generated/`. Import the generated
+   types. Do not hand-edit them.
 
 STATE
 
@@ -59,30 +65,61 @@ still has `game: null`. It does not put the table back.
 
 YOUR TASK
 
-1. When the owner opens Phase 1, build C5 on these three rules: the message after `ok` is that
-   step's `game.update`; a closed socket's ids are forgotten and `welcome` is the snapshot; a
-   `game.leave` update takes the table down, and a later `game.over` is the result, not a return
-   to the hand.
-2. Do not start C5 from this handover. Leave `server/`, `.github/`, `fixtures/` and `legacy/`
-   alone.
+C5 and C6, on one branch cut from `dev`. The Rust server is not part of this package. Speak
+protocol v1 as `f9fc639` writes it, including the three paragraphs in STATE.
+
+1. Socket client. Connect, send `hello`, take `ok` then `welcome`, and keep a server-clock offset
+   from `serverTime` on `welcome` and on `ping`. One reply per client `id`. Reconnect with
+   backoff. On a new socket, forget every outstanding `id`, do not send the intent again, and
+   replace online state with `welcome`. A dropped connection is not `game.leave`: `welcome.game`
+   is the game while the player is still seated.
+2. `RemoteTable` implements `Table`. `localSeats` is the one seat `game.start` calls `me`.
+   `dispatch` sends `game.bid`, `game.play` or `game.ability` with no seat field. Input stays
+   locked from the send until the next message after `ok`, which is that step's `game.update`.
+   An `err` unlocks at once and is not followed by an update for that intent. `game.leave`'s
+   update takes the table down. A later `game.over` is the result, including a forfeit, and does
+   not put the table back. Put the table on screen with the existing `showTable`.
+3. A mock server in `web/`, used by tests and by a dev switch. It speaks the same messages. The
+   table task handles one step at a time and writes `ok` then that step's `game.update` with
+   nothing between them. Drive accepted play through the engine already in `web/src/game/`. Do
+   not write a second copy of the rules. Each seat is sent only its own view. Cover with tests:
+   the pair order, an `err` with no update, a reconnect that drops old ids, a leave that stops
+   `game.update` and still delivers `game.over` when the game ends, and a second seat that never
+   receives the first seat's hand.
+4. Lobby screens, drawn in `design/web.pen` with the Pencil tools before the code: the online
+   hub, create, join by code, and the lobby room (members, ready, add and remove a bot, settings,
+   start). Wire them to the mock. From the hub a player can create a private lobby, add one bot,
+   ready, start, and bid once at the existing table. Solo, pass-and-play and the scorekeeper stay
+   on `LocalTable` and keep the behavior the parity suite already checks.
+5. Do not build C7 or C8. No deadline ring, presence badges, reconnect overlay, or browser test
+   against a real server. Leave `server/`, `.github/`, `fixtures/` and `legacy/` alone. If the
+   protocol text is missing a message you need, stop on that message and name it in the handover.
+   Do not invent one.
 
 CONTRACTS
 
 - Frozen: `docs/engine-conformance.md` §3–§5, the 41 fixtures, `legacy/Skull King Tavern.html`, and
-  every message name, field and error code.
-- Changed by Grok in `f9fc639`: `docs/protocol.md` §5.2 and §5.5, the three paragraphs above.
-  `protocol` stays 1.
-- The seat of an online action still comes from the session.
+  every message name, field and error code. `protocol` stays 1.
+- Changed by Grok in `f9fc639`: `docs/protocol.md` §5.2 and §5.5, the three paragraphs in STATE.
+- The seat of an online action comes from the session. The mock enforces that. The client must
+  not send a seat on `game.bid`, `game.play` or `game.ability`.
 - You may edit `web/` except `web/src/protocol/generated/`, and `design/` through the Pencil tools.
   You may not edit `server/` or `.github/`.
 
 DONE WHEN
 
-- You have not started C5 from this handover.
+- From `web/`: `npx vp check`, `npx vp test` and `npx vp build` pass, and
+  `node scripts/generate-engine-fixtures.mjs --check` still prints that the fixtures match. Report
+  the test count.
+- The tests in task 3 pass.
+- In a browser, against the mock: create a private lobby, add a bot, ready, start, and bid once.
+  Then play one offline solo round and confirm it still reaches the round result.
+- The new screens are in `design/web.pen`.
 
 REPORT BACK
 
-When the owner opens Phase 1, write `docs/handover/018-claude-to-grok-<slug>.md` and print the
-same text in one fenced code block. It must itself be a paste-ready prompt for Grok ("You are
-Grok"), with who and where, state, a numbered task, contracts, done when, and report back.
-Include any further `docs/protocol.md` change, with the reason, or "None".
+Write `docs/handover/018-claude-to-grok-<slug>.md` and print the same text in one fenced code
+block. It must itself be a paste-ready prompt for Grok ("You are Grok"), with who and where,
+state, a numbered task, contracts, done when, and report back. Include: where the socket client,
+`RemoteTable` and the mock live; the test count; any hole in `docs/protocol.md`, with the reason,
+or "None"; and whether the offline solo path still passed.
