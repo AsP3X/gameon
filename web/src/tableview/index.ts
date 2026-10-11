@@ -15,7 +15,7 @@ import { SPRITE } from './art';
 import { $$ } from './dom';
 import { listen } from './events';
 import { finale } from './motion';
-import { render } from './render';
+import { render, tuneMenu } from './render';
 import { clearTimer, loadState, prefs, savePrefs, session, stage, ui } from './state';
 import { Tracker } from './tracker';
 
@@ -26,6 +26,15 @@ export type { OnlineHooks } from './state';
 export interface TavernHooks {
   /** "Play online" on the home screen: the online screens are React's, not the renderer's. */
   online?: () => void;
+}
+
+/**
+ * Tell the renderer that the page shows something else in its place (the online screens), or that
+ * it is back. What it drew stays as it was; the menu music stops while it cannot be seen.
+ */
+export function coverTavern(covered: boolean): void {
+  stage.covered = covered;
+  tuneMenu();
 }
 
 /** How long the one-time "swipe to cancel" hint takes to play: its delay plus its animation (swipeHint in tavern.css). */

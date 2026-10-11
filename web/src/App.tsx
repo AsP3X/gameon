@@ -4,7 +4,7 @@ import { Online } from './net/online';
 import { SocketClient } from './net/socket';
 import type { Transport } from './net/socket';
 import { OnlineScreens } from './online/OnlineScreens';
-import { closeOnlineTable, mountTavern, openOnlineTable } from './tableview';
+import { closeOnlineTable, coverTavern, mountTavern, openOnlineTable } from './tableview';
 
 export interface AppProps {
   /** How the online screens reach a server. Tests hand in a mock server's. */
@@ -47,6 +47,8 @@ export function App({ transport = appTransport }: AppProps) {
   useEffect(() => () => online.close(), [online]);
 
   const screens = inOnline && !table;
+  // The online screens take the renderer's place: its home screen is still there, but not to be seen.
+  useEffect(() => coverTavern(screens), [screens]);
   return (
     <>
       <div id="app" ref={app} hidden={screens}></div>
