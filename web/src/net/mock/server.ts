@@ -17,8 +17,13 @@
    passwords included, as they were typed. There are no emotes, no away detection, no bot takeover
    after the grace period and no rate limit on REST.
 
-   Ranked is here so the screens have something to show, and no more than that: the numbers of a
-   rating, the one tier, the season and the length of the cooldown are stand-ins, not the model.
+   Ranked follows the rules of docs/protocol.md §4, §5.4 and §5.5 in everything a screen can see:
+   the tier bands, placement ending with the fifth game, the cooldown that doubles with every
+   leave, the season that is the UTC calendar quarter, and a ladder paged by user id. Two things it
+   does not do. It does not rate: where the server runs Weng-Lin, the mock moves a rating by a
+   fixed step for each place, so its numbers have the right shape and mean nothing. And it has no
+   skill window: the first four accounts in the ranked queue sit down, whatever their ratings.
+   It also never sees a season end, so it has no soft reset.
 
    A browser() is one browser profile: a cookie jar that holds at most one session, the REST calls
    that carry it, and the sockets opened with it. */
@@ -97,11 +102,48 @@ export const STANDARD: GameSettings = {
 /** §4: 3–16 characters of A–Z a–z 0–9 _. The reserved list is not named, so the mock has none. */
 const USERNAME = /^[A-Za-z0-9_]{3,16}$/;
 const NAME_MAX = 16;
-/** The one tier the mock knows. A real rating has seven, and the server picks among them. */
-const STAND_IN_TIER = 'Deckhand';
-/** How long a ranked leave closes the ranked queue, unless the options say otherwise. A stand-in. */
-const STAND_IN_COOLDOWN_MS = 15 * 60_000;
+/** The tiers and the value each one ends below (§4). From 48 it is Skull King. */
+const TIERS: readonly (readonly [below: number, name: string])[] = [
+  [8, 'Deckhand'],
+  [16, 'Bosun'],
+  [24, 'Quartermaster'],
+  [32, 'First Mate'],
+  [40, 'Captain'],
+  [48, 'Pirate Lord'],
+];
+const tierOf = (value: number): string => TIERS.find(([below]) => value < below)?.[1] ?? 'Skull King';
+/** The ranked games of a season that are placement games: the fifth one ends placement. */
+const PLACEMENT_GAMES = 5;
+/**
+ * What a ranked game does to a rating in the mock, by place. NOT the rating model: the server
+ * runs Weng-Lin and the number is whatever that gives. This only makes ratings move, so tiers and
+ * the end of placement can be seen.
+ */
+const MOCK_RATING_STEP = [6, 2, -2, -6];
+const MINUTE_MS = 60_000;
 const DAY_MS = 86_400_000;
+/** How long the n-th ranked leave of a season closes the ranked queue: 15 minutes, doubled each time, a day at most. */
+const cooldownAfter = (leaves: number): number => Math.min(DAY_MS, 15 * MINUTE_MS * 2 ** (leaves - 1));
+/** The season that contains `at`: the UTC calendar quarter. Season 1 is 2026 Q1. */
+function seasonAt(at: number): Season {
+  const date = new Date(at),
+    year = date.getUTCFullYear(),
+    quarter = Math.floor(date.getUTCMonth() / 3);
+  return {
+    id: (year - 2026) * 4 + quarter + 1,
+    name: `${year} Q${quarter + 1}`,
+    startsAt: Date.UTC(year, quarter * 3, 1),
+    endsAt: Date.UTC(year, quarter * 3 + 3, 1),
+  };
+}
+/** Strings in the order of their UTF-8 bytes, which is how the ladder breaks a tie of values. */
+function byBytes(a: string, b: string): number {
+  const x = BYTES.encode(a),
+    y = BYTES.encode(b);
+  for (let i = 0; i < Math.min(x.length, y.length); i++) if (x[i] !== y[i]) return x[i] - y[i];
+  return x.length - y.length;
+}
+const BYTES = new TextEncoder();
 const LADDER_PAGE = 25;
 const LADDER_MAX = 100;
 
@@ -127,7 +169,7 @@ const MESSAGES: Partial<Record<ErrorCode, string>> = {
   INVALID_CREDENTIALS: 'Wrong username or password.',
   ALREADY_REGISTERED: 'This player already has an account.',
   ACCOUNT_REQUIRED: 'Ranked needs an account.',
-  QUEUE_COOLDOWN: 'You left a ranked game. Ranked is closed for you for now.',
+  QUEUE_COOLDOWN: 'You cannot queue yet.',
   RATE_LIMITED: 'Too many messages. Slow down.',
   PROTOCOL_UNSUPPORTED: 'This page is too old for the server. Reload to update.',
   LOBBY_NOT_FOUND: 'No table has that code.',
@@ -153,8 +195,6 @@ export interface MockOptions {
   bot?: { minMs: number; maxMs: number };
   /** How long the casual queue waits for a full table before bots take the open seats. The protocol names no time. */
   queueFillMs?: number;
-  /** How long a ranked leave closes the ranked queue for the leaver. The real rule is the server's. */
-  cooldownMs?: number;
 }
 
 type Timer = ReturnType<typeof setTimeout>;
@@ -173,6 +213,8 @@ interface Account {
   game: Game | null;
   /** The queue this player waits in, and since when. */
   queued: { mode: QueueMode; since: number } | null;
+  /** How many ranked games this player has left this season: each one makes the next cooldown longer. */
+  leaves: number;
   /** Results of games that ended while this player had no socket: written right after the next `welcome`. */
   owed: GameOver[];
 }
@@ -207,6 +249,8 @@ interface Game {
   /** Who plays each seat. null is a bot seat, or one whose player left. */
   players: (Account | null)[];
   colors: TableColor[];
+  /** The tier each seat is announced with in `game.start`: a ranked player's, if they had a rating at the deal. */
+  tiers: (string | null)[];
   /** Those who left, and the seat they gave up. In ranked that is a forfeit. */
   leavers: { account: Account; seat: Seat }[];
   status: SeatStatus[];
@@ -262,9 +306,6 @@ export class MockServer {
   private readonly timers: Timers;
   private readonly bot: { minMs: number; maxMs: number };
   private readonly queueFillMs: number;
-  private readonly cooldownMs: number;
-  /** The one season there is. Its dates are a stand-in around the day the mock was made. */
-  private readonly season: Season;
   private readonly rooms = new Set<Room>();
   private readonly conns = new Set<Conn>();
   /** Every player there ever was, by user id. */
@@ -281,16 +322,12 @@ export class MockServer {
     timers = {},
     bot = { minMs: 800, maxMs: 1500 },
     queueFillMs = 6000,
-    cooldownMs = STAND_IN_COOLDOWN_MS,
   }: MockOptions = {}) {
     this.now = now;
     this.random = random;
     this.timers = { ...STANDARD_TIMERS, ...timers };
     this.bot = bot;
     this.queueFillMs = queueFillMs;
-    this.cooldownMs = cooldownMs;
-    const startsAt = now() - 30 * DAY_MS;
-    this.season = { id: 1, name: 'Season 1', startsAt, endsAt: startsAt + 92 * DAY_MS };
   }
 
   /**
@@ -355,6 +392,7 @@ export class MockServer {
       room: null,
       game: null,
       queued: null,
+      leaves: 0,
       owed: [],
     };
     this.accounts.set(account.me.user.id, account);
@@ -627,29 +665,35 @@ export class MockServer {
       build: 'mock',
       timers: this.timers,
       standard: STANDARD,
-      season: this.season,
+      season: seasonAt(this.now()),
       emotes: [],
     };
   }
 
   /**
-   * One page of the ladder: everyone with a rating, best first, ranks counted from 1 with no ties.
-   * `after` is how many rows the caller already has. A season there is not is `NOT_FOUND`; a limit
-   * or a cursor that is not one is `VALIDATION`. An entry is the public player and the rating: no
-   * username, no stats, no session.
+   * One page of the current season's ladder: everyone with a ranked game, highest value first, then
+   * by display name in byte order, then by user id. Ranks count from 1 with no ties. `after` is the
+   * user id of the last row the caller has; `next` is the id of this page's last row, while more
+   * follow. Any season but the current one is `NOT_FOUND`; a limit that is not 1 to 100, or an
+   * `after` that is not on the ladder, is `VALIDATION`. An entry is the public player and the
+   * rating: no username, no stats, no session.
    */
   private ladder(query: URLSearchParams): LadderPage | 'NOT_FOUND' | 'VALIDATION' {
-    const season = query.get('season'),
+    const season = seasonAt(this.now()),
       limit = query.has('limit') ? Number(query.get('limit')) : LADDER_PAGE,
-      after = query.has('after') ? Number(query.get('after')) : 0;
-    if (season != null && season !== String(this.season.id)) return 'NOT_FOUND';
-    if (!isInt(limit) || limit < 1 || limit > LADDER_MAX || !isInt(after) || after < 0) return 'VALIDATION';
+      after = query.get('after');
+    if (query.has('season') && query.get('season') !== String(season.id)) return 'NOT_FOUND';
+    if (!isInt(limit) || limit < 1 || limit > LADDER_MAX) return 'VALIDATION';
     const rated = [...this.accounts.values()]
       .flatMap((a) => (a.me.rating ? [{ user: a.me.user, rating: a.me.rating }] : []))
-      .sort((a, b) => b.rating.value - a.rating.value || a.user.name.localeCompare(b.user.name));
-    const entries: LadderEntry[] = rated.slice(after, after + limit).map((e, i) => ({ rank: after + i + 1, ...e }));
-    const page: LadderPage = { season: this.season, entries };
-    if (after + limit < rated.length) page.next = String(after + limit);
+      .sort(
+        (a, b) => b.rating.value - a.rating.value || byBytes(a.user.name, b.user.name) || byBytes(a.user.id, b.user.id),
+      );
+    const from = after == null ? 0 : rated.findIndex((e) => e.user.id === after) + 1;
+    if (after != null && from === 0) return 'VALIDATION';
+    const entries: LadderEntry[] = rated.slice(from, from + limit).map((e, i) => ({ rank: from + i + 1, ...e }));
+    const page: LadderPage = { season, entries };
+    if (from + limit < rated.length && entries.length) page.next = entries[entries.length - 1].user.id;
     return page;
   }
 
@@ -686,7 +730,7 @@ export class MockServer {
     if (m.t !== 'queue.join' || !oneOf(m.mode, ['casual', 'ranked'])) return this.fail(conn, m.id, 'VALIDATION');
     const mode = m.mode;
     // Who may ask comes before where they are: a guest is told `ACCOUNT_REQUIRED`, and a leaver
-    // `QUEUE_COOLDOWN`, even when seated. The message carries no time: `GET /me` does.
+    // `QUEUE_COOLDOWN`, even when seated (§5.4). The message carries no time: `GET /me` does.
     if (mode === 'ranked' && account.me.guest) return this.fail(conn, m.id, 'ACCOUNT_REQUIRED');
     if (mode === 'ranked' && (this.me(account).cooldownUntil ?? 0) > this.now())
       return this.fail(conn, m.id, 'QUEUE_COOLDOWN');
@@ -937,6 +981,8 @@ export class MockServer {
       rev: 0,
       players,
       colors: seats.map((p) => p.color),
+      // A tier is announced only at a ranked table, and only for an account that has a rating.
+      tiers: players.map((a) => (mode === 'ranked' ? (a?.me.rating?.tier ?? null) : null)),
       leavers: [],
       status: players.map((a) => (a ? (a.conn ? 'online' : 'offline') : 'bot')),
       ready: players.map(() => false),
@@ -975,7 +1021,7 @@ export class MockServer {
           color: game.colors[i],
           bot: p.bot,
           userId: account ? account.me.user.id : null,
-          tier: null,
+          tier: game.tiers[i],
         };
       }),
       me: seat,
@@ -1029,8 +1075,9 @@ export class MockServer {
         game.players[seat] = null;
         game.leavers.push({ account, seat });
         account.game = null;
-        // Leaving a ranked game is a forfeit, and it closes the ranked queue for a while.
-        if (game.mode === 'ranked') account.me.cooldownUntil = this.now() + this.cooldownMs;
+        // Leaving a ranked game is a forfeit, and it closes the ranked queue from this moment:
+        // for longer with every leave of the season.
+        if (game.mode === 'ranked') account.me.cooldownUntil = this.now() + cooldownAfter(++account.leaves);
         this.step(game, [{ type: 'seatStatus', seat, status: 'bot' }], actor);
         return this.unseat(account);
       }
@@ -1172,10 +1219,11 @@ export class MockServer {
           ? totals.length
           : 1 + totals.filter((x, other) => x > t && !forfeited.includes(other)).length,
       );
-    // The game counts for everyone still in their seat, before anyone is told it is over: a
-    // `GET /me` that follows `game.over` already has it. A seat that was left is not counted.
+    // A custom or a casual game counts for everyone still in their seat, before anyone is told it
+    // is over: a `GET /me` that follows `game.over` already has it. A seat that was left is not
+    // counted. A ranked game changes no `Stats` at all: it is counted in the rating's `games`.
     game.players.forEach((account, seat) => {
-      if (!account) return;
+      if (!account || ranked) return;
       const stats = account.me.stats;
       stats.games++;
       if (places[seat] === 1) stats.wins++;
@@ -1196,7 +1244,7 @@ export class MockServer {
           totals,
           places,
           forfeited,
-          rating: ranked ? this.rate(account, places[seat] === 1) : null,
+          rating: ranked ? this.rate(account, places[seat]) : null,
           lobbyId: open && room ? room.lobby.id : null,
         },
       };
@@ -1219,17 +1267,18 @@ export class MockServer {
   }
 
   /**
-   * Move a rating after a ranked game, and say what it was and what it is. A STAND-IN, not the
-   * rating model: one point up for first place and one down for everything else, one tier for
-   * everyone, and every game a placement game. The real numbers are the server's.
+   * Move a rating after a ranked game, and say what it was and what it is. The shape is the
+   * server's: a whole number, `delta` the difference of the two values, the tier of the band the
+   * value is in, and placement until the fifth game. The step is the mock's own (MOCK_RATING_STEP).
    */
-  private rate(account: Account, won: boolean): { before: Rating; after: Rating; delta: number } {
-    const before = account.me.rating ?? { value: 0, tier: STAND_IN_TIER, provisional: true, games: 0 },
-      delta = won ? 1 : -1,
-      after = { value: before.value + delta, tier: STAND_IN_TIER, provisional: true, games: before.games + 1 };
+  private rate(account: Account, place: number): { before: Rating; after: Rating; delta: number } {
+    const before = account.me.rating ?? { value: 0, tier: tierOf(0), provisional: true, games: 0 },
+      value = before.value + (MOCK_RATING_STEP[place - 1] ?? MOCK_RATING_STEP[MOCK_RATING_STEP.length - 1]),
+      games = before.games + 1,
+      after = { value, tier: tierOf(value), provisional: games < PLACEMENT_GAMES, games };
     account.me.rating = after;
     account.me.user.tier = after.tier;
-    return { before, after, delta };
+    return { before, after, delta: after.value - before.value };
   }
 
   /* ---------- ids ---------- */

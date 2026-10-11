@@ -1,8 +1,9 @@
 /* The mock server's ranked queue, rating change, cooldown and ladder, from bare connections and
-   bare REST calls. The Rust server does not speak ranked yet, so this is what the client is built
-   against. The NUMBERS here are stand-ins the screens can render (one point up or down, one tier,
-   every game a placement game, a fixed cooldown): the frames and their order are the contract, the
-   values are not. */
+   bare REST calls: the rules of docs/protocol.md §4, §5.4 and §5.5 as far as a client can see them.
+   What a rating is worth after a game is the server's (Weng-Lin), and the mock's own step is not
+   checked here. What is checked is the shape every rating has: a whole number, `delta` the
+   difference of the two values that were sent, the tier of the band the value is in, and placement
+   until the fifth game. */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 import type { LadderPage, Me, Rating } from '../../protocol/generated';
 import type { RestMethod, RestResponse } from '../api';
@@ -24,8 +25,28 @@ function seeded(seed: number): () => number {
 /** Short clocks: a deadline plays for a human who does nothing, so a whole game runs by itself. */
 const FAST = { bidMs: 400, playMs: 300, abilityMs: 300, trickEndMs: 100, roundEndMs: 200 };
 const QUEUE_FILL_MS = 5000;
-const COOLDOWN_MS = 10 * 60_000;
-const T0 = 1_700_000_000_000;
+const MINUTE_MS = 60_000;
+/** 11 October 2026, midday UTC: the season is 2026 Q4. */
+const T0 = Date.UTC(2026, 9, 11, 12);
+const Q4 = { id: 4, name: '2026 Q4', startsAt: Date.UTC(2026, 9, 1), endsAt: Date.UTC(2027, 0, 1) };
+/** The tier of a value, written down from §4 and not taken from the mock. */
+function tierOf(value: number): string {
+  const bands: [number, string][] = [
+    [8, 'Deckhand'],
+    [16, 'Bosun'],
+    [24, 'Quartermaster'],
+    [32, 'First Mate'],
+    [40, 'Captain'],
+    [48, 'Pirate Lord'],
+  ];
+  return bands.find(([below]) => value < below)?.[1] ?? 'Skull King';
+}
+/** What every rating on the wire looks like, whatever its number. */
+function expectShape(rating: Rating, games: number): void {
+  expect(Number.isInteger(rating.value)).toBe(true);
+  expect(rating).toEqual({ value: rating.value, tier: tierOf(rating.value), provisional: games < 5, games });
+}
+const UNRATED: Rating = { value: 0, tier: 'Deckhand', provisional: true, games: 0 };
 
 let server: MockServer;
 const flush = (): Promise<void> => vi.advanceTimersByTimeAsync(0).then(() => {});
@@ -36,13 +57,14 @@ interface Player {
   connect(): Promise<RawClient>;
   socket: RawClient;
 }
-/** A browser with a session: a guest, or an account when it is given a username. */
-async function player(username?: string): Promise<Player> {
+let logins = 0;
+/** A browser with a session: a guest, or an account with that display name and a login of its own. */
+async function player(name?: string): Promise<Player> {
   const b = server.browser();
   await b.rest('POST', '/auth/guest');
-  if (username) {
-    await b.rest('PATCH', '/me', { name: username });
-    expect((await b.rest('POST', '/auth/register', { username, password: 'x' })).status).toBe(200);
+  if (name) {
+    await b.rest('PATCH', '/me', { name });
+    expect((await b.rest('POST', '/auth/register', { username: `login_${++logins}`, password: 'x' })).status).toBe(200);
   }
   const connect = async (): Promise<RawClient> => {
     const client = await connectRaw(b.transport);
@@ -76,16 +98,20 @@ async function until(done: () => boolean, what: string, steps = 8000): Promise<v
   throw new Error(`Never happened: ${what}`);
 }
 const NAMES = ['anne', 'calico', 'mary', 'kidd'];
-/** Four accounts at one ranked table, in that seat order. */
-async function rankedTable(): Promise<Player[]> {
+/** Put these accounts into the ranked queue, in this order. Four of them are a table. */
+async function queueUp(players: Player[]): Promise<void> {
+  for (const p of players) expect(await ask(p.socket, { t: 'queue.join', mode: 'ranked' })).toMatchObject({ t: 'ok' });
+}
+/** Four new accounts at one ranked table, in that seat order. */
+async function rankedTable(names = NAMES): Promise<Player[]> {
   const players: Player[] = [];
-  for (const name of NAMES) {
-    const p = await player(name);
-    expect(await ask(p.socket, { t: 'queue.join', mode: 'ranked' })).toMatchObject({ t: 'ok' });
-    players.push(p);
-  }
+  for (const name of names) players.push(await player(name));
+  await queueUp(players);
   return players;
 }
+/** Let the deadlines play a table to its end: every one of `players` has `games` results by then. */
+const played = (players: Player[], games = 1): Promise<void> =>
+  until(() => players.every((p) => framesOf(p.socket, 'game.over').length >= games), 'the game ends');
 const error = (code: string): unknown => ({ error: { code, message: expect.any(String) } });
 
 beforeEach(() => {
@@ -97,7 +123,6 @@ beforeEach(() => {
     timers: FAST,
     bot: { minMs: 40, maxMs: 80 },
     queueFillMs: QUEUE_FILL_MS,
-    cooldownMs: COOLDOWN_MS,
   });
 });
 
@@ -190,6 +215,8 @@ describe('the ranked queue', () => {
       // Humans in the order they joined, and nobody else.
       expect(start.seats.map((s) => [s.name, s.bot])).toEqual(NAMES.map((name) => [name, false]));
       expect(start.seats.every((s) => s.userId != null)).toBe(true);
+      // Nobody at this table has a rating yet, so no seat is announced with a tier.
+      expect(start.seats.map((s) => s.tier)).toEqual([null, null, null, null]);
       const i = p.socket.frames.indexOf(start);
       expect(p.socket.frames[i + 1]).toMatchObject({ t: 'game.update', rev: 0, events: [] });
       // No accept step and no lobby. What comes before `game.start` is the fourth join itself: its
@@ -207,88 +234,153 @@ describe('the ranked queue', () => {
 });
 
 describe('the result of a ranked game', () => {
-  it('tells every seat its own rating change, and stores it: one up for the winner, one down for the rest', async () => {
+  it('tells every seat its own rating change, in the shape every rating has, and stores it', async () => {
     const players = await rankedTable();
     expect((await players[0].me()).rating).toBeNull();
-    await until(() => players.every((p) => framesOf(p.socket, 'game.over').length > 0), 'the game ends');
+    expect((await players[0].me()).user.tier).toBeNull();
+    await played(players);
     const places = last(players[0].socket, 'game.over').result.places;
-    expect(places.filter((place) => place === 1).length).toBeGreaterThanOrEqual(1);
-    const unrated: Rating = { value: 0, tier: 'Deckhand', provisional: true, games: 0 };
+    const deltas: number[] = [];
     for (const [seat, p] of players.entries()) {
-      const { result } = last(p.socket, 'game.over'),
-        delta = places[seat] === 1 ? 1 : -1,
-        after: Rating = { value: delta, tier: 'Deckhand', provisional: true, games: 1 };
+      const { result } = last(p.socket, 'game.over');
       expect(result).toMatchObject({ places, forfeited: [], lobbyId: null });
-      // `rating` is the receiver's own, and nobody else's.
-      expect(result.rating).toEqual({ before: unrated, after, delta });
+      // `rating` is the receiver's own. An account that had none starts from the same place.
+      const change = result.rating;
+      if (!change) throw new Error('A ranked game has a rating change');
+      expect(change.before).toEqual(UNRATED);
+      expectShape(change.after, 1);
+      expect(change.delta).toBe(change.after.value - change.before.value);
+      deltas[seat] = change.delta;
+      // `Me.rating` and `User.tier` are written before `game.over` is.
       const me = await p.me();
-      expect(me.rating).toEqual(after);
-      expect(me.user.tier).toBe('Deckhand');
+      expect(me.rating).toEqual(change.after);
+      expect(me.user.tier).toBe(change.after.tier);
       expect(me).toMatchObject({ active: null, cooldownUntil: null });
-      expect(me.stats.games).toBe(1);
+      // A ranked game is counted in the rating's `games`, and changes no `Stats`.
+      expect(me.stats).toEqual({ games: 0, wins: 0, bidsMade: 0, bidsTotal: 0, bestScore: null });
     }
+    // Whatever the model, between equals a better place is never worth less.
+    for (const [a, placeA] of places.entries())
+      for (const [b, placeB] of places.entries())
+        if (placeA < placeB) expect(deltas[a]).toBeGreaterThanOrEqual(deltas[b]);
+    expect(deltas[places.indexOf(1)]).toBeGreaterThan(0);
   });
 
-  it('leaves the rating alone after a casual game', async () => {
+  it('ends placement with the fifth game, names the tier of the band, and announces a rated seat with its tier', async () => {
+    const players = await rankedTable();
+    for (let game = 1; game <= 6; game++) {
+      await played(players, game);
+      for (const p of players) {
+        const change = last(p.socket, 'game.over').result.rating;
+        if (!change) throw new Error('A ranked game has a rating change');
+        expectShape(change.after, game);
+        expect(change.delta).toBe(change.after.value - change.before.value);
+        // The game before this one is where this one started from.
+        if (game > 1) expectShape(change.before, game - 1);
+        expect((await p.me()).rating).toEqual(change.after);
+      }
+      if (game === 6) break;
+      const tiers = await Promise.all(players.map(async (p) => (await p.me()).user.tier));
+      await queueUp(players);
+      // From the second game on, everyone has a rating at the deal, and the seat says its tier.
+      expect(last(players[0].socket, 'game.start').seats.map((s) => s.tier)).toEqual(tiers);
+      expect(tiers.every((tier) => tier != null)).toBe(true);
+    }
+    const ratings = await Promise.all(players.map(async (p) => (await p.me()).rating));
+    expect(ratings.map((r) => r?.provisional)).toEqual([false, false, false, false]);
+    expect(ratings.map((r) => r?.games)).toEqual([6, 6, 6, 6]);
+  });
+
+  it('leaves the rating alone after a casual game, and counts that game in the stats', async () => {
     const anne = await player('anne');
     await ask(anne.socket, { t: 'queue.join', mode: 'casual' });
-    await until(() => framesOf(anne.socket, 'game.over').length > 0, 'the game ends');
+    await played([anne]);
     expect(last(anne.socket, 'game.over').result).toMatchObject({ rating: null, forfeited: [] });
     expect((await anne.me()).rating).toBeNull();
+    expect((await anne.me()).stats.games).toBe(1);
     expect((await anne.call('GET', '/ladder')).body).toMatchObject({ entries: [] });
+    // A casual table announces no tiers.
+    expect(last(anne.socket, 'game.start').seats.map((s) => s.tier)).toEqual([null, null, null, null]);
   });
 });
 
 describe('leaving a ranked game', () => {
-  it('is a forfeit: the seat is last, a cooldown starts, and the others get a normal result', async () => {
+  it('is a forfeit: the seat is last, the cooldown starts at once, and the others get a normal result', async () => {
     const players = await rankedTable(),
       [anne, ...others] = players;
     await vi.advanceTimersByTimeAsync(1000);
     const leftAt = Date.now();
     expect(await ask(anne.socket, { t: 'game.leave' })).toMatchObject({ t: 'ok' });
-    // The table is down for the leaver at once, and the cooldown is on `Me`.
-    const me = await anne.me();
-    expect(me).toMatchObject({ active: null, cooldownUntil: leftAt + COOLDOWN_MS });
+    // The table is down for the leaver at once, and the cooldown is on `Me`: 15 minutes the first time.
+    expect(await anne.me()).toMatchObject({ active: null, cooldownUntil: leftAt + 15 * MINUTE_MS });
     expect(last(await anne.connect(), 'welcome')).toMatchObject({ game: null, queue: null });
     // A bot plays the seat to the end, and the leaver hears the result when the game is over.
     const back = await anne.connect();
-    await until(() => others.every((p) => framesOf(p.socket, 'game.over').length > 0), 'the game ends');
+    await played(others);
     const theirs = last(others[0].socket, 'game.over').result;
     expect(theirs.forfeited).toEqual([0]);
     expect(theirs.places[0]).toBe(4);
     // The three who stayed are placed among themselves, from first.
     expect(Math.min(...theirs.places.slice(1))).toBe(1);
     expect(theirs.places.slice(1).every((place) => place >= 1 && place <= 3)).toBe(true);
-    expect(last(back, 'game.over').result).toMatchObject({
-      forfeited: [0],
-      rating: { delta: -1, after: { value: -1, games: 1 } },
-    });
-    expect((await anne.me()).rating).toMatchObject({ value: -1, tier: 'Deckhand', provisional: true, games: 1 });
-    // The seat that left is not in the game count; its rating moved all the same.
+    const mine = last(back, 'game.over').result;
+    expect(mine.forfeited).toEqual([0]);
+    if (!mine.rating) throw new Error('The leaver has a rating change too');
+    expect(mine.rating.before).toEqual(UNRATED);
+    expectShape(mine.rating.after, 1);
+    expect(mine.rating.delta).toBe(mine.rating.after.value);
+    expect(mine.rating.delta).toBeLessThan(0);
+    expect((await anne.me()).rating).toEqual(mine.rating.after);
+    // The leave is in the rating's `games`. No ranked game is in anybody's `Stats`.
     expect((await anne.me()).stats.games).toBe(0);
-    expect((await others[0].me()).stats.games).toBe(1);
+    expect((await others[0].me()).stats.games).toBe(0);
   });
 
-  it('closes the ranked queue with QUEUE_COOLDOWN until the time on Me, and says no time in the message', async () => {
+  it('places two leavers both last', async () => {
+    const players = await rankedTable();
+    await ask(players[2].socket, { t: 'game.leave' });
+    await ask(players[0].socket, { t: 'game.leave' });
+    await played([players[1], players[3]]);
+    const { result } = last(players[1].socket, 'game.over');
+    // In the order they left, and each with the place that is the number of seats.
+    expect(result.forfeited).toEqual([2, 0]);
+    expect([result.places[0], result.places[2]]).toEqual([4, 4]);
+    expect([result.places[1], result.places[3]].toSorted((a, b) => a - b)[0]).toBe(1);
+  });
+
+  it('closes ranked for longer with every leave: 15 minutes, doubled each time, and a day at most', async () => {
+    const anne = await player('anne'),
+      minutes: number[] = [];
+    for (let leave = 1; leave <= 9; leave++) {
+      const others = [await player(`b${leave}`), await player(`c${leave}`), await player(`d${leave}`)];
+      await queueUp([anne, ...others]);
+      const leftAt = Date.now();
+      expect(await ask(anne.socket, { t: 'game.leave' })).toMatchObject({ t: 'ok' });
+      const until = (await anne.me()).cooldownUntil;
+      if (until == null) throw new Error('A ranked leave starts a cooldown');
+      minutes.push((until - leftAt) / MINUTE_MS);
+      // Closed until the last millisecond, and open at that time: a time that is not ahead is null.
+      await vi.advanceTimersByTimeAsync(until - Date.now() - 1);
+      expect(await ask(anne.socket, { t: 'queue.join', mode: 'ranked' })).toMatchObject({ code: 'QUEUE_COOLDOWN' });
+      await vi.advanceTimersByTimeAsync(1);
+      expect((await anne.me()).cooldownUntil).toBeNull();
+    }
+    expect(minutes).toEqual([15, 30, 60, 120, 240, 480, 960, 1440, 1440]);
+  });
+
+  it('answers a join during the cooldown with QUEUE_COOLDOWN and no time, before ALREADY_SEATED, and leaves casual open', async () => {
     const [anne] = await rankedTable();
     await ask(anne.socket, { t: 'game.leave' });
-    const until = (await anne.me()).cooldownUntil;
-    expect(until).toBe(Date.now() + COOLDOWN_MS);
     const refused = await ask(anne.socket, { t: 'queue.join', mode: 'ranked' });
-    expect(refused).toMatchObject({ t: 'err', code: 'QUEUE_COOLDOWN' });
-    expect(refused.t === 'err' && refused.message).not.toMatch(/\d/);
+    expect(refused).toMatchObject({ t: 'err', code: 'QUEUE_COOLDOWN', message: 'You cannot queue yet.' });
     expect((await anne.me()).active).toBeNull();
-    // The cooldown is the ranked queue's: casual is open.
+    // The cooldown is the ranked queue's: casual and lobbies are open.
     expect(await ask(anne.socket, { t: 'queue.join', mode: 'casual' })).toMatchObject({ t: 'ok' });
-    await ask(anne.socket, { t: 'queue.leave' });
-
-    await vi.advanceTimersByTimeAsync(COOLDOWN_MS - 1000);
+    // Seated in the casual queue, ranked still answers the cooldown first.
     expect(await ask(anne.socket, { t: 'queue.join', mode: 'ranked' })).toMatchObject({ code: 'QUEUE_COOLDOWN' });
-    await vi.advanceTimersByTimeAsync(1000);
-    expect((await anne.me()).cooldownUntil).toBeNull();
-    expect(await ask(anne.socket, { t: 'queue.join', mode: 'ranked' })).toMatchObject({
+    await ask(anne.socket, { t: 'queue.leave' });
+    expect(await ask(anne.socket, { t: 'lobby.create', visibility: 'private', settings: STANDARD })).toMatchObject({
       t: 'ok',
-      queue: { mode: 'ranked' },
     });
   });
 
@@ -300,61 +392,97 @@ describe('leaving a ranked game', () => {
     await vi.advanceTimersByTimeAsync(QUEUE_FILL_MS);
     await ask(anne.socket, { t: 'game.leave' });
     expect((await anne.me()).cooldownUntil).toBeNull();
-    await until(() => framesOf(calico.socket, 'game.over').length > 0, 'the game ends');
+    await played([calico]);
     expect(last(calico.socket, 'game.over').result).toMatchObject({ forfeited: [], rating: null });
+  });
+});
+
+describe('the season', () => {
+  const seasonOn = async (at: number): Promise<unknown> =>
+    ((await new MockServer({ now: () => at }).browser().rest('GET', '/config')).body as { season: unknown }).season;
+
+  it('is the UTC calendar quarter, counted from 2026 Q1, and ends where the next one starts', async () => {
+    expect(await seasonOn(Date.UTC(2026, 0, 1))).toEqual({
+      id: 1,
+      name: '2026 Q1',
+      startsAt: Date.UTC(2026, 0, 1),
+      endsAt: Date.UTC(2026, 3, 1),
+    });
+    expect(await seasonOn(Date.UTC(2026, 3, 1) - 1)).toMatchObject({ id: 1, name: '2026 Q1' });
+    expect(await seasonOn(Date.UTC(2026, 3, 1))).toMatchObject({ id: 2, name: '2026 Q2' });
+    expect(await seasonOn(T0)).toEqual(Q4);
+    expect(await seasonOn(Date.UTC(2027, 0, 1))).toMatchObject({ id: 5, name: '2027 Q1', startsAt: Q4.endsAt });
   });
 });
 
 describe('the ladder', () => {
   const ladder = async (who: Player, query = ''): Promise<LadderPage> =>
     (await who.call('GET', `/ladder${query}`)).body as LadderPage;
+  const bytes = (a: string, b: string): number => Buffer.compare(Buffer.from(a, 'utf8'), Buffer.from(b, 'utf8'));
 
-  it('needs a session, and is an empty list with its season before anyone has played', async () => {
+  it('needs a session, and is an empty list with the current season before anyone has played', async () => {
     expect(await server.browser().rest('GET', '/ladder')).toEqual({ status: 401, body: error('UNAUTHENTICATED') });
     const guest = await player();
-    const page = await ladder(guest);
-    expect(page).toEqual({
-      season: { id: 1, name: 'Season 1', startsAt: expect.any(Number), endsAt: expect.any(Number) },
-      entries: [],
-    });
-    expect(page.season.startsAt).toBeLessThan(Date.now());
-    expect(page.season.endsAt).toBeGreaterThan(Date.now());
-    // The config names the same season, but the ladder does not lean on it.
-    expect((await guest.call('GET', '/config')).body).toMatchObject({ season: page.season });
+    expect(await ladder(guest)).toEqual({ season: Q4, entries: [] });
+    expect((await guest.call('GET', '/config')).body).toMatchObject({ season: Q4 });
   });
 
-  it('lists everyone with a rating, best first, as public players: no username anywhere', async () => {
-    const players = await rankedTable();
-    await until(() => players.every((p) => framesOf(p.socket, 'game.over').length > 0), 'the game ends');
+  it('lists everyone with a ranked game as public players, best first and ties by the bytes of the name', async () => {
+    // Two tables, so that two accounts end on every value; names whose byte order is not the alphabet's.
+    const one = await rankedTable(['anne', 'Zed', 'Émile', 'kidd']),
+      two = await rankedTable(['Anne', 'zed', 'emile', 'Kidd']);
+    await played([...one, ...two]);
     const page = await ladder(await player());
+    expect(page.season).toEqual(Q4);
     expect(page.next).toBeUndefined();
-    expect(page.entries.map((e) => e.rank)).toEqual([1, 2, 3, 4]);
-    const values = page.entries.map((e) => e.rating.value);
-    expect(values).toEqual(values.toSorted((a, b) => b - a));
-    expect(page.entries.map((e) => e.user.name).toSorted()).toEqual(NAMES.toSorted());
-    for (const entry of page.entries) {
+    expect(page.entries.map((e) => e.rank)).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
+    for (const [i, entry] of page.entries.entries()) {
       expect(Object.keys(entry).toSorted()).toEqual(['rank', 'rating', 'user']);
       expect(Object.keys(entry.user).toSorted()).toEqual(['color', 'id', 'name', 'tier']);
-      expect(Object.keys(entry.rating).toSorted()).toEqual(['games', 'provisional', 'tier', 'value']);
+      expectShape(entry.rating, 1);
+      // A provisional account is listed, with the tier its rating has.
+      expect(entry.user.tier).toBe(entry.rating.tier);
+      const next = page.entries[i + 1];
+      if (!next) continue;
+      expect(entry.rating.value).toBeGreaterThanOrEqual(next.rating.value);
+      if (entry.rating.value === next.rating.value) expect(bytes(entry.user.name, next.user.name)).toBeLessThan(0);
     }
-    // The display names here happen to be the usernames; the word "username" and the guest flag are not on the wire.
-    expect(JSON.stringify(page)).not.toMatch(/username|guest|cooldown|stats/);
+    // There were ties to break, and upper case came before lower case in one of them.
+    const tied = page.entries.filter((e, i) => e.rating.value === page.entries[i + 1]?.rating.value);
+    expect(tied.length).toBeGreaterThan(0);
+    // No login name is on the wire, and nothing else of the account.
+    expect(JSON.stringify(page)).not.toMatch(/login_|username|guest|cooldown|stats/);
   });
 
-  it('pages with limit and after, and names the next page only while there is one', async () => {
+  it('pages by the user id of the last row, and keeps counting the ranks', async () => {
     const players = await rankedTable();
-    await until(() => players.every((p) => framesOf(p.socket, 'game.over').length > 0), 'the game ends');
+    await played(players);
     const viewer = players[0],
       all = await ladder(viewer);
-    const first = await ladder(viewer, '?limit=3');
-    expect(first.entries).toEqual(all.entries.slice(0, 3));
-    expect(first.next).toEqual(expect.any(String));
-    const second = await ladder(viewer, `?limit=3&after=${first.next}`);
-    expect(second.entries).toEqual(all.entries.slice(3));
-    expect(second.next).toBeUndefined();
-    expect((await ladder(viewer, '?season=1')).entries).toEqual(all.entries);
-    expect(await viewer.call('GET', '/ladder?season=2')).toEqual({ status: 404, body: error('NOT_FOUND') });
-    for (const query of ['?limit=0', '?limit=101', '?limit=x', '?after=-1', '?after=soon'])
+    const first = await ladder(viewer, '?limit=2');
+    expect(first.entries).toEqual(all.entries.slice(0, 2));
+    expect(first.next).toBe(all.entries[1].user.id);
+    const second = await ladder(viewer, `?limit=2&after=${first.next}`);
+    expect(second.entries).toEqual(all.entries.slice(2));
+    expect(second.entries.map((e) => e.rank)).toEqual([3, 4]);
+    // The last page names no next one: the field is absent, not null.
+    expect('next' in second).toBe(false);
+    expect((await ladder(viewer, '?limit=3')).next).toBe(all.entries[2].user.id);
+    expect((await ladder(viewer, `?season=${Q4.id}`)).entries).toEqual(all.entries);
+    // Any season but the current one cannot be asked for.
+    for (const season of ['3', '5', 'x', ''])
+      expect(await viewer.call('GET', `/ladder?season=${season}`)).toEqual({ status: 404, body: error('NOT_FOUND') });
+    // A limit out of range, and a cursor that is not a row of this ladder.
+    const stranger = (await (await player()).me()).user.id;
+    for (const query of [
+      '?limit=0',
+      '?limit=101',
+      '?limit=x',
+      '?limit=2.5',
+      '?after=',
+      '?after=2',
+      `?after=${stranger}`,
+    ])
       expect(await viewer.call('GET', `/ladder${query}`)).toEqual({ status: 400, body: error('VALIDATION') });
   });
 });

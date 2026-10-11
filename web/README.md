@@ -61,9 +61,11 @@ Node 22.18+, 24.11+ or 26+. Vite+ warns on other versions.
   It has private and public lobbies, bot seats, the deadlines of §5.6, accounts (register, login,
   logout, profile), the public lobby list, the casual queue with bot fill, and stats after a game.
   Its accounts live in the page's memory and are gone on reload. It has a ranked queue, a rating
-  change after a ranked game, a cooldown after a ranked leave and a ladder, with stand-in numbers:
-  one point up or down, one tier, every game a placement game, 15 minutes. The real rating model
-  is the server's. It has no emotes, no away detection and no bot takeover after the grace period,
+  change after a ranked game, a cooldown after a ranked leave and a ladder, following the rules of
+  `docs/protocol.md`: the tier bands, placement until the fifth game, the cooldown that doubles,
+  the season that is the UTC quarter. It does not rate: where the server runs Weng-Lin the mock
+  moves a rating by a fixed step per place, and it seats the first four in the ranked queue with no
+  skill window. It has no emotes, no away detection and no bot takeover after the grace period,
   and every page has a mock of its own: two tabs cannot meet in one lobby or one queue, so a ranked
   table never forms under `?mock`.
 - The real backend (`src/net/transport.ts`) asks `POST /api/v1/auth/guest` for a session once,

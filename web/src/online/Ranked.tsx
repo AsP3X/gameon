@@ -29,7 +29,14 @@ function useTimeLeft(online: Online, until: number | null): number | null {
   return until != null && until > now ? until - now : null;
 }
 
-const waitText = (ms: number): string => (ms < MINUTE_MS ? 'less than a minute' : `${Math.ceil(ms / MINUTE_MS)} min`);
+/** "14 min", "3 h 45 min", "24 h": a cooldown is minutes the first time and can be a day. Rounded up, so it never says too little. */
+export function waitText(ms: number): string {
+  if (ms < MINUTE_MS) return 'less than a minute';
+  const minutes = Math.ceil(ms / MINUTE_MS),
+    hours = Math.floor(minutes / 60),
+    rest = minutes % 60;
+  return [hours ? `${hours} h` : '', rest ? `${rest} min` : ''].filter(Boolean).join(' ');
+}
 
 export interface RankedSectionProps {
   online: Online;
@@ -118,7 +125,10 @@ export function RankedSection({ online, me, live, onLadder, onSignUp }: RankedSe
   );
 }
 
-const DAY = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+/** A season is a UTC calendar quarter, so its days are named in UTC: the same dates for everyone. */
+const DAY = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
+/** `endsAt` is the first millisecond of the next season: the last day of this one is the day before. */
+const seasonDays = (season: Season): string => `${DAY.format(season.startsAt)} – ${DAY.format(season.endsAt - 1)}`;
 
 type Ladder =
   | { state: 'loading' }
@@ -198,9 +208,7 @@ export function LadderScreen({ online, me, live, onBack }: LadderScreenProps) {
             <>
               <div className="season">
                 <b>{ladder.season.name}</b>
-                <small>
-                  {DAY.format(ladder.season.startsAt)} – {DAY.format(ladder.season.endsAt)}
-                </small>
+                <small>{seasonDays(ladder.season)}</small>
               </div>
               {ladder.entries.length === 0 ? (
                 <div className="notice" role="status">

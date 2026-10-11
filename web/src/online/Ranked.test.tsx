@@ -19,6 +19,7 @@ import type { Wire } from '../net/socket';
 import type { LadderEntry, LadderPage, Me, TableColor } from '../protocol/generated';
 import { session, ui } from '../tableview/state';
 import { OnlineScreens } from './OnlineScreens';
+import { waitText } from './Ranked';
 
 function seeded(seed: number): () => number {
   let a = seed >>> 0;
@@ -32,7 +33,8 @@ function seeded(seed: number): () => number {
 
 /** Midday, so the season's dates read the same in every time zone. */
 const NOW = Date.UTC(2026, 9, 31, 12);
-const COOLDOWN_MS = 10 * 60_000;
+/** What the first ranked leave of a season costs. The page does not know this number: it reads `cooldownUntil`. */
+const COOLDOWN_MS = 15 * 60_000;
 
 let host: HTMLDivElement;
 let root: Root | null = null;
@@ -65,6 +67,9 @@ async function click(selector: string): Promise<void> {
 }
 const press = (label: string): Promise<void> => clickOn(button(label), `"${label}"`);
 const sentOf = (t: string): typeof sent => sent.filter((m) => m.t === t);
+/** A rating number as the screens write it: whole, with a real minus sign. */
+const shown = (n: number): string => String(n).replace('-', '−');
+const signed = (n: number): string => (n > 0 ? `+${n}` : shown(n));
 
 /** A backend that writes down what the page sends over its socket. */
 function recording(innerBackend: Backend): Backend {
@@ -138,7 +143,6 @@ beforeEach(() => {
     timers: { bidMs: 300, playMs: 200, abilityMs: 200, trickEndMs: 60, roundEndMs: 100 },
     bot: { minMs: 20, maxMs: 40 },
     queueFillMs: 4000,
-    cooldownMs: COOLDOWN_MS,
   });
   sent = [];
   page = recording(server.browser());
@@ -169,8 +173,9 @@ describe('ranked, for a guest', () => {
     await click('[aria-label="Back"]');
     await press('Ladder');
     expect($('#online h2')?.textContent).toBe('Ladder');
-    expect($('#online .season b')?.textContent).toBe('Season 1');
-    expect($('#online .season small')?.textContent).toBe('1 Oct 2026 – 1 Jan 2027');
+    // The season is the server's: its name as sent, and its days, the last one being the day before `endsAt`.
+    expect($('#online .season b')?.textContent).toBe('2026 Q4');
+    expect($('#online .season small')?.textContent).toBe('1 Oct 2026 – 31 Dec 2026');
     expect($('#online .notice')?.textContent).toBe('Nobody is on the ladder yetPlay a ranked game to be the first.');
     expect(document.querySelector('#online .footbar')).toBeNull();
   });
@@ -237,7 +242,7 @@ describe('ranked, for an account', () => {
     expect((await me()).cooldownUntil).toBe(NOW + COOLDOWN_MS);
     const ranked = (): HTMLElement | null => $('#online [aria-label="Ranked"]');
     expect(ranked()?.querySelector('.notice')?.textContent).toBe(
-      'Ranked is closed for youYou left a ranked game. It opens again in 10 min.',
+      'Ranked is closed for youYou left a ranked game. It opens again in 15 min.',
     );
     expect(button('Find a ranked game').disabled).toBe(true);
     // A tap on the closed button reaches nobody: the page still has sent one ranked join, the first.
@@ -253,10 +258,15 @@ describe('ranked, for an account', () => {
     );
     expect(button('Find a ranked game').disabled).toBe(true);
     // The others played on meanwhile: the result reached the leaver as news, with the forfeit and the rating.
+    // The numbers are whatever the server made of it: the page shows them and works none out.
+    const after = (await me()).rating;
+    if (!after) throw new Error('The leave left no rating');
+    expect(after).toMatchObject({ games: 1, provisional: true });
+    expect(after.value).toBeLessThan(0);
     expect($('#online .notice.gold p')?.textContent).toBe(
-      'You left before the end. Final place: 4th of 4. It counts as a forfeit. Rating −1.',
+      `You left before the end. Final place: 4th of 4. It counts as a forfeit. Rating ${signed(after.value)}.`,
     );
-    expect(ranked()?.querySelector('.rating')?.textContent).toBe('−1DeckhandPlacement');
+    expect(ranked()?.querySelector('.rating')?.textContent).toBe(`${shown(after.value)}${after.tier}Placement`);
     expect(ranked()?.querySelector('.plate + p')?.textContent).toBe(
       'These are placement games. Your tier is not settled yet.',
     );
@@ -292,18 +302,26 @@ describe('ranked, for an account', () => {
     await settle();
     const rating = (await me()).rating;
     if (!rating) throw new Error('The game left no rating');
-    const won = rating.value > 0;
+    // The first game starts from 0, so the change is the new value. Up or down is the server's call.
+    const delta = rating.value,
+      value = shown(rating.value),
+      badge = `${value}${rating.tier}Placement`;
+    expect(rating).toMatchObject({ games: 1, provisional: true });
     expect($('#app .end-rating')?.hidden).toBe(false);
-    expect($('#app .end-rating')?.textContent).toBe(won ? 'Rating 0 → 1 +1 Placement' : 'Rating 0 → −1 −1 Placement');
-    expect($('#app .end-rating b:last-of-type')?.className).toBe(won ? 'num pos' : 'num neg');
+    expect($('#app .end-rating')?.textContent).toBe(`Rating 0 → ${value} ${signed(delta)} Placement`);
+    expect($('#app .end-rating b:last-of-type')?.className).toBe(
+      delta > 0 ? 'num pos' : delta < 0 ? 'num neg' : 'num zero',
+    );
+    // A ranked game is in the rating, not in the online record.
+    expect((await me()).stats.games).toBe(0);
 
     await click('[data-act="again"]');
     await settle();
     expect($('#online h2')?.textContent).toBe('Play online');
-    const value = won ? '1' : '−1';
-    expect($('#online [aria-label="Ranked"] .rating')?.textContent).toBe(`${value}DeckhandPlacement`);
+    expect($('#online [aria-label="Ranked"] .rating')?.textContent).toBe(badge);
     await press('Profile');
-    expect($('#online [aria-label="Ranked"] .rating')?.textContent).toBe(`${value}DeckhandPlacement`);
+    expect($('#online [aria-label="Ranked"] .rating')?.textContent).toBe(badge);
+    expect(texts('#online .stat')[0]).toBe('0Games');
     await click('[aria-label="Back"]');
 
     await press('Ladder');
@@ -315,7 +333,7 @@ describe('ranked, for an account', () => {
     const mine = rows.filter((li) => li.classList.contains('you'));
     expect(mine).toHaveLength(1);
     expect(mine[0].querySelector('.grow b')?.textContent).toBe('Anne');
-    expect(mine[0].querySelector('small')?.textContent).toBe('Deckhand · Placement · You');
+    expect(mine[0].querySelector('small')?.textContent).toBe(`${rating.tier} · Placement · You`);
     expect(mine[0].querySelector('b.num:last-child')?.textContent).toBe(value);
     // The ladder is public players: nobody's login name is on it.
     expect($('#online')?.textContent).not.toMatch(/_login/);
@@ -432,5 +450,21 @@ describe('the ladder, a page at a time', () => {
     await press('Show more');
     expect(document.querySelectorAll('#online .ladder li')).toHaveLength(2);
     online.dispose();
+  });
+});
+
+describe('how long a cooldown is said to last', () => {
+  it('counts minutes up, turns to hours when there are any, and never says less than there is', () => {
+    const MIN = 60_000;
+    expect(waitText(1)).toBe('less than a minute');
+    expect(waitText(MIN - 1)).toBe('less than a minute');
+    expect(waitText(MIN)).toBe('1 min');
+    expect(waitText(14 * MIN + 1)).toBe('15 min');
+    expect(waitText(59 * MIN)).toBe('59 min');
+    expect(waitText(60 * MIN)).toBe('1 h');
+    expect(waitText(3 * 60 * MIN + 44 * MIN + 1000)).toBe('3 h 45 min');
+    // The longest cooldown there is: a day.
+    expect(waitText(24 * 60 * MIN)).toBe('24 h');
+    expect(waitText(24 * 60 * MIN - 1)).toBe('24 h');
   });
 });
