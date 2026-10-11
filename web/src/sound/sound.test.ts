@@ -122,6 +122,44 @@ describe('recorded takes', () => {
     expect(sources(voices).map((v) => v.buffer)).toEqual([expect.stringMatching(/^take [0-3]$/)]);
   });
 
+  it('decodes ahead of the first tap where the browser can, so the first sound is already a take', async () => {
+    let offline = 0;
+    vi.stubGlobal(
+      'OfflineAudioContext',
+      class {
+        constructor() {
+          offline++;
+        }
+        decodeAudioData = (file: ArrayBuffer) => decodeFile(file);
+      },
+    );
+    const Sound = await mixer();
+    Sound.samples('cardPlay', files());
+    await settle();
+    expect(offline).toBe(1);
+    expect(made).toEqual([]); // still no audio graph: that waits for the first sound
+    const voices = playCard(Sound);
+    expect(synthesised(voices)).toBe(false);
+    expect(sources(voices).map((v) => v.buffer)).toEqual([expect.stringMatching(/^take [0-3]$/)]);
+  });
+
+  it('waits for the audio graph where an offline context cannot be made', async () => {
+    vi.stubGlobal(
+      'OfflineAudioContext',
+      class {
+        constructor() {
+          throw new Error('not here');
+        }
+      },
+    );
+    const Sound = await mixer();
+    Sound.samples('cardPlay', files());
+    await settle();
+    expect(synthesised(playCard(Sound))).toBe(true);
+    await settle();
+    expect(synthesised(playCard(Sound))).toBe(false);
+  });
+
   it('decodes takes that arrive after audio is unlocked', async () => {
     const Sound = await mixer();
     Sound.unlock();
@@ -180,6 +218,36 @@ describe('recorded takes', () => {
     Sound.samples('cardPlay', []);
     await settle();
     expect(synthesised(playCard(Sound))).toBe(true);
+  });
+
+  it('gives each sound its own takes and its own place in the mix', async () => {
+    const Sound = await mixer();
+    Sound.samples('cardPlay', files());
+    Sound.samples('tap', [new Uint8Array([7]).buffer]);
+    Sound.unlock();
+    await settle();
+    const voicesOf = (name: 'tap' | 'cardPlay' | 'select'): FakeNode[] => {
+      vi.advanceTimersByTime(50);
+      const before = made.length;
+      Sound.play(name);
+      return made.slice(before);
+    };
+    const tap = voicesOf('tap');
+    expect(sources(tap).map((v) => v.buffer)).toEqual(['take 7']);
+    expect(synthesised(tap)).toBe(false);
+    // [the sound's bus, the take's own gain, its send to the room]: the tap sits lower than the card.
+    expect(tap.filter((v) => v.kind === 'gain').map((v) => v.gain.value)).toEqual([2.4, 0.32, 0.05]);
+    expect(
+      voicesOf('cardPlay')
+        .filter((v) => v.kind === 'gain')
+        .map((v) => v.gain.value),
+    ).toEqual([1, 1, 0.08]);
+    for (let k = 0; k < 20; k++) {
+      const rate = sources(voicesOf('tap'))[0]?.playbackRate.value ?? 0;
+      expect(Math.abs(rate - 1)).toBeLessThanOrEqual(0.04);
+    }
+    // A sound without takes is not touched by the takes of others.
+    expect(synthesised(voicesOf('select'))).toBe(true);
   });
 
   it('plays nothing when sound is off', async () => {

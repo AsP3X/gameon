@@ -36,7 +36,7 @@ let rig: Rig | null = null;
 let amb: Ambience | null = null;
 let bus: GainNode | null = null;
 const last: Partial<Record<SoundName, number>> = {};
-/** Recorded takes as they were handed in, still encoded: decoding needs the audio graph. */
+/** Recorded takes that were handed in but could not be decoded yet, still encoded (see decoder). */
 const waiting: Partial<Record<SoundName, ArrayBuffer[]>> = {};
 /** The decoded takes of a sound, and which one it played last. */
 const takes: Partial<Record<SoundName, AudioBuffer[]>> = {};
@@ -78,12 +78,27 @@ function boot(): Rig | null {
   } catch {
     rig = null;
   }
-  if (rig) for (const name of Object.keys(waiting) as SoundName[]) decode(rig, name);
+  if (rig) for (const name of Object.keys(waiting) as SoundName[]) decode(rig.ctx, name);
   return rig;
 }
 
+/**
+ * What can decode a take right now. Before the first tap the page may not start audio, but an
+ * offline context may decode: so the takes are ready when the first sound is asked for. A browser
+ * without one decodes when the audio graph is built.
+ */
+function decoder(): BaseAudioContext | null {
+  if (rig) return rig.ctx;
+  if (typeof OfflineAudioContext === 'undefined') return null;
+  try {
+    return new OfflineAudioContext(1, 1, 44100);
+  } catch {
+    return null;
+  }
+}
+
 /** Decode the takes that are waiting for this sound. One that cannot be decoded is left out. */
-function decode(r: Rig, name: SoundName): void {
+function decode(ctx: BaseAudioContext, name: SoundName): void {
   const files = waiting[name];
   if (!files) return;
   delete waiting[name];
@@ -91,7 +106,7 @@ function decode(r: Rig, name: SoundName): void {
   takes[name] = ready;
   for (const file of files) {
     try {
-      void r.ctx.decodeAudioData(file).then(
+      void ctx.decodeAudioData(file).then(
         (buffer) => {
           ready.push(buffer);
         },
@@ -445,8 +460,10 @@ interface TakeMix {
   room: number;
   drift: number;
 }
-/* The card takes are stored at the loudness the cardPlay recipe renders, so they play as they are. */
+/* Every take is stored at the same loudness (web README, "Recorded sounds"). `v` puts it where the
+   sound's recipe sat in the mix: the card recipe renders about that loud, the tap a third of it. */
 const TAKES = {
+  tap: { v: 0.32, room: 0.05, drift: 0.04 },
   cardPlay: { v: 1, room: 0.08, drift: 0.06 },
 } satisfies Partial<Record<SoundName, TakeMix>>;
 /** The sounds that can be given recorded takes. */
@@ -587,11 +604,12 @@ export const Sound = {
   },
   /**
    * Give a sound recorded takes to play in place of its recipe: encoded audio files, as fetched.
-   * They are decoded once audio is unlocked; until one is ready the recipe plays.
+   * Until one is decoded the recipe plays.
    */
   samples(name: SampledSound, files: ArrayBuffer[]): void {
     waiting[name] = files;
-    if (rig) decode(rig, name);
+    const ctx = decoder();
+    if (ctx) decode(ctx, name);
   },
   /** Every sound there is. */
   names: (): SoundName[] => Object.keys(LIB) as SoundName[],

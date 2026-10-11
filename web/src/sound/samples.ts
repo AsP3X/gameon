@@ -8,10 +8,14 @@ import cardPlayA from './samples/card-play-a.wav';
 import cardPlayB from './samples/card-play-b.wav';
 import cardPlayC from './samples/card-play-c.wav';
 import cardPlayD from './samples/card-play-d.wav';
+import tapA from './samples/tap-a.wav';
+import tapB from './samples/tap-b.wav';
+import tapC from './samples/tap-c.wav';
 import { Sound } from './sound';
 import type { SampledSound } from './sound';
 
 const FILES: Record<SampledSound, string[]> = {
+  tap: [tapA, tapB, tapC],
   cardPlay: [cardPlayA, cardPlayB, cardPlayC, cardPlayD],
 };
 
