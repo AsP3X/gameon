@@ -1,0 +1,27 @@
+# Nginx Proxy Manager overlay: no host ports. The API and the page join proxy-network.
+#
+#   docker network create proxy-network
+#   PROXY_MODE=npm ./deploy.sh
+#
+# NPM proxy hosts:
+#   web → http://skt-web:80
+#   api → http://skt-api:8080    only if a client should reach the API without the page
+#
+# Set SKT_PUBLIC_ORIGIN to the page's origin (https://tavern.example) and
+# SKT_SECURE_COOKIE=1 when that origin is https.
+
+services:
+  api:
+    networks:
+      - skt-internal
+      - proxy-network
+
+  web:
+    networks:
+      - skt-internal
+      - proxy-network
+
+networks:
+  proxy-network:
+    name: proxy-network
+    external: true

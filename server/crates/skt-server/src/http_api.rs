@@ -124,11 +124,31 @@ async fn drive(
 
 fn with_cookie(body: Json<Me>, token: &str) -> Response {
     let mut response = body.into_response();
-    let cookie = format!("skt_session={token}; HttpOnly; SameSite=Strict; Path=/; Max-Age=2592000");
+    let cookie = session_cookie_header(token, secure_cookie());
     if let Ok(value) = HeaderValue::from_str(&cookie) {
         response.headers_mut().insert(header::SET_COOKIE, value);
     }
     response
+}
+
+/// `SKT_SECURE_COOKIE=1` adds `Secure`. Leave it unset for local `http`.
+fn secure_cookie() -> bool {
+    matches!(
+        std::env::var("SKT_SECURE_COOKIE")
+            .ok()
+            .as_deref()
+            .map(str::trim),
+        Some("1" | "true" | "TRUE" | "True")
+    )
+}
+
+fn session_cookie_header(token: &str, secure: bool) -> String {
+    let mut cookie =
+        format!("skt_session={token}; HttpOnly; SameSite=Strict; Path=/; Max-Age=2592000");
+    if secure {
+        cookie.push_str("; Secure");
+    }
+    cookie
 }
 
 fn session_cookie(headers: &HeaderMap) -> Option<String> {
@@ -141,4 +161,17 @@ fn session_cookie(headers: &HeaderMap) -> Option<String> {
 
 fn header_str(headers: &HeaderMap, name: header::HeaderName) -> Option<&str> {
     headers.get(name).and_then(|value| value.to_str().ok())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::session_cookie_header;
+
+    #[test]
+    fn the_local_cookie_is_not_secure_and_the_https_cookie_is() {
+        let plain = session_cookie_header("abc", false);
+        assert!(plain.contains("HttpOnly"));
+        assert!(!plain.contains("Secure"));
+        assert!(session_cookie_header("abc", true).ends_with("; Secure"));
+    }
 }
