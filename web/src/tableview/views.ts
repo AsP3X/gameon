@@ -9,6 +9,7 @@ import type { AbilityUsed, Card, CardId, GameResult, RatingChange, Seat } from '
 import { avatar, cardBack, cardHTML, ICON, mascot } from './art';
 import type { FaceCard } from './art';
 import { esc, initial, sgn, toneOf, whole } from './dom';
+import { layout, tapWord } from './layout';
 import {
   COLORS,
   handHidden,
@@ -58,7 +59,7 @@ export function homeView(): string {
       <button class="icon-btn" data-act="soundSheet" aria-label="Sound settings">${prefs.muted ? ICON.mute : ICON.sound}</button></div>
     <div class="hero">${mascot('wink')}
       <div class="logo">Skull <span>King</span></div>
-      <p class="muted tagline">The pirate trick-taking game · bots or friends on one phone</p>
+      <p class="muted tagline">The pirate trick-taking game · bots or friends on one ${layout() === 'phone' ? 'phone' : 'screen'}</p>
       <div class="fan" aria-hidden="true">${fanCards.map((c, k) => `<div style="--r:${(k - 2) * 8}deg;--y:${Math.abs(k - 2) * 4}px">${cardHTML(c)}</div>`).join('')}</div>
     </div>
     <div class="home-actions stagger">
@@ -309,7 +310,7 @@ function abilityPanel(v: TableView): string {
     case 'smuggler': {
       const k = (p.drawn ?? []).length,
         picked = ui.discard.length;
-      return `<p class="ask">Smuggler: you drew ${k} (gold edge). Tap ${k} cards to throw back.</p>
+      return `<p class="ask">Smuggler: you drew ${k} (gold edge). ${tapWord()} ${k} cards to throw back.</p>
         <button class="btn ${picked === k ? 'wake' : ''}" data-act="ability" ${picked === k ? '' : 'disabled'}>${picked === k ? 'Discard these' : `Pick ${k - picked} more`}</button>`;
     }
     case 'gambler':
@@ -372,11 +373,15 @@ function actionsView(v: TableView): string {
       myTurn = v.phase === 'playing' && v.turn === me && !ui.waiting;
     if (myTurn && c && c.kind === 'tigress')
       return `<div class="btns"><button class="btn red ${ui.justSel ? 'wake' : ''}" data-act="play" data-as="pirate">Play as Pirate</button><button class="btn ghost" data-act="play" data-as="escape">Play as Escape</button></div>`;
+    const tap = tapWord(),
+      enter = tap === 'Click' ? ', or press Enter' : '';
     if (myTurn)
       return hint(
-        c ? `Tap <b>${esc(Rules.cardName(c, v.cfg))}</b> again to play it` : 'Your turn · tap a card to pick it',
+        c
+          ? `${tap} <b>${esc(Rules.cardName(c, v.cfg))}</b> again to play it${enter}`
+          : `Your turn · ${tap.toLowerCase()} a card to pick it`,
       );
-    return hint(c ? 'Lined up · tap it again on your turn' : '');
+    return hint(c ? `Lined up · ${tap.toLowerCase()} it again on your turn` : '');
   }
   if (ui.waiting) return `<button class="btn" disabled>Locked in</button>`;
   if (handHidden(v) && v.phase !== 'roundEnd') return hint('Hand hidden · pass-and-play');
@@ -452,13 +457,21 @@ export function gameView(): string {
         })
         .join('');
   const canPeekLast = v.lastTrick && (v.phase === 'playing' || v.phase === 'ability');
-  return `<div class="game">
-    <div class="g-top"><button class="icon-btn" data-act="home" aria-label="${session.online ? 'Leave table' : 'Leave table (game is saved)'}">${ICON.x}</button>
-      <div class="bar grow" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(pct)}"><i style="width:${from}%" data-to="${pct}"></i></div>
-      <button class="icon-btn" data-act="board" aria-label="Scoreboard">${ICON.table}</button></div>
-    <div class="g-info"><span class="pill blue">Round ${v.round + 1} of ${v.rounds}</span><span class="pill soft">${v.cards} ${v.cards === 1 ? 'card' : 'cards'}</span>
+  // From the tablet layout up the round pills share the top bar, and a desk has the rail. The phone
+  // layout below is the legacy page's markup to the letter.
+  const lay = layout(),
+    wide = lay !== 'phone',
+    railed = lay === 'desk' && ui.rail;
+  const info = `<div class="g-info"><span class="pill blue">Round ${v.round + 1} of ${v.rounds}</span><span class="pill soft">${v.cards} ${v.cards === 1 ? 'card' : 'cards'}</span>
       ${v.phase === 'playing' || trickEnd ? `<span class="pill soft">Trick ${Math.min(v.cards, doneTricks + (trickEnd ? 0 : 1))} of ${v.cards}</span>` : ''}
-      ${R.wager[me] ? `<span class="pill gold">Bet ${R.wager[me]}</span>` : ''}</div>
+      ${R.wager[me] ? `<span class="pill gold">Bet ${R.wager[me]}</span>` : ''}</div>`;
+  // Wide, the card size is the stylesheet's and the overlap is worked out there from the room the hand has.
+  const handStyle = wide ? `--n:${hand.length};--gaps:${Math.max(1, hand.length - 1)}` : `--cw:${cw}px;--ov:${ov}px`;
+  return `<div class="game${railed ? ' railed' : ''}">
+    <div class="g-top"><button class="icon-btn" data-act="home" aria-label="${session.online ? 'Leave table' : 'Leave table (game is saved)'}">${ICON.x}</button>${wide ? info : ''}
+      <div class="bar grow" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(pct)}"><i style="width:${from}%" data-to="${pct}"></i></div>
+      <button class="icon-btn" data-act="board" aria-label="Scoreboard"${lay === 'desk' ? ` aria-pressed="${ui.rail}"` : ''}>${ICON.table}</button></div>
+    ${wide ? '' : info}
     <div class="seats">${seats}</div>
     <div class="felt">
       ${ls ? `<span class="pill soft lead pop"><i class="sdot s-${ls}"></i>Follow ${Rules.SUIT_NAME[ls]}</span>` : ''}
@@ -469,9 +482,24 @@ export function gameView(): string {
     <div class="mebar ${myTurn || (v.phase === 'ability' && v.pending?.seat === me) ? 'turn' : ''} ${res && res.winner === me ? 'won' : ''} ${ui.bump === me ? 'bump' : ''}">${avatar(meP, '', `seat-${me}`)}${deadlineRing(v, me)}
       <div class="grow"><div class="pname">${esc(meP.name)}${me === v.dealer ? ' <span class="pill gold" style="padding:0 6px">Dealer</span>' : ''}</div><span class="muted num" style="font-size:14px">${tot[me]} pts</span></div>
       ${seatBid(v, me)}</div>
-    <div class="hand ${hidden ? 'hidden' : ''} ${myTurn && !ui.waiting ? 'myturn' : ''}" style="--cw:${cw}px;--ov:${ov}px">${handHtml}</div>
-    <div class="actions">${actionsView(v)}</div>
+    <div class="hand ${hidden ? 'hidden' : ''} ${myTurn && !ui.waiting ? 'myturn' : ''}" style="${handStyle}">${handHtml}</div>
+    <div class="actions">${actionsView(v)}</div>${railed ? railView(v) : ''}
   </div>`;
+}
+/**
+ * Desk layout: the scoreboard and the last trick, always in view beside the table. They are the
+ * two sheets' own bodies. With six pirates or more the stylesheet keeps the rows short and the
+ * round table to its points, and a button opens the whole scoreboard.
+ */
+function railView(v: TableView): string {
+  const many = v.seats.length > 5,
+    shown = v.lastTrick != null && v.phase !== 'bidding' && v.phase !== 'roundEnd';
+  return `<aside class="rail${many ? ' many' : ''}${ui.just === 'rail' ? ' in' : ''}" aria-label="Scoreboard and last trick">
+    <span class="label">Scoreboard</span>${boardBody(scoreView(), false)}
+    ${many ? '<button class="btn ghost" data-act="fullBoard">Full scoreboard</button>' : ''}
+    <span class="label rail-last">Last trick</span>
+    <div class="rail-trick">${shown ? lastBody(v) : '<p class="muted">No trick played yet this round.</p>'}</div>
+  </aside>`;
 }
 export function curtainView(): string {
   const v = tableView(),
@@ -534,7 +562,8 @@ export function resultsSheet(): string {
     <button class="btn ${tone === 'bad' ? 'red' : tone === 'mid' ? 'gold' : ''} wake late" data-act="next">${last ? 'See final scores' : 'Next round'}</button>${note}
   </div></div>`;
 }
-export function boardSheet(v: ScoreView = scoreView(), editable = false): string {
+/** The standings and the table of rounds: the body of the scoreboard sheet, and of the rail at a desk. */
+function boardBody(v: ScoreView, editable: boolean): string {
   const n = v.seats.length,
     tot = Rules.totals(v.log, v.cfg, n),
     run = fill(n, 0);
@@ -552,27 +581,35 @@ export function boardSheet(v: ScoreView = scoreView(), editable = false): string
             .join('')}</tr>`,
     )
     .join('');
-  return `<div class="sheet-scrim" data-act="closeSheet"></div><div class="sheet" role="dialog" aria-label="Scoreboard"><div class="in">
-    <div class="row"><h2 class="grow">Scoreboard</h2><button class="icon-btn" data-act="closeSheet" aria-label="Close">${ICON.x}</button></div>
-    <div class="lb">${rank.map((x, k) => `<div class="li"><span class="rank ${k < 3 ? 'r' + (k + 1) : ''}">${k + 1}</span>${avatar(v.seats[x.i], 'sm')}<span class="grow pname">${esc(v.seats[x.i].name)}</span><span class="total">${x.t}</span></div>`).join('')}</div>
+  return `<div class="lb">${rank.map((x, k) => `<div class="li"><span class="rank ${k < 3 ? 'r' + (k + 1) : ''}">${k + 1}</span>${avatar(v.seats[x.i], 'sm')}<span class="grow pname">${esc(v.seats[x.i].name)}</span><span class="total">${x.t}</span></div>`).join('')}</div>
     ${
       body
         ? `<div class="tablewrap"><table><thead><tr><th>Rd</th>${v.seats.map((p) => `<th>${esc(p.name)}</th>`).join('')}</tr></thead><tbody>${body}</tbody></table></div>
       <p class="muted" style="font-size:13px">${editable ? 'Tap a round to fix it. ' : ''}Each cell: round points, bid/won, ★ bonus, $ bet, running total.</p>`
         : '<p class="muted">Scores appear after the first round.</p>'
-    }
+    }`;
+}
+export function boardSheet(v: ScoreView = scoreView(), editable = false): string {
+  return `<div class="sheet-scrim" data-act="closeSheet"></div><div class="sheet" role="dialog" aria-label="Scoreboard"><div class="in">
+    <div class="row"><h2 class="grow">Scoreboard</h2><button class="icon-btn" data-act="closeSheet" aria-label="Close">${ICON.x}</button></div>
+    ${boardBody(v, editable)}
   </div></div>`;
 }
-export function lastSheet(): string {
-  const v = tableView(),
-    lt = v.lastTrick;
+/** The cards of the last trick with who played each, and who took it: the body of the sheet and of the rail. */
+function lastBody(v: TableView): string {
+  const lt = v.lastTrick;
   if (!lt) return '';
   const r = lt.result,
     abil = { abilities: v.cfg.abilities };
+  return `<div class="cardrow">${lt.plays.map((p, k) => `<div class="slot"><div class="tc ${k === r.winIndex ? 'win' : ''}">${cardHTML(v.deck[p.card], { as: p.as, ...abil })}</div>${avatar(v.seats[p.seat], 'xs')}</div>`).join('')}</div>
+    <p style="text-align:center">${r.winner == null ? 'Nobody won it.' : `${who(v, r.winner)} won it.`}</p>`;
+}
+export function lastSheet(): string {
+  const v = tableView();
+  if (!v.lastTrick) return '';
   return `<div class="sheet-scrim" data-act="closeSheet"></div><div class="sheet" role="dialog" aria-label="Last trick"><div class="in">
     <div class="row"><h2 class="grow">Last trick</h2><button class="icon-btn" data-act="closeSheet" aria-label="Close">${ICON.x}</button></div>
-    <div class="cardrow">${lt.plays.map((p, k) => `<div class="slot"><div class="tc ${k === r.winIndex ? 'win' : ''}">${cardHTML(v.deck[p.card], { as: p.as, ...abil })}</div>${avatar(v.seats[p.seat], 'xs')}</div>`).join('')}</div>
-    <p style="text-align:center">${r.winner == null ? 'Nobody won it.' : `${who(v, r.winner)} won it.`}</p>
+    ${lastBody(v)}
   </div></div>`;
 }
 /**

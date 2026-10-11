@@ -1,0 +1,838 @@
+/* The tablet, desk and wide layouts (design/web.pen, "Responsive · layout rules").
+   Under 700 px nothing here applies and the page is the phone layout of tavern.css.
+
+     700  tablet   seats sit on the felt as plates, sheets are dialogs, the bid and the ability
+                   choices move into the felt
+     1024 desk     the scoreboard and the last trick get a rail, your seat is a plate left of the hand
+     1280 / 1728   the same layout with larger cards and plates
+
+   The two widths that markup depends on are also in tableview/layout.ts. Tokens only; every
+   animation moves with transform, translate or opacity, and the reduced-motion rule at the end of
+   tavern.css switches all of them off. */
+
+/* ================================================================== tablet and up */
+@media (min-width: 700px) {
+  /* ---------- the table: one grid ----------
+     columns  1 left seats | 2-7 the middle, in six parts so two or three top seats can share it |
+              8 right seats | 9 the rail (desk, when open)
+     rows     1 top bar | 2 top seats | 3 room | 4 trick and status | 5 bid or choice | 6 room |
+              7 your strip (tablet) | 8 hand | 9 hint
+     The felt is drawn behind rows 2 to 6; what sits on it is placed in those rows. */
+  .game {
+    --edge: 24px;
+    --sw: 140px;
+    --av: 56px;
+    --cw: 112px;
+    --tw-wide: 96px;
+    --seat-fs: 15px;
+    --status-fs: 20px;
+    --inset: 16px;
+    max-width: 1920px;
+    padding: 10px var(--edge) 20px;
+    display: grid;
+    gap: 0 12px;
+    grid-template-columns: calc(var(--sw) + var(--inset)) repeat(6, minmax(0, 1fr)) calc(var(--sw) + var(--inset));
+    grid-template-rows: auto auto minmax(8px, 1fr) auto auto minmax(8px, 1fr) auto auto minmax(26px, auto);
+  }
+  .game::before {
+    content: '';
+    grid-column: 1 / 9;
+    grid-row: 2 / 7;
+    border-radius: 28px;
+    background: var(--felt);
+    border: 2px solid var(--line);
+    pointer-events: none;
+  }
+  [data-enter] .game::before {
+    animation: fade 0.4s both;
+  }
+
+  /* top bar: leave, the round pills, progress, scoreboard */
+  .g-top {
+    grid-column: 1 / -1;
+    grid-row: 1;
+    gap: 12px;
+    min-height: 48px;
+    margin-bottom: 10px;
+  }
+  .g-top .g-info {
+    flex: none;
+    flex-wrap: nowrap;
+  }
+  .g-top .pill {
+    font-size: 14px;
+    padding-inline: 11px;
+  }
+
+  /* ---------- seats: plates on the felt, clockwise from your left ---------- */
+  .seats {
+    display: contents;
+  }
+  .seat {
+    width: var(--sw);
+    padding: 10px 8px;
+    gap: 3px;
+    border-radius: 16px;
+    border-color: var(--line);
+    background: var(--card);
+    align-self: center;
+  }
+  .seat > .avatar,
+  .mebar > .avatar {
+    width: var(--av);
+    height: var(--av);
+    font-size: calc(var(--av) * 0.43);
+    box-shadow: inset 0 calc(var(--av) / -10.5) 0 rgba(0, 0, 0, 0.18);
+  }
+  .seat .sname {
+    font-size: var(--seat-fs);
+  }
+  .seat .bidline,
+  .seat .ready,
+  .mebar .bidline,
+  .mebar .ready {
+    font-size: calc(var(--seat-fs) - 1px);
+  }
+  .seat .sscore {
+    font-size: calc(var(--seat-fs) - 2px);
+  }
+  .seat .pips i,
+  .mebar .pips i {
+    width: 10px;
+    height: 10px;
+  }
+  .seat .pips i.zero,
+  .mebar .pips i.zero {
+    width: 14px;
+    height: 14px;
+  }
+  .seat .thinking,
+  .mebar .thinking {
+    height: calc(var(--seat-fs) * 1.3);
+  }
+  /* online: the clock ring and the presence tag keep their place on the larger avatar */
+  .seat .ring,
+  .mebar .ring {
+    width: calc(var(--av) * 50 / 42);
+    height: calc(var(--av) * 50 / 42);
+  }
+  .seat .ring {
+    top: calc(10px - var(--av) * 4 / 42);
+    margin-left: calc(var(--av) * -25 / 42);
+  }
+  .seat .presence {
+    top: calc(var(--av));
+  }
+  .seat .dealer {
+    top: 6px;
+    right: 10px;
+  }
+  .seat .human-tag {
+    top: 6px;
+    left: 10px;
+  }
+
+  /* where a seat sits depends on how many opponents there are: :nth-child(k):nth-last-child(m - k + 1)
+     is the k-th of m. */
+  /* left edge */
+  .seat:is(
+    :nth-child(1):nth-last-child(2),
+    :nth-child(1):nth-last-child(3),
+    :nth-child(1):nth-last-child(4),
+    :nth-child(1):nth-last-child(5),
+    :nth-child(1):nth-last-child(6),
+    :nth-child(2):nth-last-child(5),
+    :nth-child(1):nth-last-child(7),
+    :nth-child(2):nth-last-child(6)
+  ) {
+    grid-column: 1;
+    grid-row: 3 / 7;
+    justify-self: end;
+  }
+  /* right edge */
+  .seat:is(
+    :nth-child(2):nth-last-child(1),
+    :nth-child(3):nth-last-child(1),
+    :nth-child(4):nth-last-child(1),
+    :nth-child(5):nth-last-child(1),
+    :nth-child(5):nth-last-child(2),
+    :nth-child(6):nth-last-child(1),
+    :nth-child(6):nth-last-child(2),
+    :nth-child(7):nth-last-child(1)
+  ) {
+    grid-column: 8;
+    grid-row: 3 / 7;
+    justify-self: start;
+  }
+  /* two on an edge: the one nearer to you sits lower */
+  .seat:is(
+    :nth-child(1):nth-last-child(6),
+    :nth-child(1):nth-last-child(7),
+    :nth-child(6):nth-last-child(1),
+    :nth-child(7):nth-last-child(1)
+  ) {
+    translate: 0 calc(50% + 6px);
+  }
+  .seat:is(
+    :nth-child(2):nth-last-child(5),
+    :nth-child(2):nth-last-child(6),
+    :nth-child(5):nth-last-child(2),
+    :nth-child(6):nth-last-child(2)
+  ) {
+    translate: 0 calc(-50% - 6px);
+  }
+  /* top edge: one in the middle */
+  .seat:is(:nth-child(1):nth-last-child(1), :nth-child(2):nth-last-child(2)) {
+    grid-column: 2 / 8;
+    grid-row: 2;
+    justify-self: center;
+    margin-top: var(--inset);
+  }
+  /* top edge: two, side by side */
+  .seat:is(:nth-child(2):nth-last-child(3), :nth-child(3):nth-last-child(4)) {
+    grid-column: 2 / 5;
+    grid-row: 2;
+    justify-self: end;
+    margin-top: var(--inset);
+  }
+  .seat:is(:nth-child(3):nth-last-child(2), :nth-child(4):nth-last-child(3)) {
+    grid-column: 5 / 8;
+    grid-row: 2;
+    justify-self: start;
+    margin-top: var(--inset);
+  }
+  /* top edge: three */
+  .seat:is(:nth-child(2):nth-last-child(4), :nth-child(3):nth-last-child(5)) {
+    grid-column: 2 / 4;
+    grid-row: 2;
+    justify-self: end;
+    margin-top: var(--inset);
+  }
+  .seat:is(:nth-child(3):nth-last-child(3), :nth-child(4):nth-last-child(4)) {
+    grid-column: 4 / 6;
+    grid-row: 2;
+    justify-self: center;
+    margin-top: var(--inset);
+  }
+  .seat:is(:nth-child(4):nth-last-child(2), :nth-child(5):nth-last-child(3)) {
+    grid-column: 6 / 8;
+    grid-row: 2;
+    justify-self: start;
+    margin-top: var(--inset);
+  }
+  [data-enter] .seat {
+    animation: rise 0.45s var(--ease-out) both;
+  }
+  [data-enter] .seat:nth-child(2) {
+    animation-delay: 60ms;
+  }
+  [data-enter] .seat:nth-child(3) {
+    animation-delay: 120ms;
+  }
+  [data-enter] .seat:nth-child(n + 4) {
+    animation-delay: 180ms;
+  }
+
+  /* ---------- the middle of the felt: the trick, the status line, then the bid or the choice ---------- */
+  .felt,
+  .game:has(.bidsheet) .felt {
+    grid-column: 2 / 8;
+    grid-row: 4;
+    display: flex;
+    min-height: 0;
+    overflow: visible;
+    padding: 8px 0;
+    gap: 14px;
+    border: 0;
+    border-radius: 0;
+    background: none;
+  }
+  .game .trick,
+  .game:has(.bidsheet) .trick {
+    --tw: var(--tw-wide);
+    gap: 14px;
+    min-height: calc(var(--tw-wide) * 1.4 + 32px);
+  }
+  .game:has(.bidsheet) .trick {
+    min-height: 0;
+  }
+  .trick .slot {
+    gap: 6px;
+  }
+  .trick .slot .avatar.xs {
+    width: 26px;
+    height: 26px;
+    font-size: 12px;
+  }
+  .felt .empty,
+  .game:has(.bidsheet) .felt .empty {
+    display: block;
+    font-size: 15px;
+  }
+  .status {
+    font-size: var(--status-fs);
+    min-height: calc(var(--status-fs) * 1.4);
+  }
+  /* the suit to follow: above the trick, where no seat can be in its way */
+  .lead {
+    position: static;
+    order: -1;
+  }
+  .lastbtn {
+    top: -4px;
+    right: -8px;
+  }
+  .actions,
+  .actions:has(.bidsheet) {
+    position: static;
+    grid-column: 2 / 8;
+    grid-row: 5;
+    justify-self: center;
+    width: min(100%, 520px);
+    margin: 0;
+    padding: 0 0 var(--inset);
+    z-index: auto;
+  }
+  .actions:empty {
+    display: none;
+  }
+  /* a hint is about the hand, and stays under it */
+  .actions:has(> .hint) {
+    grid-row: 9;
+    width: auto;
+    justify-self: stretch;
+    padding: 4px 0 0;
+  }
+  .actions .ask {
+    font-size: 16px;
+  }
+  /* the bid: a panel on the felt in place of the sheet under the hand */
+  .game:has(.bidsheet) {
+    max-height: none;
+  }
+  .bidsheet {
+    margin: 0;
+    padding: 16px 20px 18px;
+    border: 2px solid var(--line);
+    border-radius: 22px;
+    box-shadow: none;
+  }
+  .bidsheet h2 {
+    display: block;
+  }
+  .bidsheet.rise {
+    animation: panelIn 0.45s var(--spring) both;
+  }
+
+  /* ---------- your seat and your hand ---------- */
+  .mebar {
+    grid-column: 1 / 9;
+    grid-row: 7;
+    margin-top: 10px;
+    padding: 8px 16px;
+    gap: 12px;
+    border-radius: 16px;
+    --av: 48px;
+  }
+  .mebar .pname {
+    font-size: 18px;
+  }
+  .mebar .ring {
+    top: 50%;
+    left: calc(16px - var(--av) * 4 / 42);
+    margin: calc(var(--av) * -25 / 42) 0 0;
+  }
+  .hand {
+    grid-column: 1 / 9;
+    grid-row: 8;
+    container-type: inline-size;
+  }
+  /* cards lie side by side while there is room, then overlap evenly: 100cqw is the hand's own width */
+  .hslot {
+    margin-left: min(6px, calc((100cqw - var(--n) * var(--cw)) / var(--gaps)));
+  }
+  .hand.myturn .hslot.sel .hc::before {
+    font-size: 12px;
+    padding: 3px 10px;
+  }
+
+  /* ---------- sheets are dialogs ---------- */
+  .sheet {
+    inset: 0;
+    margin: auto;
+    width: min(480px, calc(100% - 48px));
+    height: fit-content;
+    max-height: min(88vh, 860px);
+    padding: 24px;
+    border-radius: 22px;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.2);
+    animation: dialogIn 0.35s cubic-bezier(0.2, 1.2, 0.4, 1) both;
+  }
+  .sheet:has(.lb, .tablewrap, .cardrow, .rules) {
+    width: min(560px, calc(100% - 48px));
+  }
+  .sheet.leaving {
+    animation: dialogOut 0.19s ease-in forwards;
+  }
+
+  /* ---------- home: the phone column, grown ---------- */
+  .home .mascot {
+    width: clamp(96px, 17vh, 190px);
+    height: clamp(96px, 17vh, 190px);
+  }
+  .home .logo {
+    font-size: clamp(52px, 8vh, 84px);
+  }
+  .home .tagline {
+    font-size: 18px;
+  }
+  .home .fan {
+    --fw: clamp(52px, 9vh, 104px);
+    margin-top: 12px;
+  }
+  .home .fan .card {
+    --w: var(--fw);
+  }
+  .home .fan > div {
+    margin-left: calc(var(--fw) * -0.27);
+  }
+  .home .fan > div:first-child {
+    margin-left: 0;
+  }
+}
+
+/* A fine pointer clicks. The phone layout keeps the legacy wording whatever points at it. */
+@media (min-width: 700px) and (hover: hover) and (pointer: fine) {
+  .hand.myturn .hslot.sel .hc::before {
+    content: 'Click to play';
+  }
+  /* the fan on the home screen answers the mouse */
+  .home .fan > div {
+    transition: translate 0.25s var(--spring);
+  }
+  .home .fan > div:hover {
+    translate: 0 -12px;
+  }
+}
+
+/* ================================================================== desk and up */
+@media (min-width: 1024px) {
+  .game {
+    --edge: 20px;
+    --sw: 132px;
+    --av: 48px;
+    --cw: 92px;
+    --tw-wide: 84px;
+    --seat-fs: 14px;
+    --status-fs: 18px;
+    --rail: 340px;
+  }
+  .game.railed {
+    grid-template-columns:
+      calc(var(--sw) + var(--inset)) repeat(6, minmax(0, 1fr)) calc(var(--sw) + var(--inset))
+      calc(var(--rail) + 30px);
+  }
+  /* the scoreboard button shows whether the rail is open */
+  .g-top [data-act='board'][aria-pressed='true'] {
+    background: var(--blue-bg);
+  }
+  .g-top [data-act='board'][aria-pressed='true'] svg {
+    stroke: var(--blue-ink);
+  }
+  /* with the rail open the last trick is in it */
+  .game.railed .lastbtn {
+    display: none;
+  }
+
+  /* your seat: a plate like the others, left of the hand */
+  .mebar {
+    grid-column: 1;
+    grid-row: 8 / 10;
+    align-self: end;
+    width: var(--sw);
+    margin: 0;
+    padding: 10px 8px;
+    flex-direction: column;
+    gap: 3px;
+    text-align: center;
+    border-color: var(--line);
+    background: var(--card);
+    --av: inherit;
+  }
+  .mebar .grow {
+    display: contents;
+  }
+  .mebar .pname {
+    order: 1;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 0 5px;
+    max-width: 100%;
+    font-size: var(--seat-fs);
+  }
+  .mebar .pname .pill {
+    font-size: calc(var(--seat-fs) - 3px);
+  }
+  .mebar > .bidline,
+  .mebar > .ready,
+  .mebar > .thinking {
+    order: 2;
+  }
+  .mebar .grow > .muted {
+    order: 3;
+    /* the size is inline in the markup, which is the phone's */
+    font-size: calc(var(--seat-fs) - 2px) !important;
+    font-weight: 800;
+  }
+  .mebar .ring {
+    top: calc(10px - var(--av) * 4 / 42);
+    left: 50%;
+    margin: 0 0 0 calc(var(--av) * -25 / 42);
+  }
+  .hand {
+    grid-column: 2 / 8;
+  }
+
+  /* ---------- the rail: scoreboard on top, last trick at the bottom ---------- */
+  .rail {
+    grid-column: 9;
+    grid-row: 2 / 10;
+    min-height: 0;
+    margin-left: 8px;
+    padding: 4px 0 0 20px;
+    border-left: 2px solid var(--line);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    overflow-y: auto;
+  }
+  [data-enter] .rail,
+  .rail.in {
+    animation: railIn 0.35s var(--ease-out) both;
+  }
+  .rail .label {
+    flex: none;
+  }
+  .rail .lb,
+  .rail .tablewrap,
+  .rail .btn,
+  .rail-trick {
+    flex: none;
+  }
+  .rail th,
+  .rail td {
+    padding-inline: 4px;
+  }
+  .rail .rail-last {
+    margin-top: auto;
+    padding-top: 8px;
+  }
+  .rail-trick {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 14px 12px;
+    border: 2px solid var(--line);
+    border-radius: var(--r);
+    text-align: center;
+  }
+  .rail-trick .cardrow .slot .card {
+    --w: 52px;
+  }
+  /* six pirates or more: short rows, the round table down to its points */
+  .rail.many .lb .li {
+    padding: 5px 12px;
+    gap: 10px;
+  }
+  .rail.many .rank {
+    width: 22px;
+    height: 22px;
+    font-size: 12px;
+  }
+  .rail.many .avatar.sm {
+    width: 24px;
+    height: 24px;
+    font-size: 11px;
+    box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.18);
+  }
+  .rail.many .pname {
+    font-size: 14px;
+  }
+  .rail.many .total {
+    font-size: 16px;
+  }
+  .rail.many .cell small,
+  .rail.many .tablewrap + p {
+    display: none;
+  }
+  .rail.many th {
+    max-width: 44px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: 11px;
+  }
+  .rail.many .rail-trick {
+    padding: 10px 6px;
+  }
+  .rail.many .rail-trick .cardrow {
+    gap: 5px;
+  }
+  .rail.many .rail-trick .cardrow .slot .card {
+    --w: 34px;
+  }
+  .rail.many .rail-trick .avatar.xs {
+    width: 18px;
+    height: 18px;
+    font-size: 9px;
+  }
+
+  /* ---------- home: the lockup and the actions on the left, the fan on a felt on the right ---------- */
+  .home {
+    max-width: 1560px;
+    padding: 8px clamp(24px, 6vw, 96px) 24px;
+    display: grid;
+    grid-template-columns: minmax(340px, 440px) minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr) auto auto auto auto minmax(0, 1fr);
+    column-gap: clamp(40px, 6vw, 96px);
+    justify-content: center;
+  }
+  .home-top {
+    grid-column: 1 / -1;
+    grid-row: 1;
+    margin-inline: calc(clamp(24px, 6vw, 96px) * -1 + 24px);
+    padding-bottom: 8px;
+  }
+  .home .hero {
+    display: contents;
+  }
+  .home .mascot {
+    grid-column: 1;
+    grid-row: 3;
+    justify-self: center;
+    width: clamp(110px, 18vh, 200px);
+    height: clamp(110px, 18vh, 200px);
+  }
+  .home .logo {
+    grid-column: 1;
+    grid-row: 4;
+    margin-top: 8px;
+    text-align: center;
+    font-size: clamp(60px, 9.5vh, 96px);
+  }
+  .home .tagline {
+    grid-column: 1;
+    grid-row: 5;
+    margin-top: 8px;
+    text-align: center;
+  }
+  .home-actions {
+    grid-column: 1;
+    grid-row: 6;
+    margin-top: 28px;
+  }
+  .home .fan {
+    --fw: clamp(96px, 11.5vw, 200px);
+    grid-column: 2;
+    grid-row: 2 / 8;
+    margin: 0;
+    align-items: center;
+    border-radius: 28px;
+    background: var(--felt);
+    border: 2px solid var(--line);
+  }
+  [data-enter] .home .fan {
+    animation: fade 0.4s both;
+  }
+  /* the cards breathe: each drifts a little, out of step with its neighbours */
+  .home .fan .card {
+    animation: drift 5.5s ease-in-out infinite;
+  }
+  .home .fan > div:nth-child(2) .card {
+    animation-delay: -1.1s;
+  }
+  .home .fan > div:nth-child(3) .card {
+    animation-delay: -2.2s;
+  }
+  .home .fan > div:nth-child(4) .card {
+    animation-delay: -3.3s;
+  }
+  .home .fan > div:nth-child(5) .card {
+    animation-delay: -4.4s;
+  }
+
+  /* ---------- new game: the sections in columns, the button on the right ---------- */
+  #app:has(.footbar [data-act='start']) > .wrap {
+    max-width: 1360px;
+    padding-inline: 40px;
+  }
+  #app:has(.footbar [data-act='start']) > .wrap > .stack {
+    display: block;
+    columns: 2;
+    column-gap: 32px;
+  }
+  #app:has(.footbar [data-act='start']) > .wrap > .stack > section {
+    break-inside: avoid;
+    margin-bottom: 22px;
+  }
+  #app:has(.footbar [data-act='start']) > .footbar > div {
+    max-width: 1280px;
+    display: flex;
+    justify-content: flex-end;
+  }
+  #app:has(.footbar [data-act='start']) > .footbar .btn {
+    width: 320px;
+  }
+
+  /* ---------- final scores: the winner on the left, the standings and awards on the right ---------- */
+  .end {
+    max-width: 1200px;
+    padding: 6px 24px 24px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 480px);
+    grid-template-rows: auto minmax(0, 1fr) auto auto auto minmax(0, 1fr) auto;
+    column-gap: clamp(40px, 6vw, 96px);
+    gap: 12px clamp(40px, 6vw, 96px);
+  }
+  .end-top {
+    grid-column: 1 / -1;
+    grid-row: 1;
+  }
+  .end-mid {
+    display: contents;
+  }
+  .hero-win {
+    grid-column: 1;
+    grid-row: 3;
+    min-height: 300px;
+  }
+  .end .avatar.lg {
+    width: 100px;
+    height: 100px;
+    font-size: 42px;
+  }
+  .reveal h1 {
+    font-size: 38px;
+  }
+  .standings {
+    grid-column: 2;
+    grid-row: 3;
+    align-self: end;
+  }
+  .awards {
+    grid-column: 2;
+    grid-row: 4 / 6;
+    align-self: start;
+  }
+  .end-rating {
+    grid-column: 1;
+    grid-row: 4;
+  }
+  .end-actions {
+    grid-column: 1;
+    grid-row: 5;
+    justify-self: center;
+    width: min(100%, 400px);
+    margin-top: 12px;
+  }
+  .skip-hint {
+    grid-column: 1 / -1;
+    grid-row: 7;
+    text-align: center;
+  }
+}
+
+/* A desk window that is not tall: smaller cards and plates, so the felt keeps its room. */
+@media (min-width: 1024px) and (max-height: 760px) {
+  .game {
+    --av: 44px;
+    --cw: 80px;
+    --tw-wide: 70px;
+    --seat-fs: 13px;
+  }
+}
+
+@media (min-width: 1280px) {
+  .game {
+    --edge: 24px;
+    --sw: 148px;
+    --av: 56px;
+    --cw: 104px;
+    --tw-wide: 96px;
+    --seat-fs: 15px;
+    --status-fs: 20px;
+    --rail: 360px;
+  }
+  .rail-trick .cardrow .slot .card {
+    --w: 56px;
+  }
+  #app:has(.footbar [data-act='start']) > .wrap > .stack {
+    columns: 3;
+  }
+}
+@media (min-width: 1280px) and (max-height: 820px) {
+  .game {
+    --av: 48px;
+    --cw: 88px;
+    --tw-wide: 80px;
+    --seat-fs: 14px;
+  }
+}
+
+@media (min-width: 1728px) {
+  .game {
+    --edge: 32px;
+    --sw: 168px;
+    --av: 64px;
+    --cw: 124px;
+    --tw-wide: 116px;
+    --seat-fs: 17px;
+    --status-fs: 24px;
+    --rail: 420px;
+  }
+}
+@media (min-width: 1728px) and (max-height: 980px) {
+  .game {
+    --av: 56px;
+    --cw: 104px;
+    --tw-wide: 96px;
+    --seat-fs: 15px;
+    --status-fs: 20px;
+  }
+}
+
+/* ================================================================== motion */
+@keyframes dialogIn {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.96);
+  }
+}
+@keyframes dialogOut {
+  to {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+}
+@keyframes panelIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.96);
+  }
+}
+@keyframes railIn {
+  from {
+    opacity: 0;
+    transform: translateX(24px);
+  }
+}
+@keyframes drift {
+  0%,
+  100% {
+    translate: 0 0;
+  }
+  50% {
+    translate: 0 -6px;
+  }
+}

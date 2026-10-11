@@ -176,6 +176,8 @@ export interface Ui {
   endFrom: 'game' | 'track' | null;
   /** scorekeeper: which pirates have their bonus cards open, by seat */
   open: Record<string, boolean>;
+  /** desk layout: whether the rail with the scoreboard and the last trick is open */
+  rail: boolean;
 }
 
 const initialUi = (): Ui => ({
@@ -202,6 +204,7 @@ const initialUi = (): Ui => ({
   finaleDone: false,
   endFrom: null,
   open: {},
+  rail: true,
 });
 
 export const ui: Ui = initialUi();

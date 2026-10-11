@@ -11,6 +11,7 @@ import { dispatchWithin } from '../table/table';
 import type { GetView, Table, UpdateInfo } from '../table/table';
 import { $, reduced } from './dom';
 import type { ActionFn } from './dom';
+import { layout } from './layout';
 import { banner, collectTrick, finale, finishFinale, playFinale } from './motion';
 import { go, render } from './render';
 import {
@@ -357,7 +358,19 @@ export const ACTIONS: Record<string, ActionFn | undefined> = {
     render();
   },
   board() {
+    // At a desk the scoreboard is in the rail beside the table, and the button opens and closes it.
+    if (ui.screen === 'game' && layout() === 'desk') {
+      ui.rail = !ui.rail;
+      ui.just = 'rail';
+      render();
+      return;
+    }
     if (ui.screen === 'end') finishFinale();
+    ui.sheet = 'board';
+    render();
+  },
+  /** The whole scoreboard as a dialog, from the rail: with many pirates the rail shows round points only. */
+  fullBoard() {
     ui.sheet = 'board';
     render();
   },
