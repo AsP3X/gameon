@@ -1,0 +1,9 @@
+# Web image context is the repository root. Ship the client and its nginx config only.
+*
+!web
+!web/**
+!deploy
+!deploy/**
+web/node_modules
+web/dist
+**/.DS_Store

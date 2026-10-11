@@ -1,17 +1,72 @@
-//! HTTP entry for Skull King Tavern. Phase 0 serves health and the error envelope.
+//! HTTP and WebSocket entry for Skull King Tavern.
+
+#[cfg(test)]
+mod phase1_tests;
+#[cfg(test)]
+mod phase2_tests;
+#[cfg(test)]
+mod phase3_tests;
+
+mod http_api;
+mod origin;
+mod random;
+mod rate;
+mod rating;
+mod store;
+mod world;
+
+pub use http_api::AppState;
 
 use axum::Json;
 use axum::Router;
 use axum::http::{HeaderValue, StatusCode, header};
 use axum::response::{IntoResponse, Response};
-use axum::routing::get;
+use axum::routing::{get, post};
 use skt_protocol::{ErrorBody, ErrorCode, ErrorObject, Health};
 
+use http_api::{
+    config, game_log, guest, ladder, lobbies, login, logout, me, patch_me, profile, register,
+    socket,
+};
+
 /// Routes mounted at `/api/v1`.
-pub fn router() -> Router {
+pub fn router(state: AppState) -> Router {
     Router::new()
         .route("/api/v1/health", get(health).fallback(method_not_allowed))
+        .route("/api/v1/config", get(config).fallback(method_not_allowed))
+        .route(
+            "/api/v1/auth/guest",
+            post(guest).fallback(method_not_allowed),
+        )
+        .route(
+            "/api/v1/auth/register",
+            post(register).fallback(method_not_allowed),
+        )
+        .route(
+            "/api/v1/auth/login",
+            post(login).fallback(method_not_allowed),
+        )
+        .route(
+            "/api/v1/auth/logout",
+            post(logout).fallback(method_not_allowed),
+        )
+        .route(
+            "/api/v1/me",
+            get(me).patch(patch_me).fallback(method_not_allowed),
+        )
+        .route(
+            "/api/v1/users/{id}",
+            get(profile).fallback(method_not_allowed),
+        )
+        .route("/api/v1/lobbies", get(lobbies).fallback(method_not_allowed))
+        .route("/api/v1/ladder", get(ladder).fallback(method_not_allowed))
+        .route(
+            "/api/v1/games/{id}/log",
+            get(game_log).fallback(method_not_allowed),
+        )
+        .route("/api/v1/ws", get(socket).fallback(method_not_allowed))
         .fallback(not_found)
+        .with_state(state)
 }
 
 async fn health() -> Json<Health> {
@@ -30,13 +85,26 @@ async fn method_not_allowed() -> AppError {
 #[derive(Debug, Clone, Copy)]
 pub struct AppError {
     code: ErrorCode,
+    retry_after: Option<u64>,
 }
 
 impl AppError {
     /// An error with the default player-safe message for `code`.
     #[must_use]
     pub const fn new(code: ErrorCode) -> Self {
-        Self { code }
+        Self {
+            code,
+            retry_after: None,
+        }
+    }
+
+    /// `RATE_LIMITED` with a `Retry-After` of `seconds`.
+    #[must_use]
+    pub const fn limited(seconds: u64) -> Self {
+        Self {
+            code: ErrorCode::RateLimited,
+            retry_after: Some(seconds),
+        }
     }
 
     /// The protocol code.
@@ -64,9 +132,10 @@ impl IntoResponse for AppError {
         });
         let mut response = (http_status(self.code), body).into_response();
         if self.code == ErrorCode::RateLimited {
-            response
-                .headers_mut()
-                .insert(header::RETRY_AFTER, HeaderValue::from_static("1"));
+            let seconds = self.retry_after.unwrap_or(1).to_string();
+            if let Ok(value) = HeaderValue::from_str(&seconds) {
+                response.headers_mut().insert(header::RETRY_AFTER, value);
+            }
         }
         response
     }
@@ -98,7 +167,7 @@ mod tests {
 
     #[tokio::test]
     async fn health_is_ok() {
-        let response = router()
+        let response = router(crate::AppState::new())
             .oneshot(
                 Request::builder()
                     .uri("/api/v1/health")
@@ -119,7 +188,7 @@ mod tests {
 
     #[tokio::test]
     async fn unknown_path_uses_the_envelope() {
-        let response = router()
+        let response = router(crate::AppState::new())
             .oneshot(
                 Request::builder()
                     .uri("/api/v1/missing")
@@ -142,7 +211,7 @@ mod tests {
 
     #[tokio::test]
     async fn wrong_method_uses_the_envelope() {
-        let response = router()
+        let response = router(crate::AppState::new())
             .oneshot(
                 Request::builder()
                     .method("POST")

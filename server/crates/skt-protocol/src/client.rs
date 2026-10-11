@@ -178,7 +178,7 @@ pub enum ClientMessage {
     },
     /// One emote. The server accepts at most one every 2 seconds.
     ///
-    /// The id is whatever `ServerConfig.emotes` lists. This draft does not fix that list.
+    /// One id from [`crate::EMOTES`].
     #[serde(rename = "game.emote")]
     GameEmote {
         /// Correlation id.
