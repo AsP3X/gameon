@@ -54,7 +54,8 @@ function freePort(): Promise<number> {
 
 /** `vp dev` on a port of its own, with `/api` sent to `api`. Resolves when it serves the page. */
 async function startDevServer(api: string): Promise<{ url: string; stop(): void }> {
-  const port = await freePort(),
+  // A free port, unless one is asked for: a server that checks `Origin` may know only the usual one.
+  const port = Number(process.env.SKT_E2E_PORT) || (await freePort()),
     url = `http://localhost:${port}`;
   const child: ChildProcess = spawn('npx', ['vp', 'dev', '--port', String(port), '--strictPort'], {
     cwd: WEB,

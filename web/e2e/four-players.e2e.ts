@@ -11,6 +11,7 @@
      SKT_E2E_TARGET=http://127.0.0.1:8080 npm run e2e    # must answer GET /api/v1/health
      SKT_E2E_TARGET=mock npm run e2e                     # the mock host, whatever else is running
      SKT_E2E_HEADED=1 npm run e2e                        # watch it
+     SKT_E2E_PORT=5173 npm run e2e                       # the page's port, if the server's origin list needs one
 
    Nothing below knows which one it is: the steps are the player's, and what they check is
    docs/protocol.md. Where the mock is known to differ from the server, it is in the mock, not here. */
@@ -84,9 +85,12 @@ describe('four players at one table', () => {
     await button(host, 'Start game').click();
     for (const p of players) await p.page.locator('#app .game').waitFor();
 
-    // Five seats, each context its own, each with five cards nobody else was sent.
-    expect(players.map((p) => p.seat).sort((a, b) => a - b)).toEqual([0, 1, 2, 3]);
-    expect(host.start.seats.map((s) => s.bot)).toEqual([false, false, false, false, true]);
+    // Five seats: each context has one of its own, and the bot has the fifth. Which seat goes to
+    // whom is the server's to decide.
+    expect(new Set(players.map((p) => p.seat)).size).toBe(4);
+    expect(host.start.seats).toHaveLength(5);
+    expect(host.start.seats.filter((s) => s.bot)).toHaveLength(1);
+    for (const p of players) expect(host.start.seats[p.seat].bot).toBe(false);
     const hands = players.map((p) => p.view.hand);
     expect(hands.every((h) => h.length === 5)).toBe(true);
     expect(new Set(hands.flat()).size).toBe(20);

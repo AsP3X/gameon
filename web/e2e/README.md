@@ -22,7 +22,8 @@ So the day the Rust server serves guests, lobbies and the table (G3, G4, G5), th
 against it with no change: start the server on 127.0.0.1:8080 and run `npm run e2e`. Until then the
 absence of that server is not a failure. The first line the run prints says which target it used.
 
-`SKT_E2E_HEADED=1` shows the browsers.
+`SKT_E2E_HEADED=1` shows the browsers. `SKT_E2E_PORT=5173` pins the page's port, which is otherwise
+a free one: a server that checks the `Origin` of the upgrade has to allow the page's origin.
 
 ## The browser
 
