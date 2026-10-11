@@ -1,4 +1,4 @@
-/* Waiting for a quick-play table. The screen shows what the server says about the queue and nothing
+/* Waiting for a quick-play or a ranked table. The screen shows what the server says about the queue and nothing
    else: how many it has found and how many a table needs. When the table forms the game starts by
    itself; there is nothing to accept. */
 import { useState } from 'react';
@@ -24,7 +24,8 @@ export function QueueScreen({ online, queue, live, rules }: QueueScreenProps) {
   // A table has at most eight seats: no number from the wire draws more than that.
   const seats = Math.max(0, Math.min(MAX_SEATS, queue.needed)),
     found = Math.max(0, Math.min(seats, queue.found)),
-    text = rules ? describeSettings(rules) : null;
+    ranked = queue.mode === 'ranked',
+    text = rules ? describeSettings(rules, { bots: !ranked }) : null;
   const leave = (): void => {
     if (busy) return;
     setBusy(true);
@@ -37,7 +38,7 @@ export function QueueScreen({ online, queue, live, rules }: QueueScreenProps) {
   return (
     <>
       <div className="wrap">
-        <Head title="Quick play" back="Leave the queue" onBack={leave} />
+        <Head title={ranked ? 'Ranked' : 'Quick play'} back="Leave the queue" onBack={leave} />
         <div className="stack sections">
           {!live && (
             <div className="notice" role="status">
@@ -75,7 +76,11 @@ export function QueueScreen({ online, queue, live, rules }: QueueScreenProps) {
               </div>
             </section>
           )}
-          <p className="muted">The game starts by itself when the table is full. Open seats are filled with bots.</p>
+          <p className="muted">
+            {ranked
+              ? 'The game starts by itself when the table is full. A ranked table has no bots. Leaving a ranked game, or staying away for most of it, scores last place and starts a cooldown.'
+              : 'The game starts by itself when the table is full. Open seats are filled with bots.'}
+          </p>
         </div>
       </div>
       <div className="footbar">

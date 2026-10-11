@@ -15,7 +15,17 @@
    long its clock runs in all is known when the step that started it arrives; a clock that is already
    running when the table opens is taken to be a standard one, or as long as what is left of it. */
 import type { Action, TableView } from '../game';
-import type { Card, Deadline, GameEvent, GameId, GameStart, GameUpdate, Seat } from '../protocol/generated';
+import type {
+  Card,
+  Deadline,
+  GameEvent,
+  GameId,
+  GameResult,
+  GameStart,
+  GameUpdate,
+  Seat,
+  TableMode,
+} from '../protocol/generated';
 import type { ClientRequest } from '../net/messages';
 import type { LinkEvent, SocketClient } from '../net/socket';
 import { deadlineMs } from '../net/timing';
@@ -57,10 +67,13 @@ function tableView(start: GameStart, update: GameUpdate, clock: Clock | null): T
 
 export class RemoteTable implements Table {
   readonly gameId: GameId;
+  /** How the table came to be: a lobby's game, quick play, or ranked. */
+  readonly mode: TableMode;
   /** The one seat `game.start` calls `me`. */
   readonly localSeats: readonly Seat[];
   private readonly client: SocketClient;
   private readonly subs = new Set<TableListener>();
+  private readonly resultSubs = new Set<() => void>();
   private readonly unlisten: () => void;
   /** The intents sent from here that have no reply yet. */
   private readonly sent = new Set<ClientRequest>();
@@ -72,6 +85,8 @@ export class RemoteTable implements Table {
   private due: ClientRequest['t'] | null = null;
   /** This session left the seat: the server sends no further update, and none would be shown. */
   private left = false;
+  /** What `game.over` said, once it has: the standings, and in ranked this seat's rating change. */
+  private over: GameResult | null = null;
 
   /**
    * `update` is the view the table opens with. `opening` says it is the one that follows
@@ -80,6 +95,7 @@ export class RemoteTable implements Table {
   constructor(client: SocketClient, start: GameStart, update: GameUpdate, opening = false) {
     this.client = client;
     this.gameId = start.gameId;
+    this.mode = start.mode;
     this.localSeats = [start.me];
     this.start = start;
     this.rev = update.rev;
@@ -90,6 +106,19 @@ export class RemoteTable implements Table {
   /** Whether this session gave the seat up: the table's last update has arrived, and no other will. */
   get hasLeft(): boolean {
     return this.left;
+  }
+
+  /** The result of the game as the server sent it after the last update, or null until it has. */
+  get result(): GameResult | null {
+    return this.over;
+  }
+
+  /** Called once, when `game.over` for this table arrives. */
+  onResult(fn: () => void): () => void {
+    this.resultSubs.add(fn);
+    return () => {
+      this.resultSubs.delete(fn);
+    };
   }
 
   /** Only the session's own seat has a view here: the server never sent another one. */
@@ -143,6 +172,7 @@ export class RemoteTable implements Table {
   dispose(): void {
     this.unlisten();
     this.subs.clear();
+    this.resultSubs.clear();
     this.sent.clear();
   }
 
@@ -176,6 +206,12 @@ export class RemoteTable implements Table {
       // A closed socket ends every id waiting on it, and with it the update that was due.
       if (event.status !== 'online') this.due = null;
       return;
+    }
+    // The result follows the last update. It is kept for whoever shows the end of the game; what
+    // it means for an update that was still due is decided below, as for any other frame.
+    if (event.type === 'push' && event.message.t === 'game.over' && event.message.gameId === this.gameId) {
+      this.over = event.message.result;
+      Array.from(this.resultSubs).forEach((fn) => fn());
     }
     const due = this.due;
     this.due = null;

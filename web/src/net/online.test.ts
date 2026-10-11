@@ -375,7 +375,7 @@ describe('Online', () => {
   it('takes the queue from the reply to queue.join and from queue.status, and drops it on leave', async () => {
     welcome();
     const status = { mode: 'casual', since: 5, found: 1, needed: 4 };
-    const joined = online.joinQueue();
+    const joined = online.joinQueue('casual');
     expect(wire().sent.at(-1)).toMatchObject({ t: 'queue.join', mode: 'casual' });
     ok({ queue: status });
     expect(await joined).toEqual({ ok: true });
@@ -392,7 +392,7 @@ describe('Online', () => {
 
   it('keeps no queue the server refused, and says why', async () => {
     welcome();
-    const joined = online.joinQueue();
+    const joined = online.joinQueue('casual');
     wire().say({
       t: 'err',
       re: wire().sent.at(-1)?.id,
@@ -400,6 +400,21 @@ describe('Online', () => {
       message: 'You are already at a table.',
     });
     expect(await joined).toEqual({ ok: false, code: 'ALREADY_SEATED', message: 'You are already at a table.' });
+    expect(online.getState().queue).toBeNull();
+  });
+
+  it('asks for ranked by its mode, and reads Me again when the server says the queue is closed for this player', async () => {
+    welcome();
+    const cooled = { ...ME, guest: false, username: 'anne', cooldownUntil: 99 };
+    answers['GET /me'] = { status: 200, body: cooled };
+    const joined = online.joinQueue('ranked');
+    expect(wire().sent.at(-1)).toMatchObject({ t: 'queue.join', mode: 'ranked' });
+    wire().say({ t: 'err', re: wire().sent.at(-1)?.id, code: 'QUEUE_COOLDOWN', message: 'Not yet.' });
+    expect(await joined).toEqual({ ok: false, code: 'QUEUE_COOLDOWN', message: 'Not yet.' });
+    await tick();
+    // The refusal names no time. `Me.cooldownUntil` does, and the hub counts down to it.
+    expect(asked).toContain('GET /me');
+    expect(online.getState().me).toEqual(cooled);
     expect(online.getState().queue).toBeNull();
   });
 
@@ -412,6 +427,21 @@ describe('Online', () => {
     wire().say(game.update);
     expect(online.getState().queue).toBeNull();
     expect(online.getState().table?.gameId).toBe(game.start.gameId);
+  });
+
+  it('gives a result that arrives at the open table to the table, and makes no notice of it: also a forfeit for being away', () => {
+    welcome({ game });
+    const seat = game.start.me;
+    wire().say({
+      t: 'game.over',
+      gameId: game.start.gameId,
+      result: { totals: [0, 0], places: [2, 1], forfeited: [seat], rating: null, lobbyId: null },
+    });
+    // The player is still at the table: the end screen there shows the place and the forfeit.
+    // "You left before the end" is for a seat that was given up with `game.leave`, and nothing else.
+    expect(online.getState().notice).toBeNull();
+    expect(online.getState().table?.result).toMatchObject({ forfeited: [seat], places: [2, 1] });
+    expect(online.getState().table?.hasLeft).toBe(false);
   });
 
   it('asks a public table for a seat by its id', () => {

@@ -94,7 +94,7 @@ function openTable(): void {
     schedule: () => {},
     stop: () => {},
   };
-  openOnlineTable(table, { leave, exit, now: () => Date.now() });
+  openOnlineTable(table, { leave, exit, now: () => Date.now(), ranked: false, result: () => null });
 }
 
 beforeEach(() => {

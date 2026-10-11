@@ -23,7 +23,7 @@ Node 22.18+, 24.11+ or 26+. Vite+ warns on other versions.
 | `src/game/`                            | The reference engine: rules, reducer, bots. Runs the offline modes. Online, the server's engine is the authority and this one is never asked.                                                |
 | `src/table/`                           | `Table`, the seam between the renderer and whoever runs the game: its local seats, a seat's view, an asynchronous `dispatch`. `LocalTable` is the offline one, `RemoteTable` the online one. |
 | `src/net/`                             | The socket client (`socket.ts`), the REST calls (`api.ts`), the online state the screens read (`online.ts`), the real backend, and the mock server (`mock/`). See [Online](#online).         |
-| `src/online/`                          | The online screens, in React: hub, profile, sign-up and sign-in, public tables, the quick-play queue, new table, join by code, the table's lobby.                                            |
+| `src/online/`                          | The online screens, in React: hub, profile, sign-up and sign-in, public tables, the quick-play and ranked queue, the ladder, new table, join by code, the table's lobby.                     |
 | `src/tableview/`                       | The table renderer, lifted from the legacy build. It owns `#app` and rebuilds it from HTML strings; React never renders inside it. `mountTavern()` is its only entry.                        |
 | `src/sound/`                           | Sound. Every effect is synthesised with Web Audio; the played card and the button press also have recorded takes in `samples/`. The home screen's music is the recording in `music/`.        |
 | `src/styles/`                          | `tokens.css` (the custom properties), `tavern.css` (the renderer's markup) and `online.css` (what the online screens add).                                                                   |
@@ -44,7 +44,7 @@ Node 22.18+, 24.11+ or 26+. Vite+ warns on other versions.
   next socket replaces what was known. `superseded` and `PROTOCOL_UNSUPPORTED` end the connection
   without a retry. Listeners get every reply and push synchronously, in the order of the frames.
 - **`Api`** (`src/net/api.ts`) is REST under `/api/v1`: register, login, logout, the profile, another
-  player's profile, the public lobby list and the server config. Every call ends in a result with
+  player's profile, the public lobby list, the ladder and the server config. Every call ends in a result with
   the server's error code, or `OFFLINE` when there was no answer. Nothing keeps a password or a
   token after the call that carried it.
 - **`Online`** (`src/net/online.ts`) is what the page knows about its session: the link, `me`, the
@@ -79,10 +79,15 @@ Node 22.18+, 24.11+ or 26+. Vite+ warns on other versions.
   accepted play through the reference engine, one step at a time, and sends each seat its own view.
   It has private and public lobbies, bot seats, the deadlines of §5.6, accounts (register, login,
   logout, profile), the public lobby list, the casual queue with bot fill, and stats after a game.
-  It has no ranked play, no emotes, no away detection and no bot takeover after the grace period,
-  and every page has a mock of its own: two tabs cannot meet in one lobby or one queue. Behind
-  `?mock` it keeps its state in sessionStorage and comes back with it after a reload, with every
-  seat offline, as a server would find them.
+  It has a ranked queue, a rating change after a ranked game, a cooldown after a ranked leave and a
+  ladder, following the rules of `docs/protocol.md`: the tier bands, placement until the fifth
+  game, the cooldown that doubles, the season that is the UTC quarter. It does not rate: where the
+  server runs Weng-Lin the mock moves a rating by a fixed step per place, and it seats the first
+  four in the ranked queue with no skill window. It has no emotes, no away detection and no bot
+  takeover after the grace period, and every page has a mock of its own: two tabs cannot meet in
+  one lobby or one queue, so a ranked table never forms under `?mock`. Behind `?mock` it keeps its
+  state in sessionStorage and comes back with it after a reload, with every seat offline, as a
+  server would find them.
 - The real backend (`src/net/transport.ts`) asks `POST /api/v1/auth/guest` for a session once,
   opens `/api/v1/ws` on the same origin, and sends REST with the same cookie.
 

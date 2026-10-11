@@ -38,7 +38,7 @@ import { recordGame } from './stats';
 import { Store } from './store';
 import { Tracker, trkCreate, trkNow } from './tracker';
 import { TRK_ACTIONS } from './trackerActions';
-import { abilityToast, scored } from './views';
+import { abilityToast, movesStandings, ratingLine, scored } from './views';
 
 type EventOf<T extends GameEvent['type']> = Extract<GameEvent, { type: T }>;
 
@@ -218,6 +218,28 @@ export function openOnlineTable(table: Table, hooks: OnlineHooks): void {
   session.online = hooks;
   patchUi({ deal: true, lastPct: 0 });
   go('game');
+}
+/**
+ * The server's result for the online game on screen has arrived, and the end screen may already be
+ * up. An end screen drawn later reads the result by itself.
+ *
+ * The result follows the last update at once, so the standings on screen were drawn from the
+ * points a moment ago. If the server placed a seat elsewhere (a forfeit in a ranked game), the
+ * screen is drawn again from its places, and a finale that had begun starts over. Otherwise only
+ * the rating line of a ranked game is filled in where it stands, and the finale plays on.
+ */
+export function showOnlineResult(): void {
+  const result = session.online?.result();
+  if (!result || ui.screen !== 'end') return;
+  if (movesStandings(result)) {
+    render();
+    if (!ui.finaleDone) void playFinale();
+    return;
+  }
+  const line = $('.end-rating');
+  if (!result.rating || !line) return;
+  line.innerHTML = ratingLine(result.rating);
+  line.hidden = false;
 }
 /** Take the online table off the screen. The home screen is what is left underneath. */
 export function closeOnlineTable(): void {

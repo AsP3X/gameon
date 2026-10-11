@@ -5,10 +5,10 @@
 import { Rules } from '../game';
 import type { GameState, Score, ScoreConfig, ScoreRecord, TableView } from '../game';
 import { clamp, fill } from '../game/util';
-import type { AbilityUsed, Card, CardId, Seat } from '../protocol/generated';
+import type { AbilityUsed, Card, CardId, GameResult, RatingChange, Seat } from '../protocol/generated';
 import { avatar, cardBack, cardHTML, ICON, mascot } from './art';
 import type { FaceCard } from './art';
-import { esc, initial, sgn, toneOf } from './dom';
+import { esc, initial, sgn, toneOf, whole } from './dom';
 import {
   COLORS,
   handHidden,
@@ -575,14 +575,26 @@ export function lastSheet(): string {
     <p style="text-align:center">${r.winner == null ? 'Nobody won it.' : `${who(v, r.winner)} won it.`}</p>
   </div></div>`;
 }
-/** Online only: leaving a running game gives the seat to a bot, so it is asked first. */
+/**
+ * Online only: leaving a running game gives the seat to a bot, so it is asked first. In a ranked
+ * game it is also a forfeit, and the sheet says what that costs before anything is sent.
+ */
 export function leaveSheet(): string {
-  return `<div class="sheet-scrim" data-act="closeSheet"></div><div class="sheet" role="dialog" aria-label="Leave the table"><div class="in">
-    <h2>Leave the table?</h2>
-    <p>A bot takes your seat for the rest of the game. You can't come back to it.</p>
-    <button class="btn red" data-act="leaveTable">Leave table</button>
+  const ranked = session.online?.ranked === true;
+  return `<div class="sheet-scrim" data-act="closeSheet"></div><div class="sheet" role="dialog" aria-label="${ranked ? 'Leave the ranked game' : 'Leave the table'}"><div class="in">
+    <h2>${ranked ? 'Leave this ranked game?' : 'Leave the table?'}</h2>
+    <p>${ranked ? "Leaving scores last place and starts a cooldown before your next ranked game. A bot takes your seat, and you can't come back to it." : "A bot takes your seat for the rest of the game. You can't come back to it."}</p>
+    <button class="btn red" data-act="leaveTable">${ranked ? 'Leave and forfeit' : 'Leave table'}</button>
     <button class="btn ghost" data-act="closeSheet">Keep playing</button>
   </div></div>`;
+}
+/**
+ * What a ranked game did to this seat's rating, as one line: before, after and the change. Every
+ * number is the server's and is shown rounded to a whole one; nothing here works a rating out.
+ */
+export function ratingLine(change: RatingChange): string {
+  const delta = Math.round(change.delta);
+  return `<span class="muted">Rating</span> <b class="num">${esc(whole(change.before.value))} → ${esc(whole(change.after.value))}</b> <b class="num ${delta > 0 ? 'pos' : delta < 0 ? 'neg' : 'zero'}">${esc(delta > 0 ? '+' + whole(delta) : whole(delta))}</b>${change.after.provisional ? ' <span class="pill soft">Placement</span>' : ''}`;
 }
 export function peekSheet(): string {
   const v = tableView(),
@@ -686,26 +698,62 @@ function awards(v: ScoreView): Award[] {
     A.push({ c: 'var(--blue)', i: ICON.crown, t: 'Biggest haul', d: `${a.who} · ${sgn(a.v)} in one round` });
   return A;
 }
+/** One seat on the end screen: its points, where it finished, and whether it gave the game up. */
+export interface Standing {
+  i: Seat;
+  t: number;
+  rank: number;
+  forfeit: boolean;
+}
+/**
+ * Where each seat finished, best first. Offline, and online until the server's result is in, that
+ * is the order of the points. Online the places are the server's: a seat that forfeited a ranked
+ * game is last whatever was scored in it, and the client does not decide that from the points.
+ */
+export function standings(totals: number[], result: GameResult | null): Standing[] {
+  const places = result && result.places.length === totals.length ? result.places : null,
+    forfeited = result?.forfeited ?? [];
+  return totals
+    .map((t, i) => ({
+      t,
+      i,
+      rank: places ? places[i] : 1 + totals.filter((x) => x > t).length,
+      forfeit: forfeited.includes(i),
+    }))
+    .sort((a, b) => a.rank - b.rank || b.t - a.t);
+}
+/** Whether the server's result puts the seats anywhere else than their points do: the end screen has to be drawn again then. */
+export function movesStandings(result: GameResult): boolean {
+  const v = scoreView(),
+    tot = Rules.totals(v.log, v.cfg, v.seats.length),
+    drawn = standings(tot, null),
+    told = standings(tot, result);
+  return drawn.some((x, k) => x.i !== told[k].i || x.rank !== told[k].rank || x.forfeit !== told[k].forfeit);
+}
 /** One screen, no scrolling. Rendered in its pre-reveal state; playFinale() uncovers it step by step. */
 export function endView(): string {
   const v = scoreView(),
     n = v.seats.length,
     tot = Rules.totals(v.log, v.cfg, n),
     H = localSeatsOf(v),
-    solo = H.length === 1;
-  const order = tot
-    .map((t, i) => ({ t, i }))
-    .sort((a, b) => b.t - a.t)
-    .map((x) => ({ ...x, rank: 1 + tot.filter((t) => t > x.t).length }));
-  const winners = order.filter((x) => x.rank === 1),
-    rest = order.filter((x) => x.rank > 1);
+    solo = H.length === 1,
+    // Online, the server's result says who finished where, once it is in. Only a ranked game has a
+    // rating line, which stays empty until then.
+    result = session.online?.result() ?? null,
+    ranked = session.online?.ranked === true,
+    change = result?.rating ?? null;
+  const order = standings(tot, result),
+    // First place, or the best place there is should the server have given nobody the first.
+    best = Math.min(...order.map((x) => x.rank));
+  const winners = order.filter((x) => x.rank === best),
+    rest = order.filter((x) => x.rank > best);
   const done = ui.finaleDone,
     shown = (t: number): number => (done ? t : 0);
   const rows = rest
     .map((x, k) => {
       const p = v.seats[x.i];
       return `<li class="${solo && x.i === H[0] ? 'you' : ''}" data-step="${rest.length - 1 - k}"><span class="rank ${x.rank <= 3 ? 'r' + x.rank : ''}">${x.rank}</span>${avatar(p, 'sm')}
-      <span class="grow pname">${esc(p.name)}</span><b class="num" data-final="${x.t}">${shown(x.t)}</b></li>`;
+      <span class="grow pname">${esc(p.name)}</span>${x.forfeit ? '<span class="pill soft">Forfeit</span>' : ''}<b class="num" data-final="${x.t}">${shown(x.t)}</b></li>`;
     })
     .join('');
   const aw = awards(v)
@@ -726,7 +774,7 @@ export function endView(): string {
     </section>
     ${rows ? `<ol class="standings ${rest.length > 4 ? 'two' : ''}">${rows}</ol>` : ''}
     ${aw ? `<div class="awards">${aw}</div>` : ''}
-    </div>
+    </div>${ranked ? `<p class="end-rating" aria-live="polite"${change ? '' : ' hidden'}>${change ? ratingLine(change) : ''}</p>` : ''}
     <div class="end-actions"><button class="btn" data-act="again">Play again</button>${session.online ? '' : '<button class="btn ghost" data-act="home">Home</button>'}</div>
     <p class="skip-hint" aria-hidden="true">Tap to skip</p>
   </div>`;

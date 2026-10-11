@@ -8,7 +8,7 @@ import type { FormEvent } from 'react';
 import type { Notice, Online, OnlineState, Outcome } from '../net/online';
 import type { LinkStatus } from '../net/socket';
 import { Sound } from '../sound/sound';
-import { cssColor } from '../tableview/dom';
+import { cssColor, whole } from '../tableview/dom';
 import type { LobbyId, UserId, Visibility } from '../protocol/generated';
 import { SignIn, SignUp } from './Account';
 import { failureText, ordinal } from './copy';
@@ -17,10 +17,11 @@ import { Head, initialOf } from './parts';
 import { PlayerScreen, ProfileScreen } from './Profile';
 import { PublicTables } from './PublicTables';
 import { QueueScreen } from './Queue';
+import { LadderScreen, RankedSection } from './Ranked';
 import { loadSettings, MIN_SEATS, saveSettings } from './settings';
 import { SettingsForm } from './SettingsForm';
 
-type Page = 'hub' | 'create' | 'join' | 'tables' | 'profile' | 'signup' | 'signin';
+type Page = 'hub' | 'create' | 'join' | 'tables' | 'ladder' | 'profile' | 'signup' | 'signin';
 
 /** The characters a table code is made of (docs/protocol.md §5.3). Everything else is dropped as it is typed. */
 const NOT_CODE = /[^ABCDEFGHJKMNPQRSTUVWXYZ23456789]/g;
@@ -46,7 +47,7 @@ function noticeText(notice: Notice): { title: string; text: string } {
     notice.left ? 'You left before the end.' : 'It ended while you were away.',
     notice.place != null ? `Final place: ${ordinal(notice.place)} of ${notice.seats}.` : '',
     notice.forfeited ? 'It counts as a forfeit.' : '',
-    notice.delta != null ? `Rating ${notice.delta > 0 ? '+' : ''}${notice.delta}.` : '',
+    notice.delta != null ? `Rating ${notice.delta > 0 ? '+' : ''}${whole(notice.delta)}.` : '',
   ].filter(Boolean);
   return { title: 'Your last game is over', text: parts.join(' ') };
 }
@@ -117,7 +118,7 @@ function Hub(props: { online: Online; state: OnlineState; onExit: () => void; on
     Sound.play('confirm');
     setFinding(true);
     setError(null);
-    void online.joinQueue().then((r) => {
+    void online.joinQueue('casual').then((r) => {
       setFinding(false);
       if (!r.ok) setError(failureText(r));
     });
@@ -176,6 +177,13 @@ function Hub(props: { online: Online; state: OnlineState; onExit: () => void; on
             <p className="muted">Sit down with other pirates at the standard rules. Open seats are filled with bots.</p>
           )}
         </section>
+        <RankedSection
+          online={online}
+          me={me}
+          live={live}
+          onLadder={() => props.onPage('ladder')}
+          onSignUp={() => props.onPage('signup')}
+        />
         <section className="stack">
           <span className="label">Public tables</span>
           <button type="button" className="btn ghost" disabled={!live} onClick={to('tables')}>
@@ -358,6 +366,7 @@ export function OnlineScreens({ online, state, onExit }: OnlineScreensProps) {
         }}
       />
     );
+  if (page === 'ladder') return <LadderScreen online={online} me={me?.user.id ?? null} live={live} onBack={hub} />;
   if (me && page === 'profile')
     return (
       <ProfileScreen
