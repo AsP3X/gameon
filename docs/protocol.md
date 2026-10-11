@@ -288,6 +288,15 @@ a click that was aimed at one trick from landing in the next after a timeout pla
 The reply `ok` only says the intent was accepted. The effect arrives as a `game.update`, also to the
 sender. The client never applies its own action locally.
 
+On the sender's socket, an accepted `game.bid`, `game.play`, `game.ability`, `game.ready` or
+`game.leave` is written as `ok` and then, as the next message on that socket, the `game.update`
+for that step. No other server message is placed between them: not another seat's `game.update`,
+not a `game.emote`, not a `ping` reply, not `game.over`. The table handles one step at a time and
+finishes both writes before it takes the next step. An `err` is the whole answer for that intent
+and is not followed by a `game.update`. Other seats receive the step as a `game.update` only.
+When the step ends the game, `game.over` follows that `game.update`. An accepted `game.emote` is
+the same pair with the `game.emote` push in place of `game.update`. `protocol` stays 1.
+
 Other pushes:
 
 - `{ t: 'game.emote', seat, emote }`
