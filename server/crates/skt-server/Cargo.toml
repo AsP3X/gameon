@@ -14,8 +14,10 @@ name = "skt-server"
 path = "src/main.rs"
 
 [dependencies]
+argon2 = "0.5"
 axum = { workspace = true, features = ["ws"] }
 rand = "0.9"
+sqlx = { version = "0.8", default-features = false, features = ["runtime-tokio", "postgres", "migrate", "macros"] }
 serde.workspace = true
 serde_json.workspace = true
 sha2 = "0.10"

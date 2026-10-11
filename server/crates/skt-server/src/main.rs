@@ -12,7 +12,12 @@ async fn main() -> Result<(), std::io::Error> {
     if tracing_subscriber::fmt().try_init().is_err() {
         eprintln!("tracing subscriber was already installed");
     }
-    let state = AppState::new();
+    let database = std::env::var("DATABASE_URL").map_err(|_| {
+        std::io::Error::new(std::io::ErrorKind::InvalidInput, "DATABASE_URL is required")
+    })?;
+    let state = AppState::connect(&database)
+        .await
+        .map_err(std::io::Error::other)?;
     let ticking = state.clone();
     // One task for every table. It wakes every 200ms and holds the world lock only for the tick.
     tokio::spawn(async move {
@@ -25,7 +30,11 @@ async fn main() -> Result<(), std::io::Error> {
     let address = listen_on()?;
     let listener = tokio::net::TcpListener::bind(&address).await?;
     tracing::info!("listening on {address}");
-    axum::serve(listener, router(state)).await
+    axum::serve(
+        listener,
+        router(state).into_make_service_with_connect_info::<std::net::SocketAddr>(),
+    )
+    .await
 }
 
 /// `HOST` and `PORT` from the environment, or `127.0.0.1:8080`.

@@ -6,7 +6,7 @@
 #   docker compose -f docker-compose.yml -f docker-compose.local.yml up -d --build
 #   docker compose -f docker-compose.yml -f docker-compose.npm.yml up -d --build
 #
-# Games live in the API process. A restart clears them. There is no database volume yet.
+# Games live in the API process. A restart clears them. Accounts, sessions and stats live in Postgres.
 #
 # NPM targets (npm overlay, container DNS on proxy-network):
 #   http://skt-web:80      the page, which also proxies /api/v1 and the socket
@@ -21,6 +21,23 @@ x-log-rotation: &log-rotation
     max-file: "3"
 
 services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: skt-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-skt}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-skt}
+      POSTGRES_DB: ${POSTGRES_DB:-skt}
+    networks:
+      - skt-internal
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-skt} -d ${POSTGRES_DB:-skt}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    logging: *log-rotation
+    restart: unless-stopped
+
   api:
     build:
       context: ./server
@@ -32,6 +49,10 @@ services:
       RUST_LOG: ${RUST_LOG:-info}
       SKT_PUBLIC_ORIGIN: ${SKT_PUBLIC_ORIGIN:-}
       SKT_SECURE_COOKIE: ${SKT_SECURE_COOKIE:-}
+      DATABASE_URL: postgres://${POSTGRES_USER:-skt}:${POSTGRES_PASSWORD:-skt}@postgres:5432/${POSTGRES_DB:-skt}
+    depends_on:
+      postgres:
+        condition: service_healthy
     networks:
       - skt-internal
     read_only: true

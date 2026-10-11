@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use sha2::{Digest, Sha256};
-use skt_protocol::{GameId, LobbyId, TableColor, UnixMs, User, UserId};
+use skt_protocol::{GameId, LobbyId, Stats, TableColor, UnixMs, User, UserId};
 
 const COLORS: [TableColor; 8] = [
     TableColor::Sky,
@@ -19,8 +19,24 @@ const COLORS: [TableColor; 8] = [
 
 struct Account {
     user: User,
+    guest: bool,
+    username: Option<String>,
+    stats: Stats,
     lobby: Option<LobbyId>,
     game: Option<GameId>,
+}
+
+/// A row loaded from Postgres.
+#[derive(Clone)]
+pub struct AccountSnap {
+    /// The public player.
+    pub user: User,
+    /// No password yet.
+    pub guest: bool,
+    /// Login name, with its original case.
+    pub username: Option<String>,
+    /// Counters stored with the account.
+    pub stats: Stats,
 }
 
 /// Users and session hashes.
@@ -68,11 +84,82 @@ impl Identity {
             id.clone(),
             Account {
                 user,
+                guest: true,
+                username: None,
+                stats: empty_stats(),
                 lobby: None,
                 game: None,
             },
         );
         (token, id)
+    }
+
+    /// Remember a row loaded from Postgres. A player already at a table keeps that seat.
+    pub fn import(&mut self, token: &str, snap: AccountSnap) {
+        let hash = hash_token(token);
+        let id = snap.user.id.clone();
+        if let Some(account) = self.accounts.get_mut(&id) {
+            account.user = snap.user;
+            account.guest = snap.guest;
+            account.username = snap.username;
+            account.stats = snap.stats;
+        } else {
+            self.accounts.insert(
+                id.clone(),
+                Account {
+                    user: snap.user,
+                    guest: snap.guest,
+                    username: snap.username,
+                    stats: snap.stats,
+                    lobby: None,
+                    game: None,
+                },
+            );
+        }
+        self.by_hash.insert(hash, id);
+    }
+
+    pub fn guest_of(&self, id: &UserId) -> bool {
+        self.accounts.get(id).is_none_or(|account| account.guest)
+    }
+
+    pub fn username_of(&self, id: &UserId) -> Option<String> {
+        self.accounts
+            .get(id)
+            .and_then(|account| account.username.clone())
+    }
+
+    pub fn stats_of(&self, id: &UserId) -> Stats {
+        self.accounts
+            .get(id)
+            .map_or_else(empty_stats, |account| account.stats)
+    }
+
+    /// Apply one finished game. The first total sets `best_score` even when it is negative.
+    pub fn add_result(
+        &mut self,
+        id: &UserId,
+        win: bool,
+        bids_made: u32,
+        bids_total: u32,
+        total: i32,
+    ) {
+        if let Some(account) = self.accounts.get_mut(id) {
+            account.stats.games = account.stats.games.saturating_add(1);
+            if win {
+                account.stats.wins = account.stats.wins.saturating_add(1);
+            }
+            account.stats.bids_made = account.stats.bids_made.saturating_add(bids_made);
+            account.stats.bids_total = account.stats.bids_total.saturating_add(bids_total);
+            account.stats.best_score = Some(match account.stats.best_score {
+                None => total,
+                Some(old) => old.max(total),
+            });
+        }
+    }
+
+    pub fn revoke(&mut self, token: &str) {
+        self.by_hash.remove(&hash_token(token));
     }
 
     pub fn user_for_token(&self, token: &str) -> Option<UserId> {
@@ -116,6 +203,16 @@ impl Identity {
     }
 }
 
+fn empty_stats() -> Stats {
+    Stats {
+        games: 0,
+        wins: 0,
+        bids_made: 0,
+        bids_total: 0,
+        best_score: None,
+    }
+}
+
 pub fn unix_now() -> UnixMs {
     let millis = SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -150,7 +247,7 @@ pub fn uuid() -> String {
     )
 }
 
-fn token() -> String {
+pub fn token() -> String {
     let mut bytes = [0u8; 32];
     rand::rng().fill(&mut bytes);
     let mut text = String::with_capacity(64);
@@ -162,7 +259,7 @@ fn token() -> String {
     text
 }
 
-fn hash_token(token: &str) -> [u8; 32] {
+pub fn hash_token(token: &str) -> [u8; 32] {
     let digest = Sha256::digest(token.as_bytes());
     let mut hash = [0u8; 32];
     hash.copy_from_slice(&digest);

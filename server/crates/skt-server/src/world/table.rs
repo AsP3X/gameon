@@ -24,9 +24,39 @@ struct SeatPlay {
     offline_since: Option<Instant>,
 }
 
+/// One human's line in a finished game, ready to store.
+pub struct SeatTally {
+    /// The player.
+    pub user: UserId,
+    /// Seat index.
+    pub seat: u8,
+    /// Points at the end.
+    pub total: i32,
+    /// 1 is a win, including a shared first place.
+    pub place: u32,
+    /// `place` is 1.
+    pub win: bool,
+    /// Rounds where the bid was hit.
+    pub bids_made: u32,
+    /// Scored rounds.
+    pub bids_total: u32,
+}
+
+/// A finished game, written in one database transaction.
+pub struct GameReport {
+    /// Game id.
+    pub id: String,
+    /// `custom` or `casual`.
+    pub mode: &'static str,
+    /// Humans who were still seated. A `game.leave` is absent.
+    pub seats: Vec<SeatTally>,
+}
+
 struct Running {
     id: GameId,
     lobby_id: LobbyId,
+    /// Quick play has no lobby to reopen.
+    matchmade: bool,
     settings: skt_protocol::GameSettings,
     state: GameState,
     seats: Vec<SeatPlay>,
@@ -38,6 +68,7 @@ struct Running {
     shown: Option<Deadline>,
     over: bool,
     reopened: bool,
+    report: Option<GameReport>,
     owed: HashMap<UserId, GameOver>,
     forfeited: Vec<Seat>,
 }
@@ -62,6 +93,7 @@ impl Tables {
         lobby: &Lobby,
         now: Instant,
         live: &HashMap<UserId, super::Live>,
+        matchmade: bool,
     ) -> Vec<(UserId, GameId)> {
         let (mut seats, infos, status) = seats_from(lobby, live);
         let infos = unique_colors(infos);
@@ -93,6 +125,7 @@ impl Tables {
         let mut running = Running {
             id: id.clone(),
             lobby_id: lobby.id.clone(),
+            matchmade,
             settings: lobby.settings,
             state,
             seats,
@@ -104,6 +137,7 @@ impl Tables {
             shown: None,
             over: false,
             reopened: false,
+            report: None,
             owed: HashMap::new(),
             forfeited: Vec::new(),
         };
@@ -305,9 +339,10 @@ impl Tables {
         now: Instant,
         live: &HashMap<UserId, super::Live>,
         lobbies: &mut HashMap<LobbyId, Lobby>,
-    ) -> Vec<UserId> {
+    ) -> (Vec<UserId>, Vec<GameReport>) {
         let ids: Vec<GameId> = self.games.keys().cloned().collect();
         let mut finished = Vec::new();
+        let mut reports = Vec::new();
         for id in ids {
             let ended = {
                 let Some(running) = self.games.get_mut(&id) else {
@@ -323,7 +358,10 @@ impl Tables {
                             .iter()
                             .filter_map(|seat| seat.user.clone())
                             .collect::<Vec<_>>();
-                        Some((running.lobby_id.clone(), users))
+                        if let Some(report) = running.report.take() {
+                            reports.push(report);
+                        }
+                        Some((running.matchmade, running.lobby_id.clone(), users))
                     }
                 } else {
                     running.expire_grace(now, live);
@@ -337,16 +375,18 @@ impl Tables {
                     None
                 }
             };
-            if let Some((lobby_id, users)) = ended {
-                // The lobby opens again on the tick after the result, with nobody ready.
-                reopen_lobby(&lobby_id, lobbies, live);
+            if let Some((matchmade, lobby_id, users)) = ended {
+                // A quick-play table has no lobby. A custom lobby opens with nobody ready.
+                if !matchmade {
+                    reopen_lobby(&lobby_id, lobbies, live);
+                }
                 for user in users {
                     self.seat_of.remove(&user);
                     finished.push(user);
                 }
             }
         }
-        finished
+        (finished, reports)
     }
 
     fn player_step(
@@ -745,6 +785,39 @@ impl Running {
                 1 + u32::try_from(totals.iter().filter(|other| *other > total).count()).unwrap_or(0)
             })
             .collect::<Vec<_>>();
+        let scores = self.state.scores().unwrap_or_default();
+        let bids_total = u32::try_from(scores.len()).unwrap_or(0);
+        let mut tallies = Vec::new();
+        for index in 0..self.players() {
+            if self.forfeited.iter().any(|left| left.index() == index) {
+                continue;
+            }
+            let Some(user) = self.seats[index].user.clone() else {
+                continue;
+            };
+            let made = u32::try_from(
+                scores
+                    .iter()
+                    .filter(|row| row.get(index).is_some_and(|score| score.hit))
+                    .count(),
+            )
+            .unwrap_or(0);
+            let place = places.get(index).copied().unwrap_or(0);
+            tallies.push(SeatTally {
+                user,
+                seat: u8::try_from(index).unwrap_or(0),
+                total: totals.get(index).copied().unwrap_or(0),
+                place,
+                win: place == 1,
+                bids_made: made,
+                bids_total,
+            });
+        }
+        self.report = Some(GameReport {
+            id: self.id.as_str().to_owned(),
+            mode: if self.matchmade { "casual" } else { "custom" },
+            seats: tallies,
+        });
         for index in 0..self.players() {
             let Some(user) = self.seats[index].user.clone() else {
                 continue;
@@ -758,7 +831,7 @@ impl Running {
                     places: places.clone(),
                     forfeited: self.forfeited.clone(),
                     rating: None,
-                    lobby_id: Some(self.lobby_id.clone()),
+                    lobby_id: (!self.matchmade).then(|| self.lobby_id.clone()),
                 },
             };
             if live.contains_key(&user) {
@@ -825,8 +898,12 @@ impl Running {
         GameStart {
             tag: GameStartTag::Value,
             game_id: self.id.clone(),
-            mode: TableMode::Custom,
-            lobby_id: Some(self.lobby_id.clone()),
+            mode: if self.matchmade {
+                TableMode::Casual
+            } else {
+                TableMode::Custom
+            },
+            lobby_id: (!self.matchmade).then(|| self.lobby_id.clone()),
             settings: self.settings,
             deck: self.state.deck().to_vec(),
             schedule: self.state.schedule().to_vec(),

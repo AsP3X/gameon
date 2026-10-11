@@ -4,25 +4,38 @@
 //! afterwards, so the lock is never held across an `.await`. Each accepted game step queues `ok`
 //! and then that step's `game.update` before anything else can write.
 
-mod identity;
+pub(crate) mod identity;
 mod table;
 
-use std::collections::HashMap;
-use std::time::Instant;
+pub(crate) use table::GameReport;
+#[cfg(test)]
+pub(crate) use table::SeatTally;
+
+use std::collections::{HashMap, VecDeque};
+use std::time::{Duration, Instant};
 
 use skt_protocol::{
     Active, ClientMessage, ErrMessage, ErrTag, ErrorCode, GameId, Lobby, LobbyClosed,
-    LobbyClosedTag, LobbyId, LobbyPhase, LobbyStatePush, LobbyStateTag, Me, Member, MessageId,
-    OkReply, OkTag, ServerConfig, Stats, TableColor, TableMode, UserId, Visibility,
+    LobbyClosedTag, LobbyId, LobbyList, LobbyPhase, LobbyStatePush, LobbyStateTag, LobbySummary,
+    Me, Member, MessageId, OkReply, OkTag, QueueMode, QueueStatus, QueueStatusPush, QueueStatusTag,
+    ServerConfig, TableColor, TableMode, UserId, Visibility,
 };
 use tokio::sync::mpsc::UnboundedSender;
 
-use identity::Identity;
+use identity::{AccountSnap, Identity};
 
 use table::Tables;
 
+/// One outbound frame, or an instruction to close the socket.
+pub enum Wire {
+    /// A JSON text frame.
+    Text(String),
+    /// A close code. 1008 ends a session that was logged out or replaced.
+    Close(u16),
+}
+
 /// Frames waiting on one socket.
-pub type Outbox = UnboundedSender<String>;
+pub type Outbox = UnboundedSender<Wire>;
 
 /// The process-wide room.
 pub struct World {
@@ -30,9 +43,20 @@ pub struct World {
     tables: Tables,
     lobbies: HashMap<LobbyId, Lobby>,
     codes: HashMap<String, LobbyId>,
+    /// Public-list order. Oldest first.
+    opened: Vec<LobbyId>,
+    queue: VecDeque<Waiting>,
+    /// When the casual queue last became non-empty.
+    queue_since: Option<Instant>,
+    fill: Duration,
     /// Current socket for a user, if `hello` has been accepted.
     live: HashMap<UserId, Live>,
     now: Instant,
+}
+
+struct Waiting {
+    user: UserId,
+    since: skt_protocol::UnixMs,
 }
 
 struct Live {
@@ -45,14 +69,40 @@ impl World {
     /// An empty tavern.
     #[must_use]
     pub fn new() -> Self {
+        Self::with_fill(Duration::from_secs(6))
+    }
+
+    /// `fill` is how long a casual queue waits before bots take the empty seats.
+    #[must_use]
+    pub fn with_fill(fill: Duration) -> Self {
         Self {
             identity: Identity::new(),
             tables: Tables::new(),
             lobbies: HashMap::new(),
             codes: HashMap::new(),
+            opened: Vec::new(),
+            queue: VecDeque::new(),
+            queue_since: None,
+            fill,
             live: HashMap::new(),
             now: Instant::now(),
         }
+    }
+
+    /// Remember an account loaded from Postgres.
+    pub fn import(&mut self, token: &str, snap: AccountSnap) {
+        self.identity.import(token, snap);
+    }
+
+    /// Forget a session hash. The account and any seat stay until [`Self::drop_presence`].
+    pub fn revoke(&mut self, token: &str) {
+        self.identity.revoke(token);
+    }
+
+    /// Whether the cached account has no password.
+    #[must_use]
+    pub fn is_guest(&self, id: &UserId) -> bool {
+        self.identity.guest_of(id)
     }
 
     /// Public server description. Emotes stay empty until the owner names them.
@@ -129,6 +179,12 @@ impl World {
             self.hello(user, text);
             return;
         }
+        if let Some(id) = message_id(text)
+            && queue_mode_rejected(text)
+        {
+            self.fail_live(user, id, ErrorCode::Validation);
+            return;
+        }
         let message: ClientMessage = match serde_json::from_str(text) {
             Ok(message) => message,
             Err(_) => return,
@@ -137,11 +193,26 @@ impl World {
     }
 
     /// Deadlines, bot moves, and the disconnect grace.
-    pub fn tick(&mut self) {
+    pub fn tick(&mut self) -> Vec<GameReport> {
         self.now = Instant::now();
-        let finished = self.tables.tick(self.now, &self.live, &mut self.lobbies);
+        self.fill_queue();
+        let (finished, reports) = self.tables.tick(self.now, &self.live, &mut self.lobbies);
         for user in finished {
             self.identity.set_game(&user, None);
+        }
+        reports
+    }
+
+    /// Add the stored counters to the in-memory account.
+    pub fn apply_report(&mut self, report: &GameReport) {
+        for seat in &report.seats {
+            self.identity.add_result(
+                &seat.user,
+                seat.win,
+                seat.bids_made,
+                seat.bids_total,
+                seat.total,
+            );
         }
     }
 
@@ -190,9 +261,8 @@ impl World {
             ClientMessage::LobbyRemoveBot { id, index } => self.remove_bot(user, id, index),
             ClientMessage::LobbyKick { id, user_id } => self.kick(user, id, &user_id),
             ClientMessage::LobbyStart { id } => self.start(user, id),
-            ClientMessage::QueueJoin { id, .. } | ClientMessage::QueueLeave { id } => {
-                self.fail_live(user, id, ErrorCode::Internal);
-            }
+            ClientMessage::QueueJoin { id, mode } => self.join_queue(user, id, mode),
+            ClientMessage::QueueLeave { id } => self.leave_queue(user, id),
             ClientMessage::GameEmote { id, .. } => self.fail_live(user, id, ErrorCode::Validation),
             other => {
                 let left = self
@@ -238,6 +308,7 @@ impl World {
         };
         self.codes.insert(code, lobby_id.clone());
         self.lobbies.insert(lobby_id.clone(), lobby.clone());
+        self.opened.push(lobby_id.clone());
         self.identity.set_lobby(user, Some(lobby_id));
         self.ok(user, id, Some(lobby), false);
     }
@@ -443,7 +514,10 @@ impl World {
         if let Some(snapshot) = snapshot {
             self.push_lobby(&snapshot);
         }
-        for (seated, game) in self.tables.open(&game_id, &lobby, self.now, &self.live) {
+        for (seated, game) in self
+            .tables
+            .open(&game_id, &lobby, self.now, &self.live, false)
+        {
             self.identity.set_game(&seated, Some(game));
         }
     }
@@ -522,9 +596,220 @@ impl World {
         if empty {
             self.codes.remove(&code);
             self.lobbies.remove(lobby_id);
+            self.opened.retain(|id| id != lobby_id);
             return;
         }
         self.push_lobby(&snapshot);
+    }
+
+    /// Open public lobbies, oldest first, including full ones. In-game lobbies are omitted.
+    pub fn public_lobbies(&self) -> LobbyList {
+        let lobbies = self
+            .opened
+            .iter()
+            .filter_map(|id| self.lobbies.get(id))
+            .filter(|lobby| {
+                lobby.visibility == Visibility::Public && lobby.state == LobbyPhase::Open
+            })
+            .map(|lobby| LobbySummary {
+                id: lobby.id.clone(),
+                host_name: lobby.host_id.as_ref().map_or_else(
+                    || "Sailor".to_owned(),
+                    |id| self.identity.public_user(id).name,
+                ),
+                settings: lobby.settings,
+                players: u32::try_from(lobby.members.len()).unwrap_or(0),
+            })
+            .collect();
+        LobbyList { lobbies }
+    }
+
+    /// Write a display name and colour into an open or running lobby and tell every member.
+    pub fn publish_profile(&mut self, user: &UserId) {
+        let Some(lobby_id) = self.identity.lobby_of(user) else {
+            return;
+        };
+        let Some(lobby) = self.lobbies.get_mut(&lobby_id) else {
+            return;
+        };
+        let shown = self.identity.public_user(user);
+        for member in &mut lobby.members {
+            if let Member::Human { user: seated, .. } = member
+                && seated.id == *user
+            {
+                *seated = shown.clone();
+            }
+        }
+        let snapshot = lobby.clone();
+        self.push_lobby(&snapshot);
+    }
+
+    /// Leave an open lobby and the queue, and close the socket. A running game stays seated.
+    pub fn drop_presence(&mut self, user: &UserId) {
+        let in_game = self.identity.game_of(user).is_some();
+        if !in_game && let Some(lobby_id) = self.identity.lobby_of(user) {
+            let open = self
+                .lobbies
+                .get(&lobby_id)
+                .is_some_and(|lobby| lobby.state == LobbyPhase::Open);
+            if open {
+                self.remove_member(&lobby_id, user);
+            }
+        }
+        if self.queued(user) {
+            self.queue.retain(|waiting| &waiting.user != user);
+            if self.queue.is_empty() {
+                self.queue_since = None;
+            }
+            self.push_queue();
+        }
+        self.close_socket(user, 1008);
+    }
+
+    fn join_queue(&mut self, user: &UserId, id: MessageId, mode: QueueMode) {
+        if mode == QueueMode::Ranked && self.identity.guest_of(user) {
+            self.fail_live(user, id, ErrorCode::AccountRequired);
+            return;
+        }
+        if self.busy(user) {
+            self.fail_live(user, id, ErrorCode::AlreadySeated);
+            return;
+        }
+        if mode == QueueMode::Ranked {
+            self.fail_live(user, id, ErrorCode::Internal);
+            return;
+        }
+        if self.queue.is_empty() {
+            self.queue_since = Some(self.now);
+        }
+        self.queue.push_back(Waiting {
+            user: user.clone(),
+            since: identity::unix_now(),
+        });
+        let status = self.queue_status(user);
+        self.ok_queue(user, id, status);
+        self.push_queue_except(user);
+        if self.queue.len() >= 4 {
+            self.seat_from_queue(4);
+        }
+    }
+
+    fn leave_queue(&mut self, user: &UserId, id: MessageId) {
+        self.queue.retain(|waiting| &waiting.user != user);
+        if self.queue.is_empty() {
+            self.queue_since = None;
+        }
+        self.ok(user, id, None, false);
+        self.push_queue();
+    }
+
+    fn fill_queue(&mut self) {
+        let Some(since) = self.queue_since else {
+            return;
+        };
+        if self.queue.is_empty() || self.now.saturating_duration_since(since) < self.fill {
+            return;
+        }
+        let count = self.queue.len();
+        self.seat_from_queue(count);
+    }
+
+    fn seat_from_queue(&mut self, count: usize) {
+        let waiting: Vec<Waiting> = self.queue.drain(..count.min(self.queue.len())).collect();
+        if self.queue.is_empty() {
+            self.queue_since = None;
+        } else {
+            self.queue_since = Some(self.now);
+        }
+        let mut members = Vec::new();
+        for seat in &waiting {
+            members.push(self.human_member(&seat.user, false));
+        }
+        while members.len() < 4 {
+            let name = bot_name(&members);
+            let color = TableColor::Sky;
+            members.push(Member::Bot {
+                name,
+                color,
+                level: skt_engine::BotLevel::Normal,
+            });
+        }
+        let lobby = Lobby {
+            id: LobbyId::new(identity::uuid()),
+            code: String::new(),
+            mode: TableMode::Casual,
+            visibility: Visibility::Private,
+            host_id: None,
+            settings: skt_protocol::GameSettings::standard(),
+            members,
+            state: LobbyPhase::Open,
+            game_id: None,
+        };
+        let game_id = GameId::new(identity::uuid());
+        for (seated, game) in self
+            .tables
+            .open(&game_id, &lobby, self.now, &self.live, true)
+        {
+            self.identity.set_game(&seated, Some(game));
+        }
+    }
+
+    fn queued(&self, user: &UserId) -> bool {
+        self.queue.iter().any(|waiting| &waiting.user == user)
+    }
+
+    fn queue_status(&self, user: &UserId) -> Option<QueueStatus> {
+        let waiting = self.queue.iter().find(|waiting| &waiting.user == user)?;
+        Some(QueueStatus {
+            mode: QueueMode::Casual,
+            since: waiting.since,
+            found: u32::try_from(self.queue.len()).unwrap_or(0),
+            needed: 4,
+        })
+    }
+
+    fn push_queue(&self) {
+        self.push_queue_except(&UserId::new(String::new()));
+    }
+
+    fn push_queue_except(&self, skip: &UserId) {
+        let found = u32::try_from(self.queue.len()).unwrap_or(0);
+        for waiting in &self.queue {
+            if &waiting.user == skip {
+                continue;
+            }
+            self.send(
+                &waiting.user,
+                &QueueStatusPush {
+                    tag: QueueStatusTag::Value,
+                    queue: QueueStatus {
+                        mode: QueueMode::Casual,
+                        since: waiting.since,
+                        found,
+                        needed: 4,
+                    },
+                },
+            );
+        }
+    }
+
+    fn ok_queue(&self, user: &UserId, id: MessageId, queue: Option<QueueStatus>) {
+        self.send(
+            user,
+            &OkReply {
+                tag: OkTag::Value,
+                re: id,
+                lobby: None,
+                queue,
+                server_time: None,
+            },
+        );
+    }
+
+    fn close_socket(&self, user: &UserId, code: u16) {
+        if let Some(live) = self.live.get(user) {
+            let _ = live.out.send(Wire::Close(code));
+        }
     }
 
     fn push_lobby(&self, lobby: &Lobby) {
@@ -553,14 +838,16 @@ impl World {
                 me,
                 server_time: identity::unix_now(),
                 lobby,
-                queue: None,
+                queue: self.queue_status(user),
                 game,
             },
         );
     }
 
     fn busy(&self, user: &UserId) -> bool {
-        self.identity.lobby_of(user).is_some() || self.identity.game_of(user).is_some()
+        self.identity.lobby_of(user).is_some()
+            || self.identity.game_of(user).is_some()
+            || self.queued(user)
     }
 
     fn me_for_token(&self, token: &str) -> Option<Me> {
@@ -573,6 +860,10 @@ impl World {
             Some(Active::Game {
                 id: id.as_str().to_owned(),
             })
+        } else if self.queued(user) {
+            Some(Active::Queue {
+                id: "casual".to_owned(),
+            })
         } else {
             self.identity.lobby_of(user).map(|id| Active::Lobby {
                 id: id.as_str().to_owned(),
@@ -580,17 +871,11 @@ impl World {
         };
         Me {
             user: self.identity.public_user(user),
-            guest: true,
-            username: None,
+            guest: self.identity.guest_of(user),
+            username: self.identity.username_of(user),
             active,
             cooldown_until: None,
-            stats: Stats {
-                games: 0,
-                wins: 0,
-                bids_made: 0,
-                bids_total: 0,
-                best_score: None,
-            },
+            stats: self.identity.stats_of(user),
             rating: None,
         }
     }
@@ -674,9 +959,27 @@ impl World {
     }
 }
 
+fn message_id(text: &str) -> Option<MessageId> {
+    let value: serde_json::Value = serde_json::from_str(text).ok()?;
+    let id = value.get("id")?.as_u64()?;
+    u32::try_from(id).ok().map(MessageId::new)
+}
+
+/// `queue.join` whose `mode` is neither casual nor ranked.
+fn queue_mode_rejected(text: &str) -> bool {
+    let Ok(value) = serde_json::from_str::<serde_json::Value>(text) else {
+        return false;
+    };
+    if value.get("t").and_then(serde_json::Value::as_str) != Some("queue.join") {
+        return false;
+    }
+    let mode = value.get("mode").and_then(serde_json::Value::as_str);
+    mode != Some("casual") && mode != Some("ranked")
+}
+
 fn send(out: &Outbox, frame: &impl serde::Serialize) {
     if let Ok(text) = serde_json::to_string(frame) {
-        let _ = out.send(text);
+        let _ = out.send(Wire::Text(text));
     }
 }
 

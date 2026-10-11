@@ -22,7 +22,12 @@ TypeScript in `web/src/protocol/generated/` is generated from it.
 
 - The session is the cookie `skt_session`: HttpOnly, `SameSite=Strict`, `Path=/`, `Secure` outside
   local development. The value is an opaque random token; the server stores only its hash. It
-  expires 30 days after last use.
+  expires 30 days after last use. Each use slides that window.
+- Logout, and a login that replaces a different session, closes that session's socket with close
+  code 1008. An open lobby is left as `lobby.leave` would leave it. A place in the queue is left.
+  A seat in a running game is kept and treated as a dropped connection. Logging in as the account
+  that already holds the browser's session does not close its socket. Register does not close the
+  socket.
 - The page never reads the token. REST and the socket upgrade both carry the cookie.
 - Every state-changing REST request and the socket upgrade are checked against an `Origin`
   allow-list.
@@ -75,13 +80,13 @@ All bodies are JSON. Unless marked *public*, a session is required.
 | `GET /health` | | `{ ok: true }` | *public* |
 | `GET /config` | | `ServerConfig` | *public* |
 | `POST /auth/guest` | | `Me` | *public*; creates a guest and sets the cookie. With a valid session it returns that user. |
-| `POST /auth/register` | `Credentials` | `Me` | With a guest session, upgrades that guest in place. |
-| `POST /auth/login` | `Credentials` | `Me` | *public*; replaces the session. |
-| `POST /auth/logout` | | `204` | Revokes the session, clears the cookie. |
+| `POST /auth/register` | `Credentials` | `Me` | With a guest session, upgrades that guest in place. A seated guest may register; the seat is not touched. No session is `401`. An account is `ALREADY_REGISTERED`. |
+| `POST /auth/login` | `Credentials` | `Me` | *public*; replaces the session. A bad body is `VALIDATION` before the password is checked. |
+| `POST /auth/logout` | | `204` | Revokes the session, clears the cookie. No session is `401`. |
 | `GET /me` | | `Me` | |
-| `PATCH /me` | `ProfilePatch` | `Me` | Omitted fields are left unchanged. |
-| `GET /users/{id}` | | `Profile` | |
-| `GET /lobbies` | | `{ lobbies: LobbySummary[] }` | Open public lobbies. Phase 2. |
+| `PATCH /me` | `ProfilePatch` | `Me` | Omitted fields are left unchanged. A bad field refuses the whole patch. If the user sits in a lobby, every member is sent `lobby.state`. A running game keeps the names it started with. |
+| `GET /users/{id}` | | `Profile` | No username and no session data. Unknown id is `404`. |
+| `GET /lobbies` | | `{ lobbies: LobbySummary[] }` | Open public lobbies, full ones included, oldest first, no limit. A lobby leaves the list while its game runs and returns when it is `open` again. |
 | `GET /ladder?season=&limit=&after=` | | `{ season: Season, entries: LadderEntry[], next?: string }` | Phase 3. |
 
 ```ts
@@ -121,10 +126,18 @@ kraken, whale and abilities off, `botLevel` `normal`, `pace` `standard`.
 means the server currently accepts none. `game.emote` carries one id from that list; the sample
 uses the placeholder `"example"`, which is not an accepted id.
 
-Username: 3–16 characters of `A–Z a–z 0–9 _`, unique case-insensitively, not on the reserved list.
-`name` is the display name: 1–16 visible characters, trimmed, no control characters. `color` is a
-`TableColor`: one of the eight legacy table colours `#1cb0f6`, `#ff9600`, `#ce82ff`, `#ff4b4b`,
-`#58cc02`, `#e5a400`, `#2b70c9`, `#ff5fbf`.
+Username: 3–16 characters of `A–Z a–z 0–9 _`, unique case-insensitively. There is no reserved-name
+list. `name` is the display name: 1–16 Unicode code points after trimming, and no character in
+Unicode category `Cc`. `color` is a `TableColor`: one of the eight legacy table colours
+`#1cb0f6`, `#ff9600`, `#ce82ff`, `#ff4b4b`, `#58cc02`, `#e5a400`, `#2b70c9`, `#ff5fbf`, written in
+lower case. A password is `WEAK_PASSWORD` only when it is empty. The message is `Enter a password.`
+
+`Active` for a casual queue is `{ kind: 'queue', id: 'casual' }`. There is one casual queue.
+
+`Stats` counts every finished custom game and every finished casual game. A shared first place
+counts as a win for each of those seats. A seat that sent `game.leave` is not counted. `bestScore`
+is set by the first finished game even when the total is negative, and is the highest total after
+that. `bidsTotal` is the number of scored rounds. `bidsMade` is the rounds where the bid was hit.
 
 ## 5. Socket
 
@@ -199,7 +212,7 @@ type LobbySummary = { id: LobbyId; hostName: string; settings: GameSettings; pla
 | Client message | Payload | Who | Result |
 | -------------- | ------- | --- | ------ |
 | `lobby.create` | `{ visibility, settings }` | anyone not seated | `ok { lobby }` |
-| `lobby.join` | `{ code?: string, lobbyId?: string }` | anyone not seated | `ok { lobby }`. Send one. If both are present, `code` wins. |
+| `lobby.join` | `{ code?: string, lobbyId?: string }` | anyone not seated | `ok { lobby }`. Send one. If both are present, `code` wins. `lobbyId` may seat a private lobby: the id of a private lobby reaches only its members. |
 | `lobby.leave` | | member of an open lobby | `ok`. While the lobby is `inGame`, `LOBBY_STARTED`; leaving the seat is `game.leave`. |
 | `lobby.ready` | `{ ready: boolean }` | member | `ok` |
 | `lobby.settings` | `{ settings }` | host | `ok`; clears everyone's ready |
@@ -224,14 +237,31 @@ lobby as well as from the seat. The members who remain are sent `lobby.state`. T
 | Client message | Payload | Result |
 | -------------- | ------- | ------ |
 | `queue.join` | `{ mode: 'casual' | 'ranked' }` | `ok { queue }` |
-| `queue.leave` | | `ok` |
+| `queue.leave` | | `ok`, including when the user was not queued |
 
 ```ts
 type QueueStatus = { mode: 'casual' | 'ranked'; since: number; found: number; needed: number };
 ```
 
-Pushes: `{ t: 'queue.status', queue }` as it changes. When a table forms, the queue ends and the
-game starts with `game.start`; there is no accept step.
+`queue.join` is checked in this order. Any other `mode` is `VALIDATION`. `ranked` from a guest is
+`ACCOUNT_REQUIRED`, even when that guest is already seated. A user who is in a lobby, a game, or
+the queue is `ALREADY_SEATED`. `ranked` from an account is not this phase: the server answers
+`INTERNAL`.
+
+For `casual`, `ok.queue` is `{ mode: 'casual', since, found, needed: 4 }`. `since` is when this
+player joined. `found` counts everyone waiting, the joiner included. Every other waiting player is
+then sent `{ t: 'queue.status', queue }` with their own `since` and the new `found`. The joiner is
+not sent that push. No `queue.status` is sent when the table forms.
+
+When `found` reaches 4 the table forms at once, the first four in join order. Otherwise the server
+waits 6000 ms from the moment the queue stopped being empty, then seats whoever is waiting and
+fills the empty seats with bots. The client does not print that duration. A dropped socket keeps
+the place, with no time limit. The next `welcome` has `queue` set. A queued player with no socket
+when the table forms is seated `offline`.
+
+A table made by the queue has no lobby. `game.start` and `game.over` carry `lobbyId: null` and
+`mode: 'casual'`. `settings` are `config.standard`. Humans sit first, in join order, then the bots.
+There is no accept step and no `lobby.state`. After `game.over` the client returns to the hub.
 
 ### 5.5 Game
 

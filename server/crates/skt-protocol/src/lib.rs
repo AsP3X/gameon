@@ -27,8 +27,8 @@ pub use output::{
 };
 pub use pushes::{
     CloseReason, ErrMessage, ErrTag, GameEmotePush, GameOver, GameOverTag, LobbyClosed,
-    LobbyClosedTag, LobbyStatePush, LobbyStateTag, OkReply, OkTag, QueueStatusPush, Superseded,
-    SupersededTag, Welcome, WelcomeGame, WelcomeTag,
+    LobbyClosedTag, LobbyStatePush, LobbyStateTag, OkReply, OkTag, QueueStatusPush, QueueStatusTag,
+    Superseded, SupersededTag, Welcome, WelcomeGame, WelcomeTag,
 };
 pub use rest::{
     Active, Credentials, Health, LadderEntry, LadderPage, Me, Profile, ProfilePatch, Rating,
