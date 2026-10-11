@@ -6,7 +6,7 @@ import { Sound } from '../sound/sound';
 import { ACTIONS, CLOSING, GAME_INPUT, UI_SOUNDS } from './actions';
 import { $, $$, initial, reduced } from './dom';
 import type { ActionData } from './dom';
-import { render } from './render';
+import { render, tuneMenu } from './render';
 import { clearTimer, prefs, savePrefs, session, timers, ui } from './state';
 import { Tracker, trkRound } from './tracker';
 import { bidText } from './views';
@@ -335,6 +335,11 @@ export function listen(): () => void {
   window.addEventListener('pointerup', (e) => endSwipe(e, false), { signal });
   window.addEventListener('pointercancel', (e) => endSwipe(e, true), { signal });
   window.addEventListener('pointerdown', () => Sound.unlock(), { once: true, capture: true, signal });
+  // A finger going down does not unlock audio everywhere; lifting it does, and so does a key. The
+  // menu music has no button press to wait for, so it starts on whichever comes first.
+  window.addEventListener('pointerup', () => Sound.unlock(), { once: true, capture: true, signal });
+  window.addEventListener('keydown', () => Sound.unlock(), { once: true, capture: true, signal });
+  document.addEventListener('visibilitychange', tuneMenu, { signal });
   document.addEventListener('input', onVolumeInput, { signal });
   document.addEventListener('change', onVolumeChange, { signal });
   document.addEventListener('pointerdown', onBidStart, { signal });

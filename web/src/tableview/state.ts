@@ -235,11 +235,21 @@ export interface Session {
 }
 export const session: Session = { table: null, online: null, view: null, trk: null };
 
-/** Where the renderer draws, and how it hands over to the online screens: set by mountTavern, cleared when it unmounts. */
-export const stage: { app: HTMLElement | null; fx: HTMLCanvasElement | null; online: (() => void) | null } = {
+/**
+ * Where the renderer draws, and how it hands over to the online screens: set by mountTavern, cleared
+ * when it unmounts. `covered` is the page's to set (coverTavern): it shows something else in the
+ * renderer's place.
+ */
+export const stage: {
+  app: HTMLElement | null;
+  fx: HTMLCanvasElement | null;
+  online: (() => void) | null;
+  covered: boolean;
+} = {
   app: null,
   fx: null,
   online: null,
+  covered: false,
 };
 
 type Timer = ReturnType<typeof setTimeout>;

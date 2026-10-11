@@ -4,7 +4,8 @@
 
    Every sound is synthesised with Web Audio: no files to load, nothing blocked by the page sandbox.
    A sound that was given recorded takes (Sound.samples) plays one of those instead, and keeps its
-   recipe for as long as it has none.
+   recipe for as long as it has none. The menu music (Sound.tune, Sound.music) is a recording too:
+   the one sound that has no recipe, so without its file the menu is quiet.
    Graph: voices -> master gain -> soft limiter -> speakers, with a small send to a room reverb.
    Sounds are named recipes; call Sound.play(name, arg). */
 
@@ -31,6 +32,17 @@ interface Ambience {
   g: GainNode;
 }
 
+/** Where the menu tune sits in its file, in seconds: it begins at `starts` and comes round again every `repeats`. */
+export interface TuneLoop {
+  starts: number;
+  repeats: number;
+}
+
+interface Music {
+  s: AudioBufferSourceNode;
+  g: GainNode;
+}
+
 let prefs: SoundPrefs = { muted: false, volume: 0.8, ambience: false, haptics: true };
 let rig: Rig | null = null;
 let amb: Ambience | null = null;
@@ -41,6 +53,13 @@ const waiting: Partial<Record<SoundName, ArrayBuffer[]>> = {};
 /** The decoded takes of a sound, and which one it played last. */
 const takes: Partial<Record<SoundName, AudioBuffer[]>> = {};
 const lastTake: Partial<Record<SoundName, number>> = {};
+/** The menu tune as it was handed in, still encoded: it is decoded when the music is first wanted. */
+let tuneFile: ArrayBuffer | null = null;
+let tune: AudioBuffer | null = null;
+let tuneLoop: TuneLoop = { starts: 0, repeats: 0 };
+/** Whether the page asks for the menu music, and the music that plays. */
+let musicWanted = false;
+let mus: Music | null = null;
 const level = (): number => (prefs.muted ? 0 : Math.pow(prefs.volume == null ? 0.8 : prefs.volume, 1.6));
 
 function boot(): Rig | null {
@@ -552,6 +571,62 @@ function ambience(on: boolean): void {
   }
 }
 
+/* --- menu music: one recorded tune, round and round for as long as the page asks for it --- */
+/* The tune is stored at -16 LUFS. At 0.3 it plays about as loud as a button tap, under the game's sounds. */
+const MUSIC_V = 0.3;
+
+/** Decode the tune. Decoded it takes some 30 MB, so this waits until the music is wanted. */
+function decodeTune(): void {
+  const file = tuneFile,
+    ctx = decoder();
+  if (!file || !ctx) return;
+  tuneFile = null;
+  try {
+    void ctx.decodeAudioData(file).then(
+      (buffer) => {
+        tune = buffer;
+        syncMusic();
+      },
+      () => {
+        // Not audio this browser can read: the menu stays quiet.
+      },
+    );
+  } catch {
+    // The same, for a browser whose decodeAudioData does not return a promise.
+  }
+}
+
+/** Start or stop the tune, so that it plays exactly while it is wanted and sound is on. */
+function syncMusic(): void {
+  const on = musicWanted && !prefs.muted;
+  if (on && !tune) decodeTune();
+  // Without an audio graph nothing plays: it is built on the first tap, and unlock() comes back here.
+  const r = rig;
+  if (!r) return;
+  const t = r.ctx.currentTime;
+  if (on && tune && !mus) {
+    const s = r.ctx.createBufferSource(),
+      g = r.ctx.createGain();
+    s.buffer = tune;
+    // Any stretch of the file that is `repeats` long joins up with itself (web README, "Menu
+    // music"). This one begins half-way into the lead-in, clear of the silence a decoder may leave
+    // at the front of an MP3.
+    s.loop = true;
+    s.loopStart = tuneLoop.starts / 2;
+    s.loopEnd = tuneLoop.starts / 2 + tuneLoop.repeats;
+    g.gain.value = 0;
+    s.connect(g).connect(r.master);
+    s.start(t, tuneLoop.starts);
+    g.gain.setTargetAtTime(MUSIC_V, t, 0.4);
+    mus = { s, g };
+  } else if (!on && mus) {
+    const m = mus;
+    mus = null;
+    m.g.gain.setTargetAtTime(0, t, 0.15);
+    m.s.stop(t + 1);
+  }
+}
+
 export const Sound = {
   /** Point the mixer at the settings to read. They are read on every call, so later changes apply at once. */
   use(settings: SoundPrefs): void {
@@ -590,17 +665,21 @@ export const Sound = {
   setLevel(): void {
     if (rig) rig.master.gain.setTargetAtTime(level(), rig.ctx.currentTime, 0.05);
     ambience(!prefs.muted && prefs.ambience);
+    syncMusic();
   },
   ambience,
-  /** Stop the ambience without waking the audio graph: for when the table leaves the page. */
+  /** Stop the ambience and the music without waking the audio graph: for when the table leaves the page. */
   hush(): void {
     if (rig && amb) ambience(false);
+    musicWanted = false;
+    syncMusic();
   },
   /** Audio may only start after a user gesture; this unlocks it on the first tap. */
   unlock(): void {
     const r = boot();
     if (r && r.ctx.state === 'suspended') void r.ctx.resume();
     if (prefs.ambience && !prefs.muted) ambience(true);
+    syncMusic();
   },
   /**
    * Give a sound recorded takes to play in place of its recipe: encoded audio files, as fetched.
@@ -610,6 +689,23 @@ export const Sound = {
     waiting[name] = files;
     const ctx = decoder();
     if (ctx) decode(ctx, name);
+  },
+  /**
+   * Give the mixer the menu tune: an encoded audio file, as fetched, and where the tune sits in it.
+   * It is decoded when the music is first wanted.
+   */
+  tune(file: ArrayBuffer, loop: TuneLoop): void {
+    tuneFile = file;
+    tuneLoop = loop;
+    syncMusic();
+  },
+  /**
+   * Say whether the menu music is wanted. It plays once the tune is in and audio is unlocked, and
+   * not while sound is off. Asking again for what already is changes nothing.
+   */
+  music(on: boolean): void {
+    musicWanted = on;
+    syncMusic();
   },
   /** Every sound there is. */
   names: (): SoundName[] => Object.keys(LIB) as SoundName[],

@@ -11,6 +11,7 @@ import type { RawClient } from '../net/mock/raw';
 import { MockServer } from '../net/mock/server';
 import type { MockStore } from '../net/mock/server';
 import type { Transport } from '../net/socket';
+import { Sound } from '../sound/sound';
 import { session, stats, tableView, ui } from '../tableview/state';
 
 function seeded(seed: number): () => number {
@@ -144,6 +145,17 @@ describe('playing online', () => {
     expect($('#online')).toBeNull();
     expect($('#app')?.hidden).toBe(false);
     expect($('#app .home')).not.toBeNull();
+  });
+
+  it('stops the menu music while the hub is where the home screen was, and brings it back with it', async () => {
+    const music = vi.spyOn(Sound, 'music');
+    const wanted = (): boolean | undefined => music.mock.calls.at(-1)?.[0];
+    await renderApp();
+    expect(wanted()).toBe(true);
+    await click('[data-act="online"]');
+    expect(wanted()).toBe(false);
+    await click('[aria-label="Back"]');
+    expect(wanted()).toBe(true);
   });
 
   it('creates a private table, adds a bot, readies, starts and bids once at the table', async () => {
