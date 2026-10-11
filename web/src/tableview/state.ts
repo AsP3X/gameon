@@ -268,26 +268,30 @@ export function scoreView(): ScoreView {
   return v;
 }
 
-export const humansOf = (v: { seats: SeatConfig[] }): Seat[] =>
-  v.seats.map((p, i) => (p.bot ? -1 : i)).filter((i) => i >= 0);
-export const isPassAndPlay = (v: { seats: SeatConfig[] }): boolean => humansOf(v).length > 1;
-/** The human who must act next, if any. Drives the pass-and-play handoff. */
-export function humanActor(v: TableView): Seat | null {
+/**
+ * The seats played on this device for the game on screen: one in a solo game, several in
+ * pass-and-play. The table says which they are. A scoresheet has none: nobody plays a hand on it.
+ */
+export const localSeatsOf = (v: TableView | ScoreView): readonly Seat[] =>
+  isTableView(v) && session.table ? session.table.localSeats : [];
+export const isPassAndPlay = (v: TableView | ScoreView): boolean => localSeatsOf(v).length > 1;
+/** The local seat that must act next, if any. Drives the pass-and-play handoff. */
+export function localActor(v: TableView): Seat | null {
   const n = v.seats.length,
-    H = humansOf(v);
+    L = localSeatsOf(v);
   if (v.phase === 'bidding') {
-    const next = H.slice()
+    const next = L.slice()
       .sort((a, b) => ((a - ui.seat + n) % n) - ((b - ui.seat + n) % n))
       .find((i) => v.bids[i] == null);
     return next == null ? null : next;
   }
-  if (v.phase === 'playing') return v.turn == null || v.seats[v.turn].bot ? null : v.turn;
-  if (v.phase === 'ability') return !v.pending || v.seats[v.pending.seat].bot ? null : v.pending.seat;
+  if (v.phase === 'playing') return v.turn == null || !L.includes(v.turn) ? null : v.turn;
+  if (v.phase === 'ability') return !v.pending || !L.includes(v.pending.seat) ? null : v.pending.seat;
   return null;
 }
 /** Point the screen at the right seat; raise the curtain when the device changes hands. */
 export function syncSeat(getView: GetView): void {
-  const actor = humanActor(getView(ui.seat));
+  const actor = localActor(getView(ui.seat));
   if (actor != null && actor !== ui.seat) {
     ui.seat = actor;
     if (isPassAndPlay(getView(actor))) patchUi({ curtain: true, sel: null, bidPick: null, discard: [] });
@@ -295,4 +299,4 @@ export function syncSeat(getView: GetView): void {
   session.view = getView(ui.seat);
 }
 /** In pass-and-play, a hand is only shown while its owner has something to do. */
-export const handHidden = (v: TableView): boolean => isPassAndPlay(v) && humanActor(v) !== v.me;
+export const handHidden = (v: TableView): boolean => isPassAndPlay(v) && localActor(v) !== v.me;

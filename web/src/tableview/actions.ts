@@ -2,11 +2,12 @@
    Ported from the legacy build (legacy/Skull King Tavern.html, sections 14 and 15, and the two swipe
    actions) without changing behavior. */
 import { Engine, Rules } from '../game';
-import type { Action, GameState, ReduceResult, TableView } from '../game';
+import type { Action, GameState, TableView } from '../game';
 import type { AbilityChoice, EngineEvent, PlayedAs } from '../protocol/generated';
 import { Sound } from '../sound/sound';
 import type { SoundName } from '../sound/sound';
-import { LocalTable } from '../table/localTable';
+import { humanSeats, LocalTable } from '../table/localTable';
+import { dispatchWithin } from '../table/table';
 import type { GetView, Table } from '../table/table';
 import { $, reduced } from './dom';
 import type { ActionFn } from './dom';
@@ -16,12 +17,12 @@ import {
   BOT_NAMES,
   clearTimer,
   COLORS,
-  humansOf,
   isFormat,
   isLevel,
   isPassAndPlay,
   isScoring,
   isTableView,
+  localSeatsOf,
   patchUi,
   prefs,
   savePrefs,
@@ -127,14 +128,14 @@ async function present(events: EngineEvent[], getView: GetView, current: () => b
     ui.sheet = 'results';
     ui.anim = true;
     ui.toast = null;
-    const H = humansOf(v),
+    const L = localSeatsOf(v),
       R = v.log[v.round],
-      good = H.some((i) => scored(v.cfg, R, i).hit);
+      good = L.some((i) => scored(v.cfg, R, i).hit);
     Sound.play(good ? 'roundGood' : 'roundBad');
-    if (H.length === 1 && good) {
+    if (L.length === 1 && good) {
       let st = 0;
       for (let r = v.round; r >= 0; r--) {
-        if (scored(v.cfg, v.log[r], H[0]).hit) st++;
+        if (scored(v.cfg, v.log[r], L[0]).hit) st++;
         else break;
       }
       if (st >= 3) setTimeout(() => Sound.play('streak', st), 520);
@@ -151,7 +152,7 @@ async function present(events: EngineEvent[], getView: GetView, current: () => b
     Sound.buzz(15);
   }
   if (has('gameOver')) {
-    recordGame(v);
+    recordGame(v, localSeatsOf(v));
     Store.set(Store.GAME, null);
     if (session.table) session.table.stop();
     ui.endFrom = 'game';
@@ -185,15 +186,18 @@ function startGame(): void {
   patchUi({ deal: true, lastPct: 0 });
   go('game');
 }
+/** An offline game, new or saved. A save does not say who sat where, and offline it does not have to (see humanSeats). */
 function openTable(state: GameState): void {
+  showTable(new LocalTable(state, humanSeats(state.seats), (s) => Store.saveGame(s)));
+}
+/** Make `table` the open one, seen through its first local seat. The caller goes to the game screen. */
+export function showTable(table: Table): void {
   if (session.table) session.table.stop();
   feed.queue.length = 0;
-  const table: Table = new LocalTable(state, (s) => Store.saveGame(s));
   session.table = table;
   table.subscribe(onTableUpdate);
-  const first = state.seats.findIndex((p) => !p.bot);
   patchUi({
-    seat: first < 0 ? 0 : first,
+    seat: table.localSeats[0] ?? 0,
     sel: null,
     bidPick: null,
     discard: [],
@@ -205,15 +209,29 @@ function openTable(state: GameState): void {
   ui.curtain = isPassAndPlay(tableView());
   table.schedule();
 }
-/** Send a human action. Input stays locked until the table's answer has been presented. */
-function act(action: Action): ReduceResult {
+/** Counts the actions sent, so an answer can tell whether it is still the one input is waiting for. */
+let sent = 0;
+/**
+ * Send a local seat's action. Input is locked at once. An accepted action unlocks it when the
+ * table's update has been presented. A refused one, or one the table never answers, unlocks it
+ * here: the view is the one the action was sent from, and `undo` puts back what the player had
+ * picked. Nothing is drawn from the action itself, only from what the table says.
+ */
+function act(action: Action, undo?: () => void): void {
   const table = session.table;
   if (!table) throw new Error('No table is open');
+  const mine = ++sent,
+    from = session.view;
   ui.waiting = true;
-  const r = table.dispatch(action);
-  if (r.error) ui.waiting = false;
+  const answer = dispatchWithin(table, action);
   render();
-  return r;
+  void answer.then((r) => {
+    // Late news about an action nobody is waiting for any more: its update was shown, another one was sent, or the table was left.
+    if (r.ok || !ui.waiting || mine !== sent || session.table !== table) return;
+    if (session.view === from) undo?.();
+    ui.waiting = false;
+    if (ui.screen === 'game') render();
+  });
 }
 function myPlay(as?: PlayedAs): void {
   if (ui.sel == null) return;
@@ -224,11 +242,12 @@ function myPlay(as?: PlayedAs): void {
   Sound.buzz(12);
   const played = ui.sel;
   ui.sel = null;
-  const r = act({ type: 'play', seat: view.me, card: played, as });
-  if (r.error) ui.sel = played;
+  act({ type: 'play', seat: view.me, card: played, as }, () => {
+    ui.sel = played;
+  });
 }
-function useAbility(choice: AbilityChoice): void {
-  act({ type: 'ability', seat: tableView().me, choice });
+function useAbility(choice: AbilityChoice, undo?: () => void): void {
+  act({ type: 'ability', seat: tableView().me, choice }, undo);
 }
 
 export const ACTIONS: Record<string, ActionFn | undefined> = {
@@ -366,7 +385,9 @@ export const ACTIONS: Record<string, ActionFn | undefined> = {
     if (ui.bidPick == null) return;
     const b = ui.bidPick;
     ui.bidPick = null;
-    act({ type: 'bid', seat: tableView().me, bid: b });
+    act({ type: 'bid', seat: tableView().me, bid: b }, () => {
+      ui.bidPick = b;
+    });
   },
   pick(d, el) {
     const id = Number(d.id),
@@ -407,7 +428,9 @@ export const ACTIONS: Record<string, ActionFn | undefined> = {
     if (view.pending && view.pending.kind === 'smuggler') {
       const ch = ui.discard.slice();
       ui.discard = [];
-      return useAbility(ch);
+      return useAbility(ch, () => {
+        ui.discard = ch;
+      });
     }
     useAbility(d.v == null ? null : Number(d.v));
   },

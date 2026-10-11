@@ -12,8 +12,8 @@ import { esc, initial, sgn, toneOf } from './dom';
 import {
   COLORS,
   handHidden,
-  humansOf,
   isPassAndPlay,
+  localSeatsOf,
   prefs,
   savePrefs,
   scoreView,
@@ -452,7 +452,7 @@ export function resultsSheet(): string {
     R = v.log[v.round],
     tot = Rules.totals(v.log, v.cfg, n);
   const sc = v.seats.map((_, i) => scored(v.cfg, R, i)),
-    H = humansOf(v);
+    H = localSeatsOf(v);
   let tone: 'good' | 'mid' | 'bad', title: string;
   if (H.length === 1) {
     const mine = sc[H[0]];
@@ -641,7 +641,7 @@ export function endView(): string {
   const v = scoreView(),
     n = v.seats.length,
     tot = Rules.totals(v.log, v.cfg, n),
-    H = humansOf(v),
+    H = localSeatsOf(v),
     solo = H.length === 1;
   const order = tot
     .map((t, i) => ({ t, i }))

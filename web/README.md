@@ -19,7 +19,7 @@ Node 22.18+, 24.11+ or 26+. Vite+ warns on other versions.
 | Path                                   | What it holds                                                                                                                                                         |
 | -------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `src/game/`                            | The reference engine: rules, reducer, bots. Runs the offline modes. Online, the server's engine is the authority and this one is never asked.                         |
-| `src/table/`                           | `Table`, the seam between the renderer and whoever runs the game. `LocalTable` is the offline one; the socket client will be the other.                               |
+| `src/table/`                           | `Table`, the seam between the renderer and whoever runs the game: its local seats, a seat's view, an asynchronous `dispatch`. `LocalTable` is the offline one.        |
 | `src/tableview/`                       | The table renderer, lifted from the legacy build. It owns `#app` and rebuilds it from HTML strings; React never renders inside it. `mountTavern()` is its only entry. |
 | `src/sound/`                           | Sound. Every effect is synthesised with Web Audio; the played card and the button press also have recorded takes in `samples/`.                                       |
 | `src/styles/`                          | `tokens.css` (the custom properties) and `tavern.css` (everything else).                                                                                              |
@@ -59,6 +59,15 @@ together with the pinned hash in the fixture generator.
   they offer and what their button says (`pageHtml` in `parity/harness.ts`) and everything around
   them as markup, as before. The scorekeeper still uses chips: it sets a bid for every player on
   one screen.
+- The table says which seats are played on this device (`Table.localSeats`). The legacy page took
+  every seat without the `bot` flag for one, which is true offline and wrong the moment another
+  human plays from somewhere else. `LocalTable` is still handed every human seat, so solo and
+  pass-and-play are as they were; the renderer no longer reads the flag for it (`localSeatsOf`,
+  `localActor` in `state.ts`).
+- `Table.dispatch` answers with a promise. `LocalTable` resolves it before `dispatch` returns, so
+  offline nothing waits. The renderer sends through `dispatchWithin`, which gives up after 8
+  seconds. A refused or unanswered action unlocks the input and puts back what the player had
+  picked (the card, the bid, the Smuggler's discards); the legacy page dropped the pick.
 
 ## Recorded sounds
 
@@ -93,6 +102,10 @@ stays a lift; each fix should come with its own test.
 - A table update that is waiting on a banner continues after its table was replaced: starting a new
   game within about a second can briefly show the old one.
 - An error thrown while an update is presented is only logged, and can leave game input locked.
+- Any table update that is presented unlocks the input, not only the answer to the action that
+  locked it. Offline the two are the same update. Online another seat's bid can arrive first.
+- A refused or unanswered action is not explained to the player: the input comes back and nothing
+  else is shown. Offline the page is built to offer only what the engine takes.
 - During the 190 ms closing animation of a sheet, a table update can re-render it; the action then
   runs against a stale element.
 - "No saved game" and "no scoresheet" are stored as the string `null` instead of removing the key.
