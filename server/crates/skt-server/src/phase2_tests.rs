@@ -7,6 +7,8 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
 use tokio_tungstenite::tungstenite::client::IntoClientRequest;
 
+type Socket = tokio_tungstenite::WebSocketStream<tokio_tungstenite::MaybeTlsStream<TcpStream>>;
+
 use crate::AppState;
 use crate::rate::Budgets;
 
@@ -315,10 +317,103 @@ async fn stats_are_visible_on_me_after_a_recorded_game(pool: sqlx::PgPool) {
     assert!(me.contains("\"bidsMade\":2"), "{me}");
 }
 
-async fn open_socket(
-    port: u16,
-    cookie: &str,
-) -> tokio_tungstenite::WebSocketStream<tokio_tungstenite::MaybeTlsStream<TcpStream>> {
+#[sqlx::test(migrations = "../../migrations/postgres")]
+async fn four_accounts_open_a_ranked_table_and_a_waiter_is_not_filled(pool: sqlx::PgPool) {
+    let state = AppState::for_tests(pool, Duration::ZERO, budgets());
+    let port = serve(state.clone()).await;
+    let (cookie, mut first) = account(port, "Rook").await;
+    send(&mut first, r#"{"t":"queue.join","id":2,"mode":"ranked"}"#).await;
+    let joined = read_text(&mut first).await;
+    assert!(joined.contains("\"mode\":\"ranked\""), "{joined}");
+    assert!(joined.contains("\"found\":1"), "{joined}");
+    assert!(joined.contains("\"needed\":4"), "{joined}");
+    state.tick().await;
+    let filled = tokio::time::timeout(Duration::from_millis(200), read_text(&mut first)).await;
+    assert!(
+        filled.is_err(),
+        "one ranked player must not be seated with bots"
+    );
+    let (status, _, me) = http(port, "GET", "/api/v1/me", &cookie, "").await;
+    assert_eq!(status, 200, "{me}");
+    assert!(me.contains("\"id\":\"ranked\""), "{me}");
+    send(&mut first, r#"{"t":"queue.join","id":3,"mode":"casual"}"#).await;
+    let busy = read_text(&mut first).await;
+    assert!(busy.contains("ALREADY_SEATED"), "{busy}");
+    let mut second = account(port, "Mara").await.1;
+    let mut third = account(port, "Ned").await.1;
+    let mut fourth = account(port, "Odo").await.1;
+    send(&mut second, r#"{"t":"queue.join","id":2,"mode":"ranked"}"#).await;
+    assert!(read_text(&mut second).await.contains("\"found\":2"));
+    let status = read_text(&mut first).await;
+    assert!(status.contains("\"t\":\"queue.status\""), "{status}");
+    assert!(status.contains("\"found\":2"), "{status}");
+    send(&mut third, r#"{"t":"queue.join","id":2,"mode":"ranked"}"#).await;
+    assert!(read_text(&mut third).await.contains("\"found\":3"));
+    assert!(read_text(&mut first).await.contains("\"found\":3"));
+    assert!(read_text(&mut second).await.contains("\"found\":3"));
+    send(&mut fourth, r#"{"t":"queue.join","id":2,"mode":"ranked"}"#).await;
+    let ready = read_text(&mut fourth).await;
+    assert!(ready.contains("\"found\":4"), "{ready}");
+    assert!(!ready.contains("\"t\":\"queue.status\""), "{ready}");
+    for socket in [&mut first, &mut second, &mut third, &mut fourth] {
+        assert_ranked_start(&read_text(socket).await);
+    }
+}
+
+fn assert_ranked_start(frame: &str) {
+    assert!(frame.contains("\"t\":\"game.start\""), "{frame}");
+    assert!(frame.contains("\"mode\":\"ranked\""), "{frame}");
+    assert!(frame.contains("\"lobbyId\":null"), "{frame}");
+    assert!(frame.contains("\"format\":\"brawl\""), "{frame}");
+    assert!(!frame.contains("\"bot\":true"), "{frame}");
+    assert!(!frame.contains("\"t\":\"queue.status\""), "{frame}");
+}
+
+#[sqlx::test(migrations = "../../migrations/postgres")]
+async fn a_ranked_result_does_not_change_casual_stats(pool: sqlx::PgPool) {
+    let state = AppState::for_tests(pool, Duration::ZERO, budgets());
+    let port = serve(state.clone()).await;
+    let (cookie, body) = guest(port).await;
+    let id = body
+        .split("\"id\":\"")
+        .nth(1)
+        .unwrap()
+        .split('"')
+        .next()
+        .unwrap()
+        .to_owned();
+    state
+        .record_for_test(crate::world::GameReport {
+            id: "game-ranked".to_owned(),
+            mode: "ranked",
+            seats: vec![crate::world::SeatTally {
+                user: skt_protocol::UserId::new(id),
+                seat: 0,
+                total: 40,
+                place: 1,
+                win: true,
+                bids_made: 1,
+                bids_total: 1,
+            }],
+        })
+        .await;
+    let (status, _, me) = http(port, "GET", "/api/v1/me", &cookie, "").await;
+    assert_eq!(status, 200, "{me}");
+    assert!(me.contains("\"games\":0"), "{me}");
+    assert!(me.contains("\"wins\":0"), "{me}");
+}
+
+async fn account(port: u16, username: &str) -> (String, Socket) {
+    let (cookie, _) = guest(port).await;
+    let body = format!(r#"{{"username":"{username}","password":"secret"}}"#);
+    let (status, _, registered) = http(port, "POST", "/api/v1/auth/register", &cookie, &body).await;
+    assert_eq!(status, 200, "{registered}");
+    let mut socket = open_socket(port, &cookie).await;
+    greet(&mut socket).await;
+    (cookie, socket)
+}
+
+async fn open_socket(port: u16, cookie: &str) -> Socket {
     let mut request = format!("ws://127.0.0.1:{port}/api/v1/ws")
         .into_client_request()
         .expect("request");

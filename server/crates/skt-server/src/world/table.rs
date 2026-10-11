@@ -46,7 +46,7 @@ pub struct SeatTally {
 pub struct GameReport {
     /// Game id.
     pub id: String,
-    /// `custom` or `casual`.
+    /// `custom`, `casual`, or `ranked`.
     pub mode: &'static str,
     /// Humans who were still seated. A `game.leave` is absent.
     pub seats: Vec<SeatTally>,
@@ -55,8 +55,9 @@ pub struct GameReport {
 struct Running {
     id: GameId,
     lobby_id: LobbyId,
-    /// Quick play has no lobby to reopen.
+    /// Quick play and ranked have no lobby to reopen.
     matchmade: bool,
+    mode: TableMode,
     settings: skt_protocol::GameSettings,
     state: GameState,
     seats: Vec<SeatPlay>,
@@ -122,10 +123,16 @@ impl Tables {
         ) else {
             return Vec::new();
         };
+        let mode = if matchmade {
+            lobby.mode
+        } else {
+            TableMode::Custom
+        };
         let mut running = Running {
             id: id.clone(),
             lobby_id: lobby.id.clone(),
             matchmade,
+            mode,
             settings: lobby.settings,
             state,
             seats,
@@ -815,7 +822,7 @@ impl Running {
         }
         self.report = Some(GameReport {
             id: self.id.as_str().to_owned(),
-            mode: if self.matchmade { "casual" } else { "custom" },
+            mode: mode_name(self.mode),
             seats: tallies,
         });
         for index in 0..self.players() {
@@ -829,7 +836,11 @@ impl Running {
                 result: GameResult {
                     totals: totals.clone(),
                     places: places.clone(),
-                    forfeited: self.forfeited.clone(),
+                    forfeited: if self.mode == TableMode::Ranked {
+                        self.forfeited.clone()
+                    } else {
+                        Vec::new()
+                    },
                     rating: None,
                     lobby_id: (!self.matchmade).then(|| self.lobby_id.clone()),
                 },
@@ -898,11 +909,7 @@ impl Running {
         GameStart {
             tag: GameStartTag::Value,
             game_id: self.id.clone(),
-            mode: if self.matchmade {
-                TableMode::Casual
-            } else {
-                TableMode::Custom
-            },
+            mode: self.mode,
             lobby_id: (!self.matchmade).then(|| self.lobby_id.clone()),
             settings: self.settings,
             deck: self.state.deck().to_vec(),
@@ -940,6 +947,14 @@ impl Running {
                 tier: None,
             })
             .collect()
+    }
+}
+
+fn mode_name(mode: TableMode) -> &'static str {
+    match mode {
+        TableMode::Custom => "custom",
+        TableMode::Casual => "casual",
+        TableMode::Ranked => "ranked",
     }
 }
 

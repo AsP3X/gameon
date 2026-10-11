@@ -1,4 +1,4 @@
-//! In-memory sessions, private lobbies, and one table task's worth of state.
+//! In-memory sessions, lobbies, the casual and ranked queues, and one table task's worth of state.
 //!
 //! A single mutex owns every table. Callers copy outbound frames out of the lock and send them
 //! afterwards, so the lock is never held across an `.await`. Each accepted game step queues `ok`
@@ -45,9 +45,10 @@ pub struct World {
     codes: HashMap<String, LobbyId>,
     /// Public-list order. Oldest first.
     opened: Vec<LobbyId>,
-    queue: VecDeque<Waiting>,
-    /// When the casual queue last became non-empty.
-    queue_since: Option<Instant>,
+    /// Quick play. May fill with bots.
+    casual: Line,
+    /// Accounts only. Never fills with bots.
+    ranked: Line,
     fill: Duration,
     /// Current socket for a user, if `hello` has been accepted.
     live: HashMap<UserId, Live>,
@@ -57,6 +58,68 @@ pub struct World {
 struct Waiting {
     user: UserId,
     since: skt_protocol::UnixMs,
+}
+
+/// One matchmaking line. Casual and ranked do not share waiters.
+struct Line {
+    waiting: VecDeque<Waiting>,
+    /// When this line last became non-empty. Casual uses it for the bot fill.
+    since: Option<Instant>,
+}
+
+impl Line {
+    fn new() -> Self {
+        Self {
+            waiting: VecDeque::new(),
+            since: None,
+        }
+    }
+
+    fn push(&mut self, user: UserId, now: Instant) {
+        if self.waiting.is_empty() {
+            self.since = Some(now);
+        }
+        self.waiting.push_back(Waiting {
+            user,
+            since: identity::unix_now(),
+        });
+    }
+
+    fn remove(&mut self, user: &UserId) -> bool {
+        let before = self.waiting.len();
+        self.waiting.retain(|waiting| &waiting.user != user);
+        if self.waiting.is_empty() {
+            self.since = None;
+        }
+        self.waiting.len() != before
+    }
+
+    fn contains(&self, user: &UserId) -> bool {
+        self.waiting.iter().any(|waiting| &waiting.user == user)
+    }
+
+    fn take(&mut self, count: usize, now: Instant) -> Vec<Waiting> {
+        let taken: Vec<_> = self
+            .waiting
+            .drain(..count.min(self.waiting.len()))
+            .collect();
+        if self.waiting.is_empty() {
+            self.since = None;
+        } else {
+            self.since = Some(now);
+        }
+        taken
+    }
+
+    fn status(&self, user: &UserId, mode: QueueMode) -> Option<QueueStatus> {
+        let waiting = self.waiting.iter().find(|waiting| &waiting.user == user)?;
+        Some(QueueStatus {
+            mode,
+            since: waiting.since,
+            found: u32::try_from(self.waiting.len()).unwrap_or(0),
+            needed: 4,
+        })
+    }
 }
 
 struct Live {
@@ -81,8 +144,8 @@ impl World {
             lobbies: HashMap::new(),
             codes: HashMap::new(),
             opened: Vec::new(),
-            queue: VecDeque::new(),
-            queue_since: None,
+            casual: Line::new(),
+            ranked: Line::new(),
             fill,
             live: HashMap::new(),
             now: Instant::now(),
@@ -204,7 +267,12 @@ impl World {
     }
 
     /// Add the stored counters to the in-memory account.
+    ///
+    /// A ranked game is stored and does not change these counters. Its rating is a later write.
     pub fn apply_report(&mut self, report: &GameReport) {
+        if report.mode == "ranked" {
+            return;
+        }
         for seat in &report.seats {
             self.identity.add_result(
                 &seat.user,
@@ -656,12 +724,10 @@ impl World {
                 self.remove_member(&lobby_id, user);
             }
         }
-        if self.queued(user) {
-            self.queue.retain(|waiting| &waiting.user != user);
-            if self.queue.is_empty() {
-                self.queue_since = None;
-            }
-            self.push_queue();
+        if self.casual.remove(user) {
+            self.push_queue(QueueMode::Casual);
+        } else if self.ranked.remove(user) {
+            self.push_queue(QueueMode::Ranked);
         }
         self.close_socket(user, 1008);
     }
@@ -675,69 +741,73 @@ impl World {
             self.fail_live(user, id, ErrorCode::AlreadySeated);
             return;
         }
-        if mode == QueueMode::Ranked {
-            self.fail_live(user, id, ErrorCode::Internal);
-            return;
-        }
-        if self.queue.is_empty() {
-            self.queue_since = Some(self.now);
-        }
-        self.queue.push_back(Waiting {
-            user: user.clone(),
-            since: identity::unix_now(),
-        });
-        let status = self.queue_status(user);
+        let now = self.now;
+        self.line_mut(mode).push(user.clone(), now);
+        let forming = self.line(mode).waiting.len() >= 4;
+        let status = self.line(mode).status(user, mode);
         self.ok_queue(user, id, status);
-        self.push_queue_except(user);
-        if self.queue.len() >= 4 {
-            self.seat_from_queue(4);
+        if forming {
+            self.seat_from_queue(mode, 4);
+        } else {
+            self.push_queue_except(mode, user);
         }
     }
 
     fn leave_queue(&mut self, user: &UserId, id: MessageId) {
-        self.queue.retain(|waiting| &waiting.user != user);
-        if self.queue.is_empty() {
-            self.queue_since = None;
-        }
+        let left = if self.casual.remove(user) {
+            Some(QueueMode::Casual)
+        } else if self.ranked.remove(user) {
+            Some(QueueMode::Ranked)
+        } else {
+            None
+        };
         self.ok(user, id, None, false);
-        self.push_queue();
+        if let Some(mode) = left {
+            self.push_queue(mode);
+        }
     }
 
     fn fill_queue(&mut self) {
-        let Some(since) = self.queue_since else {
+        let Some(since) = self.casual.since else {
             return;
         };
-        if self.queue.is_empty() || self.now.saturating_duration_since(since) < self.fill {
+        if self.casual.waiting.is_empty() || self.now.saturating_duration_since(since) < self.fill {
             return;
         }
-        let count = self.queue.len();
-        self.seat_from_queue(count);
+        let count = self.casual.waiting.len();
+        self.seat_from_queue(QueueMode::Casual, count);
     }
 
-    fn seat_from_queue(&mut self, count: usize) {
-        let waiting: Vec<Waiting> = self.queue.drain(..count.min(self.queue.len())).collect();
-        if self.queue.is_empty() {
-            self.queue_since = None;
-        } else {
-            self.queue_since = Some(self.now);
+    // Human: Ranked starts with four accounts and no bot. Casual may fill the empty seats.
+    // Agent: READS one queue line; WRITES a matchmade table; ranked never inserts Member::Bot.
+    fn seat_from_queue(&mut self, mode: QueueMode, count: usize) {
+        if mode == QueueMode::Ranked && self.ranked.waiting.len() < 4 {
+            return;
         }
+        let now = self.now;
+        let waiting = self.line_mut(mode).take(count, now);
         let mut members = Vec::new();
         for seat in &waiting {
             members.push(self.human_member(&seat.user, false));
         }
-        while members.len() < 4 {
-            let name = bot_name(&members);
-            let color = TableColor::Sky;
-            members.push(Member::Bot {
-                name,
-                color,
-                level: skt_engine::BotLevel::Normal,
-            });
+        if mode == QueueMode::Casual {
+            while members.len() < 4 {
+                let name = bot_name(&members);
+                members.push(Member::Bot {
+                    name,
+                    color: TableColor::Sky,
+                    level: skt_engine::BotLevel::Normal,
+                });
+            }
         }
+        let table_mode = match mode {
+            QueueMode::Casual => TableMode::Casual,
+            QueueMode::Ranked => TableMode::Ranked,
+        };
         let lobby = Lobby {
             id: LobbyId::new(identity::uuid()),
             code: String::new(),
-            mode: TableMode::Casual,
+            mode: table_mode,
             visibility: Visibility::Private,
             host_id: None,
             settings: skt_protocol::GameSettings::standard(),
@@ -754,27 +824,38 @@ impl World {
         }
     }
 
+    fn line(&self, mode: QueueMode) -> &Line {
+        match mode {
+            QueueMode::Casual => &self.casual,
+            QueueMode::Ranked => &self.ranked,
+        }
+    }
+
+    fn line_mut(&mut self, mode: QueueMode) -> &mut Line {
+        match mode {
+            QueueMode::Casual => &mut self.casual,
+            QueueMode::Ranked => &mut self.ranked,
+        }
+    }
+
     fn queued(&self, user: &UserId) -> bool {
-        self.queue.iter().any(|waiting| &waiting.user == user)
+        self.casual.contains(user) || self.ranked.contains(user)
     }
 
     fn queue_status(&self, user: &UserId) -> Option<QueueStatus> {
-        let waiting = self.queue.iter().find(|waiting| &waiting.user == user)?;
-        Some(QueueStatus {
-            mode: QueueMode::Casual,
-            since: waiting.since,
-            found: u32::try_from(self.queue.len()).unwrap_or(0),
-            needed: 4,
-        })
+        self.casual
+            .status(user, QueueMode::Casual)
+            .or_else(|| self.ranked.status(user, QueueMode::Ranked))
     }
 
-    fn push_queue(&self) {
-        self.push_queue_except(&UserId::new(String::new()));
+    fn push_queue(&self, mode: QueueMode) {
+        self.push_queue_except(mode, &UserId::new(String::new()));
     }
 
-    fn push_queue_except(&self, skip: &UserId) {
-        let found = u32::try_from(self.queue.len()).unwrap_or(0);
-        for waiting in &self.queue {
+    fn push_queue_except(&self, mode: QueueMode, skip: &UserId) {
+        let line = self.line(mode);
+        let found = u32::try_from(line.waiting.len()).unwrap_or(0);
+        for waiting in &line.waiting {
             if &waiting.user == skip {
                 continue;
             }
@@ -783,7 +864,7 @@ impl World {
                 &QueueStatusPush {
                     tag: QueueStatusTag::Value,
                     queue: QueueStatus {
-                        mode: QueueMode::Casual,
+                        mode,
                         since: waiting.since,
                         found,
                         needed: 4,
@@ -860,7 +941,11 @@ impl World {
             Some(Active::Game {
                 id: id.as_str().to_owned(),
             })
-        } else if self.queued(user) {
+        } else if self.ranked.contains(user) {
+            Some(Active::Queue {
+                id: "ranked".to_owned(),
+            })
+        } else if self.casual.contains(user) {
             Some(Active::Queue {
                 id: "casual".to_owned(),
             })

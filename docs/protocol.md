@@ -133,8 +133,10 @@ Unicode category `Cc`. `color` is a `TableColor`: one of the eight legacy table 
 lower case. A password is `WEAK_PASSWORD` only when it is empty. The message is `Enter a password.`
 
 `Active` for a casual queue is `{ kind: 'queue', id: 'casual' }`. There is one casual queue.
+`Active` for a ranked queue is `{ kind: 'queue', id: 'ranked' }`. There is one ranked queue.
 
-`Stats` counts every finished custom game and every finished casual game. A shared first place
+`Stats` counts every finished custom game and every finished casual game. A finished ranked game
+is stored and does not change these counters. A shared first place
 counts as a win for each of those seats. A seat that sent `game.leave` is not counted. `bestScore`
 is set by the first finished game even when the total is negative, and is the highest total after
 that. `bidsTotal` is the number of scored rounds. `bidsMade` is the rounds where the bid was hit.
@@ -245,23 +247,31 @@ type QueueStatus = { mode: 'casual' | 'ranked'; since: number; found: number; ne
 
 `queue.join` is checked in this order. Any other `mode` is `VALIDATION`. `ranked` from a guest is
 `ACCOUNT_REQUIRED`, even when that guest is already seated. A user who is in a lobby, a game, or
-the queue is `ALREADY_SEATED`. `ranked` from an account is not this phase: the server answers
-`INTERNAL`.
+either queue is `ALREADY_SEATED`.
 
-For `casual`, `ok.queue` is `{ mode: 'casual', since, found, needed: 4 }`. `since` is when this
-player joined. `found` counts everyone waiting, the joiner included. Every other waiting player is
-then sent `{ t: 'queue.status', queue }` with their own `since` and the new `found`. The joiner is
-not sent that push. No `queue.status` is sent when the table forms.
+Casual and ranked are separate lines. A player waiting in one is not seated by the other.
 
-When `found` reaches 4 the table forms at once, the first four in join order. Otherwise the server
-waits 6000 ms from the moment the queue stopped being empty, then seats whoever is waiting and
-fills the empty seats with bots. The client does not print that duration. A dropped socket keeps
-the place, with no time limit. The next `welcome` has `queue` set. A queued player with no socket
-when the table forms is seated `offline`.
+For either mode, `ok.queue` is `{ mode, since, found, needed: 4 }`. `since` is when this player
+joined. `found` counts everyone waiting in that mode, the joiner included. Every other waiting
+player in that mode is then sent `{ t: 'queue.status', queue }` with their own `since` and the new
+`found`. The joiner is not sent that push. No `queue.status` is sent when the table forms.
 
-A table made by the queue has no lobby. `game.start` and `game.over` carry `lobbyId: null` and
-`mode: 'casual'`. `settings` are `config.standard`. Humans sit first, in join order, then the bots.
-There is no accept step and no `lobby.state`. After `game.over` the client returns to the hub.
+For `casual`, when `found` reaches 4 the table forms at once, the first four in join order.
+Otherwise the server waits 6000 ms from the moment that line stopped being empty, then seats
+whoever is waiting and fills the empty seats with bots. The client does not print that duration.
+A dropped socket keeps the place, with no time limit. The next `welcome` has `queue` set. A queued
+player with no socket when the table forms is seated `offline`.
+
+For `ranked`, the table forms only when four accounts are waiting, in join order. There is no fill
+timer and no bot. A dropped socket keeps the place. One account waiting is not seated. Ratings are
+not compared yet: there is no skill window until the rating model exists. `Me.rating` stays null
+and `Me.cooldownUntil` stays null.
+
+A table made by either queue has no lobby. `game.start` carries `lobbyId: null`. Casual carries
+`mode: 'casual'`. Ranked carries `mode: 'ranked'`. `settings` are `config.standard`. Humans sit in
+join order. Casual then adds bots. There is no accept step and no `lobby.state`. After `game.over`
+the client returns to the hub. `game.over` has no `mode` field; the mode is the one from
+`game.start`. Until the rating model exists, `result.rating` is null on a ranked game as well.
 
 ### 5.5 Game
 
@@ -352,8 +362,8 @@ and `rating` travel on `game.over`, sent to the leaver when the game ends. If th
 socket at that moment, that `game.over` is written immediately after the next `welcome`, which
 still has `game: null`. It does not put the table back. The same delivery is owed to any seated
 player who had no socket when the game ended, leaver or not. `forfeited` is empty unless the game
-is ranked. In ranked it lists every seat that sent `game.leave`. `rating` is null unless the game
-is ranked.
+is ranked. In ranked it lists every seat that sent `game.leave`. `rating` is null until the rating
+model exists, including on a ranked game.
 
 `lobby.start`'s `ok` does not carry the opening table. Every member, including the host, is then
 sent `lobby.state` with `state: 'inGame'`. On each seated human's socket the server then writes

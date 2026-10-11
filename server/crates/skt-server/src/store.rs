@@ -268,7 +268,7 @@ impl Store {
         self.snap_of(id).await
     }
 
-    /// Write the result and each human's counters in one transaction.
+    /// Write the result, and each human's counters unless the game is ranked.
     ///
     /// # Errors
     ///
@@ -281,6 +281,9 @@ impl Store {
             .execute(connection(&mut tx))
             .await
             .map_err(|err| database(&err))?;
+        // Human: Profile counters are custom and casual only. Ranked is stored for the later rating write.
+        // Agent: DB INSERT games and game_seats; UPDATE stats only when mode is not ranked.
+        let counted = game.mode != "ranked";
         for seat in &game.seats {
             sqlx::query(
                 "INSERT INTO game_seats (game_id, user_id, seat, total, place) VALUES ($1, $2, $3, $4, $5)",
@@ -293,17 +296,19 @@ impl Store {
             .execute(connection(&mut tx))
             .await
             .map_err(|err| database(&err))?;
-            sqlx::query(
-                "UPDATE stats SET games = games + 1, wins = wins + $2, bids_made = bids_made + $3, bids_total = bids_total + $4, best_score = CASE WHEN best_score IS NULL THEN $5 ELSE GREATEST(best_score, $5) END WHERE user_id = $1",
-            )
-            .bind(seat.user.as_str())
-            .bind(i32::from(u8::from(seat.win)))
-            .bind(i32::try_from(seat.bids_made).unwrap_or(i32::MAX))
-            .bind(i32::try_from(seat.bids_total).unwrap_or(i32::MAX))
-            .bind(seat.total)
-            .execute(connection(&mut tx))
-            .await
-            .map_err(|err| database(&err))?;
+            if counted {
+                sqlx::query(
+                    "UPDATE stats SET games = games + 1, wins = wins + $2, bids_made = bids_made + $3, bids_total = bids_total + $4, best_score = CASE WHEN best_score IS NULL THEN $5 ELSE GREATEST(best_score, $5) END WHERE user_id = $1",
+                )
+                .bind(seat.user.as_str())
+                .bind(i32::from(u8::from(seat.win)))
+                .bind(i32::try_from(seat.bids_made).unwrap_or(i32::MAX))
+                .bind(i32::try_from(seat.bids_total).unwrap_or(i32::MAX))
+                .bind(seat.total)
+                .execute(connection(&mut tx))
+                .await
+                .map_err(|err| database(&err))?;
+            }
         }
         tx.commit().await.map_err(|err| database(&err))?;
         Ok(())
