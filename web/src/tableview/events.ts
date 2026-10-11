@@ -9,6 +9,7 @@ import type { ActionData } from './dom';
 import { render } from './render';
 import { clearTimer, prefs, savePrefs, session, timers, ui } from './state';
 import { Tracker, trkRound } from './tracker';
+import { bidText } from './views';
 
 /** A sheet is sliding away: clicks wait until its action has run. */
 let busy = false;
@@ -199,6 +200,105 @@ function endSwipe(e: PointerEvent, cancelled: boolean): void {
   setSwipe(open ? d.row : null);
 }
 
+/* ---------- The bid slider (not in the legacy build, which had a row of chips) ---------- */
+/* Pointer driven like the swipe rows, and for the same reason it keeps its state here and looks
+   the elements up again on every move: the table is redrawn under the finger when a bot bids. */
+
+/** The pointer that is dragging the thumb. */
+let bidDrag: number | null = null;
+
+/** The slider on screen and the highest bid it offers. */
+function bidSlider(): { root: HTMLElement; max: number } | null {
+  const root = $('#bid');
+  return root && !ui.waiting ? { root, max: Number(root.getAttribute('aria-valuemax')) } : null;
+}
+
+/**
+ * Pick a bid without sending it. A drag paints the sheet in place, so the thumb keeps gliding; a
+ * key draws the table again, as a tap on a chip did. Both leave the same markup behind.
+ */
+function pickBid(bid: number, redraw: boolean): void {
+  ui.bidPick = bid;
+  ui.just = 'pick' + bid;
+  Sound.play('bidTick', bid);
+  if (redraw) {
+    render();
+    return;
+  }
+  const s = bidSlider();
+  if (!s) return;
+  const sheet = s.root.closest('.bidsheet'),
+    out = $('.bid-out', s.root),
+    send = sheet && $<HTMLButtonElement>('[data-act="bid"]', sheet);
+  sheet?.classList.remove('rise');
+  s.root.classList.add('set');
+  s.root.setAttribute('aria-valuenow', String(bid));
+  s.root.setAttribute('aria-valuetext', bidText(bid));
+  if (out) out.textContent = String(bid);
+  $$('.bid-stops span', s.root).forEach((stop, k) => stop.classList.toggle('on', k === bid));
+  if (send) {
+    send.disabled = false;
+    send.textContent = 'Bid ' + bid;
+    send.classList.add('wake');
+  }
+}
+
+/** Put the thumb at `at`, which is between two bids while it is dragged. */
+function placeThumb(root: HTMLElement, at: number, max: number): void {
+  root.setAttribute('style', `--v:${at};--max:${max}`);
+}
+
+function dragBid(x: number): void {
+  const s = bidSlider(),
+    track = s && $('.bid-track', s.root);
+  if (!s || !track) return;
+  const thumb = $('.bid-thumb', track)?.offsetWidth ?? 0,
+    box = track.getBoundingClientRect();
+  const at = Math.min(s.max, Math.max(0, ((x - box.left - thumb / 2) / Math.max(1, box.width - thumb)) * s.max));
+  if (Math.round(at) !== ui.bidPick) pickBid(Math.round(at), false);
+  s.root.classList.add('dragging');
+  placeThumb(s.root, Math.round(at * 100) / 100, s.max);
+}
+
+function onBidStart(e: PointerEvent): void {
+  if (!(e.target instanceof Element) || !e.target.closest('.bidslider') || e.button > 0 || !bidSlider()) return;
+  bidDrag = e.pointerId;
+  dragBid(e.clientX);
+}
+
+function onBidMove(e: PointerEvent): void {
+  if (bidDrag === e.pointerId) dragBid(e.clientX);
+}
+
+/** The finger lifts: the thumb settles on the bid it was nearest to. */
+function endBid(e: PointerEvent): void {
+  if (bidDrag !== e.pointerId) return;
+  bidDrag = null;
+  const s = bidSlider();
+  if (!s) return;
+  s.root.classList.remove('dragging');
+  placeThumb(s.root, ui.bidPick ?? 0, s.max);
+}
+
+/** Arrows step, Home and End jump to the ends, a digit sets that bid. */
+function onBidKey(e: KeyboardEvent): void {
+  if (!(e.target instanceof Element) || e.target.id !== 'bid' || e.altKey || e.ctrlKey || e.metaKey) return;
+  const s = bidSlider();
+  if (!s) return;
+  const now = ui.bidPick ?? 0;
+  let bid: number;
+  if (e.key === 'ArrowRight' || e.key === 'ArrowUp') bid = now + 1;
+  else if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') bid = now - 1;
+  else if (e.key === 'Home') bid = 0;
+  else if (e.key === 'End') bid = s.max;
+  else if (/^\d$/.test(e.key)) bid = Number(e.key);
+  else return;
+  e.preventDefault();
+  if (bid > s.max && e.key !== 'ArrowRight' && e.key !== 'ArrowUp') return; // a digit the round has no cards for
+  bid = Math.min(s.max, Math.max(0, bid));
+  if (bid !== ui.bidPick) pickBid(bid, true);
+}
+
 function onVolumeInput(e: Event): void {
   const t = e.target;
   if (!(t instanceof HTMLInputElement) || t.id !== 'vol') return;
@@ -221,6 +321,7 @@ export function listen(): () => void {
   busy = false;
   swipeDrag = null;
   swipeSuppressClick = false;
+  bidDrag = null;
   const off = new AbortController(),
     signal = off.signal;
   document.addEventListener('click', onClick, { signal });
@@ -236,6 +337,11 @@ export function listen(): () => void {
   window.addEventListener('pointerdown', () => Sound.unlock(), { once: true, capture: true, signal });
   document.addEventListener('input', onVolumeInput, { signal });
   document.addEventListener('change', onVolumeChange, { signal });
+  document.addEventListener('pointerdown', onBidStart, { signal });
+  window.addEventListener('pointermove', onBidMove, { signal });
+  window.addEventListener('pointerup', endBid, { signal });
+  window.addEventListener('pointercancel', endBid, { signal });
+  document.addEventListener('keydown', onBidKey, { signal });
   return () => {
     off.abort();
     clearTimer('resize');
@@ -243,5 +349,6 @@ export function listen(): () => void {
     busy = false;
     swipeDrag = null;
     swipeSuppressClick = false;
+    bidDrag = null;
   };
 }

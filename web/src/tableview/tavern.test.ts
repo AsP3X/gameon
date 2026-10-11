@@ -29,6 +29,17 @@ function click(selector: string): void {
   if (!el) throw new Error(`Nothing to click: ${selector}`);
   el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
 }
+function key(selector: string, pressed: string): void {
+  const el = document.querySelector<HTMLElement>(selector);
+  if (!el) throw new Error(`Nothing to press ${pressed} on: ${selector}`);
+  el.dispatchEvent(new KeyboardEvent('keydown', { key: pressed, bubbles: true, cancelable: true }));
+}
+/** A finger on the page. The renderer hears it go down on the document and move and lift on the window. */
+function pointer(type: 'pointerdown' | 'pointermove' | 'pointerup', x: number, selector?: string): void {
+  const on = selector ? document.querySelector(selector) : window;
+  if (!on) throw new Error(`Nothing to touch: ${selector}`);
+  on.dispatchEvent(Object.assign(new MouseEvent(type, { bubbles: true, clientX: x, button: 0 }), { pointerId: 1 }));
+}
 const mount = (): void => {
   unmount = mountTavern(app, fx);
 };
@@ -96,10 +107,11 @@ describe('mountTavern', () => {
         .map((el) => Number(el.dataset.id))
         .sort((a, b) => a - b),
     ).toEqual(v.hand.slice().sort((a, b) => a - b));
-    expect(all('.chips [data-act="bidPick"]')).toHaveLength(7);
+    expect(app.querySelector('.bidsheet #bid')?.getAttribute('aria-valuemax')).toBe('6');
+    expect(all('.bid-stops span').map((el) => el.textContent)).toEqual(['0', '1', '2', '3', '4', '5', '6']);
 
-    // Bid 2: pick the chip, then confirm.
-    click('[data-act="bidPick"][data-v="2"]');
+    // Bid 2: set the slider, then confirm.
+    key('#bid', '2');
     expect(app.querySelector('[data-act="bid"]')?.textContent).toBe('Bid 2');
     click('[data-act="bid"]');
     await vi.advanceTimersByTimeAsync(600); // the "Yo-ho-ho!" banner, shortened by reduced motion
@@ -131,6 +143,125 @@ describe('mountTavern', () => {
     // Every accepted action is saved under the legacy key.
     expect(Store.loadGame()?.played).toContain(card);
     expect(localStorage.getItem('skullking-tavern.game.v2')).not.toBeNull();
+  });
+
+  describe('the bid sheet', () => {
+    const send = (): HTMLButtonElement => {
+      const el = app.querySelector<HTMLButtonElement>('.bidsheet [data-act="bid"]');
+      if (!el) throw new Error('No bid sheet');
+      return el;
+    };
+    const slider = (): HTMLElement => {
+      const el = app.querySelector<HTMLElement>('#bid');
+      if (!el) throw new Error('No bid slider');
+      return el;
+    };
+    /** The track is 300 px wide and starts at the left edge: 50 px for each of the 6 cards. */
+    const layOutTrack = (): void => {
+      vi.spyOn(Element.prototype, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 300, 16));
+    };
+
+    it('offers nothing until the slider is touched, and 0 is a bid like any other', () => {
+      mount();
+      startSoloGame();
+      expect(tableView().phase).toBe('bidding');
+      expect(send().disabled).toBe(true);
+      expect(send().textContent).toBe('Choose your bid');
+      expect(slider().getAttribute('aria-valuetext')).toBe('No bid yet');
+      expect(app.querySelector('.bid-out')?.textContent).toBe('Slide to set your bid');
+
+      click('.bidsheet [data-act="bid"]'); // disabled: nothing is sent
+      expect(tableView().bids[tableView().me]).toBeNull();
+
+      key('#bid', 'ArrowLeft'); // from "nothing" one step down is 0, not a no-op
+      expect(ui.bidPick).toBe(0);
+      expect(send().disabled).toBe(false);
+      expect(send().textContent).toBe('Bid 0');
+      expect(slider().getAttribute('aria-valuetext')).toBe('0 tricks');
+      click('.bidsheet [data-act="bid"]');
+      expect(tableView().bids[tableView().me]).toBe(0);
+      expect(app.querySelector('.bidsheet')).toBeNull();
+    });
+
+    it('steps with the arrows, jumps with Home, End and digits, and stays inside the round', () => {
+      mount();
+      startSoloGame();
+      const steps: [string, number][] = [
+        ['ArrowRight', 1],
+        ['ArrowUp', 2],
+        ['ArrowDown', 1],
+        ['End', 6],
+        ['ArrowRight', 6],
+        ['9', 6], // six cards: there is no bid of 9
+        ['4', 4],
+        ['Home', 0],
+        ['ArrowLeft', 0],
+      ];
+      for (const [pressed, bid] of steps) {
+        key('#bid', pressed);
+        expect([pressed, ui.bidPick]).toEqual([pressed, bid]);
+        expect(slider().getAttribute('aria-valuenow')).toBe(String(bid));
+        expect(send().textContent).toBe('Bid ' + bid);
+      }
+      expect(slider().getAttribute('aria-valuetext')).toBe('0 tricks');
+      key('#bid', '1');
+      expect(slider().getAttribute('aria-valuetext')).toBe('1 trick');
+      expect(all('.bid-stops .on').map((el) => el.textContent)).toEqual(['1']);
+    });
+
+    it('keeps the keyboard on the slider when the table is redrawn', async () => {
+      mount();
+      startSoloGame();
+      slider().focus();
+      key('#bid', '3'); // redraws the table
+      expect(document.activeElement).toBe(slider());
+      await vi.advanceTimersByTimeAsync(3000); // every bot bids: three more redraws
+      expect(tableView().bids.filter((b) => b === -1)).toHaveLength(3);
+      expect(document.activeElement).toBe(slider());
+      expect(ui.bidPick).toBe(3);
+      expect(send().textContent).toBe('Bid 3');
+    });
+
+    it('follows a finger, through a redraw of the table, and settles on the nearest bid', async () => {
+      mount();
+      startSoloGame();
+      layOutTrack();
+
+      pointer('pointerdown', 110, '.bid-track');
+      expect(ui.bidPick).toBe(2);
+      expect(slider().classList.contains('dragging')).toBe(true);
+      expect(slider().getAttribute('style')).toBe('--v:2.2;--max:6'); // under the finger, between two bids
+      expect(app.querySelector('.bid-out')?.textContent).toBe('2');
+      expect(send().textContent).toBe('Bid 2');
+
+      await vi.advanceTimersByTimeAsync(3000); // the bots bid while the finger is down
+      expect(tableView().bids.filter((b) => b === -1)).toHaveLength(3);
+      pointer('pointermove', 260);
+      expect(ui.bidPick).toBe(5);
+      pointer('pointermove', 900); // past the end of the track
+      expect(ui.bidPick).toBe(6);
+      pointer('pointermove', 190);
+      pointer('pointerup', 190);
+      expect(ui.bidPick).toBe(4);
+      expect(slider().classList.contains('dragging')).toBe(false);
+      expect(slider().getAttribute('style')).toBe('--v:4;--max:6');
+
+      pointer('pointermove', 20); // the finger is up: the slider no longer follows
+      expect(ui.bidPick).toBe(4);
+    });
+
+    it('leaves the same sheet behind after a drag as after a key', () => {
+      mount();
+      startSoloGame();
+      layOutTrack();
+      pointer('pointerdown', 150, '.bid-track');
+      pointer('pointerup', 150);
+      const dragged = app.querySelector('.actions')?.innerHTML;
+      ui.bidPick = null;
+      key('#bid', '3');
+      expect(dragged).toBe(app.querySelector('.actions')?.innerHTML);
+      expect(dragged).toContain('Bid 3');
+    });
   });
 
   it('escapes a name the player typed', () => {

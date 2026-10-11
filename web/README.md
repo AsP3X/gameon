@@ -49,6 +49,12 @@ together with the pinned hash in the fixture generator.
 - The prefixed `webkitAudioContext` of Safari before 14.1 is not used.
 - States the legacy code could not reach but would have crashed on (no pending ability, no last
   trick) render nothing instead.
+- The bid at the table is a slider on a sheet that rises from the bottom edge (`bidSheet` in
+  `views.ts`, driven in `events.ts`), where the legacy page has a row of chips. It is the first
+  screen drawn differently on purpose. The parity harness compares the two bid controls on what
+  they offer and what their button says (`pageHtml` in `parity/harness.ts`) and everything around
+  them as markup, as before. The scorekeeper still uses chips: it sets a bid for every player on
+  one screen.
 
 ## Carried over as it was, to fix on purpose later
 
