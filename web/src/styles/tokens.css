@@ -1,0 +1,99 @@
+/* Design tokens: every colour, font, radius and easing of the game, light and dark.
+   Lifted from the legacy build (legacy/Skull King Tavern.html) with the values unchanged.
+   Only custom properties (and the colour scheme they belong to) live here; rules are in tavern.css. */
+:root {
+  --bg: #ffffff;
+  --card: #ffffff;
+  --soft: #f7f7f7;
+  --line: #e5e5e5;
+  --fg: #3c3c3c;
+  --muted: #777777;
+  --faint: #afafaf;
+  --felt: #f1f7fa;
+  --green: #58cc02;
+  --green-d: #58a700;
+  --green-bg: #d7ffb8;
+  --green-ink: #58a700;
+  --red: #ff4b4b;
+  --red-d: #ea2b2b;
+  --red-bg: #ffdfe0;
+  --red-ink: #ea2b2b;
+  --blue: #1cb0f6;
+  --blue-d: #1899d6;
+  --blue-bg: #ddf4ff;
+  --blue-ink: #1899d6;
+  --gold: #ffc800;
+  --gold-d: #e5a400;
+  --gold-bg: #fff5d3;
+  --orange: #ff9600;
+  --purple: #ce82ff;
+  --bone: #fffaf0;
+  --bone-line: #3c3c3c;
+  --white: #ffffff;
+  /* card faces keep their own colours in both themes */
+  --c-green: #2fa84f;
+  --c-yellow: #f5bd1f;
+  --c-purple: #8b5cf6;
+  --c-black: #22262d;
+  --c-pirate: #e5484d;
+  --c-tigress: #f08a3c;
+  --c-sk: #151515;
+  --c-mermaid: #11a99b;
+  --c-escape: #eef3f6;
+  --c-loot: #ffc800;
+  --c-kraken: #34485e;
+  --c-whale: #dde7ee;
+  --f-ui: 'Nunito', ui-rounded, 'SF Pro Rounded', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --f-logo: 'Pirata One', 'Nunito', Georgia, serif;
+  --r: 16px;
+  --rise: 14px;
+  --spring: cubic-bezier(0.3, 1.45, 0.5, 1);
+  --ease-out: cubic-bezier(0.2, 0.9, 0.3, 1);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --bg: #131f24;
+    --card: #131f24;
+    --soft: #1b2a31;
+    --line: #37464f;
+    --fg: #f1f7fb;
+    --muted: #8ea3ae;
+    --faint: #52656f;
+    --felt: #172a33;
+    --green-bg: #1f3322;
+    --green-ink: #79d634;
+    --red-bg: #3a2329;
+    --red-ink: #ff7878;
+    --blue-bg: #16323f;
+    --blue-ink: #49c0f8;
+    --gold-bg: #3a3217;
+    --bone: #f4ecd8;
+    --bone-line: #131f24;
+    color-scheme: dark;
+  }
+}
+:root[data-theme='dark'] {
+  --bg: #131f24;
+  --card: #131f24;
+  --soft: #1b2a31;
+  --line: #37464f;
+  --fg: #f1f7fb;
+  --muted: #8ea3ae;
+  --faint: #52656f;
+  --felt: #172a33;
+  --green-bg: #1f3322;
+  --green-ink: #79d634;
+  --red-bg: #3a2329;
+  --red-ink: #ff7878;
+  --blue-bg: #16323f;
+  --blue-ink: #49c0f8;
+  --gold-bg: #3a3217;
+  --bone: #f4ecd8;
+  --bone-line: #131f24;
+  color-scheme: dark;
+}
+@media (min-width: 700px) {
+  :root {
+    --rise: 22px;
+  }
+}
