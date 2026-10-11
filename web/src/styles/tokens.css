@@ -1,5 +1,7 @@
 /* Design tokens: every colour, font, radius and easing of the game, light and dark.
-   Lifted from the legacy build (legacy/Skull King Tavern.html) with the values unchanged.
+   Lifted from the legacy build (legacy/Skull King Tavern.html) with the values unchanged, but for
+   four text colours of the light theme: --muted, --green-ink, --red-ink and --blue-ink are darker
+   than they were there, so that text in them is at least 4.5:1 on the backgrounds it stands on.
    Only custom properties (and the colour scheme they belong to) live here; rules are in tavern.css. */
 :root {
   --bg: #ffffff;
@@ -7,21 +9,21 @@
   --soft: #f7f7f7;
   --line: #e5e5e5;
   --fg: #3c3c3c;
-  --muted: #777777;
+  --muted: #6b6b6b;
   --faint: #afafaf;
   --felt: #f1f7fa;
   --green: #58cc02;
   --green-d: #58a700;
   --green-bg: #d7ffb8;
-  --green-ink: #58a700;
+  --green-ink: #357000;
   --red: #ff4b4b;
   --red-d: #ea2b2b;
   --red-bg: #ffdfe0;
-  --red-ink: #ea2b2b;
+  --red-ink: #c41a1a;
   --blue: #1cb0f6;
   --blue-d: #1899d6;
   --blue-bg: #ddf4ff;
-  --blue-ink: #1899d6;
+  --blue-ink: #0a6a9f;
   --gold: #ffc800;
   --gold-d: #e5a400;
   --gold-bg: #fff5d3;
