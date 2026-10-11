@@ -20,8 +20,8 @@ use crate::pushes::{
     QueueStatusPush, Superseded, Welcome, WelcomeGame,
 };
 use crate::rest::{
-    Active, Credentials, Health, LadderEntry, LadderPage, Me, Profile, ProfilePatch, Rating,
-    Season, ServerConfig, Stats, TableColor, Timers, User,
+    ActionLog, ActionLogEntry, Active, Credentials, Health, LadderEntry, LadderPage, Me, Profile,
+    ProfilePatch, Rating, Season, ServerConfig, Stats, TableColor, Timers, User,
 };
 use crate::samples;
 use crate::settings::{GameSettings, Pace};
@@ -177,6 +177,8 @@ fn export_rest(cfg: &ts_rs::Config) -> Result<(), ExportError> {
     ErrorBody::export_all(cfg)?;
     ErrorObject::export_all(cfg)?;
     Health::export_all(cfg)?;
+    ActionLogEntry::export_all(cfg)?;
+    ActionLog::export_all(cfg)?;
     TableColor::export_all(cfg)?;
     Timers::export_all(cfg)?;
     ServerConfig::export_all(cfg)?;

@@ -23,8 +23,8 @@ use crate::pushes::{
     QueueStatusTag, Superseded, SupersededTag, Welcome, WelcomeGame, WelcomeTag,
 };
 use crate::rest::{
-    Active, Credentials, Health, LadderEntry, LadderPage, Me, Profile, ProfilePatch, Rating,
-    Season, ServerConfig, Stats, TableColor, Timers, User,
+    ActionLog, ActionLogEntry, Active, Credentials, Health, LadderEntry, LadderPage, Me, Profile,
+    ProfilePatch, Rating, Season, ServerConfig, Stats, TableColor, Timers, User, emote_ids,
 };
 use crate::settings::GameSettings;
 use crate::table::{
@@ -50,6 +50,20 @@ pub(crate) fn apply(dir: &Path, write: bool) -> Result<(), ExportError> {
 }
 
 fn rest(dir: &Path, write: bool) -> Result<(), ExportError> {
+    put(
+        dir,
+        write,
+        "action-log",
+        &ActionLog {
+            game_id: GameId::new(GAME),
+            entries: vec![ActionLogEntry {
+                seq: 0,
+                kind: "deal".to_owned(),
+                seat: None,
+                body: r#"{"round":0,"cards":[1]}"#.to_owned(),
+            }],
+        },
+    )?;
     put(dir, write, "health", &Health { ok: true })?;
     put(dir, write, "timers", &Timers::standard())?;
     put(dir, write, "game-settings", &GameSettings::standard())?;
@@ -63,7 +77,7 @@ fn rest(dir: &Path, write: bool) -> Result<(), ExportError> {
             timers: Timers::standard(),
             standard: GameSettings::standard(),
             season: None,
-            emotes: Vec::new(),
+            emotes: emote_ids(),
         },
     )?;
     put(
@@ -506,6 +520,7 @@ fn pushes(dir: &Path, write: bool) -> Result<(), ExportError> {
         &GameOver {
             tag: GameOverTag::Value,
             game_id: GameId::new(GAME),
+            seat: Some(Seat::from_index(0)),
             result: game_result(),
         },
     )?;

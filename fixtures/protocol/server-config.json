@@ -21,5 +21,14 @@
     "pace": "standard"
   },
   "season": null,
-  "emotes": []
+  "emotes": [
+    "yoho",
+    "arr",
+    "nice",
+    "oops",
+    "thinking",
+    "laugh",
+    "cry",
+    "gg"
+  ]
 }

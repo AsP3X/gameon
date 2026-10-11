@@ -3,7 +3,15 @@
    jsdom has no matchMedia, no Web Audio and no vibration. The renderer already does without the
    last two; matchMedia is stubbed here, answering "reduce motion", so nothing waits on an animation. */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test';
-import { mountTavern } from './index';
+import { Bots, Engine } from '../game';
+import type { GameState } from '../game';
+import type { Seat } from '../protocol/generated';
+import { DISPATCH_TIMEOUT_MS } from '../table/table';
+import type { DispatchResult, Table, TableListener } from '../table/table';
+import { Sound } from '../sound/sound';
+import { showTable } from './actions';
+import { coverTavern, mountTavern } from './index';
+import { go, render } from './render';
 import { prefs, session, tableView, ui } from './state';
 import { Store } from './store';
 
@@ -281,6 +289,39 @@ describe('mountTavern', () => {
     expect(app.querySelector('img')).toBeNull();
   });
 
+  it('asks for the menu music on the home screen and nowhere else', () => {
+    const music = vi.spyOn(Sound, 'music');
+    const wanted = (): boolean | undefined => music.mock.calls.at(-1)?.[0];
+    mount();
+    expect(wanted()).toBe(true);
+    click('[data-act="soundSheet"]'); // a sheet over the home screen is still the home screen
+    expect(wanted()).toBe(true);
+    click('[data-act="closeSheet"]');
+    click('[data-act="setup"]');
+    expect(wanted()).toBe(false);
+    click('[data-act="start"]');
+    expect(wanted()).toBe(false);
+    go('home');
+    expect(wanted()).toBe(true);
+    coverTavern(true); // the page shows the online screens instead
+    expect(wanted()).toBe(false);
+    coverTavern(false);
+    expect(wanted()).toBe(true);
+    const hidden = vi.spyOn(document, 'hidden', 'get').mockReturnValue(true);
+    document.dispatchEvent(new Event('visibilitychange'));
+    expect(wanted()).toBe(false);
+    hidden.mockReturnValue(false);
+    document.dispatchEvent(new Event('visibilitychange'));
+    expect(wanted()).toBe(true);
+    const hush = vi.spyOn(Sound, 'hush');
+    unmount?.();
+    unmount = null;
+    expect(hush).toHaveBeenCalledTimes(1);
+    music.mockClear();
+    document.dispatchEvent(new Event('visibilitychange')); // no listener left to ask for it
+    expect(music).not.toHaveBeenCalled();
+  });
+
   it('cleans up: no sprite, no listeners, no running table', async () => {
     mount();
     startSoloGame();
@@ -357,5 +398,231 @@ describe('mountTavern', () => {
     click('[data-act="resume"]');
     expect(tableView().bids.filter((b) => b === -1)).toHaveLength(3);
     expect(all('.hand .hslot')).toHaveLength(6);
+  });
+});
+
+describe('a table that does not take an action', () => {
+  const silent = (): Promise<DispatchResult> => new Promise(() => {});
+  /** The open table. */
+  function open(): Table {
+    if (!session.table) throw new Error('No table is open');
+    return session.table;
+  }
+  /** A solo game in which the three bots have bid and the human has set the slider to 2. */
+  async function readyToBid(): Promise<void> {
+    mount();
+    startSoloGame();
+    await vi.advanceTimersByTimeAsync(3000);
+    key('#bid', '2');
+    render(); // once more, so the page holds nothing that only the first drawing after a key shows
+  }
+
+  it('gives a refused bid back at once and an unanswered one at the limit, with the table as it was', async () => {
+    await readyToBid();
+    const page = app.innerHTML,
+      view = session.view;
+    const dispatch = vi
+      .spyOn(open(), 'dispatch')
+      .mockResolvedValue({ ok: false, code: 'NOT_YOUR_TURN', message: 'Wait for your turn.' });
+
+    click('[data-act="bid"]');
+    expect(ui.waiting).toBe(true);
+    expect(app.querySelector('.actions')?.textContent).toBe('Locked in');
+    await vi.advanceTimersByTimeAsync(0);
+    expect(ui.waiting).toBe(false);
+    expect(ui.bidPick).toBe(2);
+    expect(session.view).toBe(view);
+    expect(app.innerHTML).toBe(page);
+
+    dispatch.mockImplementation(silent);
+    click('[data-act="bid"]');
+    click('.hand .hslot'); // input is locked: a tap on a card picks nothing
+    expect(ui.sel).toBeNull();
+    await vi.advanceTimersByTimeAsync(DISPATCH_TIMEOUT_MS - 1);
+    expect(ui.waiting).toBe(true);
+    expect(app.querySelector('.actions')?.textContent).toBe('Locked in');
+    await vi.advanceTimersByTimeAsync(1);
+    expect(ui.waiting).toBe(false);
+    expect(ui.bidPick).toBe(2);
+    expect(session.view).toBe(view);
+    expect(app.innerHTML).toBe(page);
+    expect(dispatch).toHaveBeenCalledTimes(2);
+    expect(dispatch).toHaveBeenLastCalledWith({ type: 'bid', seat: 0, bid: 2 });
+    expect(tableView().bids[0]).toBeNull();
+
+    // The same button still works once the table answers.
+    dispatch.mockRestore();
+    click('[data-act="bid"]');
+    await vi.advanceTimersByTimeAsync(600); // the last bid of the round: shown after the "Yo-ho-ho!" banner
+    expect(tableView().bids[0]).toBe(2);
+    expect(ui.waiting).toBe(false);
+  });
+
+  it('puts an unanswered card back in the hand, still picked', async () => {
+    await readyToBid();
+    click('[data-act="bid"]');
+    await vi.advanceTimersByTimeAsync(600);
+    await untilMyTurn();
+    const v = tableView(),
+      card = v.legal.find((id) => v.deck[id].kind !== 'tigress') ?? v.legal[0],
+      slot = `.hand .hslot[data-id="${card}"]`;
+    click(slot);
+    render();
+    const page = app.innerHTML,
+      view = session.view;
+    const dispatch = vi.spyOn(open(), 'dispatch').mockImplementation(silent);
+
+    if (v.deck[card].kind === 'tigress') click('[data-act="play"][data-as="pirate"]');
+    else click(slot);
+    expect(dispatch).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ type: 'play', seat: 0, card }));
+    expect(ui.waiting).toBe(true);
+    expect(ui.sel).toBeNull();
+    expect(app.querySelector('.hand')?.classList.contains('myturn')).toBe(false);
+
+    await vi.advanceTimersByTimeAsync(DISPATCH_TIMEOUT_MS);
+    expect(ui.waiting).toBe(false);
+    expect(ui.sel).toBe(card);
+    expect(session.view).toBe(view);
+    expect(tableView().hand).toContain(card);
+    expect(app.innerHTML).toBe(page);
+  });
+
+  it('stays locked on a second action when late news comes about the first', async () => {
+    await readyToBid();
+    const table = open(),
+      real = table.dispatch.bind(table);
+    let fail: (r: DispatchResult) => void = () => {};
+    const dispatch = vi.spyOn(table, 'dispatch').mockImplementationOnce((action) => {
+      void real(action); // the bid goes through and its update is shown, but the answer is held back
+      return new Promise((resolve) => {
+        fail = resolve;
+      });
+    });
+    click('[data-act="bid"]');
+    await vi.advanceTimersByTimeAsync(600);
+    expect(tableView().bids[0]).toBe(2);
+    expect(ui.waiting).toBe(false);
+    await untilMyTurn();
+
+    const v = tableView(),
+      card = v.legal.find((id) => v.deck[id].kind !== 'tigress') ?? v.legal[0];
+    dispatch.mockImplementation(silent);
+    click(`.hand .hslot[data-id="${card}"]`);
+    if (v.deck[card].kind === 'tigress') click('[data-act="play"][data-as="pirate"]');
+    else click(`.hand .hslot[data-id="${card}"]`);
+    expect(ui.waiting).toBe(true);
+
+    fail({ ok: false, code: 'TIMEOUT', message: 'The table did not answer in time.' });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(ui.waiting).toBe(true);
+    expect(ui.sel).toBeNull();
+    expect(ui.bidPick).toBeNull();
+  });
+});
+
+describe('local seats', () => {
+  it('a solo game has one, and no curtain', () => {
+    mount();
+    startSoloGame();
+    expect(session.table?.localSeats).toEqual([0]);
+    expect(ui.curtain).toBe(false);
+    expect(app.querySelector('.curtain')).toBeNull();
+    expect(app.querySelector('.human-tag')).toBeNull();
+  });
+
+  it('pass-and-play has one per human, and hands the device from each to the next', async () => {
+    mount();
+    click('[data-act="setup"]');
+    click('[data-act="crewKind"][data-i="1"][data-v="human"]');
+    click('[data-act="format"][data-v="brawl"]');
+    click('[data-act="start"]');
+    expect(session.table?.localSeats).toEqual([0, 1]);
+    expect(app.querySelector('.curtain h1')?.textContent).toBe('Pass to You');
+
+    click('[data-act="reveal"]');
+    expect(tableView().me).toBe(0);
+    expect(app.querySelector('.hand.hidden')).toBeNull();
+    expect(all('.seat .human-tag')).toHaveLength(1); // the other human at the table
+    key('#bid', '1');
+    click('[data-act="bid"]');
+
+    // Seat 0 has bid, seat 1 has not: the curtain comes down and the screen now belongs to seat 1.
+    expect(ui.seat).toBe(1);
+    expect(app.querySelector('.curtain h1')?.textContent).toBe('Pass to Anne');
+    click('[data-act="reveal"]');
+    expect(tableView().me).toBe(1);
+    expect(app.querySelector('.mebar .pname')?.textContent).toContain('Anne');
+    expect(all('.hand .hslot')).toHaveLength(6);
+    expect(app.querySelector('.bidsheet')).not.toBeNull();
+    key('#bid', '0');
+    click('[data-act="bid"]');
+    await vi.advanceTimersByTimeAsync(4000); // the two bots bid, the bids are revealed
+    expect(tableView().phase).not.toBe('bidding');
+    expect(tableView().bids.slice(0, 2)).toEqual([1, 0]);
+  });
+
+  it('do not include a human who plays somewhere else: that seat is never looked through', async () => {
+    mount();
+    const seats = [
+      { name: 'You', color: '#1cb0f6', bot: false },
+      { name: 'Remy', color: '#ff9600', bot: false },
+      { name: 'Anne', color: '#ce82ff', bot: true },
+    ];
+    let state: GameState = Engine.create({ seats, format: 'brawl', seed: 5 });
+    const subs = new Set<TableListener>(),
+      asked = new Set<Seat>();
+    const viewOf =
+      (s: GameState) =>
+      (seat: Seat): ReturnType<Table['view']> => {
+        asked.add(seat);
+        return Engine.view(s, seat);
+      };
+    /** Seat 0 is here. Seat 1 is a person too, but not on this device. Nothing moves unless the test moves it. */
+    const table: Table = {
+      localSeats: [0],
+      view: (seat) => viewOf(state)(seat),
+      dispatch(action) {
+        const r = Engine.reduce(state, action);
+        if (r.error) return Promise.resolve({ ok: false, code: 'REJECTED', message: r.error });
+        state = r.state;
+        subs.forEach((fn) => fn(r.events, viewOf(r.state)));
+        return Promise.resolve({ ok: true });
+      },
+      subscribe(fn) {
+        subs.add(fn);
+        return () => subs.delete(fn);
+      },
+      schedule: () => {},
+      stop: () => {},
+    };
+    showTable(table);
+    go('game');
+    expect(app.querySelector('.curtain')).toBeNull();
+    expect(app.querySelector('.human-tag')).toBeNull();
+
+    // The local seat bids. Remy has not: the screen stays with seat 0 and waits.
+    key('#bid', '1');
+    click('[data-act="bid"]');
+    await vi.advanceTimersByTimeAsync(0);
+    expect(ui.seat).toBe(0);
+    expect(ui.curtain).toBe(false);
+    expect(app.querySelector('.actions')?.textContent).toBe('You bid 1 · waiting for the crew');
+    expect(app.querySelector('.hand.hidden')).toBeNull();
+
+    // The others bid from wherever they are, and the cards go round until it is Remy's turn.
+    await table.dispatch({ type: 'bid', seat: 1, bid: 0 });
+    await table.dispatch({ type: 'bid', seat: 2, bid: 0 });
+    while (state.phase === 'playing' && state.turn != null && state.turn !== 1)
+      await table.dispatch({ type: 'play', seat: state.turn, ...Bots.play(state, state.turn) });
+    await vi.advanceTimersByTimeAsync(1000);
+    expect([state.phase, state.turn]).toEqual(['playing', 1]);
+
+    expect(ui.seat).toBe(0);
+    expect(tableView().me).toBe(0);
+    expect(app.querySelector('.curtain')).toBeNull();
+    expect(app.querySelector('.hand.hidden')).toBeNull();
+    expect(app.querySelector('.hand.myturn')).toBeNull();
+    expect(app.querySelector('.status')?.textContent).toBe('Remy is thinking…');
+    expect([...asked]).toEqual([0]);
   });
 });

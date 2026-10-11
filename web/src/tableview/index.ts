@@ -15,9 +15,27 @@ import { SPRITE } from './art';
 import { $$ } from './dom';
 import { listen } from './events';
 import { finale } from './motion';
-import { render } from './render';
+import { render, tuneMenu } from './render';
 import { clearTimer, loadState, prefs, savePrefs, session, stage, ui } from './state';
 import { Tracker } from './tracker';
+
+export { closeOnlineTable, openOnlineTable, showOnlineResult } from './actions';
+export type { OnlineHooks } from './state';
+
+/** What the page around the renderer does for it. */
+export interface TavernHooks {
+  /** "Play online" on the home screen: the online screens are React's, not the renderer's. */
+  online?: () => void;
+}
+
+/**
+ * Tell the renderer that the page shows something else in its place (the online screens), or that
+ * it is back. What it drew stays as it was; the menu music stops while it cannot be seen.
+ */
+export function coverTavern(covered: boolean): void {
+  stage.covered = covered;
+  tuneMenu();
+}
 
 /** How long the one-time "swipe to cancel" hint takes to play: its delay plus its animation (swipeHint in tavern.css). */
 const SWIPE_HINT_MS = 2700;
@@ -29,15 +47,16 @@ let mounted: (() => void) | null = null;
  * Draw the table into `app`, with `fx` as the confetti canvas, and start listening.
  * Returns the cleanup: it removes every listener, stops the table's timers and what else was pending,
  * and takes the sprite and the screen off the page. Safe to call twice, and safe under React
- * StrictMode (mount, cleanup, mount).
+ * StrictMode (mount, cleanup, mount). `hooks` is what the renderer asks the page around it to do.
  */
-export function mountTavern(app: HTMLElement, fx: HTMLCanvasElement): () => void {
+export function mountTavern(app: HTMLElement, fx: HTMLCanvasElement, hooks: TavernHooks = {}): () => void {
   mounted?.();
   loadState();
   session.trk = Tracker.load();
   resetFeed();
   stage.app = app;
   stage.fx = fx;
+  stage.online = hooks.online ?? null;
 
   /* ---------- boot ---------- */
   document.body.insertAdjacentHTML('afterbegin', SPRITE);
@@ -72,6 +91,7 @@ export function mountTavern(app: HTMLElement, fx: HTMLCanvasElement): () => void
     fx.hidden = true;
     stage.app = null;
     stage.fx = null;
+    stage.online = null;
   };
   mounted = cleanup;
   return cleanup;

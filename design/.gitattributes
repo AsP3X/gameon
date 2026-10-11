@@ -1,0 +1,3 @@
+# The design file is not text. Git must never write conflict markers into it: a conflict is
+# carried across in Pen, frame by frame (docs/agent-rules/design-sync.md).
+*.pen binary

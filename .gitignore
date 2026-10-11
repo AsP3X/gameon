@@ -11,3 +11,6 @@ server/target/
 
 # Local preview servers of a Claude Code session (absolute paths to a worktree)
 /.claude/launch.json
+
+# Local secrets. Never commit.
+.env

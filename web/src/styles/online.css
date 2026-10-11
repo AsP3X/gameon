@@ -1,0 +1,540 @@
+/* The online screens (src/online): hub, new table, join, and the table's lobby. They are React's and
+   sit next to #app, which is hidden while they show. They reuse the classes of tavern.css; what is
+   here is only what those screens add. Tokens only. */
+#online {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+#online .wrap {
+  padding-block: 0 170px;
+}
+#online .head {
+  padding-block: 8px;
+}
+#online .icon-btn {
+  width: 44px;
+  height: 44px;
+}
+#online .sbtn {
+  width: 44px;
+  height: 44px;
+}
+#online .sections {
+  gap: 22px;
+}
+#online p.muted {
+  font-size: 14px;
+}
+
+/* The home screen's two ways in, side by side: the row costs the hero no height. */
+.play-row {
+  display: flex;
+  gap: 12px;
+}
+.play-row .btn {
+  flex: 1;
+  min-width: 0;
+  padding-inline: 8px;
+}
+
+/* The end of a ranked game: what it did to the rating, shown when the standings are. */
+.end-rating {
+  flex: none;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 800;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+.end-rating[hidden] {
+  display: none;
+}
+.end-rating b {
+  font-size: 16px;
+  font-weight: 900;
+}
+.end.done .end-rating {
+  opacity: 1;
+}
+
+/* ---------- at the table, online ---------- */
+
+/* The clock of a seat the table is waiting on: a ring around the avatar that empties until the
+   deadline. It starts where the clock is right now (--gone, in hundredths of the ring) and runs for
+   what is left (--left). The last five seconds are red. */
+.ring {
+  position: absolute;
+  top: 2px;
+  left: 50%;
+  width: 50px;
+  height: 50px;
+  margin-left: -25px;
+  transform: rotate(-90deg);
+  pointer-events: none;
+}
+.mebar {
+  position: relative;
+}
+.mebar .ring {
+  top: 50%;
+  left: 6px;
+  margin: -25px 0 0;
+}
+.ring circle {
+  fill: none;
+  stroke-width: 3.5;
+}
+.ring-track {
+  stroke: var(--line);
+}
+.ring-left {
+  stroke: var(--blue);
+  stroke-linecap: round;
+  stroke-dasharray: 100;
+  stroke-dashoffset: var(--gone);
+  animation:
+    ringEmpty var(--left) linear forwards,
+    ringHurry 1ms linear var(--calm) forwards;
+}
+.ring-left.hurry {
+  stroke: var(--red);
+}
+@keyframes ringEmpty {
+  to {
+    stroke-dashoffset: 100;
+  }
+}
+@keyframes ringHurry {
+  to {
+    stroke: var(--red);
+  }
+}
+/* The ring is a clock, not decoration: with reduced motion it still runs, one step a second. */
+@media (prefers-reduced-motion: reduce) {
+  .ring .ring-left {
+    animation:
+      ringEmpty var(--left) steps(var(--ticks), end) forwards,
+      ringHurry 1ms linear var(--calm) forwards !important;
+  }
+}
+
+/* Where the player of a seat is, when they are not simply there. It sits on the lower edge of the avatar. */
+.presence {
+  position: absolute;
+  top: 40px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 1px 6px;
+  border-radius: 99px;
+  box-shadow: 0 0 0 2px var(--bg);
+  font-size: 10px;
+  font-weight: 900;
+  line-height: 1.3;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.presence.off {
+  background: var(--red-bg);
+  color: var(--red-ink);
+}
+.presence.away {
+  background: var(--gold-bg);
+  color: var(--gold-d);
+}
+.presence.bot {
+  background: var(--soft);
+  color: var(--muted);
+}
+.seat.gone .avatar {
+  opacity: 0.5;
+}
+.sheet-note {
+  text-align: center;
+  font-size: 13px;
+}
+
+/* The table cannot be reached: a card over it says so, and the table underneath takes no input. */
+.table-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: color-mix(in srgb, var(--c-sk) 60%, transparent);
+}
+.table-overlay .box {
+  width: 100%;
+  max-width: 420px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 22px 18px 20px;
+  border-radius: 22px;
+  background: var(--bg);
+}
+.table-overlay .btn {
+  margin-block: 6px 4px;
+}
+
+/* The end of an online game has one way on, and it takes the whole row. */
+.end-actions > :only-child {
+  grid-column: 1 / -1;
+}
+
+.identity {
+  min-height: 44px;
+}
+.identity small {
+  display: block;
+  font-size: 12px;
+  color: var(--muted);
+}
+.identity b,
+.member b {
+  display: block;
+  font-weight: 900;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Something the player has to read: the connection is down, a table closed, a game ended. */
+.notice {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 16px;
+  border-radius: var(--r);
+  background: var(--soft);
+}
+.notice.gold {
+  background: var(--gold-bg);
+}
+.notice b {
+  font-weight: 900;
+}
+.notice p {
+  color: var(--muted);
+  font-size: 14px;
+}
+.notice .btn {
+  margin-block: 6px 4px;
+}
+.alert {
+  color: var(--red-ink);
+  font-size: 14px;
+}
+
+/* A bordered card with something to read on the left and one small button on the right. */
+.plate {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border: 2px solid var(--line);
+  border-radius: var(--r);
+  background: var(--card);
+  box-shadow: 0 3px 0 var(--line);
+}
+.plate small {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.3;
+}
+.plate b {
+  display: block;
+  font-size: 15px;
+  font-weight: 900;
+}
+.plate .code {
+  font-size: 28px;
+  line-height: 1.2;
+  letter-spacing: 0.14em;
+  font-variant-numeric: tabular-nums;
+}
+.mini {
+  flex: none;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 6px 14px;
+  border: 2px solid var(--line);
+  border-radius: 12px;
+  background: var(--card);
+  box-shadow: 0 2px 0 var(--line);
+  color: var(--blue-ink);
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.mini:active {
+  transform: translateY(2px);
+  box-shadow: none;
+}
+
+.member {
+  min-height: 44px;
+}
+.member small {
+  display: block;
+  font-size: 12px;
+  color: var(--muted);
+}
+.member.open {
+  color: var(--muted);
+  font-weight: 800;
+  font-size: 15px;
+}
+.avatar.empty {
+  background: transparent;
+  color: var(--faint);
+  border: 2px solid var(--line);
+  box-shadow: none;
+}
+
+.seats-row small {
+  display: block;
+  color: var(--muted);
+  font-size: 13px;
+}
+#online .seg button {
+  min-height: 44px;
+}
+#online .seg.one button {
+  text-align: left;
+  padding: 10px 12px;
+}
+
+input.code-input {
+  width: 100%;
+  height: 64px;
+  text-align: center;
+  text-transform: uppercase;
+  font-size: 28px;
+  font-weight: 900;
+  letter-spacing: 0.2em;
+  font-variant-numeric: tabular-nums;
+}
+input.code-input[aria-invalid='true'] {
+  border-color: var(--red);
+}
+
+#online .footbar > div {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.foot-hint {
+  text-align: center;
+  color: var(--muted);
+  font-size: 14px;
+}
+.foot-row {
+  display: flex;
+  gap: 12px;
+}
+.foot-row .btn {
+  flex: 1;
+  min-width: 0;
+  padding-inline: 8px;
+}
+
+/* The player's identity on the hub is a plate: who they are, and the way to their profile. */
+.plate.identity small {
+  line-height: 1.4;
+}
+.plate.identity b {
+  font-size: 16px;
+}
+
+/* A text field that takes the row. */
+input.field {
+  flex: none;
+  width: 100%;
+  min-height: 46px;
+}
+input.field[aria-invalid='true'] {
+  border-color: var(--red);
+}
+
+/* Who a profile is about: the big avatar, the name, and what kind of account it is. */
+.who {
+  gap: 14px;
+  padding-block: 4px;
+}
+.who b {
+  display: block;
+  font-size: 20px;
+  font-weight: 900;
+  overflow-wrap: anywhere;
+}
+.who .pill {
+  margin-top: 4px;
+}
+
+/* The eight table colours: four to a row, each a 48 px target around its dot. */
+.swatches {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+}
+.swatch {
+  display: grid;
+  place-items: center;
+  height: 48px;
+  border: 0;
+  background: none;
+  padding: 0;
+}
+.swatch i {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  /* The ring of the chosen colour: a gap in the page colour, then the text colour. */
+  box-shadow: 0 0 0 3px var(--bg);
+}
+.swatch[aria-checked='true'] i {
+  box-shadow:
+    0 0 0 3px var(--bg),
+    0 0 0 6px var(--fg);
+}
+
+/* A human at the table is a button to their profile; it looks like the row it is in. */
+.member-link {
+  display: block;
+  min-height: 44px;
+  border: 0;
+  background: none;
+  padding: 0;
+  text-align: left;
+  color: inherit;
+  font: inherit;
+}
+
+/* The public tables. */
+ul.tables {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.tables .plate b {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mini[disabled] {
+  color: var(--faint);
+  box-shadow: none;
+}
+
+/* Waiting in the queue: one dot per seat the table needs. */
+.searching {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding-top: 18px;
+  text-align: center;
+}
+.queue-seats {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  padding-bottom: 6px;
+}
+.queue-seat {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 2px solid var(--line);
+  color: var(--faint);
+  font-size: 16px;
+  font-weight: 900;
+}
+.queue-seat.found {
+  border: 0;
+  background: var(--green);
+  color: var(--white);
+  box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.18);
+}
+.queue-seat svg {
+  width: 22px;
+  height: 22px;
+}
+
+/* A ranked rating: the number, the tier, and the placement flag when it is set. */
+.rating {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.rating b,
+.plate b.unrated {
+  font-size: 20px;
+  font-weight: 900;
+}
+
+/* The ladder: the season on top, then one row per player. The list is `.ranking` and a row's number
+   `.place`: tavern.css already has a `.ladder` and a `.rank`, for the how-to-play sheet and the standings. */
+.season b {
+  display: block;
+  font-size: 18px;
+  font-weight: 900;
+}
+.season small {
+  display: block;
+  color: var(--muted);
+  font-size: 13px;
+}
+ol.ranking {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.ranking li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 50px;
+  padding: 8px 12px;
+  border: 2px solid var(--line);
+  border-radius: 14px;
+}
+.ranking li.you {
+  border-color: var(--blue);
+  background: var(--blue-bg);
+}
+.ranking .place {
+  flex: none;
+  min-width: 28px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 900;
+}
+.ranking li b {
+  display: block;
+  font-weight: 900;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ranking li small {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+}

@@ -21,6 +21,22 @@ jobs:
   test:
     name: fmt / clippy / test
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: skt
+          POSTGRES_PASSWORD: skt
+          POSTGRES_DB: skt
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U skt -d skt"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgres://skt:skt@127.0.0.1:5432/skt
     defaults:
       run:
         working-directory: server

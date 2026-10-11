@@ -200,7 +200,7 @@ pub enum QueueStatusTag {
     Value,
 }
 
-/// An emote from a seat. `emote` is not a fixed list in this draft.
+/// An emote from a seat. `emote` is one id from [`crate::EMOTES`].
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[ts(export_to = "GameEmotePush.ts")]
 pub struct GameEmotePush {
@@ -233,6 +233,10 @@ pub struct GameOver {
     pub tag: GameOverTag,
     /// Game id.
     pub game_id: GameId,
+    /// The receiver's seat. The server always sends it. An older message may omit it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub seat: Option<Seat>,
     /// Standings for this seat.
     pub result: GameResult,
 }
