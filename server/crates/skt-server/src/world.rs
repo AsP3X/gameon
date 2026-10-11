@@ -9,6 +9,8 @@ mod table;
 
 pub(crate) use table::GameReport;
 #[cfg(test)]
+pub(crate) use table::LogEntry;
+#[cfg(test)]
 pub(crate) use table::RatedResult;
 #[cfg(test)]
 pub(crate) use table::SeatTally;
@@ -60,7 +62,15 @@ pub struct World {
     live: HashMap<UserId, Live>,
     /// Upgrades waiting for `hello`, keyed by connection id. They are not the player's socket yet.
     pending: HashMap<u64, Pending>,
+    /// Private-lobby parties that ranked must not seat together, until `until`.
+    parties: Vec<RecentParty>,
     now: Instant,
+}
+
+/// Humans who started a private lobby together.
+struct RecentParty {
+    users: Vec<UserId>,
+    until: Instant,
 }
 
 /// A ranked leave, persisted outside the world lock.
@@ -185,6 +195,7 @@ impl World {
             penalties: Vec::new(),
             live: HashMap::new(),
             pending: HashMap::new(),
+            parties: Vec::new(),
             now: Instant::now(),
         }
     }
@@ -658,6 +669,9 @@ impl World {
         if let Some(snapshot) = snapshot {
             self.push_lobby(&snapshot);
         }
+        if lobby.visibility == Visibility::Private {
+            self.note_party(&lobby);
+        }
         let priors = self.priors_of(&lobby);
         for (seated, game) in self
             .tables
@@ -876,7 +890,42 @@ impl World {
         self.seat_ids(QueueMode::Casual, &ids);
     }
 
+    fn note_party(&mut self, lobby: &Lobby) {
+        let users = lobby
+            .members
+            .iter()
+            .filter_map(|member| match member {
+                Member::Human { user, .. } => Some(user.id.clone()),
+                Member::Bot { .. } => None,
+            })
+            .collect::<Vec<_>>();
+        if users.len() < 2 {
+            return;
+        }
+        let until = self
+            .now
+            .checked_add(Duration::from_hours(2))
+            .unwrap_or(self.now);
+        self.parties.push(RecentParty { users, until });
+    }
+
+    fn shares_party(&self, left: &UserId, right: &UserId) -> bool {
+        self.parties.iter().any(|party| {
+            party.until > self.now
+                && party.users.iter().any(|user| user == left)
+                && party.users.iter().any(|user| user == right)
+        })
+    }
+
     fn form_ranked(&mut self) {
+        let now = self.now;
+        self.parties.retain(|party| party.until > now);
+        let ids: Vec<UserId> = self
+            .ranked
+            .waiting
+            .iter()
+            .map(|waiting| waiting.user.clone())
+            .collect();
         let waiters: Vec<Waiter> = self
             .ranked
             .waiting
@@ -886,7 +935,12 @@ impl World {
                 waited: self.now.saturating_duration_since(waiting.joined),
             })
             .collect();
-        let Some(indexes) = rating::pick_table(&waiters) else {
+        let Some(indexes) = rating::pick_table(&waiters, |left, right| {
+            ids.get(left).is_some_and(|one| {
+                ids.get(right)
+                    .is_some_and(|other| self.shares_party(one, other))
+            })
+        }) else {
             return;
         };
         let ids: Vec<UserId> = indexes

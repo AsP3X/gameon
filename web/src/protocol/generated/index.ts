@@ -3,6 +3,8 @@ export type { Ability } from "./Ability";
 export type { AbilityChoice } from "./AbilityChoice";
 export type { AbilityUsed } from "./AbilityUsed";
 export type { ActionAt } from "./ActionAt";
+export type { ActionLog } from "./ActionLog";
+export type { ActionLogEntry } from "./ActionLogEntry";
 export type { Active } from "./Active";
 export type { Beast } from "./Beast";
 export type { BotLevel } from "./BotLevel";

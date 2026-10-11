@@ -1,0 +1,11 @@
+{
+  "gameId": "018f6b4a-6a2e-7c3a-8b1d-9e0f1a2b3c4f",
+  "entries": [
+    {
+      "seq": 0,
+      "kind": "deal",
+      "seat": null,
+      "body": "{\"round\":0,\"cards\":[1]}"
+    }
+  ]
+}

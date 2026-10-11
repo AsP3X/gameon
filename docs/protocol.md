@@ -88,6 +88,7 @@ All bodies are JSON. Unless marked *public*, a session is required.
 | `GET /users/{id}` | | `Profile` | No username and no session data. Unknown id is `404`. |
 | `GET /lobbies` | | `{ lobbies: LobbySummary[] }` | Open public lobbies, full ones included, oldest first, no limit. A lobby leaves the list while its game runs and returns when it is `open` again. |
 | `GET /ladder?season=&limit=&after=` | | `{ season: Season, entries: LadderEntry[], next?: string }` | Session required. See below. |
+| `GET /games/{id}/log` | | `ActionLog` | Session required. The caller must have sat in that finished game. Unknown game, or a caller who did not sit it, is `404`. |
 
 ```ts
 type ServerConfig = {
@@ -115,6 +116,8 @@ type Stats = { games: number; wins: number; bidsMade: number; bidsTotal: number;
 type Rating = { value: number; tier: string; provisional: boolean; games: number };
 type Season = { id: number; name: string; startsAt: number; endsAt: number };
 type LadderEntry = { rank: number; user: User; rating: Rating };
+type ActionLog = { gameId: GameId; entries: ActionLogEntry[] };
+type ActionLogEntry = { seq: number; kind: string; seat: number | null; body: string };
 type Credentials = { username: string; password: string };   // register and login
 type ProfilePatch = { name?: string; color?: TableColor };   // omitted fields are left unchanged
 ```
@@ -306,8 +309,13 @@ For `ranked`, there is no fill timer and no bot. A dropped socket keeps the plac
 waiting is not seated. Each waiter has a window around the ordinal they had on joining. An account
 with no rating uses 0. The window starts at ±10 and grows by ±10 for every 15 seconds spent
 waiting. Two waiters match only when each is inside the other's window. The server looks at the
-12 who have waited the longest and seats the oldest compatible four. Four accounts on 0 match at
-once, in join order. `SeatInfo.tier` on that `game.start` follows the rule under the `SeatInfo` type.
+12 who have waited the longest and seats the oldest compatible four. Two accounts who were
+human seats of the same private lobby when its game started are not seated together for the next
+two hours. If every compatible four still pairs them, nobody from that search is seated yet. Four
+accounts on 0 match at once, in join order, when no such pair is among them. `SeatInfo.tier` on
+that `game.start` follows the rule under the `SeatInfo` type. `body` on an action-log entry is the
+JSON text of that step: a deal is `{"round":n,"cards":[...]}`, a bid is `{"bid":n}`, a play is
+`{"card":n,"as":...}`, an ability is the choice JSON, and an advance is `{}`.
 
 A table made by either queue has no lobby. `game.start` carries `lobbyId: null`. Casual carries
 `mode: 'casual'`. Ranked carries `mode: 'ranked'`. `settings` are `config.standard`. Humans sit in

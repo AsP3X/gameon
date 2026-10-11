@@ -3,7 +3,7 @@
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
-use crate::ids::{UnixMs, UserId};
+use crate::ids::{GameId, UnixMs, UserId};
 use crate::settings::GameSettings;
 
 /// `GET /api/v1/health`.
@@ -106,6 +106,32 @@ pub struct ServerConfig {
     pub season: Option<Season>,
     /// Emote ids this process accepts. See [`EMOTES`].
     pub emotes: Vec<String>,
+}
+
+/// One stored step of a finished game.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(rename_all = "camelCase", export_to = "ActionLogEntry.ts")]
+pub struct ActionLogEntry {
+    /// Position in the game, starting at 0.
+    pub seq: u32,
+    /// `deal`, `bid`, `play`, `ability`, or `advance`.
+    pub kind: String,
+    /// Acting seat. Absent for a deal or an advance.
+    pub seat: Option<u8>,
+    /// JSON text of that step.
+    pub body: String,
+}
+
+/// `GET /api/v1/games/{id}/log`. The caller sat in the game.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(rename_all = "camelCase", export_to = "ActionLog.ts")]
+pub struct ActionLog {
+    /// The finished game.
+    pub game_id: GameId,
+    /// Steps in deal order.
+    pub entries: Vec<ActionLogEntry>,
 }
 
 /// Where a reconnect lands.
