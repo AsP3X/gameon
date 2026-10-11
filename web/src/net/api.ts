@@ -6,6 +6,7 @@
    real one is fetch against this origin; the mock server hands out its own. `Api` puts the calls of
    §4 on top of either, and turns every answer into a result the screens can branch on by code. */
 import type {
+  ActionLog,
   Credentials,
   ErrorCode,
   LadderPage,
@@ -82,6 +83,14 @@ export class Api {
    * One page of the current season's ladder. `after` is the `next` of the page before it: the
    * server's own cursor, sent back as it came.
    */
+  /**
+   * The deals and accepted actions of a finished game this session sat. An unknown game, or one
+   * this session did not sit, is `NOT_FOUND`.
+   */
+  gameLog(id: string): Promise<ApiResult<ActionLog>> {
+    if (!UUID.test(id)) return Promise.resolve({ ok: false, code: 'NOT_FOUND', message: 'No such game.' });
+    return this.call('GET', `/games/${id}/log`);
+  }
   ladder(after?: string): Promise<ApiResult<LadderPage>> {
     const query = new URLSearchParams({ limit: String(LADDER_PAGE) });
     if (after != null) query.set('after', after);

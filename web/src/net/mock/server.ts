@@ -32,6 +32,7 @@
 import { Bots, Engine, Rules } from '../../game';
 import type { Action, GameState } from '../../game';
 import type {
+  ActionLogEntry,
   ClientMessage,
   Credentials,
   Deadline,
@@ -320,6 +321,8 @@ export class MockServer {
   private readonly sessions = new Map<string, Account>();
   private readonly rooms = new Set<Room>();
   private readonly games = new Set<Game>();
+  /** Finished games a seat may read back. The key is the game id. */
+  private readonly records = new Map<string, { users: Set<string>; entries: ActionLogEntry[] }>();
   private readonly conns = new Set<Conn>();
   /** Every player there ever was, by user id. */
   private readonly accounts = new Map<string, Account>();
@@ -621,6 +624,7 @@ export class MockServer {
     // A query belongs to the request, not to the path: only the ladder reads one.
     const [path, search = ''] = target.split('?', 2);
     const user = /^\/users\/([^/]+)$/.exec(path);
+    const gameLog = /^\/games\/([^/]+)\/log$/.exec(path);
     const methods: Record<string, string> = {
       '/health': 'GET',
       '/config': 'GET',
@@ -632,7 +636,7 @@ export class MockServer {
       '/lobbies': 'GET',
       '/ladder': 'GET',
     };
-    const allowed = user ? 'GET' : methods[path];
+    const allowed = user || gameLog ? 'GET' : methods[path];
     if (allowed == null) return fail('NOT_FOUND');
     if (!allowed.split(' ').includes(method)) return fail('VALIDATION');
 
@@ -705,6 +709,11 @@ export class MockServer {
       const page = this.ladder(new URLSearchParams(search));
       return typeof page === 'string' ? fail(page) : ok(page);
     }
+    if (gameLog) {
+      const kept = this.records.get(gameLog[1]);
+      if (!kept?.users.has(account.me.user.id)) return fail('NOT_FOUND');
+      return ok({ gameId: gameLog[1], entries: kept.entries });
+    }
     if (user) {
       const found = this.accounts.get(user[1]);
       if (!found) return fail('NOT_FOUND');
@@ -712,6 +721,24 @@ export class MockServer {
       return ok(profile);
     }
     return fail('NOT_FOUND');
+  }
+
+  /** Keep the steps of a finished game for the seats that played it. */
+  private remember(game: Game): void {
+    const entries: ActionLogEntry[] = [];
+    const push = (kind: string, seat: number | null, body: unknown): void => {
+      entries.push({ seq: entries.length, kind, seat, body: JSON.stringify(body) });
+    };
+    game.state.log.forEach((_round, round) => {
+      push('deal', null, { round, cards: [] });
+    });
+    if (entries.length === 0) push('advance', null, {});
+    const users = new Set<string>();
+    game.players.forEach((account) => {
+      if (account) users.add(account.me.user.id);
+    });
+    game.leavers.forEach(({ account }) => users.add(account.me.user.id));
+    this.records.set(game.id, { users, entries });
   }
 
   private config(): ServerConfig {
@@ -1311,6 +1338,7 @@ export class MockServer {
       if (account.conn) this.write(account.conn, over);
       else account.owed.push(over);
     };
+    this.remember(game);
     this.games.delete(game);
     game.players.forEach((account, seat) => {
       if (!account) return;
