@@ -48,6 +48,11 @@ input:focus-visible {
   outline: 3px solid var(--blue);
   outline-offset: 2px;
 }
+/* What takes the keyboard without being a control: a screen's title, a dialog that has just opened.
+   It is where reading starts, not something to press, so it is not ringed. */
+[tabindex='-1']:not(button, input, select, textarea):focus {
+  outline: none;
+}
 /* #app was a child of <body>; it now sits inside React's #root, which passes the full height on,
    so `min-height: 100%` and `#app.full { height: 100% }` resolve as they did. */
 #root {
@@ -186,8 +191,8 @@ p {
   border: 0;
   background: transparent;
   color: var(--faint);
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   border-radius: 12px;
   display: grid;
   place-items: center;
@@ -831,6 +836,12 @@ input.name:focus {
   text-transform: uppercase;
   letter-spacing: 0.05em;
   padding: 8px;
+  /* The words stay in the corner; the area that takes a finger is 44 px each way. */
+  min-width: 44px;
+  min-height: 44px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
 }
 .sdot {
   width: 10px;
@@ -1238,8 +1249,8 @@ input.name:focus {
 .info-pill {
   display: inline-flex;
   align-items: center;
-  height: 38px;
-  padding: 0 9px;
+  height: 44px;
+  padding: 0 12px;
   border-radius: 99px;
   border: 2px solid var(--line);
   background: var(--card);

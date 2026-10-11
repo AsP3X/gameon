@@ -209,13 +209,24 @@ async function openPort(): Promise<Stage> {
   return { ...page, win: window, stored, sounds: () => Sound.names(), play, close };
 }
 
-/* ---------- the one place the port is drawn differently on purpose ---------- */
+/* ---------- the places the port is drawn differently on purpose ---------- */
+
+/* The port looks after the keyboard where the legacy page does not (render.ts, keepFocus): what
+   is behind an open sheet or the curtain is `inert`, and the dialog itself can take the focus.
+   Neither changes what is shown, so both attributes are taken off before the two are compared. */
+function withoutKeyboardMarks(app: HTMLElement): HTMLElement {
+  const copy = app.cloneNode(true) as HTMLElement;
+  for (const child of Array.from(copy.children)) child.removeAttribute('inert');
+  for (const dialog of Array.from(copy.querySelectorAll('.sheet, .curtain'))) dialog.removeAttribute('tabindex');
+  return copy;
+}
 
 /* The legacy page asks for a bid with a row of chips; the port asks with a slider on a sheet
    (views.ts, bidSheet). Both end in the same button. So the two are compared on what a bid control
    says, not on how it is drawn: how many bids it offers, and what its button reads and whether it
    can be pressed. Everything around it is still compared as markup. */
-function pageHtml(app: HTMLElement): string {
+function pageHtml(page: HTMLElement): string {
+  const app = withoutKeyboardMarks(page);
   // The port's home screen offers "Play online" next to "Play", in a row the legacy page does not
   // have. What is compared is the button both builds share.
   const row = app.querySelector('.play-row'),

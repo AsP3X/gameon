@@ -50,6 +50,62 @@ export function tuneMenu(): void {
   Sound.music(!!stage.app && ui.screen === 'home' && !stage.covered && !document.hidden);
 }
 
+/** The dialogs a redraw may put over the page: a sheet, or the pass-and-play curtain. */
+const DIALOG = '.sheet, .curtain';
+/** Which dialog the last redraw left open, and what had the keyboard when it opened. */
+const over: { name: string | null; opener: (() => HTMLElement | null) | null } = { name: null, opener: null };
+
+/** Every data attribute of a control, in one string: what it does and to what. */
+const dataOf = (el: HTMLElement): string =>
+  JSON.stringify(Object.entries(el.dataset).toSorted(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)));
+
+/**
+ * A redraw replaces every element, so the one that has the keyboard is gone after it. This names
+ * that control in a way the next picture can answer: by its id, or by its tag, its data attributes
+ * and which of its kind it is. The answer is how to find it again, or null when nothing in the
+ * page had the keyboard or the control cannot be told from the others.
+ */
+function focused(app: HTMLElement): (() => HTMLElement | null) | null {
+  const el = document.activeElement;
+  if (!(el instanceof HTMLElement) || el === app || !app.contains(el)) return null;
+  if (el.id) {
+    const id = el.id;
+    return () => document.getElementById(id);
+  }
+  const tag = el.tagName,
+    data = dataOf(el);
+  if (data === '[]') return null;
+  const alike = (): HTMLElement[] =>
+    Array.from(app.querySelectorAll<HTMLElement>(tag)).filter((other) => dataOf(other) === data);
+  const index = alike().indexOf(el);
+  return () => alike()[index] ?? null;
+}
+
+/**
+ * After a redraw: the keyboard goes back to the control it was on. A dialog that has just opened
+ * takes it instead, and what is behind any dialog takes no input while it is open; the scrim stays
+ * live, because tapping it is how a sheet is closed. When the dialog closes, the keyboard returns
+ * to what opened it.
+ */
+function keepFocus(app: HTMLElement, before: (() => HTMLElement | null) | null): void {
+  const dialog = $(DIALOG, app),
+    name = dialog ? (ui.curtain && ui.screen === 'game' ? 'curtain' : ui.sheet) : null;
+  for (const child of Array.from(app.children))
+    if (child instanceof HTMLElement) child.inert = dialog != null && !child.matches(`${DIALOG}, .sheet-scrim`);
+  const opened = name != null && name !== over.name,
+    closed = name == null && over.name != null;
+  if (opened && over.name == null) over.opener = before;
+  over.name = name;
+  if (dialog && (opened || !dialog.contains(before?.() ?? null))) {
+    dialog.tabIndex = -1;
+    dialog.focus({ preventScroll: true });
+    return;
+  }
+  const back = closed ? over.opener : before;
+  if (closed) over.opener = null;
+  back?.()?.focus({ preventScroll: true });
+}
+
 export function render(): void {
   const app = stage.app;
   if (!app) return; // unmounted: a late timer or a finished animation has nothing to draw on
@@ -60,11 +116,11 @@ export function render(): void {
   else if (ui.sheet) html += SHEETS[ui.sheet]();
   app.toggleAttribute('data-enter', ui.enter);
   app.classList.toggle('full', ui.screen === 'end' || ui.screen === 'home');
-  // The bid slider is the one control a redraw can take from under the keyboard: a bot's bid
-  // redraws the table while the player is still stepping through theirs.
-  const onBid = document.activeElement?.id === 'bid';
+  // A redraw must not take a control from under the keyboard: a bot's bid redraws the table while
+  // the player is still stepping through theirs, or is on a card.
+  const before = focused(app);
   app.innerHTML = html;
-  if (onBid) $('#bid')?.focus();
+  keepFocus(app, before);
   flip(snap);
   animateBar();
   if (ui.anim || ui.enter) {

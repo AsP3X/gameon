@@ -359,6 +359,18 @@ describe('playing online', () => {
     });
   });
 
+  it('takes the keyboard to the title of each screen it opens', async () => {
+    await renderApp();
+    await click('[data-act="online"]');
+    await settle();
+    expect(document.activeElement).toBe($('#online h2'));
+    expect(document.activeElement?.textContent).toBe('Play online');
+    await press('Join with a code');
+    expect(document.activeElement?.textContent).toBe('Join a table');
+    await click('#online [aria-label="Back"]');
+    expect(document.activeElement?.textContent).toBe('Play online');
+  });
+
   it('shows the way to the offline modes when the server cannot be reached', async () => {
     server.drop(true);
     await renderApp();
@@ -489,6 +501,8 @@ describe('playing online', () => {
       await settle();
       expect($('.table-overlay h2')?.textContent).toBe('Connection lost');
       expect($('.table-overlay')?.getAttribute('role')).toBe('alertdialog');
+      // The table underneath takes no input: the keyboard is on the one thing that can be done.
+      expect(document.activeElement).toBe($('.table-overlay button'));
       expect($('#app')?.hasAttribute('inert')).toBe(true);
       expect(ui.screen).toBe('game'); // the table stays where it was, underneath
 
