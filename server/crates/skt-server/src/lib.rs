@@ -1,17 +1,31 @@
-//! HTTP entry for Skull King Tavern. Phase 0 serves health and the error envelope.
+//! HTTP and WebSocket entry for Skull King Tavern.
+
+mod http_api;
+mod origin;
+mod random;
+mod world;
+
+pub use http_api::AppState;
 
 use axum::Json;
 use axum::Router;
 use axum::http::{HeaderValue, StatusCode, header};
 use axum::response::{IntoResponse, Response};
-use axum::routing::get;
+use axum::routing::{get, post};
 use skt_protocol::{ErrorBody, ErrorCode, ErrorObject, Health};
 
+use http_api::{config, guest, me, socket};
+
 /// Routes mounted at `/api/v1`.
-pub fn router() -> Router {
+pub fn router(state: AppState) -> Router {
     Router::new()
         .route("/api/v1/health", get(health).fallback(method_not_allowed))
+        .route("/api/v1/config", get(config))
+        .route("/api/v1/auth/guest", post(guest))
+        .route("/api/v1/me", get(me))
+        .route("/api/v1/ws", get(socket))
         .fallback(not_found)
+        .with_state(state)
 }
 
 async fn health() -> Json<Health> {
@@ -98,7 +112,7 @@ mod tests {
 
     #[tokio::test]
     async fn health_is_ok() {
-        let response = router()
+        let response = router(crate::AppState::new())
             .oneshot(
                 Request::builder()
                     .uri("/api/v1/health")
@@ -119,7 +133,7 @@ mod tests {
 
     #[tokio::test]
     async fn unknown_path_uses_the_envelope() {
-        let response = router()
+        let response = router(crate::AppState::new())
             .oneshot(
                 Request::builder()
                     .uri("/api/v1/missing")
@@ -142,7 +156,7 @@ mod tests {
 
     #[tokio::test]
     async fn wrong_method_uses_the_envelope() {
-        let response = router()
+        let response = router(crate::AppState::new())
             .oneshot(
                 Request::builder()
                     .method("POST")
