@@ -65,6 +65,17 @@ fn rest(dir: &Path, write: bool) -> Result<(), ExportError> {
         },
     )?;
     put(dir, write, "health", &Health { ok: true })?;
+    put(
+        dir,
+        write,
+        "metrics",
+        &crate::rest::Metrics {
+            games: 0,
+            sockets: 0,
+            casual: 0,
+            ranked: 0,
+        },
+    )?;
     put(dir, write, "timers", &Timers::standard())?;
     put(dir, write, "game-settings", &GameSettings::standard())?;
     put(

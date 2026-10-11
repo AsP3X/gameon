@@ -14,3 +14,6 @@ server/target/
 
 # Local secrets. Never commit.
 .env
+
+# Database dumps from ./deploy.sh --backup
+/backups/

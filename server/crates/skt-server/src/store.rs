@@ -31,6 +31,38 @@ pub enum StoreFailure {
     AlreadyRegistered,
 }
 
+/// One game still in progress, with every stored step.
+pub struct SavedGame {
+    /// Game id.
+    pub id: String,
+    /// `custom`, `casual`, or `ranked`.
+    pub mode: String,
+    /// Quick play and ranked have no lobby.
+    pub matchmade: bool,
+    /// `GameSettings` as JSON.
+    pub settings: String,
+    /// Seats as JSON.
+    pub seats: String,
+    /// `seq`, kind, seat, body.
+    pub log: Vec<(i32, String, Option<i32>, String)>,
+}
+
+/// New steps to append for a game that is still running.
+pub struct OpenWrite {
+    /// Game id.
+    pub id: String,
+    /// `custom`, `casual`, or `ranked`.
+    pub mode: String,
+    /// Quick play and ranked have no lobby.
+    pub matchmade: bool,
+    /// `GameSettings` as JSON.
+    pub settings: String,
+    /// Seats as JSON.
+    pub seats: String,
+    /// New rows only. `seq` is the position in the whole log.
+    pub entries: Vec<(i32, String, Option<i32>, String)>,
+}
+
 /// Postgres for accounts and results.
 #[derive(Clone)]
 pub struct Store {
@@ -277,6 +309,11 @@ impl Store {
     /// The transaction failed.
     pub async fn record(&self, game: &GameReport) -> Result<(), StoreFailure> {
         let mut tx = self.pool.begin().await.map_err(|err| database(&err))?;
+        sqlx::query("DELETE FROM open_games WHERE id = $1")
+            .bind(&game.id)
+            .execute(connection(&mut tx))
+            .await
+            .map_err(|err| database(&err))?;
         sqlx::query("INSERT INTO games (id, mode) VALUES ($1, $2)")
             .bind(&game.id)
             .bind(game.mode)
@@ -354,6 +391,74 @@ impl Store {
         }
         tx.commit().await.map_err(|err| database(&err))?;
         Ok(())
+    }
+
+    /// Append steps of a game that is still being played.
+    ///
+    /// # Errors
+    ///
+    /// The transaction failed.
+    pub async fn save_open(&self, game: &OpenWrite) -> Result<(), StoreFailure> {
+        let mut tx = self.pool.begin().await.map_err(|err| database(&err))?;
+        sqlx::query(
+            "INSERT INTO open_games (id, mode, matchmade, settings, seats) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (id) DO UPDATE SET settings = EXCLUDED.settings, seats = EXCLUDED.seats",
+        )
+        .bind(&game.id)
+        .bind(&game.mode)
+        .bind(game.matchmade)
+        .bind(&game.settings)
+        .bind(&game.seats)
+        .execute(connection(&mut tx))
+        .await
+        .map_err(|err| database(&err))?;
+        for (seq, kind, seat, body) in &game.entries {
+            sqlx::query(
+                "INSERT INTO open_log (game_id, seq, kind, seat, body) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (game_id, seq) DO NOTHING",
+            )
+            .bind(&game.id)
+            .bind(seq)
+            .bind(kind)
+            .bind(seat)
+            .bind(body)
+            .execute(connection(&mut tx))
+            .await
+            .map_err(|err| database(&err))?;
+        }
+        tx.commit().await.map_err(|err| database(&err))?;
+        Ok(())
+    }
+
+    /// Games that were still running when the process last wrote them down.
+    ///
+    /// # Errors
+    ///
+    /// The read failed.
+    pub async fn load_open(&self) -> Result<Vec<SavedGame>, StoreFailure> {
+        let games: Vec<(String, String, bool, String, String)> = sqlx::query_as(
+            "SELECT id, mode, matchmade, settings, seats FROM open_games ORDER BY id",
+        )
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|err| database(&err))?;
+        let mut saved = Vec::new();
+        for (id, mode, matchmade, settings, seats) in games {
+            let log: Vec<(i32, String, Option<i32>, String)> = sqlx::query_as(
+                "SELECT seq, kind, seat, body FROM open_log WHERE game_id = $1 ORDER BY seq",
+            )
+            .bind(&id)
+            .fetch_all(&self.pool)
+            .await
+            .map_err(|err| database(&err))?;
+            saved.push(SavedGame {
+                id,
+                mode,
+                matchmade,
+                settings,
+                seats,
+                log,
+            });
+        }
+        Ok(saved)
     }
 
     /// The action log of a finished game, if `user` sat in it.

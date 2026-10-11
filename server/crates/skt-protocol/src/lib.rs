@@ -32,7 +32,7 @@ pub use pushes::{
 };
 pub use rest::{
     ActionLog, ActionLogEntry, Active, Credentials, EMOTES, Health, LadderEntry, LadderPage, Me,
-    Profile, ProfilePatch, Rating, Season, ServerConfig, Stats, TableColor, Timers, User,
+    Metrics, Profile, ProfilePatch, Rating, Season, ServerConfig, Stats, TableColor, Timers, User,
     emote_ids,
 };
 pub use settings::{ExpansionFlags, GameSettings, Pace};

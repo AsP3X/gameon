@@ -78,6 +78,7 @@ All bodies are JSON. Unless marked *public*, a session is required.
 | Method and path | Body | Returns | Notes |
 | --------------- | ---- | ------- | ----- |
 | `GET /health` | | `{ ok: true }` | *public* |
+| `GET /metrics` | | `Metrics` | *public*. Counts only: games on the clock, open sockets, and the two queues. |
 | `GET /config` | | `ServerConfig` | *public* |
 | `POST /auth/guest` | | `Me` | *public*; creates a guest and sets the cookie. With a valid session it returns that user. |
 | `POST /auth/register` | `Credentials` | `Me` | With a guest session, upgrades that guest in place. A seated guest may register; the seat is not touched. No session is `401`. An account is `ALREADY_REGISTERED`. |

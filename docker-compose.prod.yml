@@ -1,0 +1,13 @@
+# TLS in front of the page. Put the certificate at deploy/certs/fullchain.pem and the key at
+# deploy/certs/privkey.pem, then:
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+# Port 80 redirects to https. The API stays on the private network.
+
+services:
+  web:
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/certs:/etc/nginx/certs:ro
+      - ./deploy/nginx/nginx-tls.conf.template:/etc/nginx/templates/default.conf.template:ro

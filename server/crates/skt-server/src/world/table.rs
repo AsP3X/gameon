@@ -82,6 +82,62 @@ pub struct GameReport {
     pub log: Vec<LogEntry>,
 }
 
+/// Steps of one running game that still need to be stored.
+pub struct OpenDelta {
+    /// Game id.
+    pub id: String,
+    /// `custom`, `casual`, or `ranked`.
+    pub mode: String,
+    /// Quick play and ranked have no lobby.
+    pub matchmade: bool,
+    /// The rules the table opened with.
+    pub settings: skt_protocol::GameSettings,
+    /// Seats as JSON.
+    pub seats: String,
+    /// New rows. `seq` is the position in the whole log.
+    pub entries: Vec<(i32, String, Option<i32>, String)>,
+    /// Log lines stored once these rows are written.
+    pub stored: usize,
+}
+
+/// A seat as it is written into `open_games`.
+#[derive(serde::Serialize, serde::Deserialize)]
+struct SavedSeat {
+    user: Option<String>,
+    name: String,
+    color: skt_protocol::TableColor,
+    bot: bool,
+}
+
+/// A running game read back from Postgres.
+pub struct RestoredGame {
+    /// Game id.
+    pub id: String,
+    /// `custom`, `casual`, or `ranked`.
+    pub mode: String,
+    /// Quick play and ranked have no lobby.
+    pub matchmade: bool,
+    /// The rules the table opened with.
+    pub settings: skt_protocol::GameSettings,
+    /// Seats in order.
+    pub seats: Vec<RestoredSeat>,
+    /// Every stored step.
+    pub log: Vec<super::replay::Step>,
+}
+
+/// One seat of a restored game.
+#[derive(serde::Deserialize)]
+pub struct RestoredSeat {
+    /// The account, or nothing for a bot.
+    pub user: Option<String>,
+    /// Display name.
+    pub name: String,
+    /// Seat colour.
+    pub color: skt_protocol::TableColor,
+    /// The seat started as a bot.
+    pub bot: bool,
+}
+
 /// One stored step. `body` is JSON.
 pub struct LogEntry {
     /// `deal`, `bid`, `play`, `ability`, or `advance`.
@@ -129,6 +185,8 @@ struct Running {
     /// How many of those rounds ended while this seat was away.
     away_rounds: Vec<u32>,
     log: Vec<LogEntry>,
+    /// How many log lines are already in `open_log`.
+    stored: usize,
 }
 
 /// Every game in the process.
@@ -138,6 +196,10 @@ pub struct Tables {
 }
 
 impl Tables {
+    pub fn len(&self) -> usize {
+        self.games.len()
+    }
+
     pub fn new() -> Self {
         Self {
             games: HashMap::new(),
@@ -225,6 +287,7 @@ impl Tables {
             rounds: 0,
             away_rounds: vec![0; players],
             log,
+            stored: 0,
         };
         running.ready.resize(running.seats.len(), false);
         running.arm(now);
@@ -253,6 +316,165 @@ impl Tables {
             .collect();
         self.games.insert(id.clone(), running);
         seated
+    }
+
+    /// One seated player and their cards. Tests use this after a replay.
+    #[cfg(test)]
+    pub fn first_hand(&self) -> Option<(UserId, Vec<u8>)> {
+        let (user, _) = self.seat_of.iter().next()?;
+        let cards = self.hand(user)?;
+        Some((user.clone(), cards))
+    }
+
+    /// Cards in this player's hand. Tests use this to check a replay.
+    #[cfg(test)]
+    pub fn hand(&self, user: &UserId) -> Option<Vec<u8>> {
+        let (id, seat) = self.seat_of.get(user)?;
+        let running = self.games.get(id)?;
+        let view = running.state.view(*seat).ok()?;
+        Some(
+            view.hand
+                .iter()
+                .map(|card| u8::try_from(card.index()).unwrap_or(0))
+                .collect(),
+        )
+    }
+
+    /// The game this player is sitting, if they have a seat.
+    pub fn game_of(&self, user: &UserId) -> Option<GameId> {
+        self.seat_of.get(user).map(|(id, _)| id.clone())
+    }
+
+    /// Steps not yet written to `open_log`.
+    pub fn checkpoint(&self) -> Vec<OpenDelta> {
+        self.games
+            .values()
+            .filter(|running| !running.over && running.stored < running.log.len())
+            .map(|running| {
+                let seats = running
+                    .seats
+                    .iter()
+                    .map(|seat| SavedSeat {
+                        user: seat.user.as_ref().map(|id| id.as_str().to_owned()),
+                        name: seat.name.clone(),
+                        color: seat.color,
+                        bot: seat.started_bot,
+                    })
+                    .collect::<Vec<_>>();
+                let entries = running
+                    .log
+                    .iter()
+                    .enumerate()
+                    .skip(running.stored)
+                    .map(|(seq, entry)| {
+                        (
+                            i32::try_from(seq).unwrap_or(i32::MAX),
+                            entry.kind.to_owned(),
+                            entry.seat.map(i32::from),
+                            entry.body.clone(),
+                        )
+                    })
+                    .collect();
+                OpenDelta {
+                    id: running.id.as_str().to_owned(),
+                    mode: mode_name(running.mode).to_owned(),
+                    matchmade: running.matchmade,
+                    settings: running.settings,
+                    seats: serde_json::to_string(&seats).unwrap_or_else(|_| "[]".to_owned()),
+                    entries,
+                    stored: running.log.len(),
+                }
+            })
+            .collect()
+    }
+
+    /// `stored` lines of this game are now in `open_log`.
+    pub fn mark_stored(&mut self, id: &str, stored: usize) {
+        if let Some(running) = self
+            .games
+            .values_mut()
+            .find(|running| running.id.as_str() == id)
+        {
+            running.stored = running.stored.max(stored);
+        }
+    }
+
+    /// Put a game read from `open_games` back on the clock. Deadlines start again from `now`.
+    pub fn resume(&mut self, game: RestoredGame, now: Instant) -> bool {
+        let players = u8::try_from(game.seats.len()).unwrap_or(0);
+        let Some(state) = super::replay::rebuild(&game.settings, players, &game.log) else {
+            return false;
+        };
+        let count = game.seats.len();
+        let seats = game
+            .seats
+            .iter()
+            .map(|seat| SeatPlay {
+                user: seat.user.as_ref().map(|id| UserId::new(id.clone())),
+                name: seat.name.clone(),
+                color: seat.color,
+                started_bot: seat.bot,
+                misses: 0,
+                offline_since: None,
+                last_emote: None,
+                prior_mu: 25.0,
+                prior_sigma: 25.0 / 3.0,
+                prior_games: 0,
+                tier: None,
+            })
+            .collect::<Vec<_>>();
+        let log = game
+            .log
+            .iter()
+            .filter_map(|step| {
+                kind_of(&step.kind).map(|kind| LogEntry {
+                    kind,
+                    seat: step.seat,
+                    body: step.body.clone(),
+                })
+            })
+            .collect::<Vec<_>>();
+        let stored = log.len();
+        let id = GameId::new(game.id);
+        let mut running = Running {
+            id: id.clone(),
+            lobby_id: skt_protocol::LobbyId::new("restored"),
+            matchmade: game.matchmade,
+            mode: mode_of(&game.mode),
+            settings: game.settings,
+            state,
+            seats,
+            status: vec![SeatStatus::Offline; count],
+            ready: vec![false; count],
+            rev: u32::try_from(stored).unwrap_or(u32::MAX),
+            bot_at: None,
+            step_at: None,
+            shown: None,
+            over: false,
+            reopened: false,
+            report: None,
+            owed: HashMap::new(),
+            forfeited: Vec::new(),
+            rounds: 0,
+            away_rounds: vec![0; count],
+            log,
+            stored,
+        };
+        running.arm(now);
+        for (index, seat) in running.seats.iter().enumerate() {
+            let Some(user) = seat.user.clone() else {
+                continue;
+            };
+            self.seat_of.insert(
+                user,
+                (
+                    id.clone(),
+                    Seat::from_index(u8::try_from(index).unwrap_or(0)),
+                ),
+            );
+        }
+        self.games.insert(id, running);
+        true
     }
 
     pub fn welcome_game(&self, user: &UserId) -> Option<WelcomeGame> {
@@ -1289,6 +1511,25 @@ fn deal_body(round: u32, cards: &[u8]) -> String {
 
 fn play_body(card: skt_engine::CardId, played_as: Option<skt_engine::PlayedAs>) -> String {
     serde_json::json!({ "card": card.index(), "as": played_as }).to_string()
+}
+
+fn kind_of(kind: &str) -> Option<&'static str> {
+    Some(match kind {
+        "deal" => "deal",
+        "bid" => "bid",
+        "play" => "play",
+        "ability" => "ability",
+        "advance" => "advance",
+        _ => return None,
+    })
+}
+
+fn mode_of(mode: &str) -> TableMode {
+    match mode {
+        "casual" => TableMode::Casual,
+        "ranked" => TableMode::Ranked,
+        _ => TableMode::Custom,
+    }
 }
 
 fn mode_name(mode: TableMode) -> &'static str {
