@@ -157,18 +157,50 @@ async fn a_ranked_leave_is_last_and_rated_and_cooled_down(pool: sqlx::PgPool) {
     .await;
     assert_eq!(status, 200, "{page}");
     assert!(page.contains("\"rank\":3"), "{page}");
-    let deals: i64 = sqlx::query_scalar("SELECT count(*) FROM action_log WHERE kind = 'deal'")
-        .fetch_one(&pool)
-        .await
-        .expect("deals");
-    let steps: i64 = sqlx::query_scalar(
-        "SELECT count(*) FROM action_log WHERE kind = 'bid' OR kind = 'play' OR kind = 'ability'",
+    assert_action_log(&pool).await;
+}
+
+async fn assert_action_log(pool: &sqlx::PgPool) {
+    let rows: Vec<(String, i32, String, Option<i32>, String)> = sqlx::query_as(
+        "SELECT game_id, seq, kind, seat, body FROM action_log ORDER BY game_id, seq",
     )
-    .fetch_one(&pool)
+    .fetch_all(pool)
     .await
-    .expect("steps");
-    assert!(deals > 0, "{deals}");
-    assert!(steps > 0, "{steps}");
+    .expect("action log");
+    assert!(!rows.is_empty());
+    let mut game = String::new();
+    let mut next_seq = 0_i32;
+    let mut saw_deal = false;
+    let mut saw_advance = false;
+    let mut saw_step = false;
+    for (id, seq, kind, seat, body) in &rows {
+        if id != &game {
+            assert_eq!(*seq, 0, "{id}");
+            game.clone_from(id);
+            next_seq = 0;
+        }
+        assert_eq!(*seq, next_seq, "{id}");
+        next_seq += 1;
+        match kind.as_str() {
+            "deal" => {
+                assert!(seat.is_none(), "{body}");
+                assert!(body.contains("\"round\""), "{body}");
+                assert!(body.contains("\"cards\""), "{body}");
+                saw_deal = true;
+            }
+            "advance" => {
+                assert!(seat.is_none(), "{body}");
+                assert_eq!(body, "{}");
+                saw_advance = true;
+            }
+            "bid" | "play" | "ability" => {
+                assert!(seat.is_some(), "{body}");
+                saw_step = true;
+            }
+            other => panic!("unknown action log kind {other}"),
+        }
+    }
+    assert!(saw_deal && saw_advance && saw_step);
 }
 
 #[sqlx::test(migrations = "../../migrations/postgres")]

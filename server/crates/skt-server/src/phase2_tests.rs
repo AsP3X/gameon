@@ -264,6 +264,35 @@ async fn a_casual_queue_starts_a_game_and_a_guest_cannot_play_ranked(pool: sqlx:
 }
 
 #[sqlx::test(migrations = "../../migrations/postgres")]
+async fn two_missed_deadlines_mark_the_seat_away(pool: sqlx::PgPool) {
+    let state = AppState::for_tests(pool, Duration::ZERO, budgets());
+    let port = serve(state.clone()).await;
+    let (cookie, _) = guest(port).await;
+    let mut socket = open_socket(port, &cookie).await;
+    greet(&mut socket).await;
+    send(&mut socket, r#"{"t":"queue.join","id":2,"mode":"casual"}"#).await;
+    let _ = read_text(&mut socket).await;
+    state.tick().await;
+    for _ in 0..40 {
+        state.advance(Duration::from_secs(3)).await;
+    }
+    let mut saw_timeout = false;
+    let mut saw_away = false;
+    for _ in 0..80 {
+        let frame = tokio::time::timeout(Duration::from_millis(50), read_text(&mut socket)).await;
+        let Ok(frame) = frame else { break };
+        if frame.contains("timedOut") {
+            saw_timeout = true;
+        }
+        if frame.contains("\"status\":\"away\"") {
+            saw_away = true;
+        }
+    }
+    assert!(saw_timeout, "a missed deadline is played for the seat");
+    assert!(saw_away, "the second miss marks the seat away");
+}
+
+#[sqlx::test(migrations = "../../migrations/postgres")]
 async fn already_seated_while_queued_or_in_a_lobby(pool: sqlx::PgPool) {
     let state = AppState::for_tests(pool, Duration::from_mins(1), budgets());
     let port = serve(state).await;
