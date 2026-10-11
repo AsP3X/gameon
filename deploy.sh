@@ -87,11 +87,12 @@ show_help() {
 
   ${BOLD}First start${NC} opens a setup screen when .env does not exist yet.
   ${BOLD}./deploy.sh --setup${NC} opens it again. The fields start as they are now.
-  Arrows move. Enter changes the selected line. s saves and starts. r puts the
-  answers back to the shipped defaults, and s writes them. q quits and writes
-  nothing. Reset does not touch the database. While skt-postgres exists, the
-  reach mode, the Postgres port and the database user, password and name cannot
-  be changed: that would recreate the container and delete what it stores.
+  Arrows move. Enter on This machine or NPM selects how players reach the tavern.
+  Enter on a setting changes it. s saves and starts. r puts the answers back to
+  the shipped defaults, and s writes them. q quits and writes nothing. Reset does
+  not touch the database. While skt-postgres exists, the reach mode, the Postgres
+  port and the database user, password and name cannot be changed: that would
+  recreate the container and delete what it stores.
   A start without a terminal copies .env.example and does not ask.
 
   ${BOLD}Environment${NC} (.env, or the defaults in .env.example):
@@ -105,9 +106,10 @@ show_help() {
     RUST_LOG            API log level
     NO_COLOR            disable coloured output
 
-  ${BOLD}Nginx Proxy Manager${NC} (PROXY_MODE=npm, no host ports):
-    docker network create proxy-network
-    Point a proxy host at http://skt-web:80 and set SKT_PUBLIC_ORIGIN.
+  ${BOLD}NPM${NC} (PROXY_MODE=npm, no host ports), the same choice as the setup screen:
+    The stack joins the external proxy-network. ./deploy.sh creates that network
+    when it is missing. Point Nginx Proxy Manager at http://skt-web:80, turn
+    websockets on, and set SKT_PUBLIC_ORIGIN.
 
 EOF
 }
@@ -170,6 +172,17 @@ env_value() {
   file_value .env "$1"
 }
 
+# local, or npm. external and proxy are the same choice as npm.
+canon_proxy_mode() {
+  local mode
+  mode="$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]')"
+  case "$mode" in
+    ""|local) printf 'local' ;;
+    npm|external|proxy) printf 'npm' ;;
+    *) printf '%s' "$mode" ;;
+  esac
+}
+
 # The answers the setup screen edits. Anything else in .env is left as it is.
 SETUP_MODE="local"
 SETUP_WEB="8081"
@@ -187,8 +200,7 @@ SETUP_PG_LOCKED=0
 
 load_setup_from() {
   local file="$1"
-  SETUP_MODE="$(file_value "$file" PROXY_MODE)"
-  SETUP_MODE="${SETUP_MODE:-local}"
+  SETUP_MODE="$(canon_proxy_mode "$(file_value "$file" PROXY_MODE)")"
   SETUP_WEB="$(file_value "$file" WEB_PORT)"
   SETUP_WEB="${SETUP_WEB:-8081}"
   SETUP_API="$(file_value "$file" API_PORT)"
@@ -328,15 +340,19 @@ setup_row() {
   fi
 }
 
+# A reach line. * marks the mode that will be saved. The cursor is separate.
+setup_reach() {
+  local index="$1" mode="$2" text="$3" mark=" "
+  if [[ "$SETUP_MODE" == "$mode" ]]; then
+    mark="*"
+  fi
+  setup_row "$index" "${mark} ${text}"
+}
+
 setup_draw() {
-  local reach cookie proxies origin
+  local cookie proxies origin
   printf '\033[H\033[2J'
   printf '%sSkull King Tavern — setup%s\n\n' "$BOLD" "$NC"
-  if [[ "$SETUP_MODE" == "npm" ]]; then
-    reach="Nginx Proxy Manager    http://skt-web:80"
-  else
-    reach="This machine            http://localhost:${SETUP_WEB}"
-  fi
   if [[ "$SETUP_SECURE" == "1" ]]; then
     cookie="on"
   else
@@ -345,18 +361,19 @@ setup_draw() {
   origin="$SETUP_ORIGIN"
   proxies="$SETUP_PROXIES"
   printf '  How players reach the tavern\n'
-  setup_row 0 "$reach"
+  setup_reach 0 local "This machine            http://localhost:${SETUP_WEB}"
+  setup_reach 1 npm "NPM                     http://skt-web:80"
   printf '\n  Settings\n'
-  setup_row 1 "Web port              ${SETUP_WEB}"
-  setup_row 2 "API port              ${SETUP_API}"
-  setup_row 3 "Postgres port         ${SETUP_PGPORT}"
-  setup_row 4 "Public origin         ${origin}"
-  setup_row 5 "Secure cookie         ${cookie}"
-  setup_row 6 "Database password     ${SETUP_PASSWORD}"
-  setup_row 7 "Trusted proxies       ${proxies}"
+  setup_row 2 "Web port              ${SETUP_WEB}"
+  setup_row 3 "API port              ${SETUP_API}"
+  setup_row 4 "Postgres port         ${SETUP_PGPORT}"
+  setup_row 5 "Public origin         ${origin}"
+  setup_row 6 "Secure cookie         ${cookie}"
+  setup_row 7 "Database password     ${SETUP_PASSWORD}"
+  setup_row 8 "Trusted proxies       ${proxies}"
   printf '\n'
   if [[ "$SETUP_MODE" == "npm" ]]; then
-    printf '  %sPorts are kept for a later local start. The proxy publishes none.%s\n' "$DIM" "$NC"
+    printf '  %sNPM joins proxy-network and publishes no ports. The ports above stay for a local start.%s\n' "$DIM" "$NC"
     printf '  %sPoint Nginx Proxy Manager at skt-web port 80 and turn websockets on.%s\n' "$DIM" "$NC"
   else
     printf '  %sThe page is the only address the browser needs.%s\n' "$DIM" "$NC"
@@ -367,7 +384,7 @@ setup_draw() {
   if [[ "$SETUP_PG_LOCKED" == "1" ]]; then
     printf '  %sThe database is already in skt-postgres. Reach mode, its port and its password stay.%s\n' "$DIM" "$NC"
   fi
-  printf '\n  %s↑↓ move    enter change    s save and start    r reset answers    q quit%s\n' "$DIM" "$NC"
+  printf '\n  %s↑↓ move    enter select    s save and start    r reset answers    q quit%s\n' "$DIM" "$NC"
   printf '  %sOn a text line, enter keeps the shown value. Type - to clear the origin or the proxies.%s\n' "$DIM" "$NC"
 }
 
@@ -490,37 +507,36 @@ run_setup() {
     setup_draw
     setup_key
     case "$SETUP_ACTION" in
-      up) SETUP_PICK=$(( (SETUP_PICK + 7) % 8 )) ;;
-      down) SETUP_PICK=$(( (SETUP_PICK + 1) % 8 )) ;;
+      up) SETUP_PICK=$(( (SETUP_PICK + 8) % 9 )) ;;
+      down) SETUP_PICK=$(( (SETUP_PICK + 1) % 9 )) ;;
       enter)
         case "$SETUP_PICK" in
-          0)
-            if [[ "$SETUP_MODE" == "local" ]]; then SETUP_MODE="npm"; else SETUP_MODE="local"; fi
-            ;;
-          5)
+          0) SETUP_MODE="local" ;;
+          1) SETUP_MODE="npm" ;;
+          6)
             if [[ "$SETUP_SECURE" == "1" ]]; then SETUP_SECURE=""; else SETUP_SECURE="1"; fi
             ;;
-          1)
+          2)
             setup_edit "$SETUP_WEB" ""
             SETUP_WEB="$SETUP_ENTERED"
             ;;
-          2)
+          3)
             setup_edit "$SETUP_API" ""
             SETUP_API="$SETUP_ENTERED"
             ;;
-          3)
+          4)
             setup_edit "$SETUP_PGPORT" ""
             SETUP_PGPORT="$SETUP_ENTERED"
             ;;
-          4)
+          5)
             setup_edit "$SETUP_ORIGIN" "  (- clears)"
             SETUP_ORIGIN="$(apply_optional "$SETUP_ENTERED" "(this machine)")"
             ;;
-          6)
+          7)
             setup_edit "$SETUP_PASSWORD" ""
             SETUP_PASSWORD="$SETUP_ENTERED"
             ;;
-          7)
+          8)
             setup_edit "$SETUP_PROXIES" "  (- clears)"
             SETUP_PROXIES="$(apply_optional "$SETUP_ENTERED" "(Docker bridge)")"
             ;;
@@ -567,8 +583,7 @@ load_env() {
   if [[ ! -f .env && ( "$CMD" == "up" || "$CMD" == "rebuild" ) ]]; then
     run_setup_first
   fi
-  PROXY_MODE="$(env_value PROXY_MODE)"
-  PROXY_MODE="${PROXY_MODE:-local}"
+  PROXY_MODE="$(canon_proxy_mode "$(env_value PROXY_MODE)")"
   API_PORT="$(env_value API_PORT)"
   API_PORT="${API_PORT:-8080}"
   WEB_PORT="$(env_value WEB_PORT)"
@@ -590,10 +605,13 @@ compose() {
   docker compose "${files[@]}" "$@"
 }
 
-require_proxy_network() {
+ensure_proxy_network() {
   [[ "$PROXY_MODE" == "npm" ]] || return 0
-  docker network inspect proxy-network >/dev/null 2>&1 ||
-    die "proxy-network does not exist. Create it once: docker network create proxy-network"
+  if docker network inspect proxy-network >/dev/null 2>&1; then
+    return 0
+  fi
+  step "Creating Docker network proxy-network (shared with Nginx Proxy Manager)…"
+  docker network create proxy-network >/dev/null
 }
 
 show_status() {
@@ -710,7 +728,7 @@ echo "  ${BOLD}Skull King Tavern — API + web client${NC}"
 echo "===================================================="
 echo ""
 
-require_proxy_network
+ensure_proxy_network
 
 STARTED_AT=$SECONDS
 CURRENT_STAGE="stack build/start"
