@@ -15,7 +15,7 @@ use crate::rating::{self, PlayerSkill};
 
 use super::identity;
 use super::send;
-use crate::random::{DeckShuffle, OsRandom};
+use crate::random::{OsRandom, Recall};
 
 struct SeatPlay {
     user: Option<UserId>,
@@ -76,6 +76,18 @@ pub struct GameReport {
     pub overs: Vec<(UserId, GameOver)>,
     /// Ranked seats that were away for most rounds. A `game.leave` is not repeated here.
     pub penalise: Vec<UserId>,
+    /// Deals and accepted actions, in order.
+    pub log: Vec<LogEntry>,
+}
+
+/// One stored step. `body` is JSON.
+pub struct LogEntry {
+    /// `deal`, `bid`, `play`, `ability`, or `advance`.
+    pub kind: &'static str,
+    /// Acting seat, or nothing for a deal or an advance.
+    pub seat: Option<u8>,
+    /// JSON payload.
+    pub body: String,
 }
 
 /// Skill copied onto a seat when the game opens.
@@ -114,6 +126,7 @@ struct Running {
     rounds: u32,
     /// How many of those rounds ended while this seat was away.
     away_rounds: Vec<u32>,
+    log: Vec<LogEntry>,
 }
 
 /// Every game in the process.
@@ -169,7 +182,7 @@ impl Tables {
         let Ok(deck) = skt_engine::build_deck(rules.expansions) else {
             return Vec::new();
         };
-        let mut deals = DeckShuffle::new(deck.len());
+        let mut deals = Recall::new(deck.len());
         let Ok(state) = GameState::create(
             rules,
             u8::try_from(seats.len()).unwrap_or(0),
@@ -178,6 +191,10 @@ impl Tables {
         ) else {
             return Vec::new();
         };
+        let mut log = Vec::new();
+        for (round, cards) in deals.orders {
+            log.push(deal_entry(round, &cards));
+        }
         let mode = if matchmade {
             lobby.mode
         } else {
@@ -205,6 +222,7 @@ impl Tables {
             forfeited: Vec::new(),
             rounds: 0,
             away_rounds: vec![0; players],
+            log,
         };
         running.ready.resize(running.seats.len(), false);
         running.arm(now);
@@ -348,6 +366,8 @@ impl Tables {
                         now,
                         live,
                     },
+                    "bid",
+                    format!(r#"{{"bid":{bid}}}"#),
                     |state| state.bid(seat, i64::from(bid)),
                 ),
                 false,
@@ -368,6 +388,8 @@ impl Tables {
                         now,
                         live,
                     },
+                    "play",
+                    play_body(card, played_as),
                     |state| state.play(seat, card, played_as),
                 ),
                 false,
@@ -387,6 +409,8 @@ impl Tables {
                         now,
                         live,
                     },
+                    "ability",
+                    serde_json::to_string(&choice).unwrap_or_else(|_| "{}".to_owned()),
                     |state| state.ability(seat, &choice),
                 ),
                 false,
@@ -493,6 +517,8 @@ impl Tables {
         &mut self,
         id: &GameId,
         hit: &Hit<'_>,
+        kind: &'static str,
+        payload: String,
         body: impl FnOnce(&mut GameState) -> Result<Vec<skt_engine::GameEvent>, skt_engine::StepError>,
     ) -> Vec<UserId> {
         let Some(running) = self.games.get_mut(id) else {
@@ -514,6 +540,7 @@ impl Tables {
             }
         };
         let wire: Vec<GameEvent> = events.into_iter().map(GameEvent::Engine).collect();
+        running.push_log(kind, u8::try_from(hit.seat.index()).ok(), payload);
         running.seats[hit.seat.index()].misses = 0;
         if running.status[hit.seat.index()] == SeatStatus::Away {
             running.status[hit.seat.index()] = SeatStatus::Online;
@@ -725,10 +752,14 @@ impl Running {
 
     fn advance(&mut self, now: Instant, live: &HashMap<UserId, super::Live>) -> bool {
         let round_end = self.state.phase() == Phase::RoundEnd;
-        let mut deals = DeckShuffle::new(self.state.deck().len());
+        let mut deals = Recall::new(self.state.deck().len());
         let Ok(events) = self.state.advance(&mut deals) else {
             return false;
         };
+        for (round, cards) in deals.orders {
+            self.push_log("deal", None, deal_body(round, &cards));
+        }
+        self.push_log("advance", None, "{}".to_owned());
         if round_end {
             self.note_round_end();
         }
@@ -819,17 +850,48 @@ impl Running {
         } else {
             BotLevel::Normal
         };
+        let seat_no = u8::try_from(seat.index()).ok();
         let mut rng = OsRandom;
         let played = match view.phase {
-            Phase::Bidding => skt_engine::choose_bid(&view, self.state.deck(), level, &mut rng)
-                .ok()
-                .and_then(|bid| self.state.bid(seat, i64::from(bid)).ok()),
-            Phase::Playing => skt_engine::choose_play(&view, self.state.deck(), level, &mut rng)
-                .ok()
-                .and_then(|(card, played_as)| self.state.play(seat, card, played_as).ok()),
-            Phase::Ability => skt_engine::choose_ability(&view, self.state.deck(), level)
-                .ok()
-                .and_then(|choice| self.state.ability(seat, &choice).ok()),
+            Phase::Bidding => {
+                let Some(bid) =
+                    skt_engine::choose_bid(&view, self.state.deck(), level, &mut rng).ok()
+                else {
+                    return false;
+                };
+                let events = self.state.bid(seat, i64::from(bid)).ok();
+                if events.is_some() {
+                    self.push_log("bid", seat_no, format!(r#"{{"bid":{bid}}}"#));
+                }
+                events
+            }
+            Phase::Playing => {
+                let Some((card, played_as)) =
+                    skt_engine::choose_play(&view, self.state.deck(), level, &mut rng).ok()
+                else {
+                    return false;
+                };
+                let events = self.state.play(seat, card, played_as).ok();
+                if events.is_some() {
+                    self.push_log("play", seat_no, play_body(card, played_as));
+                }
+                events
+            }
+            Phase::Ability => {
+                let Some(choice) = skt_engine::choose_ability(&view, self.state.deck(), level).ok()
+                else {
+                    return false;
+                };
+                let events = self.state.ability(seat, &choice).ok();
+                if events.is_some() {
+                    self.push_log(
+                        "ability",
+                        seat_no,
+                        serde_json::to_string(&choice).unwrap_or_else(|_| "{}".to_owned()),
+                    );
+                }
+                events
+            }
             _ => None,
         };
         let Some(events) = played else {
@@ -962,7 +1024,12 @@ impl Running {
             rated,
             overs,
             penalise: self.away_penalties(&forfeits),
+            log: std::mem::take(&mut self.log),
         });
+    }
+
+    fn push_log(&mut self, kind: &'static str, seat: Option<u8>, body: String) {
+        self.log.push(LogEntry { kind, seat, body });
     }
 
     fn note_round_end(&mut self) {
@@ -1149,6 +1216,22 @@ impl Running {
             })
             .collect()
     }
+}
+
+fn deal_entry(round: u32, cards: &[u8]) -> LogEntry {
+    LogEntry {
+        kind: "deal",
+        seat: None,
+        body: deal_body(round, cards),
+    }
+}
+
+fn deal_body(round: u32, cards: &[u8]) -> String {
+    serde_json::json!({ "round": round, "cards": cards }).to_string()
+}
+
+fn play_body(card: skt_engine::CardId, played_as: Option<skt_engine::PlayedAs>) -> String {
+    serde_json::json!({ "card": card.index(), "as": played_as }).to_string()
 }
 
 fn mode_name(mode: TableMode) -> &'static str {

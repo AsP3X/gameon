@@ -248,6 +248,7 @@ impl World {
                     tag: skt_protocol::SupersededTag::Value,
                 },
             );
+            let _ = previous.out.send(Wire::Close(4001));
         }
         Ok((user, id))
     }
@@ -1174,6 +1175,19 @@ impl World {
         );
     }
 
+    /// Reject one frame on the user's current socket.
+    pub fn reject(&self, user: &UserId, id: MessageId, code: ErrorCode) {
+        self.fail_live(user, id, code);
+    }
+
+    /// Whether this connection has sent an accepted `hello`.
+    #[must_use]
+    pub fn greeted(&self, user: &UserId, conn: u64) -> bool {
+        self.live
+            .get(user)
+            .is_some_and(|live| live.id == conn && live.greeted)
+    }
+
     fn fail_live(&self, user: &UserId, id: MessageId, code: ErrorCode) {
         self.send(
             user,
@@ -1194,7 +1208,7 @@ impl World {
     }
 }
 
-fn message_id(text: &str) -> Option<MessageId> {
+pub(crate) fn message_id(text: &str) -> Option<MessageId> {
     let value: serde_json::Value = serde_json::from_str(text).ok()?;
     let id = value.get("id")?.as_u64()?;
     u32::try_from(id).ok().map(MessageId::new)

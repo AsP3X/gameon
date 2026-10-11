@@ -32,21 +32,32 @@ impl BotRng for OsRandom {
     }
 }
 
-/// A deal source bound to one deck length.
-pub struct DeckShuffle {
+/// A deal source that keeps every order it produced, for the action log.
+pub struct Recall {
     len: usize,
+    /// Round index and card indexes, dealt first at index 0.
+    pub orders: Vec<(u32, Vec<u8>)>,
 }
 
-impl DeckShuffle {
-    /// Shuffles a deck of `len` cards on every round.
+impl Recall {
+    /// Records shuffles of a deck of `len` cards.
     #[must_use]
     pub const fn new(len: usize) -> Self {
-        Self { len }
+        Self {
+            len,
+            orders: Vec::new(),
+        }
     }
 }
 
-impl DealSource for DeckShuffle {
-    fn deal_order(&mut self, _round: usize) -> Vec<CardId> {
-        OsRandom::permutation(self.len)
+impl DealSource for Recall {
+    fn deal_order(&mut self, round: usize) -> Vec<CardId> {
+        let order = OsRandom::permutation(self.len);
+        let cards = order
+            .iter()
+            .map(|card| u8::try_from(card.index()).unwrap_or(0))
+            .collect();
+        self.orders.push((u32::try_from(round).unwrap_or(0), cards));
+        order
     }
 }

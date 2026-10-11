@@ -25,6 +25,10 @@ pub struct AppState {
     store: Option<Store>,
     rates: RateGate,
     trusted: TrustedProxies,
+    /// How long a new socket may wait before `hello`.
+    hello_wait: std::time::Duration,
+    /// How long a socket may stay silent.
+    silence: std::time::Duration,
 }
 
 impl Default for AppState {
@@ -42,6 +46,18 @@ impl AppState {
             store: None,
             rates: RateGate::new(Budgets::standard()),
             trusted: TrustedProxies::none(),
+            hello_wait: std::time::Duration::from_secs(5),
+            silence: std::time::Duration::from_secs(45),
+        }
+    }
+
+    /// An empty tavern with short socket deadlines. Tests use this.
+    #[must_use]
+    pub fn for_socket_tests(hello_wait: std::time::Duration, silence: std::time::Duration) -> Self {
+        Self {
+            hello_wait,
+            silence,
+            ..Self::new()
         }
     }
 
@@ -78,6 +94,8 @@ impl AppState {
             store: Some(store),
             rates: RateGate::new(budgets),
             trusted,
+            hello_wait: std::time::Duration::from_secs(5),
+            silence: std::time::Duration::from_secs(45),
         }
     }
 
@@ -405,25 +423,47 @@ async fn drive(
     mut socket: WebSocket,
     inbound: &mut mpsc::UnboundedReceiver<Wire>,
 ) {
+    let hello_wait = state.hello_wait;
+    let silence_for = state.silence;
+    let started = tokio::time::Instant::now();
+    let mut last_heard = started;
+    let mut greeted = false;
     let mut stamps = std::collections::VecDeque::new();
     loop {
+        if socket_expired(greeted, started, last_heard, hello_wait, silence_for) {
+            let _ = close_socket(&mut socket, 1000).await;
+            break;
+        }
+        let wait = next_deadline(greeted, started, last_heard, hello_wait, silence_for);
         tokio::select! {
+            () = tokio::time::sleep(wait) => {}
             incoming = socket.recv() => {
                 let Some(Ok(message)) = incoming else { break; };
                 let Message::Text(text) = message else { continue; };
+                last_heard = tokio::time::Instant::now();
                 if text.len() > 4096 {
+                    let _ = close_socket(&mut socket, 1009).await;
                     break;
                 }
-                let now = std::time::Instant::now();
-                while stamps.front().is_some_and(|stamp| now.duration_since(*stamp).as_secs() >= 1) {
-                    stamps.pop_front();
+                if serde_json::from_str::<serde_json::Value>(text.as_str()).is_err() {
+                    let _ = close_socket(&mut socket, 1003).await;
+                    break;
                 }
-                if stamps.len() >= 20 {
+                if too_many(&mut stamps) {
+                    let id = crate::world::message_id(text.as_str())
+                        .unwrap_or(skt_protocol::MessageId::new(0));
+                    state
+                        .world
+                        .lock()
+                        .await
+                        .reject(&user, id, skt_protocol::ErrorCode::RateLimited);
                     continue;
                 }
-                stamps.push_back(now);
                 state.world.lock().await.on_message(&user, &text);
                 state.persist_penalties().await;
+                if !greeted && state.world.lock().await.greeted(&user, conn) {
+                    greeted = true;
+                }
             }
             outgoing = inbound.recv() => {
                 let Some(frame) = outgoing else { break; };
@@ -434,12 +474,7 @@ async fn drive(
                         }
                     }
                     Wire::Close(code) => {
-                        let _ = socket
-                            .send(Message::Close(Some(CloseFrame {
-                                code,
-                                reason: "".into(),
-                            })))
-                            .await;
+                        let _ = close_socket(&mut socket, code).await;
                         break;
                     }
                 }
@@ -447,6 +482,54 @@ async fn drive(
         }
     }
     state.world.lock().await.disconnect(&user, conn);
+}
+
+fn socket_expired(
+    greeted: bool,
+    started: tokio::time::Instant,
+    last_heard: tokio::time::Instant,
+    hello_wait: std::time::Duration,
+    silence_for: std::time::Duration,
+) -> bool {
+    (!greeted && started.elapsed() >= hello_wait) || last_heard.elapsed() >= silence_for
+}
+
+fn next_deadline(
+    greeted: bool,
+    started: tokio::time::Instant,
+    last_heard: tokio::time::Instant,
+    hello_wait: std::time::Duration,
+    silence_for: std::time::Duration,
+) -> std::time::Duration {
+    let silence_left = silence_for.saturating_sub(last_heard.elapsed());
+    if greeted {
+        return silence_left;
+    }
+    silence_left.min(hello_wait.saturating_sub(started.elapsed()))
+}
+
+fn too_many(stamps: &mut std::collections::VecDeque<tokio::time::Instant>) -> bool {
+    let now = tokio::time::Instant::now();
+    while stamps.front().is_some_and(|stamp| {
+        now.saturating_duration_since(*stamp) >= std::time::Duration::from_secs(1)
+    }) {
+        stamps.pop_front();
+    }
+    if stamps.len() >= 20 {
+        return true;
+    }
+    stamps.push_back(now);
+    false
+}
+
+async fn close_socket(socket: &mut WebSocket, code: u16) -> bool {
+    socket
+        .send(Message::Close(Some(CloseFrame {
+            code,
+            reason: "".into(),
+        })))
+        .await
+        .is_ok()
 }
 
 struct JsonBody<T>(T);

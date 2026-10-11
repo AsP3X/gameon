@@ -283,6 +283,19 @@ impl Store {
             .execute(connection(&mut tx))
             .await
             .map_err(|err| database(&err))?;
+        for (seq, entry) in game.log.iter().enumerate() {
+            sqlx::query(
+                "INSERT INTO action_log (game_id, seq, kind, seat, body) VALUES ($1, $2, $3, $4, $5)",
+            )
+            .bind(&game.id)
+            .bind(i32::try_from(seq).unwrap_or(i32::MAX))
+            .bind(entry.kind)
+            .bind(entry.seat.map(i32::from))
+            .bind(&entry.body)
+            .execute(connection(&mut tx))
+            .await
+            .map_err(|err| database(&err))?;
+        }
         // Human: Profile counters are custom and casual only. Ranked writes skill, not those counters.
         // Agent: DB INSERT games and game_seats; UPDATE stats only when mode is not ranked; UPSERT ratings for ranked.
         if game.mode == "ranked" {

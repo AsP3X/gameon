@@ -185,8 +185,10 @@ clock. Those three fields are omitted when they do not apply. They are not sent 
 
 Server → client pushes have no `re`.
 
-Limits: 4 KB per frame; 20 messages per second per connection, then `RATE_LIMITED`; a frame that
-is not valid JSON closes the socket with code 1003.
+Limits: 4 KB per frame, and a longer frame closes the socket with code 1009. 20 messages per
+second per connection, then `RATE_LIMITED` for that frame and it is not applied. A frame that is
+not valid JSON closes the socket with code 1003. No `hello` within 5 seconds, or 45 seconds with
+no frame, closes the socket.
 
 ### 5.2 Connecting
 

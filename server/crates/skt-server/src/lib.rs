@@ -1,6 +1,8 @@
 //! HTTP and WebSocket entry for Skull King Tavern.
 
 #[cfg(test)]
+mod phase1_tests;
+#[cfg(test)]
 mod phase2_tests;
 #[cfg(test)]
 mod phase3_tests;
