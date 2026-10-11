@@ -10,6 +10,7 @@ use skt_protocol::{Stats, TableColor, User, UserId};
 use sqlx::PgPool;
 use sqlx::postgres::PgPoolOptions;
 
+use crate::rating::StoredSkill;
 use crate::world::GameReport;
 use crate::world::identity::{self, AccountSnap, hash_token};
 
@@ -88,6 +89,7 @@ impl Store {
             guest: true,
             username: None,
             stats: zero_stats(),
+            skill: None,
         };
         let mut tx = self.pool.begin().await.map_err(|err| database(&err))?;
         sqlx::query(
@@ -281,22 +283,49 @@ impl Store {
             .execute(connection(&mut tx))
             .await
             .map_err(|err| database(&err))?;
-        // Human: Profile counters are custom and casual only. Ranked is stored for the later rating write.
-        // Agent: DB INSERT games and game_seats; UPDATE stats only when mode is not ranked.
-        let counted = game.mode != "ranked";
-        for seat in &game.seats {
-            sqlx::query(
-                "INSERT INTO game_seats (game_id, user_id, seat, total, place) VALUES ($1, $2, $3, $4, $5)",
-            )
-            .bind(&game.id)
-            .bind(seat.user.as_str())
-            .bind(i32::from(seat.seat))
-            .bind(seat.total)
-            .bind(i32::try_from(seat.place).unwrap_or(i32::MAX))
-            .execute(connection(&mut tx))
-            .await
-            .map_err(|err| database(&err))?;
-            if counted {
+        // Human: Profile counters are custom and casual only. Ranked writes skill, not those counters.
+        // Agent: DB INSERT games and game_seats; UPDATE stats only when mode is not ranked; UPSERT ratings for ranked.
+        if game.mode == "ranked" {
+            for rated in &game.rated {
+                sqlx::query(
+                    "INSERT INTO game_seats (game_id, user_id, seat, total, place) VALUES ($1, $2, $3, $4, $5)",
+                )
+                .bind(&game.id)
+                .bind(rated.user.as_str())
+                .bind(i32::from(rated.seat))
+                .bind(rated.total)
+                .bind(i32::try_from(rated.place).unwrap_or(i32::MAX))
+                .execute(connection(&mut tx))
+                .await
+                .map_err(|err| database(&err))?;
+                let season = i32::try_from(crate::rating::season_at(identity::unix_now().get()).id)
+                    .unwrap_or(i32::MAX);
+                sqlx::query(
+                    "INSERT INTO ratings (user_id, season_id, mu, sigma, games) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (user_id) DO UPDATE SET season_id = EXCLUDED.season_id, mu = EXCLUDED.mu, sigma = EXCLUDED.sigma, games = EXCLUDED.games",
+                )
+                .bind(rated.user.as_str())
+                .bind(season)
+                .bind(rated.after.mu)
+                .bind(rated.after.sigma)
+                .bind(i32::try_from(rated.after.games).unwrap_or(i32::MAX))
+                .execute(connection(&mut tx))
+                .await
+                .map_err(|err| database(&err))?;
+            }
+        }
+        if game.mode != "ranked" {
+            for seat in &game.seats {
+                sqlx::query(
+                    "INSERT INTO game_seats (game_id, user_id, seat, total, place) VALUES ($1, $2, $3, $4, $5)",
+                )
+                .bind(&game.id)
+                .bind(seat.user.as_str())
+                .bind(i32::from(seat.seat))
+                .bind(seat.total)
+                .bind(i32::try_from(seat.place).unwrap_or(i32::MAX))
+                .execute(connection(&mut tx))
+                .await
+                .map_err(|err| database(&err))?;
                 sqlx::query(
                     "UPDATE stats SET games = games + 1, wins = wins + $2, bids_made = bids_made + $3, bids_total = bids_total + $4, best_score = CASE WHEN best_score IS NULL THEN $5 ELSE GREATEST(best_score, $5) END WHERE user_id = $1",
                 )
@@ -337,6 +366,7 @@ impl Store {
         else {
             return Err(StoreFailure::NotFound);
         };
+        let skill = self.skill_of(&id).await?;
         Ok(AccountSnap {
             user: User {
                 id: UserId::new(id),
@@ -353,8 +383,131 @@ impl Store {
                 bids_total: u32::try_from(bids_total).unwrap_or(0),
                 best_score,
             },
+            skill,
         })
     }
+
+    /// Replace the leave penalty for one account.
+    ///
+    /// # Errors
+    ///
+    /// The write failed.
+    pub async fn write_penalty(
+        &self,
+        user: &str,
+        season: i32,
+        leaves: i32,
+        until: i64,
+    ) -> Result<(), StoreFailure> {
+        sqlx::query(
+            "INSERT INTO penalties (user_id, season_id, leaves, cooldown_until) VALUES ($1, $2, $3, $4) ON CONFLICT (user_id) DO UPDATE SET season_id = EXCLUDED.season_id, leaves = EXCLUDED.leaves, cooldown_until = EXCLUDED.cooldown_until",
+        )
+        .bind(user)
+        .bind(season)
+        .bind(leaves)
+        .bind(until)
+        .execute(&self.pool)
+        .await
+        .map_err(|err| database(&err))?;
+        Ok(())
+    }
+
+    /// Rated accounts in one season, highest ordinal first. No usernames.
+    ///
+    /// # Errors
+    ///
+    /// The read failed.
+    pub async fn ladder(&self, season: i32) -> Result<Vec<LadderRow>, StoreFailure> {
+        let rows: Vec<(String, String, String, f64, f64, i32)> = sqlx::query_as(
+            "SELECT users.id, users.name, users.color, ratings.mu, ratings.sigma, ratings.games FROM ratings JOIN users ON users.id = ratings.user_id WHERE ratings.season_id = $1 AND ratings.games >= 1",
+        )
+        .bind(season)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|err| database(&err))?;
+        let mut entries: Vec<LadderRow> = rows
+            .into_iter()
+            .filter_map(|(id, name, color, mu, sigma, games)| {
+                let color = parse_color(&color)?;
+                Some(LadderRow {
+                    id,
+                    name,
+                    color,
+                    mu,
+                    sigma,
+                    games: u32::try_from(games).unwrap_or(0),
+                })
+            })
+            .collect();
+        entries.sort_by(|left, right| {
+            let value = crate::rating::ordinal(right.mu, right.sigma)
+                .cmp(&crate::rating::ordinal(left.mu, left.sigma));
+            value
+                .then_with(|| left.name.cmp(&right.name))
+                .then_with(|| left.id.cmp(&right.id))
+        });
+        Ok(entries)
+    }
+
+    async fn skill_of(&self, id: &str) -> Result<Option<StoredSkill>, StoreFailure> {
+        let rating: Option<(i32, f64, f64, i32)> =
+            sqlx::query_as("SELECT season_id, mu, sigma, games FROM ratings WHERE user_id = $1")
+                .bind(id)
+                .fetch_optional(&self.pool)
+                .await
+                .map_err(|err| database(&err))?;
+        let penalty: Option<(i32, i32, Option<i64>)> = sqlx::query_as(
+            "SELECT season_id, leaves, cooldown_until FROM penalties WHERE user_id = $1",
+        )
+        .bind(id)
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(|err| database(&err))?;
+        let now = identity::unix_now().get();
+        Ok(match (rating, penalty) {
+            (None, None) => None,
+            (Some((season, mu, sigma, games)), penalty) => {
+                let (leave_season, leaves, cooldown_until) = penalty.unwrap_or((season, 0, None));
+                Some(StoredSkill {
+                    season_id: u32::try_from(season).unwrap_or(0),
+                    mu,
+                    sigma,
+                    games: u32::try_from(games).unwrap_or(0),
+                    leaves: u32::try_from(leaves).unwrap_or(0),
+                    leave_season: u32::try_from(leave_season).unwrap_or(0),
+                    cooldown_until,
+                })
+            }
+            (None, Some((season, leaves, cooldown_until))) => {
+                let prior = crate::rating::prior();
+                Some(StoredSkill {
+                    season_id: crate::rating::season_at(now).id,
+                    mu: prior.mu,
+                    sigma: prior.sigma,
+                    games: 0,
+                    leaves: u32::try_from(leaves).unwrap_or(0),
+                    leave_season: u32::try_from(season).unwrap_or(0),
+                    cooldown_until,
+                })
+            }
+        })
+    }
+}
+
+/// One rated account, before it is turned into a ladder row.
+pub struct LadderRow {
+    /// User id.
+    pub id: String,
+    /// Display name.
+    pub name: String,
+    /// Table colour.
+    pub color: skt_protocol::TableColor,
+    /// Weng-Lin μ.
+    pub mu: f64,
+    /// Weng-Lin σ.
+    pub sigma: f64,
+    /// Ranked games this season.
+    pub games: u32,
 }
 
 type AccountRow = (

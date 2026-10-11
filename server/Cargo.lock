@@ -1820,6 +1820,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "33f4fe9184a62d842c9ef383018f3306d8ba224fd9d836f56d7288308847c256"
 
 [[package]]
+name = "skillratings"
+version = "0.29.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e948550eed18870bdcb199bfb98b0b7252c3af7bfe1c23f12d0f47b1841fbdc5"
+
+[[package]]
 name = "skt-engine"
 version = "0.1.0"
 dependencies = [
@@ -1854,6 +1860,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sha2",
+ "skillratings",
  "skt-engine",
  "skt-protocol",
  "sqlx",

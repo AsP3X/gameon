@@ -298,6 +298,8 @@ async fn stats_are_visible_on_me_after_a_recorded_game(pool: sqlx::PgPool) {
         .record_for_test(crate::world::GameReport {
             id: "game-1".to_owned(),
             mode: "casual",
+            rated: vec![],
+            overs: vec![],
             seats: vec![crate::world::SeatTally {
                 user: skt_protocol::UserId::new(id),
                 seat: 0,
@@ -355,6 +357,11 @@ async fn four_accounts_open_a_ranked_table_and_a_waiter_is_not_filled(pool: sqlx
     let ready = read_text(&mut fourth).await;
     assert!(ready.contains("\"found\":4"), "{ready}");
     assert!(!ready.contains("\"t\":\"queue.status\""), "{ready}");
+    for socket in [&mut first, &mut second, &mut third] {
+        let status = read_text(socket).await;
+        assert!(status.contains("\"t\":\"queue.status\""), "{status}");
+        assert!(status.contains("\"found\":4"), "{status}");
+    }
     for socket in [&mut first, &mut second, &mut third, &mut fourth] {
         assert_ranked_start(&read_text(socket).await);
     }
@@ -386,6 +393,8 @@ async fn a_ranked_result_does_not_change_casual_stats(pool: sqlx::PgPool) {
         .record_for_test(crate::world::GameReport {
             id: "game-ranked".to_owned(),
             mode: "ranked",
+            rated: vec![],
+            overs: vec![],
             seats: vec![crate::world::SeatTally {
                 user: skt_protocol::UserId::new(id),
                 seat: 0,

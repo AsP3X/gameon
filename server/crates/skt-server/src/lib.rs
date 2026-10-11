@@ -2,11 +2,14 @@
 
 #[cfg(test)]
 mod phase2_tests;
+#[cfg(test)]
+mod phase3_tests;
 
 mod http_api;
 mod origin;
 mod random;
 mod rate;
+mod rating;
 mod store;
 mod world;
 
@@ -19,7 +22,9 @@ use axum::response::{IntoResponse, Response};
 use axum::routing::{get, post};
 use skt_protocol::{ErrorBody, ErrorCode, ErrorObject, Health};
 
-use http_api::{config, guest, lobbies, login, logout, me, patch_me, profile, register, socket};
+use http_api::{
+    config, guest, ladder, lobbies, login, logout, me, patch_me, profile, register, socket,
+};
 
 /// Routes mounted at `/api/v1`.
 pub fn router(state: AppState) -> Router {
@@ -51,6 +56,7 @@ pub fn router(state: AppState) -> Router {
             get(profile).fallback(method_not_allowed),
         )
         .route("/api/v1/lobbies", get(lobbies).fallback(method_not_allowed))
+        .route("/api/v1/ladder", get(ladder).fallback(method_not_allowed))
         .route("/api/v1/ws", get(socket).fallback(method_not_allowed))
         .fallback(not_found)
         .with_state(state)

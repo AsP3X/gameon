@@ -84,14 +84,47 @@ impl AppState {
     /// Run due bot moves and deadlines, then store any game that finished.
     pub async fn tick(&self) {
         let reports = self.world.lock().await.tick();
+        self.settle(reports).await;
+    }
+
+    /// Move the table clock. Tests use this to play a game out.
+    #[cfg(test)]
+    pub async fn advance(&self, by: std::time::Duration) {
+        let reports = self.world.lock().await.advance(by);
+        self.settle(reports).await;
+    }
+
+    /// Store leave penalties queued by the last socket messages.
+    pub async fn persist_penalties(&self) {
+        let pending = self.world.lock().await.take_penalties();
         let Some(store) = &self.store else {
             return;
         };
-        for report in reports {
-            if store.record(&report).await.is_err() {
-                continue;
+        for penalty in pending {
+            let season = i32::try_from(penalty.season).unwrap_or(i32::MAX);
+            let leaves = i32::try_from(penalty.leaves).unwrap_or(i32::MAX);
+            if store
+                .write_penalty(penalty.user.as_str(), season, leaves, penalty.until)
+                .await
+                .is_err()
+            {
+                tracing::error!("penalty was not stored");
             }
-            self.world.lock().await.apply_report(&report);
+        }
+    }
+
+    async fn settle(&self, reports: Vec<crate::world::GameReport>) {
+        for report in reports {
+            let stored = if let Some(store) = &self.store {
+                store.record(&report).await.is_ok()
+            } else {
+                true
+            };
+            let mut world = self.world.lock().await;
+            world.deliver(&report);
+            if stored {
+                world.apply_report(&report);
+            }
         }
     }
 
@@ -102,7 +135,9 @@ impl AppState {
             return;
         };
         store.record(&report).await.expect("record");
-        self.world.lock().await.apply_report(&report);
+        let mut world = self.world.lock().await;
+        world.deliver(&report);
+        world.apply_report(&report);
     }
 }
 
@@ -310,6 +345,36 @@ pub async fn lobbies(
     Ok(Json(state.world.lock().await.public_lobbies()))
 }
 
+pub async fn ladder(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    request: Request,
+) -> Result<Json<skt_protocol::LadderPage>, AppError> {
+    let token = session_cookie(&headers).ok_or(AppError::new(ErrorCode::Unauthenticated))?;
+    remember(&state, &token).await?;
+    let asked = parse_ladder(request.uri().query().unwrap_or(""))?;
+    let season = crate::rating::season_at(crate::world::identity::unix_now().get());
+    if let Some(id) = asked.season
+        && id != season.id
+    {
+        return Err(AppError::new(ErrorCode::NotFound));
+    }
+    let store = state
+        .store
+        .clone()
+        .ok_or(AppError::new(ErrorCode::Internal))?;
+    let rows = store
+        .ladder(i32::try_from(season.id).unwrap_or(i32::MAX))
+        .await
+        .map_err(|err| failure(&err))?;
+    Ok(Json(page_ladder(
+        &season,
+        &rows,
+        asked.limit,
+        asked.after.as_deref(),
+    )?))
+}
+
 pub async fn socket(
     State(state): State<AppState>,
     headers: HeaderMap,
@@ -355,6 +420,7 @@ async fn drive(
                 }
                 stamps.push_back(now);
                 state.world.lock().await.on_message(&user, &text);
+                state.persist_penalties().await;
             }
             outgoing = inbound.recv() => {
                 let Some(frame) = outgoing else { break; };
@@ -408,6 +474,132 @@ async fn remember(state: &AppState, token: &str) -> Result<(), AppError> {
         .map_err(|err| failure(&err))?;
     state.world.lock().await.import(token, snap);
     Ok(())
+}
+
+struct Asked {
+    season: Option<u32>,
+    limit: usize,
+    after: Option<String>,
+}
+
+fn parse_ladder(query: &str) -> Result<Asked, AppError> {
+    let mut season = None;
+    let mut limit = 25usize;
+    let mut after = None;
+    if query.is_empty() {
+        return Ok(Asked {
+            season,
+            limit,
+            after,
+        });
+    }
+    for pair in query.split('&') {
+        let (key, raw) = pair.split_once('=').unwrap_or((pair, ""));
+        let value = form_decode(raw);
+        match key {
+            "season" => {
+                season = Some(
+                    value
+                        .parse()
+                        .map_err(|_| AppError::new(ErrorCode::NotFound))?,
+                );
+            }
+            "limit" => {
+                let parsed = value
+                    .parse::<u32>()
+                    .map_err(|_| AppError::new(ErrorCode::Validation))?;
+                if !(1..=100).contains(&parsed) {
+                    return Err(AppError::new(ErrorCode::Validation));
+                }
+                limit = usize::try_from(parsed).unwrap_or(25);
+            }
+            "after" => {
+                if value.is_empty() {
+                    return Err(AppError::new(ErrorCode::Validation));
+                }
+                after = Some(value);
+            }
+            _ => {}
+        }
+    }
+    Ok(Asked {
+        season,
+        limit,
+        after,
+    })
+}
+
+fn page_ladder(
+    season: &skt_protocol::Season,
+    rows: &[crate::store::LadderRow],
+    limit: usize,
+    after: Option<&str>,
+) -> Result<skt_protocol::LadderPage, AppError> {
+    let start = if let Some(after) = after {
+        rows.iter()
+            .position(|row| row.id == after)
+            .ok_or(AppError::new(ErrorCode::Validation))?
+            .saturating_add(1)
+    } else {
+        0
+    };
+    let end = start.saturating_add(limit).min(rows.len());
+    let entries = rows
+        .get(start..end)
+        .unwrap_or(&[])
+        .iter()
+        .enumerate()
+        .map(|(offset, row)| {
+            let skill = crate::rating::PlayerSkill {
+                mu: row.mu,
+                sigma: row.sigma,
+                games: row.games,
+            };
+            let rating = crate::rating::to_rating(skill);
+            skt_protocol::LadderEntry {
+                rank: u32::try_from(start.saturating_add(offset).saturating_add(1)).unwrap_or(0),
+                user: skt_protocol::User {
+                    id: skt_protocol::UserId::new(row.id.clone()),
+                    name: row.name.clone(),
+                    color: row.color,
+                    tier: Some(rating.tier.clone()),
+                },
+                rating,
+            }
+        })
+        .collect();
+    let next = (end < rows.len())
+        .then(|| rows.get(end.saturating_sub(1)).map(|row| row.id.clone()))
+        .flatten();
+    Ok(skt_protocol::LadderPage {
+        season: season.clone(),
+        entries,
+        next,
+    })
+}
+
+fn form_decode(value: &str) -> String {
+    let mut out = String::new();
+    let bytes = value.as_bytes();
+    let mut index = 0;
+    while index < bytes.len() {
+        if bytes[index] == b'%'
+            && let Some(hex) = bytes.get(index + 1..index + 3)
+            && let Ok(text) = std::str::from_utf8(hex)
+            && let Ok(byte) = u8::from_str_radix(text, 16)
+        {
+            out.push(char::from(byte));
+            index += 3;
+            continue;
+        }
+        if bytes[index] == b'+' {
+            out.push(' ');
+        } else {
+            out.push(char::from(bytes[index]));
+        }
+        index += 1;
+    }
+    out
 }
 
 fn failure(err: &StoreFailure) -> AppError {

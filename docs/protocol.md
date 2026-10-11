@@ -87,7 +87,7 @@ All bodies are JSON. Unless marked *public*, a session is required.
 | `PATCH /me` | `ProfilePatch` | `Me` | Omitted fields are left unchanged. A bad field refuses the whole patch. If the user sits in a lobby, every member is sent `lobby.state`. A running game keeps the names it started with. |
 | `GET /users/{id}` | | `Profile` | No username and no session data. Unknown id is `404`. |
 | `GET /lobbies` | | `{ lobbies: LobbySummary[] }` | Open public lobbies, full ones included, oldest first, no limit. A lobby leaves the list while its game runs and returns when it is `open` again. |
-| `GET /ladder?season=&limit=&after=` | | `{ season: Season, entries: LadderEntry[], next?: string }` | Phase 3. |
+| `GET /ladder?season=&limit=&after=` | | `{ season: Season, entries: LadderEntry[], next?: string }` | Session required. See below. |
 
 ```ts
 type ServerConfig = {
@@ -136,10 +136,41 @@ lower case. A password is `WEAK_PASSWORD` only when it is empty. The message is 
 `Active` for a ranked queue is `{ kind: 'queue', id: 'ranked' }`. There is one ranked queue.
 
 `Stats` counts every finished custom game and every finished casual game. A finished ranked game
-is stored and does not change these counters. A shared first place
-counts as a win for each of those seats. A seat that sent `game.leave` is not counted. `bestScore`
-is set by the first finished game even when the total is negative, and is the highest total after
-that. `bidsTotal` is the number of scored rounds. `bidsMade` is the rounds where the bid was hit.
+is stored and does not change these counters, including for a seat that stayed. `rating.games`
+counts that ranked game instead, including a seat that left. A shared first place counts as a win
+for each of those seats. A seat that sent `game.leave` is not counted in `Stats`. `bestScore` is
+set by the first finished custom or casual game even when the total is negative, and is the highest
+total after that. `bidsTotal` is the number of scored rounds. `bidsMade` is the rounds where the
+bid was hit.
+
+`config.season` is the calendar quarter that contains the server's clock. It is not null. Quarters
+are UTC: Q1 starts 1 January, Q2 1 April, Q3 1 July, Q4 1 October. `id` 1 is 2026 Q1. `name` is
+`YYYY Qn`, for example `2026 Q4`. `startsAt` is the quarter's first millisecond. `endsAt` is the
+next quarter's first millisecond. A season that is not the current one cannot be asked for.
+
+`Rating.value` is a whole number: the nearest integer of μ − 3σ, half away from zero. It may be
+negative. μ and σ are Weng-Lin (OpenSkill, Plackett-Luce), one player per team, with the crate's
+default β of 25/6. A new account has no row, so `Me.rating` and `User.tier` are null. The prior
+used for that account's first ranked game is μ 25 and σ 25/3, whose value is 0. `delta` is
+`after.value − before.value` of the integers that were sent. `provisional` is true while `games`
+is below 5. The fifth ranked game of a season ends placement: its `after.provisional` is false and
+its `after.games` is 5. The tier is shown during placement. The bands, on `value`, are Deckhand
+below 8, Bosun below 16, Quartermaster below 24, First Mate below 32, Captain below 40, Pirate Lord
+below 48, and Skull King from 48. The server sends those strings. It does not send any other tier.
+
+At a season boundary a stored rating is soft-reset for display and for the next game: μ moves
+halfway back to 25, σ becomes `min(25/3, hypot(σ, 25/6))`, and `games` becomes 0, so the rating is
+provisional again. `Me.rating` stays present. The account is not on the ladder until it finishes a
+ranked game in the new season. An account that has never finished one stays `rating: null`. The
+leave count starts over. A cooldown that has not run out still applies.
+
+`Me.cooldownUntil` is the server time when ranked opens again, or null. A time that is not in the
+future is null. The penalty starts when the ranked `game.leave` is accepted, not when the game
+ends. The first ranked leave of a season closes ranked for 15 minutes. Each further leave in that
+season doubles it: 15, 30, 60 minutes, then 2, 4, 8 and 16 hours. The eighth leave and every leave
+after it is 24 hours, which is the cap. The `QUEUE_COOLDOWN` message carries no time. Casual queue
+and every lobby message still work during the penalty. A bot that takes a seat after the disconnect
+grace is not a forfeit and does not start a cooldown.
 
 ## 5. Socket
 
@@ -246,15 +277,19 @@ type QueueStatus = { mode: 'casual' | 'ranked'; since: number; found: number; ne
 ```
 
 `queue.join` is checked in this order. Any other `mode` is `VALIDATION`. `ranked` from a guest is
-`ACCOUNT_REQUIRED`, even when that guest is already seated. A user who is in a lobby, a game, or
-either queue is `ALREADY_SEATED`.
+`ACCOUNT_REQUIRED`, even when that guest is already seated. `ranked` while `Me.cooldownUntil` is in
+the future is `QUEUE_COOLDOWN`, even when that account is already seated. A user who is in a lobby,
+a game, or either queue is `ALREADY_SEATED`.
 
 Casual and ranked are separate lines. A player waiting in one is not seated by the other.
 
 For either mode, `ok.queue` is `{ mode, since, found, needed: 4 }`. `since` is when this player
 joined. `found` counts everyone waiting in that mode, the joiner included. Every other waiting
 player in that mode is then sent `{ t: 'queue.status', queue }` with their own `since` and the new
-`found`. The joiner is not sent that push. No `queue.status` is sent when the table forms.
+`found`. The joiner is not sent that push. The join that fills a table sends that `queue.status`
+too, with the new `found`, and then `game.start`. There is no further `queue.status` after
+`game.start`. A ranked table that seats four and leaves others waiting sends those others a later
+`queue.status` with the reduced `found`.
 
 For `casual`, when `found` reaches 4 the table forms at once, the first four in join order.
 Otherwise the server waits 6000 ms from the moment that line stopped being empty, then seats
@@ -262,16 +297,33 @@ whoever is waiting and fills the empty seats with bots. The client does not prin
 A dropped socket keeps the place, with no time limit. The next `welcome` has `queue` set. A queued
 player with no socket when the table forms is seated `offline`.
 
-For `ranked`, the table forms only when four accounts are waiting, in join order. There is no fill
-timer and no bot. A dropped socket keeps the place. One account waiting is not seated. Ratings are
-not compared yet: there is no skill window until the rating model exists. `Me.rating` stays null
-and `Me.cooldownUntil` stays null.
+For `ranked`, there is no fill timer and no bot. A dropped socket keeps the place. One account
+waiting is not seated. Each waiter has a window around the ordinal they had on joining. An account
+with no rating uses 0. The window starts at ±10 and grows by ±10 for every 15 seconds spent
+waiting. Two waiters match only when each is inside the other's window. The server looks at the
+12 who have waited the longest and seats the oldest compatible four. Four accounts on 0 match at
+once, in join order. `game.start` then carries each human's `SeatInfo.tier`: the tier string when
+that account already has a visible rating, otherwise null.
 
 A table made by either queue has no lobby. `game.start` carries `lobbyId: null`. Casual carries
 `mode: 'casual'`. Ranked carries `mode: 'ranked'`. `settings` are `config.standard`. Humans sit in
 join order. Casual then adds bots. There is no accept step and no `lobby.state`. After `game.over`
 the client returns to the hub. `game.over` has no `mode` field; the mode is the one from
-`game.start`. Until the rating model exists, `result.rating` is null on a ranked game as well.
+`game.start`.
+
+`GET /ladder` needs a session. No session is `401`. `season` omitted, or equal to `config.season.id`,
+is the current season. Any other value, including a non-integer, is `404`. `limit` omitted is 25.
+An integer from 1 to 100 is kept. Anything else is `400`. `after` omitted starts at rank 1. It is
+otherwise the `next` of the previous page, which is the user id of that page's last row, and the
+next page starts after that row. An empty `after`, or an id that is not on this season's ladder,
+is `400`. The body is `{ season, entries, next? }`. `entries` are the accounts with at least one
+ranked game in this season, highest `value` first, then by display name in UTF-8 byte order, then
+by user id. `rank` counts from 1 with no shared ranks. A provisional account is listed. An account
+whose season was reset and who has not finished a game since is not. Each entry is
+`{ rank, user, rating }`. `user` is `{ id, name, color, tier }` and has no username, no stats and
+no session. `next` is omitted on the last page, not null. The page does not add the caller's own
+rank when that row was not loaded. With nobody rated, `entries` is `[]` and `season` is still the
+current quarter.
 
 ### 5.5 Game
 
@@ -362,8 +414,15 @@ and `rating` travel on `game.over`, sent to the leaver when the game ends. If th
 socket at that moment, that `game.over` is written immediately after the next `welcome`, which
 still has `game: null`. It does not put the table back. The same delivery is owed to any seated
 player who had no socket when the game ended, leaver or not. `forfeited` is empty unless the game
-is ranked. In ranked it lists every seat that sent `game.leave`. `rating` is null until the rating
-model exists, including on a ranked game.
+is ranked. In ranked it lists every seat that sent `game.leave`, in the order they left. A seat a
+bot took after the disconnect grace is not in that list. `totals` are the points as played. A
+forfeited seat's place is the number of seats, so two forfeits in a four-player game are both 4.
+Every other seat is 1 plus the number of non-forfeited seats with a strictly higher total. Ties
+among those seats share a place. `rating` is that receiver's own `{ before, after, delta }` in a
+ranked game, and null in every other mode. `before` is the rating at the deal. For an account that
+had none, `before` is `{ value: 0, tier: 'Deckhand', provisional: true, games: 0 }`. `after` is
+written to `Me.rating` and `User.tier` before `game.over` is sent. No other seat's new rating is
+on this message.
 
 `lobby.start`'s `ok` does not carry the opening table. Every member, including the host, is then
 sent `lobby.state` with `state: 'inGame'`. On each seated human's socket the server then writes

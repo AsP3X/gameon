@@ -7,9 +7,11 @@ use skt_engine::{BotLevel, Expansions, GameState, Phase, Ruleset, Seat};
 use skt_protocol::{
     ClientMessage, Deadline, DeadlineKind, EngineView, ErrMessage, ErrTag, ErrorCode, GameEvent,
     GameId, GameOver, GameOverTag, GameResult, GameStart, GameStartTag, GameUpdate, GameUpdateTag,
-    Lobby, LobbyId, Member, MessageId, OkReply, OkTag, OnlineEvent, SeatInfo, SeatStatus,
-    TableInfo, TableMode, UserId, WelcomeGame,
+    Lobby, LobbyId, Member, MessageId, OkReply, OkTag, OnlineEvent, RatingChange, SeatInfo,
+    SeatStatus, TableInfo, TableMode, UserId, WelcomeGame,
 };
+
+use crate::rating::{self, PlayerSkill};
 
 use super::identity;
 use super::send;
@@ -22,6 +24,10 @@ struct SeatPlay {
     started_bot: bool,
     misses: u8,
     offline_since: Option<Instant>,
+    prior_mu: f64,
+    prior_sigma: f64,
+    prior_games: u32,
+    tier: Option<String>,
 }
 
 /// One human's line in a finished game, ready to store.
@@ -42,6 +48,20 @@ pub struct SeatTally {
     pub bids_total: u32,
 }
 
+/// One human in a ranked result, including a seat that left.
+pub struct RatedResult {
+    /// The player.
+    pub user: UserId,
+    /// Seat index.
+    pub seat: u8,
+    /// Points at the end, as played.
+    pub total: i32,
+    /// Place. A forfeit is last.
+    pub place: u32,
+    /// Skill after this game.
+    pub after: PlayerSkill,
+}
+
 /// A finished game, written in one database transaction.
 pub struct GameReport {
     /// Game id.
@@ -50,6 +70,22 @@ pub struct GameReport {
     pub mode: &'static str,
     /// Humans who were still seated. A `game.leave` is absent.
     pub seats: Vec<SeatTally>,
+    /// Ranked humans, including forfeits. Empty for every other mode.
+    pub rated: Vec<RatedResult>,
+    /// `game.over` for each human, sent after the result is stored.
+    pub overs: Vec<(UserId, GameOver)>,
+}
+
+/// Skill copied onto a seat when the game opens.
+pub struct OpenPrior {
+    /// Weng-Lin μ.
+    pub mu: f64,
+    /// Weng-Lin σ.
+    pub sigma: f64,
+    /// Games already finished this season.
+    pub games: u32,
+    /// Tier at the opening, or nothing when the account is unrated.
+    pub tier: Option<String>,
 }
 
 struct Running {
@@ -95,8 +131,21 @@ impl Tables {
         now: Instant,
         live: &HashMap<UserId, super::Live>,
         matchmade: bool,
+        priors: &HashMap<UserId, OpenPrior>,
     ) -> Vec<(UserId, GameId)> {
-        let (mut seats, infos, status) = seats_from(lobby, live);
+        let (mut seats, mut infos, status) = seats_from(lobby, live);
+        for (seat, info) in seats.iter_mut().zip(infos.iter_mut()) {
+            let Some(user) = seat.user.clone() else {
+                continue;
+            };
+            if let Some(prior) = priors.get(&user) {
+                seat.prior_mu = prior.mu;
+                seat.prior_sigma = prior.sigma;
+                seat.prior_games = prior.games;
+                seat.tier.clone_from(&prior.tier);
+                info.tier.clone_from(&prior.tier);
+            }
+        }
         let infos = unique_colors(infos);
         for (seat, info) in seats.iter_mut().zip(&infos) {
             seat.color = info.color;
@@ -242,7 +291,7 @@ impl Tables {
         now: Instant,
         live: &HashMap<UserId, super::Live>,
         lobbies: &mut HashMap<LobbyId, Lobby>,
-    ) -> Vec<UserId> {
+    ) -> (Vec<UserId>, bool) {
         let Some((id, seat)) = self.seat_of.get(user).cloned() else {
             if let ClientMessage::GameBid { id, .. }
             | ClientMessage::GamePlay { id, .. }
@@ -252,34 +301,21 @@ impl Tables {
             {
                 fail(live, user, id, ErrorCode::NotInGame);
             }
-            return Vec::new();
+            return (Vec::new(), false);
         };
         let Some(running) = self.games.get_mut(&id) else {
-            return Vec::new();
+            return (Vec::new(), false);
         };
         if running.over {
-            return Vec::new();
+            return (Vec::new(), false);
         }
+        let _ = lobbies;
         match message {
-            ClientMessage::GameLeave { id: msg } => {
-                ok(live, user, msg);
-                running.status[seat.index()] = SeatStatus::Bot;
-                running.seats[seat.index()].offline_since = None;
-                let events = vec![GameEvent::Online(OnlineEvent::SeatStatus {
-                    seat,
-                    status: SeatStatus::Bot,
-                })];
-                running.publish(&events, Some(user), live);
-                running.forfeited.push(seat);
-                running.arm(now);
-                let _ = lobbies;
-                self.seat_of.remove(user);
-                vec![user.clone()]
-            }
+            ClientMessage::GameLeave { id: msg } => self.leave_seat(user, seat, msg, now, live),
             ClientMessage::GameReady { id: msg } => {
                 if running.state.phase() != Phase::RoundEnd {
                     fail(live, user, msg, ErrorCode::NotYourTurn);
-                    return Vec::new();
+                    return (Vec::new(), false);
                 }
                 running.ready[seat.index()] = true;
                 running.seats[seat.index()].misses = 0;
@@ -290,55 +326,93 @@ impl Tables {
                 } else {
                     running.arm(now);
                 }
-                Vec::new()
+                (Vec::new(), false)
             }
-            ClientMessage::GameBid { id: msg, at, bid } => self.player_step(
-                &id,
-                &Hit {
-                    user,
-                    seat,
-                    msg,
-                    at,
-                    now,
-                    live,
-                },
-                |state| state.bid(seat, i64::from(bid)),
+            ClientMessage::GameBid { id: msg, at, bid } => (
+                self.player_step(
+                    &id,
+                    &Hit {
+                        user,
+                        seat,
+                        msg,
+                        at,
+                        now,
+                        live,
+                    },
+                    |state| state.bid(seat, i64::from(bid)),
+                ),
+                false,
             ),
             ClientMessage::GamePlay {
                 id: msg,
                 at,
                 card,
                 played_as,
-            } => self.player_step(
-                &id,
-                &Hit {
-                    user,
-                    seat,
-                    msg,
-                    at,
-                    now,
-                    live,
-                },
-                |state| state.play(seat, card, played_as),
+            } => (
+                self.player_step(
+                    &id,
+                    &Hit {
+                        user,
+                        seat,
+                        msg,
+                        at,
+                        now,
+                        live,
+                    },
+                    |state| state.play(seat, card, played_as),
+                ),
+                false,
             ),
             ClientMessage::GameAbility {
                 id: msg,
                 at,
                 choice,
-            } => self.player_step(
-                &id,
-                &Hit {
-                    user,
-                    seat,
-                    msg,
-                    at,
-                    now,
-                    live,
-                },
-                |state| state.ability(seat, &choice),
+            } => (
+                self.player_step(
+                    &id,
+                    &Hit {
+                        user,
+                        seat,
+                        msg,
+                        at,
+                        now,
+                        live,
+                    },
+                    |state| state.ability(seat, &choice),
+                ),
+                false,
             ),
-            _ => Vec::new(),
+            _ => (Vec::new(), false),
         }
+    }
+
+    fn leave_seat(
+        &mut self,
+        user: &UserId,
+        seat: Seat,
+        msg: MessageId,
+        now: Instant,
+        live: &HashMap<UserId, super::Live>,
+    ) -> (Vec<UserId>, bool) {
+        let Some((id, _)) = self.seat_of.get(user).cloned() else {
+            return (Vec::new(), false);
+        };
+        let Some(running) = self.games.get_mut(&id) else {
+            return (Vec::new(), false);
+        };
+        let ranked = running.mode == TableMode::Ranked;
+        ok(live, user, msg);
+        running.status[seat.index()] = SeatStatus::Bot;
+        running.seats[seat.index()].offline_since = None;
+        let events = vec![GameEvent::Online(OnlineEvent::SeatStatus {
+            seat,
+            status: SeatStatus::Bot,
+        })];
+        running.publish(&events, Some(user), live);
+        running.forfeited.push(seat);
+        running.arm(now);
+        self.seat_of.remove(user);
+        (vec![user.clone()], ranked)
     }
 
     pub fn tick(
@@ -394,6 +468,16 @@ impl Tables {
             }
         }
         (finished, reports)
+    }
+
+    pub fn deliver(&mut self, report: &GameReport, live: &HashMap<UserId, super::Live>) {
+        for (user, over) in &report.overs {
+            if let Some(socket) = live.get(user) {
+                send(&socket.out, over);
+            } else if let Some(running) = self.games.get_mut(&over.game_id) {
+                running.owed.insert(user.clone(), over.clone());
+            }
+        }
     }
 
     fn player_step(
@@ -501,10 +585,14 @@ impl Running {
         };
         let mut seats = Vec::new();
         for index in 0..self.players() {
+            // Away humans are played for on bid, play, and ability. At round end they are waited
+            // for, and the round-end deadline has to include them or the table never moves on.
+            let away_from_round =
+                self.status[index] == SeatStatus::Away && kind != DeadlineKind::NextRound;
             if self.seats[index].started_bot
                 || self.status[index] == SeatStatus::Bot
                 || self.status[index] == SeatStatus::Offline
-                || self.status[index] == SeatStatus::Away
+                || away_from_round
             {
                 continue;
             }
@@ -786,12 +874,18 @@ impl Running {
             .state
             .totals()
             .unwrap_or_else(|_| vec![0; self.players()]);
-        let places = totals
-            .iter()
-            .map(|total| {
-                1 + u32::try_from(totals.iter().filter(|other| *other > total).count()).unwrap_or(0)
-            })
-            .collect::<Vec<_>>();
+        let forfeited_index: Vec<usize> = self.forfeited.iter().map(|seat| seat.index()).collect();
+        let places = if self.mode == TableMode::Ranked {
+            rating::ranked_places(&totals, &forfeited_index)
+        } else {
+            totals
+                .iter()
+                .map(|total| {
+                    1 + u32::try_from(totals.iter().filter(|other| *other > total).count())
+                        .unwrap_or(0)
+                })
+                .collect::<Vec<_>>()
+        };
         let scores = self.state.scores().unwrap_or_default();
         let bids_total = u32::try_from(scores.len()).unwrap_or(0);
         let mut tallies = Vec::new();
@@ -820,39 +914,88 @@ impl Running {
                 bids_total,
             });
         }
-        self.report = Some(GameReport {
-            id: self.id.as_str().to_owned(),
-            mode: mode_name(self.mode),
-            seats: tallies,
-        });
+        let (rated, changes) = self.rated_changes(&places, &totals);
+        let mut overs = Vec::new();
         for index in 0..self.players() {
             let Some(user) = self.seats[index].user.clone() else {
                 continue;
             };
-            let over = GameOver {
-                tag: GameOverTag::Value,
-                game_id: self.id.clone(),
-                seat: Some(Seat::from_index(u8::try_from(index).unwrap_or(0))),
-                result: GameResult {
-                    totals: totals.clone(),
-                    places: places.clone(),
-                    forfeited: if self.mode == TableMode::Ranked {
-                        self.forfeited.clone()
-                    } else {
-                        Vec::new()
+            overs.push((
+                user,
+                GameOver {
+                    tag: GameOverTag::Value,
+                    game_id: self.id.clone(),
+                    seat: Some(Seat::from_index(u8::try_from(index).unwrap_or(0))),
+                    result: GameResult {
+                        totals: totals.clone(),
+                        places: places.clone(),
+                        forfeited: if self.mode == TableMode::Ranked {
+                            self.forfeited.clone()
+                        } else {
+                            Vec::new()
+                        },
+                        rating: changes.get(index).cloned().flatten(),
+                        lobby_id: (!self.matchmade).then(|| self.lobby_id.clone()),
                     },
-                    rating: None,
-                    lobby_id: (!self.matchmade).then(|| self.lobby_id.clone()),
                 },
-            };
-            if live.contains_key(&user) {
-                if let Some(socket) = live.get(&user) {
-                    send(&socket.out, &over);
-                }
-            } else {
-                self.owed.insert(user, over);
-            }
+            ));
         }
+        let _ = live;
+        self.report = Some(GameReport {
+            id: self.id.as_str().to_owned(),
+            mode: mode_name(self.mode),
+            seats: tallies,
+            rated,
+            overs,
+        });
+    }
+
+    fn rated_changes(
+        &self,
+        places: &[u32],
+        totals: &[i32],
+    ) -> (Vec<RatedResult>, Vec<Option<RatingChange>>) {
+        let mut per_seat = vec![None; self.players()];
+        if self.mode != TableMode::Ranked {
+            return (Vec::new(), per_seat);
+        }
+        let mut skills = Vec::new();
+        let mut used = Vec::new();
+        for index in 0..self.players() {
+            let Some(player) = self.seats[index].user.clone() else {
+                continue;
+            };
+            skills.push(PlayerSkill {
+                mu: self.seats[index].prior_mu,
+                sigma: self.seats[index].prior_sigma,
+                games: self.seats[index].prior_games,
+            });
+            used.push((index, player));
+        }
+        let skill_places: Vec<u32> = used
+            .iter()
+            .map(|(index, _)| places.get(*index).copied().unwrap_or(0))
+            .collect();
+        let after = rating::rate(&skills, &skill_places);
+        let mut rated = Vec::new();
+        for ((index, user), (before, after)) in used.into_iter().zip(skills.into_iter().zip(after))
+        {
+            let before_rating = rating::to_rating(before);
+            let after_rating = rating::to_rating(after);
+            per_seat[index] = Some(RatingChange {
+                delta: after_rating.value - before_rating.value,
+                before: before_rating,
+                after: after_rating,
+            });
+            rated.push(RatedResult {
+                user,
+                seat: u8::try_from(index).unwrap_or(0),
+                total: totals.get(index).copied().unwrap_or(0),
+                place: places.get(index).copied().unwrap_or(0),
+                after,
+            });
+        }
+        (rated, per_seat)
     }
 
     fn publish(
@@ -944,7 +1087,7 @@ impl Running {
                 color: seat.color,
                 bot: seat.started_bot,
                 user_id: seat.user.clone(),
-                tier: None,
+                tier: seat.tier.clone(),
             })
             .collect()
     }
@@ -994,6 +1137,10 @@ fn seats_from(
                     started_bot: false,
                     misses: 0,
                     offline_since: None,
+                    prior_mu: 25.0,
+                    prior_sigma: 25.0 / 3.0,
+                    prior_games: 0,
+                    tier: None,
                 });
                 infos.push(SeatInfo {
                     name: user.name.clone(),
@@ -1016,6 +1163,10 @@ fn seats_from(
                     started_bot: true,
                     misses: 0,
                     offline_since: None,
+                    prior_mu: 25.0,
+                    prior_sigma: 25.0 / 3.0,
+                    prior_games: 0,
+                    tier: None,
                 });
                 infos.push(SeatInfo {
                     name: name.clone(),

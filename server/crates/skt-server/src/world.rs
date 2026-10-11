@@ -9,6 +9,8 @@ mod table;
 
 pub(crate) use table::GameReport;
 #[cfg(test)]
+pub(crate) use table::RatedResult;
+#[cfg(test)]
 pub(crate) use table::SeatTally;
 
 use std::collections::{HashMap, VecDeque};
@@ -24,7 +26,9 @@ use tokio::sync::mpsc::UnboundedSender;
 
 use identity::{AccountSnap, Identity};
 
-use table::Tables;
+use crate::rating::{self, Waiter};
+
+use table::{OpenPrior, Tables};
 
 /// One outbound frame, or an instruction to close the socket.
 pub enum Wire {
@@ -50,14 +54,31 @@ pub struct World {
     /// Accounts only. Never fills with bots.
     ranked: Line,
     fill: Duration,
+    /// Leave penalties waiting to be written. The socket task stores them after the lock.
+    penalties: Vec<PenaltyWrite>,
     /// Current socket for a user, if `hello` has been accepted.
     live: HashMap<UserId, Live>,
     now: Instant,
 }
 
+/// A ranked leave, persisted outside the world lock.
+pub struct PenaltyWrite {
+    /// The player.
+    pub user: UserId,
+    /// Season the leave counts in.
+    pub season: u32,
+    /// Leaves this season, including this one.
+    pub leaves: u32,
+    /// Unix milliseconds when ranked opens again.
+    pub until: i64,
+}
+
 struct Waiting {
     user: UserId,
     since: skt_protocol::UnixMs,
+    joined: Instant,
+    /// Match ordinal. Casual does not read it.
+    rating: i32,
 }
 
 /// One matchmaking line. Casual and ranked do not share waiters.
@@ -75,13 +96,15 @@ impl Line {
         }
     }
 
-    fn push(&mut self, user: UserId, now: Instant) {
+    fn push(&mut self, user: UserId, now: Instant, rating: i32) {
         if self.waiting.is_empty() {
             self.since = Some(now);
         }
         self.waiting.push_back(Waiting {
             user,
             since: identity::unix_now(),
+            joined: now,
+            rating,
         });
     }
 
@@ -98,14 +121,20 @@ impl Line {
         self.waiting.iter().any(|waiting| &waiting.user == user)
     }
 
-    fn take(&mut self, count: usize, now: Instant) -> Vec<Waiting> {
-        let taken: Vec<_> = self
-            .waiting
-            .drain(..count.min(self.waiting.len()))
-            .collect();
+    fn take_ids(&mut self, ids: &[UserId], now: Instant) -> Vec<Waiting> {
+        let mut taken = Vec::new();
+        let mut rest = VecDeque::new();
+        while let Some(waiting) = self.waiting.pop_front() {
+            if ids.iter().any(|id| id == &waiting.user) {
+                taken.push(waiting);
+            } else {
+                rest.push_back(waiting);
+            }
+        }
+        self.waiting = rest;
         if self.waiting.is_empty() {
             self.since = None;
-        } else {
+        } else if !taken.is_empty() {
             self.since = Some(now);
         }
         taken
@@ -147,6 +176,7 @@ impl World {
             casual: Line::new(),
             ranked: Line::new(),
             fill,
+            penalties: Vec::new(),
             live: HashMap::new(),
             now: Instant::now(),
         }
@@ -176,7 +206,7 @@ impl World {
             build: "dev".to_owned(),
             timers: skt_protocol::Timers::standard(),
             standard: skt_protocol::GameSettings::standard(),
-            season: None,
+            season: Some(rating::season_at(identity::unix_now().get())),
             emotes: Vec::new(),
         }
     }
@@ -255,10 +285,36 @@ impl World {
         self.dispatch(user, message);
     }
 
-    /// Deadlines, bot moves, and the disconnect grace.
+    /// Deadlines, bot moves, the casual fill, and the ranked window.
     pub fn tick(&mut self) -> Vec<GameReport> {
         self.now = Instant::now();
+        self.step()
+    }
+
+    /// Move the clock without reading the wall time. Tests use this to finish a table.
+    #[cfg(test)]
+    pub fn advance(&mut self, by: Duration) -> Vec<GameReport> {
+        self.now += by;
+        self.step()
+    }
+
+    /// Penalties queued by the last messages. The caller stores them and drops them here.
+    pub fn take_penalties(&mut self) -> Vec<PenaltyWrite> {
+        std::mem::take(&mut self.penalties)
+    }
+
+    /// Apply ranked skills and send the `game.over` frames stored on the report.
+    pub fn deliver(&mut self, report: &GameReport) {
+        let season = rating::season_at(identity::unix_now().get()).id;
+        for rated in &report.rated {
+            self.identity.set_rated(&rated.user, rated.after, season);
+        }
+        self.tables.deliver(report, &self.live);
+    }
+
+    fn step(&mut self) -> Vec<GameReport> {
         self.fill_queue();
+        self.form_ranked();
         let (finished, reports) = self.tables.tick(self.now, &self.live, &mut self.lobbies);
         for user in finished {
             self.identity.set_game(&user, None);
@@ -333,11 +389,14 @@ impl World {
             ClientMessage::QueueLeave { id } => self.leave_queue(user, id),
             ClientMessage::GameEmote { id, .. } => self.fail_live(user, id, ErrorCode::Validation),
             other => {
-                let left = self
-                    .tables
-                    .act(user, other, self.now, &self.live, &mut self.lobbies);
+                let (left, ranked_leave) =
+                    self.tables
+                        .act(user, other, self.now, &self.live, &mut self.lobbies);
                 for seated in left {
                     self.identity.set_game(&seated, None);
+                    if ranked_leave {
+                        self.penalise(&seated);
+                    }
                     if let Some(lobby_id) = self.identity.lobby_of(&seated) {
                         self.remove_member(&lobby_id, &seated);
                     }
@@ -582,9 +641,10 @@ impl World {
         if let Some(snapshot) = snapshot {
             self.push_lobby(&snapshot);
         }
+        let priors = self.priors_of(&lobby);
         for (seated, game) in self
             .tables
-            .open(&game_id, &lobby, self.now, &self.live, false)
+            .open(&game_id, &lobby, self.now, &self.live, false, &priors)
         {
             self.identity.set_game(&seated, Some(game));
         }
@@ -737,19 +797,35 @@ impl World {
             self.fail_live(user, id, ErrorCode::AccountRequired);
             return;
         }
+        if mode == QueueMode::Ranked && self.identity.cooldown_until(user).is_some() {
+            self.fail_live(user, id, ErrorCode::QueueCooldown);
+            return;
+        }
         if self.busy(user) {
             self.fail_live(user, id, ErrorCode::AlreadySeated);
             return;
         }
+        let ordinal = if mode == QueueMode::Ranked {
+            self.identity.ordinal_of(user)
+        } else {
+            0
+        };
         let now = self.now;
-        self.line_mut(mode).push(user.clone(), now);
-        let forming = self.line(mode).waiting.len() >= 4;
+        self.line_mut(mode).push(user.clone(), now, ordinal);
         let status = self.line(mode).status(user, mode);
         self.ok_queue(user, id, status);
-        if forming {
-            self.seat_from_queue(mode, 4);
-        } else {
-            self.push_queue_except(mode, user);
+        self.push_queue_except(mode, user);
+        if mode == QueueMode::Casual && self.casual.waiting.len() >= 4 {
+            let ids: Vec<UserId> = self
+                .casual
+                .waiting
+                .iter()
+                .take(4)
+                .map(|waiting| waiting.user.clone())
+                .collect();
+            self.seat_ids(QueueMode::Casual, &ids);
+        } else if mode == QueueMode::Ranked {
+            self.form_ranked();
         }
     }
 
@@ -774,18 +850,66 @@ impl World {
         if self.casual.waiting.is_empty() || self.now.saturating_duration_since(since) < self.fill {
             return;
         }
-        let count = self.casual.waiting.len();
-        self.seat_from_queue(QueueMode::Casual, count);
+        let ids: Vec<UserId> = self
+            .casual
+            .waiting
+            .iter()
+            .map(|waiting| waiting.user.clone())
+            .collect();
+        self.seat_ids(QueueMode::Casual, &ids);
+    }
+
+    fn form_ranked(&mut self) {
+        let waiters: Vec<Waiter> = self
+            .ranked
+            .waiting
+            .iter()
+            .map(|waiting| Waiter {
+                rating: waiting.rating,
+                waited: self.now.saturating_duration_since(waiting.joined),
+            })
+            .collect();
+        let Some(indexes) = rating::pick_table(&waiters) else {
+            return;
+        };
+        let ids: Vec<UserId> = indexes
+            .into_iter()
+            .filter_map(|index| {
+                self.ranked
+                    .waiting
+                    .get(index)
+                    .map(|waiting| waiting.user.clone())
+            })
+            .collect();
+        if ids.len() < 4 {
+            return;
+        }
+        self.seat_ids(QueueMode::Ranked, &ids);
+        self.push_queue(QueueMode::Ranked);
+    }
+
+    fn penalise(&mut self, user: &UserId) {
+        let now = identity::unix_now().get();
+        let leaves = self.identity.leaves_of(user).saturating_add(1);
+        let season = rating::season_at(now).id;
+        let until = now.saturating_add(rating::cooldown_ms(leaves));
+        self.identity.note_penalty(user, leaves, season, until);
+        self.penalties.push(PenaltyWrite {
+            user: user.clone(),
+            season,
+            leaves,
+            until,
+        });
     }
 
     // Human: Ranked starts with four accounts and no bot. Casual may fill the empty seats.
     // Agent: READS one queue line; WRITES a matchmade table; ranked never inserts Member::Bot.
-    fn seat_from_queue(&mut self, mode: QueueMode, count: usize) {
-        if mode == QueueMode::Ranked && self.ranked.waiting.len() < 4 {
+    fn seat_ids(&mut self, mode: QueueMode, ids: &[UserId]) {
+        if mode == QueueMode::Ranked && ids.len() < 4 {
             return;
         }
         let now = self.now;
-        let waiting = self.line_mut(mode).take(count, now);
+        let waiting = self.line_mut(mode).take_ids(ids, now);
         let mut members = Vec::new();
         for seat in &waiting {
             members.push(self.human_member(&seat.user, false));
@@ -816,9 +940,10 @@ impl World {
             game_id: None,
         };
         let game_id = GameId::new(identity::uuid());
+        let priors = self.priors_of(&lobby);
         for (seated, game) in self
             .tables
-            .open(&game_id, &lobby, self.now, &self.live, true)
+            .open(&game_id, &lobby, self.now, &self.live, true, &priors)
         {
             self.identity.set_game(&seated, Some(game));
         }
@@ -959,10 +1084,32 @@ impl World {
             guest: self.identity.guest_of(user),
             username: self.identity.username_of(user),
             active,
-            cooldown_until: None,
+            cooldown_until: self
+                .identity
+                .cooldown_until(user)
+                .map(skt_protocol::UnixMs::new),
             stats: self.identity.stats_of(user),
-            rating: None,
+            rating: self.identity.rating_of(user),
         }
+    }
+
+    fn priors_of(&self, lobby: &Lobby) -> HashMap<UserId, OpenPrior> {
+        let mut priors = HashMap::new();
+        for member in &lobby.members {
+            if let Member::Human { user, .. } = member {
+                let (skill, tier) = self.identity.open_skill(&user.id);
+                priors.insert(
+                    user.id.clone(),
+                    OpenPrior {
+                        mu: skill.mu,
+                        sigma: skill.sigma,
+                        games: skill.games,
+                        tier,
+                    },
+                );
+            }
+        }
+        priors
     }
 
     fn human_member(&self, user: &UserId, ready: bool) -> Member {

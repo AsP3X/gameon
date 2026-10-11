@@ -4,7 +4,9 @@ use std::collections::HashMap;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use sha2::{Digest, Sha256};
-use skt_protocol::{GameId, LobbyId, Stats, TableColor, UnixMs, User, UserId};
+use skt_protocol::{GameId, LobbyId, Rating, Stats, TableColor, UnixMs, User, UserId};
+
+use crate::rating::{self, PlayerSkill, StoredSkill};
 
 const COLORS: [TableColor; 8] = [
     TableColor::Sky,
@@ -22,6 +24,8 @@ struct Account {
     guest: bool,
     username: Option<String>,
     stats: Stats,
+    /// Ranked skill, once a row or a leave penalty exists. Absent means unrated.
+    skill: Option<StoredSkill>,
     lobby: Option<LobbyId>,
     game: Option<GameId>,
 }
@@ -37,6 +41,8 @@ pub struct AccountSnap {
     pub username: Option<String>,
     /// Counters stored with the account.
     pub stats: Stats,
+    /// Ranked skill, if a row or a penalty exists.
+    pub skill: Option<StoredSkill>,
 }
 
 /// Users and session hashes.
@@ -87,6 +93,7 @@ impl Identity {
                 guest: true,
                 username: None,
                 stats: empty_stats(),
+                skill: None,
                 lobby: None,
                 game: None,
             },
@@ -98,19 +105,27 @@ impl Identity {
     pub fn import(&mut self, token: &str, snap: AccountSnap) {
         let hash = hash_token(token);
         let id = snap.user.id.clone();
+        let now = unix_now().get();
         if let Some(account) = self.accounts.get_mut(&id) {
-            account.user = snap.user;
+            account.user.name = snap.user.name;
+            account.user.color = snap.user.color;
             account.guest = snap.guest;
             account.username = snap.username;
             account.stats = snap.stats;
+            account.skill = merge_skill(account.skill, snap.skill, now);
+            account.user.tier = tier_of(account.skill, now);
         } else {
+            let skill = snap.skill;
+            let mut user = snap.user;
+            user.tier = tier_of(skill, now);
             self.accounts.insert(
                 id.clone(),
                 Account {
-                    user: snap.user,
+                    user,
                     guest: snap.guest,
                     username: snap.username,
                     stats: snap.stats,
+                    skill,
                     lobby: None,
                     game: None,
                 },
@@ -167,15 +182,114 @@ impl Identity {
     }
 
     pub fn public_user(&self, id: &UserId) -> User {
-        self.accounts
-            .get(id)
-            .map(|account| account.user.clone())
-            .unwrap_or(User {
+        let now = unix_now().get();
+        self.accounts.get(id).map_or_else(
+            || User {
                 id: id.clone(),
                 name: "Sailor".to_owned(),
                 color: TableColor::Sky,
                 tier: None,
+            },
+            |account| {
+                let mut user = account.user.clone();
+                user.tier = tier_of(account.skill, now);
+                user
+            },
+        )
+    }
+
+    /// Wire rating, or nothing when the account has not finished a ranked game.
+    pub fn rating_of(&self, id: &UserId) -> Option<Rating> {
+        let stored = self.accounts.get(id)?.skill?;
+        let now = unix_now().get();
+        let shown = rating::shown(stored, now);
+        let season = rating::season_at(now).id;
+        if shown.games == 0 && stored.season_id == season {
+            return None;
+        }
+        Some(rating::to_rating(shown))
+    }
+
+    /// Ordinal used by the matchmaker. Unrated is 0, the prior.
+    pub fn ordinal_of(&self, id: &UserId) -> i32 {
+        let now = unix_now().get();
+        self.accounts.get(id).map_or(0, |account| {
+            account.skill.map_or(0, |stored| {
+                let shown = rating::shown(stored, now);
+                rating::ordinal(shown.mu, shown.sigma)
             })
+        })
+    }
+
+    /// Skill at the start of a game, after a season reset. Unrated uses the prior.
+    pub fn open_skill(&self, id: &UserId) -> (PlayerSkill, Option<String>) {
+        let now = unix_now().get();
+        let Some(stored) = self.accounts.get(id).and_then(|account| account.skill) else {
+            return (rating::prior(), None);
+        };
+        let shown = rating::shown(stored, now);
+        let tier = self.rating_of(id).map(|rating| rating.tier);
+        (shown, tier)
+    }
+
+    /// Unix milliseconds when ranked opens, if the penalty is still running.
+    pub fn cooldown_until(&self, id: &UserId) -> Option<i64> {
+        let stored = self.accounts.get(id)?.skill?;
+        rating::active_cooldown(stored.cooldown_until, unix_now().get())
+    }
+
+    /// Ranked leaves already taken this season.
+    pub fn leaves_of(&self, id: &UserId) -> u32 {
+        let now = unix_now().get();
+        self.accounts.get(id).map_or(0, |account| {
+            account
+                .skill
+                .map_or(0, |stored| rating::active_leaves(stored, now))
+        })
+    }
+
+    /// Remember the skill written for a finished ranked game.
+    pub fn set_rated(&mut self, id: &UserId, after: PlayerSkill, season: u32) {
+        let Some(account) = self.accounts.get_mut(id) else {
+            return;
+        };
+        let (leaves, leave_season, cooldown_until) =
+            account.skill.map_or((0, season, None), |skill| {
+                (skill.leaves, skill.leave_season, skill.cooldown_until)
+            });
+        account.skill = Some(StoredSkill {
+            season_id: season,
+            mu: after.mu,
+            sigma: after.sigma,
+            games: after.games,
+            leaves,
+            leave_season,
+            cooldown_until,
+        });
+        account.user.tier =
+            Some(rating::tier_name(rating::ordinal(after.mu, after.sigma)).to_owned());
+    }
+
+    /// Close ranked for this account. A first penalty does not invent a visible rating.
+    pub fn note_penalty(&mut self, id: &UserId, leaves: u32, season: u32, until: i64) {
+        let Some(account) = self.accounts.get_mut(id) else {
+            return;
+        };
+        let base = account.skill.unwrap_or(StoredSkill {
+            season_id: season,
+            mu: rating::prior().mu,
+            sigma: rating::prior().sigma,
+            games: 0,
+            leaves: 0,
+            leave_season: season,
+            cooldown_until: None,
+        });
+        account.skill = Some(StoredSkill {
+            leaves,
+            leave_season: season,
+            cooldown_until: Some(until),
+            ..base
+        });
     }
 
     pub fn set_lobby(&mut self, id: &UserId, lobby: Option<LobbyId>) {
@@ -201,6 +315,56 @@ impl Identity {
             .get(id)
             .and_then(|account| account.game.clone())
     }
+}
+
+fn tier_of(skill: Option<StoredSkill>, now: i64) -> Option<String> {
+    let stored = skill?;
+    let shown = rating::shown(stored, now);
+    let season = rating::season_at(now).id;
+    if shown.games == 0 && stored.season_id == season {
+        return None;
+    }
+    Some(rating::tier_name(rating::ordinal(shown.mu, shown.sigma)).to_owned())
+}
+
+fn merge_skill(
+    memory: Option<StoredSkill>,
+    db: Option<StoredSkill>,
+    now: i64,
+) -> Option<StoredSkill> {
+    let season = rating::season_at(now).id;
+    match (memory, db) {
+        (None, db) => db,
+        (memory, None) => memory,
+        (Some(memory), Some(db)) => Some(prefer_skill(memory, db, season, now)),
+    }
+}
+
+fn prefer_skill(memory: StoredSkill, db: StoredSkill, season: u32, now: i64) -> StoredSkill {
+    let mut chosen = match (memory.season_id == season, db.season_id == season) {
+        (true, false) => memory,
+        (true, true) if memory.games > db.games => memory,
+        _ => db,
+    };
+    let memory_leaves = if memory.leave_season == season {
+        memory.leaves
+    } else {
+        0
+    };
+    let db_leaves = if db.leave_season == season {
+        db.leaves
+    } else {
+        0
+    };
+    if memory_leaves.max(db_leaves) > 0 {
+        chosen.leaves = memory_leaves.max(db_leaves);
+        chosen.leave_season = season;
+    }
+    chosen.cooldown_until = rating::active_cooldown(memory.cooldown_until, now)
+        .max(rating::active_cooldown(db.cooldown_until, now))
+        .or(memory.cooldown_until)
+        .or(db.cooldown_until);
+    chosen
 }
 
 fn empty_stats() -> Stats {

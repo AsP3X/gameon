@@ -27,6 +27,7 @@ thiserror.workspace = true
 tokio = { workspace = true, features = ["sync", "time"] }
 tracing.workspace = true
 tracing-subscriber.workspace = true
+skillratings = "0.29.2"
 
 [dev-dependencies]
 futures-util = "0.3"
