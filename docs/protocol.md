@@ -332,15 +332,21 @@ is the opening view. The client draws the table from it and does not present its
 accepted step is `rev` 1.
 
 `game.ready` during `roundEnd` is `ok` and then a `game.update` whose `events` are empty and whose
-`table.ready` shows the new flags. `advance` to the next round is a later step of its own, when
-every connected human is ready or when the round-end deadline fires.
+`table.ready` shows the new flags. `table.ready` is false for every bot seat and for a human who
+has not sent `game.ready`. `advance` to the next round is a later step of its own, when every human
+seat whose status is `online` or `away` is ready, or when the round-end deadline fires. `offline`
+and `bot` are not waited for.
+
+A missed deadline's `timedOut` event is in the same `game.update` as the move the server played
+for that seat, after the engine's events.
 
 A socket that arrives or drops during a game is a step of its own. `rev` increases by one,
 `events` is one `seatStatus`, and every seated socket is sent that `game.update`. The returning
 socket is sent it after `welcome`. `welcome.game.update`, when `welcome.game` is present, is a
 snapshot at the current `rev` with `events: []`. It is not a new step. A drop sets the status to
-`offline` at once. The 60s grace, and the change to `bot` when it runs out, are later steps. Two
-missed deadlines in a row set `away` as their own step.
+`offline` at once. During the 60s grace the seat is still that player's and the status stays
+`offline`. The change to `bot` when the grace runs out is a later step. Two missed deadlines in a
+row set `away` as their own step. `away` still has a socket. `offline` does not.
 
 At `game.start`, a seat whose colour is already taken by an earlier seat gets the next free
 `TableColor`.
@@ -348,7 +354,9 @@ At `game.start`, a seat whose colour is already taken by an earlier seat gets th
 Other pushes:
 
 - `{ t: 'game.emote', seat, emote }`
-- `{ t: 'game.over', gameId, result: GameResult }`, sent after the final `game.update`.
+- `{ t: 'game.over', gameId, seat, result: GameResult }`, sent after the final `game.update`.
+  `seat` is the receiver's seat. The server always sends it. A message that omits it is still
+  readable.
 
 ```ts
 type GameResult = {
@@ -374,9 +382,12 @@ The server drives every transition the legacy `LocalTable` drove with timers.
 | Bot seats | 0.8–1.5 s per move | So people can follow |
 | Disconnect grace | 60 s | Then the seat's status becomes `bot` |
 
-`pace` scales bid, play and ability: relaxed ×2, fast ×0.5. A missed deadline plays the bot's move
-for that turn and emits `timedOut`. Two in a row set the seat to `away`; an away seat is played
-after 1.5 seconds and returns to `online` on the player's next accepted intent.
+`pace` scales bid, play and ability: relaxed ×2, fast ×0.5. Those lengths, scaled by the game's
+`pace`, are the whole of every deadline clock. `Deadline` has no length of its own. A client that
+meets a clock while it is already running uses that scaled length, or the time remaining when that
+is longer. A missed deadline plays the bot's move for that turn and emits `timedOut`. Two in a row
+set the seat to `away`; an away seat is played after 1.5 seconds and returns to `online` on the
+player's next accepted intent. Round end waits for `online` and `away` humans, as §5.5 says.
 
 ## 6. What a seat never receives
 

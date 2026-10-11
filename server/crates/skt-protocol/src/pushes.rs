@@ -233,6 +233,10 @@ pub struct GameOver {
     pub tag: GameOverTag,
     /// Game id.
     pub game_id: GameId,
+    /// The receiver's seat. The server always sends it. An older message may omit it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub seat: Option<Seat>,
     /// Standings for this seat.
     pub result: GameResult,
 }

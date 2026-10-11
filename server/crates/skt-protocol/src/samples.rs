@@ -506,6 +506,7 @@ fn pushes(dir: &Path, write: bool) -> Result<(), ExportError> {
         &GameOver {
             tag: GameOverTag::Value,
             game_id: GameId::new(GAME),
+            seat: Some(Seat::from_index(0)),
             result: game_result(),
         },
     )?;
