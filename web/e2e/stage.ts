@@ -41,7 +41,7 @@ async function healthy(base: string): Promise<boolean> {
   }
 }
 
-function freePort(): Promise<number> {
+export function freePort(): Promise<number> {
   return new Promise((resolve, reject) => {
     const probe = createServer();
     probe.once('error', reject);
@@ -84,7 +84,7 @@ async function startDevServer(api: string): Promise<{ url: string; stop(): void 
 }
 
 /** A Chromium to drive: the Chrome or Edge on this machine, or the one Playwright installed. */
-async function launch(): Promise<Browser> {
+export async function launch(): Promise<Browser> {
   const headless = process.env.SKT_E2E_HEADED !== '1';
   const failures: string[] = [];
   for (const channel of ['chrome', 'msedge', undefined]) {

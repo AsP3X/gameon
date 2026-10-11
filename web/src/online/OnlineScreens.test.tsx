@@ -359,6 +359,20 @@ describe('playing online', () => {
     });
   });
 
+  it('shows the way to the offline modes when the server cannot be reached', async () => {
+    server.drop(true);
+    await renderApp();
+    await click('[data-act="online"]');
+    await settle();
+    expect($('#online .notice p:last-of-type')?.textContent).toBe(
+      'Bots, one phone for the crew and the scoresheet need no connection.',
+    );
+    await press('Play offline');
+    expect($('#online')).toBeNull();
+    expect($('#app .home')).not.toBeNull();
+    expect(ui.screen).toBe('home');
+  });
+
   it('says when the server cannot be reached, keeps trying, and recovers', async () => {
     server.drop(true);
     await renderApp();
@@ -366,6 +380,7 @@ describe('playing online', () => {
     await settle();
     expect(texts('#online .pill')).toEqual(['Offline']);
     expect($('#online .notice b')?.textContent).toBe("Can't reach the tavern");
+    expect(texts('#online .notice .btn')).toEqual(['Try now', 'Play offline']);
     expect(button('Create a table').disabled).toBe(true);
     server.restore();
     await press('Try now');

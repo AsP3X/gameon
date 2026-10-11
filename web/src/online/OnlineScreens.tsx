@@ -53,7 +53,7 @@ function noticeText(notice: Notice): { title: string; text: string } {
 }
 
 /** What stands between the player and the server, if anything. */
-function LinkNotice({ status, online }: { status: LinkStatus; online: Online }) {
+function LinkNotice({ status, online, onOffline }: { status: LinkStatus; online: Online; onOffline: () => void }) {
   const again = (): void => {
     Sound.play('tap');
     online.retry();
@@ -74,6 +74,17 @@ function LinkNotice({ status, online }: { status: LinkStatus; online: Online }) 
           <p>Check your connection. Trying again on its own.</p>
           <button type="button" className="btn ghost" onClick={again}>
             Try now
+          </button>
+          <p>Bots, one phone for the crew and the scoresheet need no connection.</p>
+          <button
+            type="button"
+            className="btn ghost"
+            onClick={() => {
+              Sound.play('back');
+              onOffline();
+            }}
+          >
+            Play offline
           </button>
         </div>
       );
@@ -147,7 +158,7 @@ function Hub(props: { online: Online; state: OnlineState; onExit: () => void; on
             Profile
           </button>
         </div>
-        <LinkNotice status={state.status} online={online} />
+        <LinkNotice status={state.status} online={online} onOffline={props.onExit} />
         {notice && (
           <div className="notice gold" role="status">
             <b>{notice.title}</b>
