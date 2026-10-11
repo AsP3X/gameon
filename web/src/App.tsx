@@ -1,14 +1,15 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
-import { appTransport, BUILD } from './net/connect';
+import { Api } from './net/api';
+import type { Backend } from './net/api';
+import { appBackend, BUILD } from './net/connect';
 import { Online } from './net/online';
 import { SocketClient } from './net/socket';
-import type { Transport } from './net/socket';
 import { OnlineScreens } from './online/OnlineScreens';
 import { closeOnlineTable, mountTavern, openOnlineTable } from './tableview';
 
 export interface AppProps {
-  /** How the online screens reach a server. Tests hand in a mock server's. */
-  transport?: Transport;
+  /** How the online screens reach a server. Tests hand in a mock server's browser. */
+  backend?: Backend;
 }
 
 /**
@@ -19,10 +20,12 @@ export interface AppProps {
  * table live there. "Play online" hands over to the online screens, which are React's; an online
  * game is played back at the renderer's table, with the server on the other side of it.
  */
-export function App({ transport = appTransport }: AppProps) {
+export function App({ backend = appBackend }: AppProps) {
   const app = useRef<HTMLDivElement>(null);
   const fx = useRef<HTMLCanvasElement>(null);
-  const [online] = useState(() => new Online(new SocketClient({ transport, build: BUILD })));
+  const [online] = useState(
+    () => new Online(new SocketClient({ transport: backend.transport, build: BUILD }), new Api(backend.rest)),
+  );
   const state = useSyncExternalStore(online.subscribe, online.getState);
   const [inOnline, setInOnline] = useState(false);
   const table = state.table;

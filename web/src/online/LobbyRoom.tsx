@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { Online, Outcome } from '../net/online';
 import type { LinkStatus } from '../net/socket';
-import type { Lobby, Me, Member } from '../protocol/generated';
+import type { Lobby, Me, Member, UserId } from '../protocol/generated';
 import { Sound } from '../sound/sound';
 import { cssColor } from '../tableview/dom';
 import { failureText } from './copy';
@@ -31,10 +31,12 @@ export interface LobbyRoomProps {
   me: Me;
   status: LinkStatus;
   onRules: () => void;
+  /** A human at the table was tapped: show who they are. */
+  onPlayer: (id: UserId) => void;
 }
 
 /** The table before the game: who is at it, who is ready, the rules, and the host's start. */
-export function LobbyRoom({ online, lobby, me, status, onRules }: LobbyRoomProps) {
+export function LobbyRoom({ online, lobby, me, status, onRules, onPlayer }: LobbyRoomProps) {
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   useEffect(() => {
@@ -124,10 +126,24 @@ export function LobbyRoom({ online, lobby, me, status, onRules }: LobbyRoomProps
                   >
                     {initialOf(nameOf(m))}
                   </span>
-                  <span className="grow">
-                    <b>{nameOf(m)}</b>
-                    <small>{role}</small>
-                  </span>
+                  {m.kind === 'human' ? (
+                    <button
+                      type="button"
+                      className="member-link grow"
+                      onClick={() => {
+                        Sound.play('tap');
+                        onPlayer(m.user.id);
+                      }}
+                    >
+                      <b>{m.user.name}</b>
+                      <small>{role}</small>
+                    </button>
+                  ) : (
+                    <span className="grow">
+                      <b>{m.name}</b>
+                      <small>{role}</small>
+                    </span>
+                  )}
                   {m.kind === 'human' ? (
                     <span className={`pill ${m.ready ? 'green' : 'soft'}`}>{m.ready ? 'Ready' : 'Not ready'}</span>
                   ) : host && open ? (

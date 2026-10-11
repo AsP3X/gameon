@@ -21,8 +21,8 @@ Node 22.18+, 24.11+ or 26+. Vite+ warns on other versions.
 | -------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `src/game/`                            | The reference engine: rules, reducer, bots. Runs the offline modes. Online, the server's engine is the authority and this one is never asked.                                                |
 | `src/table/`                           | `Table`, the seam between the renderer and whoever runs the game: its local seats, a seat's view, an asynchronous `dispatch`. `LocalTable` is the offline one, `RemoteTable` the online one. |
-| `src/net/`                             | The socket client (`socket.ts`), the online state the screens read (`online.ts`), the transports, and the mock server (`mock/`). See [Online](#online).                                      |
-| `src/online/`                          | The online screens, in React: hub, new table, join by code, the table's lobby.                                                                                                               |
+| `src/net/`                             | The socket client (`socket.ts`), the REST calls (`api.ts`), the online state the screens read (`online.ts`), the real backend, and the mock server (`mock/`). See [Online](#online).         |
+| `src/online/`                          | The online screens, in React: hub, profile, sign-up and sign-in, public tables, the quick-play queue, new table, join by code, the table's lobby.                                            |
 | `src/tableview/`                       | The table renderer, lifted from the legacy build. It owns `#app` and rebuilds it from HTML strings; React never renders inside it. `mountTavern()` is its only entry.                        |
 | `src/sound/`                           | Sound. Every effect is synthesised with Web Audio; the played card and the button press also have recorded takes in `samples/`.                                                              |
 | `src/styles/`                          | `tokens.css` (the custom properties), `tavern.css` (the renderer's markup) and `online.css` (what the online screens add).                                                                   |
@@ -41,9 +41,15 @@ Node 22.18+, 24.11+ or 26+. Vite+ warns on other versions.
   socket is answered `OFFLINE` and forgotten: nothing is sent a second time, and the `welcome` of the
   next socket replaces what was known. `superseded` and `PROTOCOL_UNSUPPORTED` end the connection
   without a retry. Listeners get every reply and push synchronously, in the order of the frames.
+- **`Api`** (`src/net/api.ts`) is REST under `/api/v1`: register, login, logout, the profile, another
+  player's profile, the public lobby list and the server config. Every call ends in a result with
+  the server's error code, or `OFFLINE` when there was no answer. Nothing keeps a password or a
+  token after the call that carried it.
 - **`Online`** (`src/net/online.ts`) is what the page knows about its session: the link, `me`, the
-  lobby, the open table, and a notice when something ended while the player was not looking. The
-  screens read it with `useSyncExternalStore`. Its lobby intents only ask.
+  lobby, the queue, the open table, and a notice when something ended while the player was not
+  looking. The screens read it with `useSyncExternalStore`. Its intents only ask. Registering and
+  saving the profile keep the session and take `Me` from the answer; a login connects again with the
+  new session, and a logout hangs up.
 - **`RemoteTable`** (`src/table/remoteTable.ts`) implements `Table` for the one seat `game.start`
   calls `me`. `dispatch` sends `game.bid`, `game.play` or `game.ability` with the round and trick on
   screen and no seat; `advance` is `game.ready`. It tells the renderer which update gives the input
@@ -52,11 +58,13 @@ Node 22.18+, 24.11+ or 26+. Vite+ warns on other versions.
 - **The mock server** (`src/net/mock/server.ts`) speaks the same messages inside the page, for the
   tests and for `?mock` in a development build (it is not in the production bundle). It runs
   accepted play through the reference engine, one step at a time, and sends each seat its own view.
-  It has private lobbies, bot seats and the deadlines of §5.6. It has no accounts, no queue, no
-  emotes, no away detection and no bot takeover after the grace period, and every page has a mock
-  of its own: two tabs cannot meet in one lobby.
-- The real transport (`src/net/transport.ts`) asks `POST /api/v1/auth/guest` for a session once and
-  opens `/api/v1/ws` on the same origin.
+  It has private and public lobbies, bot seats, the deadlines of §5.6, accounts (register, login,
+  logout, profile), the public lobby list, the casual queue with bot fill, and stats after a game.
+  Its accounts live in the page's memory and are gone on reload. It has no ranked play, no emotes,
+  no away detection and no bot takeover after the grace period, and every page has a mock of its
+  own: two tabs cannot meet in one lobby or one queue.
+- The real backend (`src/net/transport.ts`) asks `POST /api/v1/auth/guest` for a session once,
+  opens `/api/v1/ws` on the same origin, and sends REST with the same cookie.
 
 What is not built yet (plan items C7 and C8): the deadline ring, presence badges, the waiting state
 after "ready for the next round", a reconnect overlay on the table, and a browser test against the

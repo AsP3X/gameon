@@ -3,8 +3,11 @@
    screens' test; here the order is exact. */
 import { readFileSync } from 'node:fs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test';
-import type { Lobby, WelcomeGame } from '../protocol/generated';
+import type { Lobby, QueueStatus, WelcomeGame } from '../protocol/generated';
+import { Api } from './api';
+import type { Rest, RestResponse } from './api';
 import { Online } from './online';
+import type { OnlineState } from './online';
 import { SocketClient } from './socket';
 import type { Wire } from './socket';
 
@@ -13,6 +16,26 @@ const read = <T>(name: string): T =>
 const game = read<WelcomeGame>('welcome-game');
 const lobby = read<Lobby>('lobby');
 const ME = { user: lobby.members[0].kind === 'human' ? lobby.members[0].user : null };
+
+/** These tests are about the socket: every REST call finds no server. */
+const noRest = (): Promise<never> => Promise.reject(new Error('These tests have no REST'));
+/** What REST answers, by "METHOD /path". A path without an answer finds no server. */
+let answers: Record<string, RestResponse>;
+let asked: string[];
+const rest: Rest = (method, path) => {
+  const key = `${method} ${path}`;
+  asked.push(key);
+  return answers[key] ? Promise.resolve(answers[key]) : noRest();
+};
+const NOTHING: OnlineState = {
+  status: 'idle',
+  me: null,
+  lobby: null,
+  queue: null,
+  table: null,
+  notice: null,
+  config: null,
+};
 
 type TestWire = Wire & { sent: { t: string; id: number; [key: string]: unknown }[]; say(frame: object): void };
 let wires: TestWire[];
@@ -25,7 +48,7 @@ const wire = (): TestWire => {
   if (!w) throw new Error('No connection was opened');
   return w;
 };
-function welcome(snapshot: { lobby?: Lobby | null; game?: WelcomeGame | null } = {}): void {
+function welcome(snapshot: { lobby?: Lobby | null; queue?: QueueStatus | null; game?: WelcomeGame | null } = {}): void {
   const w = wire();
   w.say({ t: 'ok', re: w.sent[0].id });
   w.say({ t: 'welcome', me: ME, serverTime: Date.now(), lobby: null, queue: null, game: null, ...snapshot });
@@ -37,6 +60,8 @@ beforeEach(async () => {
   vi.useFakeTimers();
   wires = [];
   changes = 0;
+  answers = {};
+  asked = [];
   const transport = (): Promise<Wire> => {
     const sent: TestWire['sent'] = [];
     const w: TestWire = {
@@ -50,7 +75,7 @@ beforeEach(async () => {
     wires.push(w);
     return Promise.resolve(w);
   };
-  online = new Online(new SocketClient({ transport, build: 'test', random: () => 0.5 }));
+  online = new Online(new SocketClient({ transport, build: 'test', random: () => 0.5 }), new Api(rest));
   online.subscribe(() => changes++);
   online.open();
   await tick();
@@ -62,7 +87,7 @@ afterEach(() => {
 
 describe('Online', () => {
   it('knows nothing until the first welcome, and then exactly what it said', () => {
-    expect(online.getState()).toEqual({ status: 'connecting', me: null, lobby: null, table: null, notice: null });
+    expect(online.getState()).toEqual({ ...NOTHING, status: 'connecting' });
     welcome({ lobby });
     expect(online.getState()).toMatchObject({ status: 'online', me: ME, lobby, table: null });
   });
@@ -71,7 +96,6 @@ describe('Online', () => {
     welcome();
     const before = online.getState(),
       n = changes;
-    wire().say({ t: 'queue.status', queue: { mode: 'casual', since: 0, found: 1, needed: 4 } });
     wire().say({ t: 'game.emote', seat: 1, emote: 'example' });
     expect(online.getState()).toBe(before);
     expect(changes).toBe(n);
@@ -236,6 +260,153 @@ describe('Online', () => {
   it('forgets everything on close()', () => {
     welcome({ lobby, game });
     online.close();
-    expect(online.getState()).toEqual({ status: 'idle', me: null, lobby: null, table: null, notice: null });
+    expect(online.getState()).toEqual({ ...NOTHING, status: 'idle' });
+  });
+  it('takes the queue from the reply to queue.join and from queue.status, and drops it on leave', async () => {
+    welcome();
+    const status = { mode: 'casual', since: 5, found: 1, needed: 4 };
+    const joined = online.joinQueue();
+    expect(wire().sent.at(-1)).toMatchObject({ t: 'queue.join', mode: 'casual' });
+    ok({ queue: status });
+    expect(await joined).toEqual({ ok: true });
+    expect(online.getState().queue).toEqual(status);
+    wire().say({ t: 'queue.status', queue: { ...status, found: 3 } });
+    expect(online.getState().queue).toEqual({ ...status, found: 3 });
+
+    const left = online.leaveQueue();
+    expect(wire().sent.at(-1)).toMatchObject({ t: 'queue.leave' });
+    ok();
+    expect(await left).toEqual({ ok: true });
+    expect(online.getState().queue).toBeNull();
+  });
+
+  it('keeps no queue the server refused, and says why', async () => {
+    welcome();
+    const joined = online.joinQueue();
+    wire().say({
+      t: 'err',
+      re: wire().sent.at(-1)?.id,
+      code: 'ALREADY_SEATED',
+      message: 'You are already at a table.',
+    });
+    expect(await joined).toEqual({ ok: false, code: 'ALREADY_SEATED', message: 'You are already at a table.' });
+    expect(online.getState().queue).toBeNull();
+  });
+
+  it('takes the queue from a welcome, and ends it when the table the queue made opens', () => {
+    const status: QueueStatus = { mode: 'casual', since: 5, found: 2, needed: 4 };
+    welcome({ queue: status });
+    expect(online.getState()).toMatchObject({ queue: status, table: null });
+    wire().say(game.start);
+    expect(online.getState().queue).toEqual(status); // not before the opening view is in
+    wire().say(game.update);
+    expect(online.getState().queue).toBeNull();
+    expect(online.getState().table?.gameId).toBe(game.start.gameId);
+  });
+
+  it('asks a public table for a seat by its id', () => {
+    welcome();
+    void online.joinPublicLobby(lobby.id);
+    expect(wire().sent.at(-1)).toMatchObject({ t: 'lobby.join', lobbyId: lobby.id });
+    expect(wire().sent.at(-1)).not.toHaveProperty('code');
+  });
+
+  describe('the account', () => {
+    const me = { ...ME, guest: true, username: null };
+    const anne = { ...ME, guest: false, username: 'anne' };
+    const credentials = { username: 'anne', password: 'secret' };
+
+    it('reads the server config once when it opens', async () => {
+      expect(asked).toEqual(['GET /config']);
+      online.close();
+      answers['GET /config'] = { status: 200, body: { protocol: 1, standard: lobby.settings } };
+      online.open();
+      await tick();
+      expect(online.getState().config).toMatchObject({ standard: lobby.settings });
+      online.close();
+      online.open();
+      await tick();
+      expect(asked).toEqual(['GET /config', 'GET /config']); // it has it now, and keeps it
+      expect(online.getState().config).not.toBeNull();
+    });
+
+    it('takes who the player is from the answer to register, on the socket it already has', async () => {
+      welcome();
+      answers['POST /auth/register'] = { status: 200, body: anne };
+      expect(await online.register(credentials)).toEqual({ ok: true });
+      expect(online.getState()).toMatchObject({ status: 'online', me: anne });
+      expect(wires).toHaveLength(1);
+    });
+
+    it('stays who it was when registering is refused', async () => {
+      welcome();
+      wire().say({ t: 'lobby.state', lobby });
+      answers['POST /auth/register'] = {
+        status: 409,
+        body: { error: { code: 'USERNAME_TAKEN', message: 'Taken.' } },
+      };
+      expect(await online.register(credentials)).toEqual({ ok: false, code: 'USERNAME_TAKEN', message: 'Taken.' });
+      expect(online.getState()).toMatchObject({ status: 'online', me: ME, lobby });
+    });
+
+    it('connects again after a login, as the account, and knows nothing of the old session', async () => {
+      welcome({ lobby });
+      answers['POST /auth/login'] = { status: 200, body: anne };
+      expect(await online.login(credentials)).toEqual({ ok: true });
+      expect(online.getState()).toMatchObject({ status: 'connecting', me: anne, lobby: null, table: null });
+      await tick();
+      expect(wires).toHaveLength(2);
+      welcome();
+      expect(online.getState()).toMatchObject({ status: 'online', lobby: null });
+    });
+
+    it('keeps the connection when a login is refused', async () => {
+      welcome({ lobby });
+      answers['POST /auth/login'] = {
+        status: 401,
+        body: { error: { code: 'INVALID_CREDENTIALS', message: 'Wrong.' } },
+      };
+      expect(await online.login(credentials)).toMatchObject({ ok: false, code: 'INVALID_CREDENTIALS' });
+      expect(online.getState()).toMatchObject({ status: 'online', lobby });
+      expect(wires).toHaveLength(1);
+    });
+
+    it('hangs up and forgets everything after a logout, also when the session was already gone', async () => {
+      welcome({ lobby });
+      answers['POST /auth/logout'] = { status: 204, body: null };
+      expect(await online.logout()).toEqual({ ok: true });
+      expect(online.getState()).toEqual({ ...NOTHING, status: 'idle' });
+
+      answers['POST /auth/logout'] = { status: 401, body: { error: { code: 'UNAUTHENTICATED', message: 'No.' } } };
+      expect(await online.logout()).toEqual({ ok: true });
+    });
+
+    it('stays connected when the logout did not reach the server', async () => {
+      welcome({ lobby });
+      expect(await online.logout()).toMatchObject({ ok: false, code: 'OFFLINE' });
+      expect(online.getState()).toMatchObject({ status: 'online', lobby });
+    });
+
+    it('takes the saved profile from the answer to the patch', async () => {
+      welcome();
+      const renamed = { ...me, user: { ...me.user, name: 'Calico' } };
+      answers['PATCH /me'] = { status: 200, body: renamed };
+      expect(await online.saveProfile({ name: 'Calico' })).toEqual({ ok: true });
+      expect(online.getState().me).toEqual(renamed);
+    });
+
+    it('asks who the player is again when a game ends, because the game changed their record', async () => {
+      welcome();
+      const played = { ...me, stats: { games: 1, wins: 1, bidsMade: 3, bidsTotal: 5, bestScore: 120 } };
+      answers['GET /me'] = { status: 200, body: played };
+      wire().say({
+        t: 'game.over',
+        gameId: game.start.gameId,
+        result: { totals: [0, 0], places: [1, 1], forfeited: [], rating: null, lobbyId: null },
+      });
+      await tick();
+      expect(asked).toContain('GET /me');
+      expect(online.getState().me).toEqual(played);
+    });
   });
 });

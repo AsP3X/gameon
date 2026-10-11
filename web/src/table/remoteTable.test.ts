@@ -4,6 +4,7 @@
    whole table is alive on the other side. docs/protocol.md §5.2 and §5.5. */
 import { readFileSync } from 'node:fs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test';
+import { Api } from '../net/api';
 import { MockServer } from '../net/mock/server';
 import { connectRaw, framesOf } from '../net/mock/raw';
 import type { RawClient } from '../net/mock/raw';
@@ -257,7 +258,7 @@ describe('RemoteTable at a table on the mock server', () => {
       return wire;
     };
     client = new SocketClient({ transport, build: 'test', random: () => 0.5 });
-    online = new Online(client);
+    online = new Online(client, new Api(() => Promise.reject(new Error('These tests have no REST'))));
   });
   afterEach(() => online.dispose());
 
