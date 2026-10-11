@@ -13,6 +13,7 @@ import {
   gameView,
   homeView,
   lastSheet,
+  leaveSheet,
   peekSheet,
   resultsSheet,
   rulesSheet,
@@ -35,6 +36,7 @@ const SHEETS: Record<Sheet, () => string> = {
   rules: rulesSheet,
   last: lastSheet,
   peek: peekSheet,
+  leave: leaveSheet,
   trkResults: trkResultsSheet,
   trkBoard: () => boardSheet(trkView(), true),
 };

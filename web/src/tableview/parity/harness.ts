@@ -216,7 +216,11 @@ async function openPort(): Promise<Stage> {
    says, not on how it is drawn: how many bids it offers, and what its button reads and whether it
    can be pressed. Everything around it is still compared as markup. */
 function pageHtml(app: HTMLElement): string {
-  const html = app.innerHTML,
+  // The port's home screen offers "Play online" next to "Play", in a row the legacy page does not
+  // have. What is compared is the button both builds share.
+  const row = app.querySelector('.play-row'),
+    shared = row?.querySelector('[data-act="setup"]');
+  const html = row && shared ? app.innerHTML.replace(row.outerHTML, shared.outerHTML) : app.innerHTML,
     actions = app.querySelector('.actions'),
     send = actions?.querySelector<HTMLButtonElement>('[data-act="bid"]');
   if (!actions || !send) return html;

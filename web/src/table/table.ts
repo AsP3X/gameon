@@ -8,14 +8,29 @@ import type { EngineEvent, ErrorCode, Seat } from '../protocol/generated';
 /** The redacted view of one seat at the moment an update happened. */
 export type GetView = (seat: Seat) => TableView;
 
+/**
+ * What a table says about an update when "the answer to the action just sent" is not the whole story.
+ * An offline table never passes one: every update there is the answer.
+ */
+export interface UpdateInfo {
+  /**
+   * Whether input locked by an action sent from here is given back once this update is on screen.
+   * `false` is somebody else's step arriving while that action is still unanswered.
+   */
+  unlock: boolean;
+  /** The table is over for this device after this update: the seat was left, and nothing more will come. */
+  last: boolean;
+}
+
 /** Called once per accepted action with what happened and the views right after it. */
-export type TableListener = (events: EngineEvent[], getView: GetView) => void;
+export type TableListener = (events: EngineEvent[], getView: GetView, info?: UpdateInfo) => void;
 
 /**
  * Why an action was not taken. A server answers with one of its error codes; `REJECTED` is the
- * offline engine saying no, and `TIMEOUT` is no answer at all (see dispatchWithin).
+ * offline engine saying no, `OFFLINE` is a table that cannot be reached right now, and `TIMEOUT` is
+ * no answer at all (see dispatchWithin).
  */
-export type DispatchCode = ErrorCode | 'REJECTED' | 'TIMEOUT';
+export type DispatchCode = ErrorCode | 'REJECTED' | 'OFFLINE' | 'TIMEOUT';
 
 /**
  * The table's answer to one action. `ok` only says the action was accepted: what it did arrives

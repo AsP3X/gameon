@@ -64,7 +64,7 @@ export function homeView(): string {
     <div class="home-actions stagger">
       ${statsView()}
       ${live ? swipeContinue(saved) : ''}
-      <button class="btn ${live ? 'ghost' : ''}" data-act="setup">${live ? 'New game' : 'Play'}</button>
+      <div class="play-row"><button class="btn ${live ? 'ghost' : ''}" data-act="setup">${live ? 'New game' : 'Play'}</button><button class="btn blue" data-act="online">Play online</button></div>
       ${trackerEntry()}
     </div>
     ${ui.undo ? `<div class="undo-bar" role="status"><span>${ui.undo.kind === 'track' ? 'Scoresheet deleted' : 'Game cancelled'}</span><button data-act="undoCancel">Undo</button></div>` : ''}
@@ -416,7 +416,7 @@ export function gameView(): string {
         .join('');
   const canPeekLast = v.lastTrick && (v.phase === 'playing' || v.phase === 'ability');
   return `<div class="game">
-    <div class="g-top"><button class="icon-btn" data-act="home" aria-label="Leave table (game is saved)">${ICON.x}</button>
+    <div class="g-top"><button class="icon-btn" data-act="home" aria-label="${session.online ? 'Leave table' : 'Leave table (game is saved)'}">${ICON.x}</button>
       <div class="bar grow" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(pct)}"><i style="width:${from}%" data-to="${pct}"></i></div>
       <button class="icon-btn" data-act="board" aria-label="Scoreboard">${ICON.table}</button></div>
     <div class="g-info"><span class="pill blue">Round ${v.round + 1} of ${v.rounds}</span><span class="pill soft">${v.cards} ${v.cards === 1 ? 'card' : 'cards'}</span>
@@ -532,6 +532,15 @@ export function lastSheet(): string {
     <div class="row"><h2 class="grow">Last trick</h2><button class="icon-btn" data-act="closeSheet" aria-label="Close">${ICON.x}</button></div>
     <div class="cardrow">${lt.plays.map((p, k) => `<div class="slot"><div class="tc ${k === r.winIndex ? 'win' : ''}">${cardHTML(v.deck[p.card], { as: p.as, ...abil })}</div>${avatar(v.seats[p.seat], 'xs')}</div>`).join('')}</div>
     <p style="text-align:center">${r.winner == null ? 'Nobody won it.' : `${who(v, r.winner)} won it.`}</p>
+  </div></div>`;
+}
+/** Online only: leaving a running game gives the seat to a bot, so it is asked first. */
+export function leaveSheet(): string {
+  return `<div class="sheet-scrim" data-act="closeSheet"></div><div class="sheet" role="dialog" aria-label="Leave the table"><div class="in">
+    <h2>Leave the table?</h2>
+    <p>A bot takes your seat for the rest of the game. You can't come back to it.</p>
+    <button class="btn red" data-act="leaveTable">Leave table</button>
+    <button class="btn ghost" data-act="closeSheet">Keep playing</button>
   </div></div>`;
 }
 export function peekSheet(): string {
@@ -677,7 +686,7 @@ export function endView(): string {
     ${rows ? `<ol class="standings ${rest.length > 4 ? 'two' : ''}">${rows}</ol>` : ''}
     ${aw ? `<div class="awards">${aw}</div>` : ''}
     </div>
-    <div class="end-actions"><button class="btn" data-act="again">Play again</button><button class="btn ghost" data-act="home">Home</button></div>
+    <div class="end-actions"><button class="btn" data-act="again">Play again</button>${session.online ? '' : '<button class="btn ghost" data-act="home">Home</button>'}</div>
     <p class="skip-hint" aria-hidden="true">Tap to skip</p>
   </div>`;
 }

@@ -8,7 +8,7 @@ import { Rules } from '../game';
 import type { GameState, ScoreConfig, ScoreRecord, SeatConfig, TableView } from '../game';
 import type { BotLevel, CardId, Format, RoundRecord, Scoring, Seat } from '../protocol/generated';
 import { Sound } from '../sound/sound';
-import type { GetView, Table } from '../table/table';
+import type { DispatchResult, GetView, Table } from '../table/table';
 import { Store } from './store';
 
 export const COLORS = ['#1cb0f6', '#ff9600', '#ce82ff', '#ff4b4b', '#58cc02', '#e5a400', '#2b70c9', '#ff5fbf'];
@@ -139,7 +139,7 @@ export interface ScoreView {
 }
 
 export type Screen = 'home' | 'setup' | 'game' | 'end' | 'trackSetup' | 'track';
-export type Sheet = 'sound' | 'results' | 'board' | 'rules' | 'last' | 'peek' | 'trkResults' | 'trkBoard';
+export type Sheet = 'sound' | 'results' | 'board' | 'rules' | 'last' | 'peek' | 'leave' | 'trkResults' | 'trkBoard';
 
 /** What a swipe row deleted, kept for five seconds so it can be undone. */
 export type Undo = { kind: 'track'; data: TrackerState | null } | { kind: 'game'; data: GameState | null };
@@ -210,18 +210,35 @@ export const patchUi = (patch: Partial<Ui>): void => {
   Object.assign(ui, patch);
 };
 
+/**
+ * What the renderer asks of whoever put an online table on screen. Offline there is nobody to ask:
+ * leaving a table there is closing a screen.
+ */
+export interface OnlineHooks {
+  /** Give the seat up for good. An accepted leave is followed by the table's last update. */
+  leave(): Promise<DispatchResult>;
+  /** The table is done with on this device: take it off the screen and go back to the online screens. */
+  exit(): void;
+}
+
 export interface Session {
-  /** LocalTable (or, later, a network table) */
+  /** LocalTable offline, RemoteTable online */
   table: Table | null;
+  /** set while the open table is an online one */
+  online: OnlineHooks | null;
   /** the view currently on screen; after a scored game with real cards, that scoresheet's totals */
   view: TableView | ScoreView | null;
   /** the scoresheet of a game played with real cards */
   trk: TrackerState | null;
 }
-export const session: Session = { table: null, view: null, trk: null };
+export const session: Session = { table: null, online: null, view: null, trk: null };
 
-/** Where the renderer draws: set by mountTavern, cleared when it unmounts. */
-export const stage: { app: HTMLElement | null; fx: HTMLCanvasElement | null } = { app: null, fx: null };
+/** Where the renderer draws, and how it hands over to the online screens: set by mountTavern, cleared when it unmounts. */
+export const stage: { app: HTMLElement | null; fx: HTMLCanvasElement | null; online: (() => void) | null } = {
+  app: null,
+  fx: null,
+  online: null,
+};
 
 type Timer = ReturnType<typeof setTimeout>;
 /** Timeouts that outlive the function that set them. */
@@ -250,6 +267,7 @@ export function loadState(): void {
   refill(stats, defaultStats(), Store.get<Partial<Stats>>(Store.STATS) || {});
   refill(ui, initialUi());
   session.table = null;
+  session.online = null;
   session.view = null;
   session.trk = null;
 }
