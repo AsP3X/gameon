@@ -6,14 +6,14 @@
    instead and comes back with it, which makes a reload in development what it is against a real
    server: the sockets are gone, the table is not. */
 import { Store } from '../tableview/store';
+import type { Backend } from './api';
 import type { OnlineMemory, Remembered } from './online';
-import type { Transport } from './socket';
-import { browserTransport } from './transport';
+import { browserBackend } from './transport';
 
 const MOCK_KEY = 'skullking-tavern.mock.v1';
 const MEMORY_KEY = 'skullking-tavern.online.v1';
 
-let mock: Promise<Transport> | null = null;
+let mock: Promise<Backend> | null = null;
 
 /** The tab's own storage, or nothing where it is blocked: the mock then simply forgets on reload. */
 const mockStore = {
@@ -33,14 +33,20 @@ const mockStore = {
   },
 };
 
-export const appTransport: Transport = () => {
-  if (import.meta.env.DEV && new URLSearchParams(location.search).has('mock')) {
-    mock ??= import('./mock/server').then(({ MockServer }) =>
-      new MockServer({ store: mockStore }).transport('this-page'),
-    );
-    return mock.then((open) => open());
-  }
-  return browserTransport();
+const asked = (): boolean => new URLSearchParams(location.search).has('mock');
+/** One mock server and one browser profile at it, for as long as the page lives. */
+const mockBackend = (): Promise<Backend> =>
+  (mock ??= import('./mock/server').then(({ MockServer }) => new MockServer({ store: mockStore }).page('this-page')));
+
+export const appBackend: Backend = {
+  transport: () => {
+    if (import.meta.env.DEV && asked()) return mockBackend().then((b) => b.transport());
+    return browserBackend.transport();
+  },
+  rest: (method, path, body) => {
+    if (import.meta.env.DEV && asked()) return mockBackend().then((b) => b.rest(method, path, body));
+    return browserBackend.rest(method, path, body);
+  },
 };
 
 /** What the online state leaves on the device for the next page (see online.ts, OnlineMemory). */

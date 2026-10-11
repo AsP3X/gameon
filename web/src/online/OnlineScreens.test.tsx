@@ -69,7 +69,12 @@ async function renderApp(transport: Transport = server.transport()): Promise<voi
   await act(async () => {
     root?.render(
       <StrictMode>
-        <App transport={transport} />
+        <App
+          backend={{
+            transport,
+            rest: () => Promise.reject(new Error('This screen test has no REST')),
+          }}
+        />
       </StrictMode>,
     );
     await vi.advanceTimersByTimeAsync(0);
@@ -358,15 +363,15 @@ describe('playing online', () => {
   });
 
   it('pauses when the same player connects from somewhere else, until asked to play here', async () => {
-    const as = server.transport();
+    const as = server.browser();
     root = createRoot(host);
     await act(async () => {
-      root?.render(<App transport={as} />);
+      root?.render(<App backend={as} />);
       await vi.advanceTimersByTimeAsync(0);
     });
     await click('[data-act="online"]');
     await settle();
-    const elsewhere = await connectRaw(as);
+    const elsewhere = await connectRaw(as.transport);
     await settle();
     expect(texts('#online .pill')).toEqual(['Paused']);
     expect($('#online .notice b')?.textContent).toBe('Playing in another tab');

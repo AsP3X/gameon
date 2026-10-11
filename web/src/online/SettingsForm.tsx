@@ -2,7 +2,7 @@ import { useState } from 'react';
 import type { ReactNode } from 'react';
 import { Rules } from '../game';
 import type { Outcome } from '../net/online';
-import type { BotLevel, Format, GameSettings, Scoring } from '../protocol/generated';
+import type { BotLevel, Format, GameSettings, Scoring, Visibility } from '../protocol/generated';
 import { Sound } from '../sound/sound';
 import { failureText } from './copy';
 import { BackIcon } from './icons';
@@ -16,6 +16,10 @@ const LEVELS: readonly { value: BotLevel; name: string; desc: string }[] = [
 const SCORINGS: readonly { value: Scoring; name: string; desc: string }[] = [
   { value: 'classic', name: "Skull King's", desc: 'Classic, high risk' },
   { value: 'rascal', name: "Rascal's", desc: '10 per card dealt' },
+];
+const VISIBILITIES: readonly { value: Visibility; name: string; desc: string }[] = [
+  { value: 'private', name: 'Private', desc: 'Code only' },
+  { value: 'public', name: 'Public', desc: 'Listed for everyone' },
 ];
 const EXTRAS: readonly { key: 'abilities' | 'loot' | 'kraken' | 'whale'; name: string; desc: string }[] = [
   {
@@ -59,13 +63,18 @@ export interface SettingsFormProps {
   title: string;
   submit: string;
   initial: GameSettings;
+  /**
+   * Who can join a new table, as the form opens. Without it the form does not ask: a table's
+   * visibility is chosen when it is created and no message changes it afterwards.
+   */
+  visibility?: Visibility;
   /** A table that already has this many at it cannot have fewer seats. */
   minSeats: number;
   /** Shown under the form: what saving will do besides saving. */
   note?: string;
   disabled: boolean;
   onBack: () => void;
-  onSubmit: (settings: GameSettings) => Promise<Outcome>;
+  onSubmit: (settings: GameSettings, visibility: Visibility) => Promise<Outcome>;
 }
 
 /** The rules of an online table: the "New table" screen, and the host's "Table rules". */
@@ -73,6 +82,7 @@ export function SettingsForm({
   title,
   submit,
   initial,
+  visibility,
   minSeats,
   note,
   disabled,
@@ -80,6 +90,7 @@ export function SettingsForm({
   onSubmit,
 }: SettingsFormProps) {
   const [settings, setSettings] = useState(initial);
+  const [who, setWho] = useState<Visibility>(visibility ?? 'private');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const set = (patch: Partial<GameSettings>): void => {
@@ -94,7 +105,7 @@ export function SettingsForm({
     Sound.play('confirm');
     setBusy(true);
     setError(null);
-    void onSubmit(settings).then((r) => {
+    void onSubmit(settings, who).then((r) => {
       setBusy(false);
       if (!r.ok) setError(failureText(r));
     });
@@ -118,6 +129,17 @@ export function SettingsForm({
           <h2 className="grow">{title}</h2>
         </div>
         <div className="stack sections">
+          {visibility && (
+            <Choice
+              label="Who can join"
+              value={who}
+              options={VISIBILITIES}
+              onPick={(value) => {
+                Sound.play('select');
+                setWho(value);
+              }}
+            />
+          )}
           <section className="stack">
             <span className="label">Seats</span>
             <div className="row seats-row">

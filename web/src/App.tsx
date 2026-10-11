@@ -1,16 +1,17 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
-import { appMemory, appTransport, BUILD } from './net/connect';
+import { Api } from './net/api';
+import type { Backend } from './net/api';
+import { appBackend, appMemory, BUILD } from './net/connect';
 import { Online } from './net/online';
 import type { OnlineMemory } from './net/online';
 import { SocketClient } from './net/socket';
-import type { Transport } from './net/socket';
 import { OnlineScreens } from './online/OnlineScreens';
 import { TableOverlay } from './online/TableOverlay';
 import { closeOnlineTable, mountTavern, openOnlineTable } from './tableview';
 
 export interface AppProps {
-  /** How the online screens reach a server. Tests hand in a mock server's. */
-  transport?: Transport;
+  /** How the online screens reach a server. Tests hand in a mock server's browser. */
+  backend?: Backend;
   /** What one page leaves on the device for the next. Tests hand in an object. */
   memory?: OnlineMemory;
 }
@@ -26,10 +27,12 @@ export interface AppProps {
  * A page that opens on a device whose last page was seated in a lobby or at a table connects by
  * itself: that is what a reload is. What it comes back to is whatever the server's `welcome` says.
  */
-export function App({ transport = appTransport, memory = appMemory }: AppProps) {
+export function App({ backend = appBackend, memory = appMemory }: AppProps) {
   const app = useRef<HTMLDivElement>(null);
   const fx = useRef<HTMLCanvasElement>(null);
-  const [online] = useState(() => new Online(new SocketClient({ transport, build: BUILD }), memory));
+  const [online] = useState(
+    () => new Online(new SocketClient({ transport: backend.transport, build: BUILD }), new Api(backend.rest), memory),
+  );
   const state = useSyncExternalStore(online.subscribe, online.getState);
   const [inOnline, setInOnline] = useState(() => online.wasSeated);
   const table = state.table;
