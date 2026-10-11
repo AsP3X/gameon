@@ -6,6 +6,21 @@ use ts_rs::TS;
 use crate::ids::{GameId, UnixMs, UserId};
 use crate::settings::GameSettings;
 
+/// `GET /api/v1/metrics`. Public counts. No player, hand, or bid.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(rename_all = "camelCase", export_to = "Metrics.ts")]
+pub struct Metrics {
+    /// Games on the clock.
+    pub games: u32,
+    /// Open sockets that have said hello.
+    pub sockets: u32,
+    /// People waiting in quick play.
+    pub casual: u32,
+    /// People waiting in ranked.
+    pub ranked: u32,
+}
+
 /// `GET /api/v1/health`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[ts(export_to = "Health.ts")]

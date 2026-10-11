@@ -5,13 +5,18 @@
 //! and then that step's `game.update` before anything else can write.
 
 pub(crate) mod identity;
+mod replay;
 mod table;
 
+pub(crate) use replay::Step;
 pub(crate) use table::GameReport;
 #[cfg(test)]
 pub(crate) use table::LogEntry;
+pub(crate) use table::OpenDelta;
 #[cfg(test)]
 pub(crate) use table::RatedResult;
+pub(crate) use table::RestoredGame;
+pub(crate) use table::RestoredSeat;
 #[cfg(test)]
 pub(crate) use table::SeatTally;
 
@@ -203,6 +208,11 @@ impl World {
     /// Remember an account loaded from Postgres.
     pub fn import(&mut self, token: &str, snap: AccountSnap) {
         self.identity.import(token, snap);
+        if let Some(user) = self.identity.user_for_token(token)
+            && let Some(game) = self.tables.game_of(&user)
+        {
+            self.identity.set_game(&user, Some(game));
+        }
     }
 
     /// Forget a session hash. The account and any seat stay until [`Self::drop_presence`].
@@ -306,6 +316,52 @@ impl World {
     pub fn advance(&mut self, by: Duration) -> Vec<GameReport> {
         self.now += by;
         self.step()
+    }
+
+    /// Steps of running games that are not in `open_log` yet.
+    pub fn checkpoint(&self) -> Vec<OpenDelta> {
+        self.tables.checkpoint()
+    }
+
+    /// Those steps were written.
+    pub fn mark_stored(&mut self, id: &str, stored: usize) {
+        self.tables.mark_stored(id, stored);
+    }
+
+    /// Put games read from Postgres back on the clock.
+    pub fn resume(&mut self, games: Vec<RestoredGame>) {
+        for game in games {
+            if !self.tables.resume(game, self.now) {
+                tracing::error!("a running game could not be replayed");
+            }
+        }
+    }
+
+    /// One seated player and their cards.
+    #[cfg(test)]
+    pub fn first_hand(&self) -> Option<(UserId, Vec<u8>)> {
+        self.tables.first_hand()
+    }
+
+    /// Cards in this player's hand, after a replay or a live game.
+    #[cfg(test)]
+    pub fn hand(&self, user: &UserId) -> Option<Vec<u8>> {
+        self.tables.hand(user)
+    }
+
+    /// How many games are on the clock, and how many people are waiting.
+    #[must_use]
+    pub fn counts(&self) -> (u32, u32, u32, u32) {
+        (
+            u32::try_from(self.tables_len()).unwrap_or(u32::MAX),
+            u32::try_from(self.live.len()).unwrap_or(u32::MAX),
+            u32::try_from(self.casual.waiting.len()).unwrap_or(u32::MAX),
+            u32::try_from(self.ranked.waiting.len()).unwrap_or(u32::MAX),
+        )
+    }
+
+    fn tables_len(&self) -> usize {
+        self.tables.len()
     }
 
     /// Penalties queued by the last messages. The caller stores them and drops them here.

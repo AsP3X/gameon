@@ -24,7 +24,7 @@ sha2 = "0.10"
 skt-engine = { path = "../skt-engine" }
 skt-protocol = { path = "../skt-protocol" }
 thiserror.workspace = true
-tokio = { workspace = true, features = ["sync", "time"] }
+tokio = { workspace = true, features = ["signal", "sync", "time"] }
 tracing.workspace = true
 tracing-subscriber.workspace = true
 skillratings = "0.29.2"

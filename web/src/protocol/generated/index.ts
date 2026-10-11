@@ -47,6 +47,7 @@ export type { LootMove } from "./LootMove";
 export type { Me } from "./Me";
 export type { Member } from "./Member";
 export type { MessageId } from "./MessageId";
+export type { Metrics } from "./Metrics";
 export type { OkReply } from "./OkReply";
 export type { OnlineEvent } from "./OnlineEvent";
 export type { Pace } from "./Pace";

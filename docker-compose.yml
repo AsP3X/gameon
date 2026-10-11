@@ -6,7 +6,7 @@
 #   docker compose -f docker-compose.yml -f docker-compose.local.yml up -d --build
 #   docker compose -f docker-compose.yml -f docker-compose.npm.yml up -d --build
 #
-# Games live in the API process. A restart clears them. Accounts, sessions and stats live in Postgres.
+# A restart replays games that were still running from open_games. Accounts live in Postgres.
 #
 # NPM targets (npm overlay, container DNS on proxy-network):
 #   http://skt-web:80      the page, which also proxies /api/v1 and the socket

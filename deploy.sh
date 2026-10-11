@@ -9,6 +9,7 @@
 #   ./deploy.sh --restart [svc]  restart
 #   ./deploy.sh --rebuild        rebuild images, then start
 #   ./deploy.sh --down           stop the stack
+#   ./deploy.sh --backup         dump Postgres to backups/
 #   ./deploy.sh --help
 
 set -Eeuo pipefail
@@ -56,6 +57,7 @@ show_help() {
     ./deploy.sh --restart [svc]  Restart all services, or the named ones
     ./deploy.sh --rebuild        Rebuild images, then start
     ./deploy.sh --down           Stop and remove the containers
+    ./deploy.sh --backup         Write a Postgres dump to backups/
     ./deploy.sh --help           This help
 
   ${BOLD}Service names${NC} (for --logs / --restart):
@@ -66,8 +68,9 @@ show_help() {
     API:  http://localhost:\${API_PORT:-8080}/api/v1/health
 
   The page proxies /api, including the socket, so the browser talks to one origin.
-  Games are kept in the API process. Stopping the stack clears them.
-  There is no database volume, so --down removes containers only.
+  Running games are written to Postgres as they are played and replayed after a restart.
+  ./deploy.sh --backup writes a dump. --down removes containers and does not delete that dump.
+  Docker stop sends SIGTERM. The API finishes writing open games, then exits.
 
   ${BOLD}Environment${NC} (.env, or the defaults in .env.example):
     PROXY_MODE          local | npm
@@ -212,10 +215,11 @@ while (( $# )); do
     --restart|restart)       set_cmd restart ;;
     --rebuild|rebuild)       set_cmd rebuild ;;
     --down|down|--stop|stop) set_cmd down ;;
+    --backup|backup)         set_cmd backup ;;
     --up|up)                 set_cmd up ;;
     --)                      shift; PASSTHRU+=("$@"); break ;;
     -*)                      die "unknown option: $1
-  Valid: --status --ps --logs --restart --rebuild --down --help" ;;
+  Valid: --status --ps --logs --restart --rebuild --down --backup --help" ;;
     *)                       PASSTHRU+=("$1") ;;
   esac
   shift
@@ -258,7 +262,16 @@ case "$CMD" in
   down)
     step "Stopping the stack…"
     compose down
-    ok "Stopped. In-memory games are gone."
+    ok "Stopped. Running games stay in Postgres and are replayed on the next start."
+    exit 0
+    ;;
+  backup)
+    step "Dumping Postgres…"
+    mkdir -p backups
+    stamp="$(date -u +%Y%m%dT%H%M%SZ)"
+    out="backups/skt-${stamp}.sql"
+    compose exec -T postgres pg_dump -U "${POSTGRES_USER:-skt}" "${POSTGRES_DB:-skt}" > "$out"
+    ok "Wrote ${out}"
     exit 0
     ;;
 esac

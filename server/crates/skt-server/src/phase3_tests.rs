@@ -536,3 +536,58 @@ async fn saw(socket: &mut Socket, needle: &str) -> bool {
 }
 
 const PRIVATE: &str = r#"{"maxPlayers":2,"scoring":"classic","format":"swift","loot":false,"kraken":false,"whale":false,"abilities":false,"botLevel":"normal","pace":"standard"}"#;
+
+#[sqlx::test(migrations = "../../migrations/postgres")]
+async fn a_restart_replays_the_same_hand(pool: sqlx::PgPool) {
+    let state = AppState::for_tests(pool, Duration::from_mins(1), budgets());
+    let port = serve(state.clone()).await;
+    let (status, _, body) = http(port, "GET", "/api/v1/metrics", "", "").await;
+    assert_eq!(status, 200, "{body}");
+    assert!(body.contains("\"games\":0"), "{body}");
+    let mut checks = Vec::new();
+    for _ in 0..16 {
+        checks.push(http(port, "GET", "/api/v1/health", "", ""));
+    }
+    for check in checks {
+        assert_eq!(check.await.0, 200);
+    }
+    let mut ada = account(port, "Ada").await.1;
+    let mut bea = account(port, "Bea").await.1;
+    send(
+        &mut ada,
+        &format!(r#"{{"t":"lobby.create","id":2,"visibility":"private","settings":{PRIVATE}}}"#),
+    )
+    .await;
+    let created = read_text(&mut ada).await;
+    let code = created
+        .split("\"code\":\"")
+        .nth(1)
+        .unwrap()
+        .split('"')
+        .next()
+        .unwrap()
+        .to_owned();
+    send(
+        &mut bea,
+        &format!(r#"{{"t":"lobby.join","id":2,"code":"{code}"}}"#),
+    )
+    .await;
+    let _ = read_text(&mut bea).await;
+    let _ = read_text(&mut bea).await;
+    let _ = read_text(&mut ada).await;
+    send(&mut ada, r#"{"t":"lobby.ready","id":3,"ready":true}"#).await;
+    let _ = read_text(&mut ada).await;
+    let _ = read_text(&mut ada).await;
+    let _ = read_text(&mut bea).await;
+    send(&mut bea, r#"{"t":"lobby.ready","id":3,"ready":true}"#).await;
+    let _ = read_text(&mut bea).await;
+    let _ = read_text(&mut bea).await;
+    let _ = read_text(&mut ada).await;
+    send(&mut ada, r#"{"t":"lobby.start","id":4}"#).await;
+    assert!(saw(&mut ada, "game.start").await);
+    let Some((user, before)) = state.live_hand().await else {
+        panic!("no hand");
+    };
+    let again = state.restored_hand(&user).await;
+    assert_eq!(again.as_deref(), Some(before.as_slice()));
+}

@@ -30,11 +30,34 @@ async fn main() -> Result<(), std::io::Error> {
     let address = listen_on()?;
     let listener = tokio::net::TcpListener::bind(&address).await?;
     tracing::info!("listening on {address}");
+    let draining = state.clone();
     axum::serve(
         listener,
         router(state).into_make_service_with_connect_info::<std::net::SocketAddr>(),
     )
+    .with_graceful_shutdown(async move {
+        shutdown().await;
+        tracing::info!("draining");
+        draining.persist_open().await;
+    })
     .await
+}
+
+/// SIGINT or SIGTERM. Deploy sends SIGTERM. Running games stay in `open_games` and are replayed
+/// on the next start.
+async fn shutdown() {
+    let mut terminate =
+        tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate()).ok();
+    tokio::select! {
+        _ = tokio::signal::ctrl_c() => {}
+        () = async {
+            if let Some(terminate) = terminate.as_mut() {
+                terminate.recv().await;
+            } else {
+                std::future::pending::<()>().await;
+            }
+        } => {}
+    }
 }
 
 /// `HOST` and `PORT` from the environment, or `127.0.0.1:8080`.

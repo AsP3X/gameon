@@ -68,13 +68,11 @@ impl AppState {
     /// The database is unreachable or a migration fails.
     pub async fn connect(url: &str) -> Result<Self, String> {
         let store = Store::connect(url).await?;
+        let saved = store.load_open().await.map_err(|err| format!("{err:?}"))?;
+        let mut world = World::new();
+        world.resume(saved.into_iter().filter_map(restore_game).collect());
         let trusted = TrustedProxies::from_env()?;
-        Ok(Self::with_store(
-            store,
-            World::new(),
-            Budgets::standard(),
-            trusted,
-        ))
+        Ok(Self::with_store(store, world, Budgets::standard(), trusted))
     }
 
     /// A migrated pool, a queue wait, and rate budgets. Tests use this.
@@ -103,6 +101,7 @@ impl AppState {
     pub async fn tick(&self) {
         let reports = self.world.lock().await.tick();
         self.settle(reports).await;
+        self.persist_open().await;
     }
 
     /// Move the table clock. Tests use this to play a game out.
@@ -110,6 +109,22 @@ impl AppState {
     pub async fn advance(&self, by: std::time::Duration) {
         let reports = self.world.lock().await.advance(by);
         self.settle(reports).await;
+    }
+
+    /// One seated player and their cards, in the live world.
+    #[cfg(test)]
+    pub async fn live_hand(&self) -> Option<(skt_protocol::UserId, Vec<u8>)> {
+        self.world.lock().await.first_hand()
+    }
+
+    /// Replay running games from Postgres into a new world. Tests use this.
+    #[cfg(test)]
+    pub async fn restored_hand(&self, user: &skt_protocol::UserId) -> Option<Vec<u8>> {
+        self.persist_open().await;
+        let saved = self.store.as_ref()?.load_open().await.ok()?;
+        let mut world = World::new();
+        world.resume(saved.into_iter().filter_map(restore_game).collect());
+        world.hand(user)
     }
 
     /// Store leave penalties queued by the last socket messages.
@@ -147,6 +162,30 @@ impl AppState {
             }
             self.persist_penalties().await;
         }
+        self.persist_open().await;
+    }
+
+    /// Write steps of games that are still running.
+    pub async fn persist_open(&self) {
+        let pending = self.world.lock().await.checkpoint();
+        let Some(store) = &self.store else {
+            return;
+        };
+        for game in pending {
+            let write = crate::store::OpenWrite {
+                id: game.id.clone(),
+                mode: game.mode,
+                matchmade: game.matchmade,
+                settings: serde_json::to_string(&game.settings).unwrap_or_else(|_| "{}".to_owned()),
+                seats: game.seats,
+                entries: game.entries,
+            };
+            if store.save_open(&write).await.is_ok() {
+                self.world.lock().await.mark_stored(&game.id, game.stored);
+            } else {
+                tracing::error!("a running game was not stored");
+            }
+        }
     }
 
     /// The same write the tick uses, for a finished game the test already scored.
@@ -160,6 +199,16 @@ impl AppState {
         world.deliver(&report);
         world.apply_report(&report);
     }
+}
+
+pub async fn metrics(State(state): State<AppState>) -> Json<skt_protocol::Metrics> {
+    let (games, sockets, casual, ranked) = state.world.lock().await.counts();
+    Json(skt_protocol::Metrics {
+        games,
+        sockets,
+        casual,
+        ranked,
+    })
 }
 
 pub async fn config() -> Json<ServerConfig> {
@@ -502,6 +551,7 @@ async fn drive(
                 }
                 state.world.lock().await.on_message(&user, conn, &text);
                 state.persist_penalties().await;
+                state.persist_open().await;
                 if !greeted && state.world.lock().await.greeted(&user, conn) {
                     greeted = true;
                 }
@@ -766,6 +816,28 @@ fn valid_username(value: &str) -> bool {
         && value
             .chars()
             .all(|character| character.is_ascii_alphanumeric() || character == '_')
+}
+
+fn restore_game(game: crate::store::SavedGame) -> Option<crate::world::RestoredGame> {
+    let settings = serde_json::from_str(&game.settings).ok()?;
+    let seats = serde_json::from_str::<Vec<crate::world::RestoredSeat>>(&game.seats).ok()?;
+    let log = game
+        .log
+        .into_iter()
+        .map(|(_seq, kind, seat, body)| crate::world::Step {
+            kind,
+            seat: seat.and_then(|value| u8::try_from(value).ok()),
+            body,
+        })
+        .collect();
+    Some(crate::world::RestoredGame {
+        id: game.id,
+        mode: game.mode,
+        matchmade: game.matchmade,
+        settings,
+        seats,
+        log,
+    })
 }
 
 fn display_name(raw: &str) -> Option<String> {
