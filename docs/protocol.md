@@ -470,6 +470,11 @@ type GameResult = {
 };
 ```
 
+Until `game.over` arrives, the client may order the seats by `totals`. From the moment `game.over`
+follows that final `game.update`, the end screen takes each seat's place from `result.places` and
+marks every seat in `result.forfeited`. The winner is whoever has place 1, even when a forfeited
+seat has a higher total. `game.over` stays the message after that `game.update`, as written above.
+
 ### 5.6 Timing
 
 The server drives every transition the legacy `LocalTable` drove with timers.
