@@ -46,3 +46,29 @@ jobs:
 
       - name: fixture generator
         run: node scripts/generate-engine-fixtures.mjs --check
+
+  pwa:
+    name: offline page
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: npm ci
+        run: npm ci
+
+      - name: Install Chromium
+        run: npx playwright-core install --with-deps chromium
+
+      - name: pwa end to end
+        run: SKT_E2E=1 SKT_E2E_TARGET=mock npx vp test e2e/pwa.e2e.ts

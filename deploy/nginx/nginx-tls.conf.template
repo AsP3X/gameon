@@ -55,6 +55,24 @@ server {
         try_files $uri =404;
     }
 
+    # The worker and the manifest must be fetched again after a deploy. A long
+    # lifetime would keep serving the previous file list.
+    location = /sw.js {
+        include /etc/nginx/security-headers.conf;
+        add_header Cache-Control "no-cache, must-revalidate";
+        types { }
+        default_type application/javascript;
+        try_files $uri =404;
+    }
+
+    location = /manifest.json {
+        include /etc/nginx/security-headers.conf;
+        add_header Cache-Control "no-cache, must-revalidate";
+        types { }
+        default_type application/json;
+        try_files $uri =404;
+    }
+
     location / {
         try_files $uri $uri/ /index.html;
     }
