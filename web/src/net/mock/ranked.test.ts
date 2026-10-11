@@ -257,6 +257,15 @@ describe('the result of a ranked game', () => {
       expect(me.rating).toEqual(change.after);
       expect(me.user.tier).toBe(change.after.tier);
       expect(me).toMatchObject({ active: null, cooldownUntil: null });
+      const gameId = last(p.socket, 'game.over').gameId;
+      const record = await p.call('GET', `/games/${gameId}/log`);
+      expect(record.status).toBe(200);
+      expect(record.body).toEqual(
+        expect.objectContaining({
+          gameId,
+          entries: expect.arrayContaining([expect.objectContaining({ kind: 'deal' })]),
+        }),
+      );
       // A ranked game is counted in the rating's `games`, and changes no `Stats`.
       expect(me.stats).toEqual({ games: 0, wins: 0, bidsMade: 0, bidsTotal: 0, bestScore: null });
     }

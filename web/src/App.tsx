@@ -5,6 +5,7 @@ import { appBackend, appMemory, BUILD } from './net/connect';
 import { Online } from './net/online';
 import type { OnlineMemory } from './net/online';
 import { SocketClient } from './net/socket';
+import { GameRecord } from './online/GameRecord';
 import { OnlineScreens } from './online/OnlineScreens';
 import { TableOverlay } from './online/TableOverlay';
 import { closeOnlineTable, coverTavern, mountTavern, openOnlineTable, showOnlineResult } from './tableview';
@@ -35,6 +36,7 @@ export function App({ backend = appBackend, memory = appMemory }: AppProps) {
   );
   const state = useSyncExternalStore(online.subscribe, online.getState);
   const [inOnline, setInOnline] = useState(() => online.wasSeated);
+  const [record, setRecord] = useState(false);
   const table = state.table;
 
   useEffect(() => {
@@ -79,6 +81,12 @@ export function App({ backend = appBackend, memory = appMemory }: AppProps) {
       <div id="app" ref={app} hidden={screens} inert={cut != null}></div>
       <canvas id="fx" ref={fx} hidden></canvas>
       {cut && <TableOverlay status={cut} online={online} />}
+      {table?.result && !record && (
+        <button id="record-open" type="button" className="btn ghost" onClick={() => setRecord(true)}>
+          The record
+        </button>
+      )}
+      {table?.result && record && <GameRecord online={online} gameId={table.gameId} onClose={() => setRecord(false)} />}
       {screens && (
         <div id="online">
           <OnlineScreens

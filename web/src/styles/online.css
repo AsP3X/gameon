@@ -337,6 +337,31 @@ input.code-input[aria-invalid='true'] {
   color: var(--muted);
   font-size: 14px;
 }
+#record-open {
+  position: fixed;
+  z-index: 20;
+  right: 16px;
+  bottom: 24px;
+}
+#record {
+  position: fixed;
+  z-index: 30;
+  inset: 0;
+  overflow: auto;
+  background: var(--bg);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+#record .head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+#record li p {
+  overflow-wrap: anywhere;
+}
 .foot-row {
   display: flex;
   gap: 12px;

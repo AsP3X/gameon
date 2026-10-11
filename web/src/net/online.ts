@@ -212,6 +212,11 @@ export class Online {
   }
 
   /** Another player, as the server knows them. */
+  /** The stored steps of a finished game this session sat. */
+  record(gameId: string): ReturnType<Api['gameLog']> {
+    return this.api.gameLog(gameId);
+  }
+
   profile(id: UserId): Promise<ApiResult<Profile>> {
     return this.api.user(id);
   }
