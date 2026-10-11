@@ -19,6 +19,9 @@ RUN mkdir -p crates/skt-engine/src crates/skt-protocol/src crates/skt-server/src
     && rm -rf crates/skt-engine/src crates/skt-protocol/src crates/skt-server/src
 
 COPY crates crates
+# sqlx::migrate! embeds these files at compile time. The path in store.rs is
+# relative to crates/skt-server, which resolves to /app/migrations/postgres.
+COPY migrations migrations
 
 # The dependency layer is newer than these sources, so cargo would keep the empty crates.
 RUN find crates -name '*.rs' -exec touch {} + \
