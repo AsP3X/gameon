@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import type { Online } from '../net/online';
 import type { LinkStatus } from '../net/socket';
 import { Sound } from '../sound/sound';
+import { reloadPage } from './reload';
 
 const COPY: Record<Exclude<LinkStatus, 'online'>, { title: string; text: string; action: string }> = {
   idle: { title: 'Connection lost', text: '', action: 'Try now' },
@@ -53,7 +54,7 @@ export function TableOverlay({ status, online }: { status: Exclude<LinkStatus, '
           className={reload ? 'btn' : 'btn ghost'}
           onClick={() => {
             Sound.play('tap');
-            if (reload) location.reload();
+            if (reload) reloadPage();
             else online.retry();
           }}
         >

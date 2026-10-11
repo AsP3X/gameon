@@ -3,9 +3,10 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ActionLog } from '../protocol/generated';
 import type { Online } from '../net/online';
+import { Sound } from '../sound/sound';
 
 export interface GameRecordProps {
-  online: Online;
+  online: Pick<Online, 'record'>;
   gameId: string;
   onClose: () => void;
 }
@@ -13,19 +14,21 @@ export interface GameRecordProps {
 /** One finished game's stored steps, or why they could not be read. */
 export function GameRecord({ online, gameId, onClose }: GameRecordProps) {
   const [log, setLog] = useState<ActionLog | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  /** Why the record could not be read, and whether asking again can help: a game the server does not have stays that way. */
+  const [failure, setFailure] = useState<{ message: string; again: boolean } | null>(null);
+  const [round, setRound] = useState(0);
 
   useEffect(() => {
     let live = true;
     void online.record(gameId).then((result) => {
       if (!live) return;
       if (result.ok) setLog(result.value);
-      else setError(result.message);
+      else setFailure({ message: result.message, again: result.code !== 'NOT_FOUND' });
     });
     return () => {
       live = false;
     };
-  }, [online, gameId]);
+  }, [online, gameId, round]);
 
   // A dialog over the end screen: it takes the keyboard while it is open, Escape closes it like
   // the table's own sheets, and the keyboard goes back to the button that opened it.
@@ -58,10 +61,25 @@ export function GameRecord({ online, gameId, onClose }: GameRecordProps) {
           The record
         </span>
       </div>
-      {error ? (
-        <p className="alert" role="alert">
-          {error}
-        </p>
+      {failure ? (
+        <>
+          <p className="alert" role="alert">
+            {failure.message}
+          </p>
+          {failure.again && (
+            <button
+              type="button"
+              className="btn ghost"
+              onClick={() => {
+                Sound.play('tap');
+                setFailure(null);
+                setRound((n) => n + 1);
+              }}
+            >
+              Try again
+            </button>
+          )}
+        </>
       ) : !log ? (
         <p className="muted" role="status">
           Loading the record.

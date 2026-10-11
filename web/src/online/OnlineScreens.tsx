@@ -17,6 +17,7 @@ import { Head, initialOf } from './parts';
 import { PlayerScreen, ProfileScreen } from './Profile';
 import { PublicTables } from './PublicTables';
 import { QueueScreen } from './Queue';
+import { reloadPage } from './reload';
 import { LadderScreen, RankedSection } from './Ranked';
 import { loadSettings, MIN_SEATS, saveSettings } from './settings';
 import { SettingsForm } from './SettingsForm';
@@ -103,7 +104,7 @@ function LinkNotice({ status, online, onOffline }: { status: LinkStatus; online:
         <div className="notice" role="alert">
           <b>The tavern has moved on</b>
           <p>This page is older than the server. Reload to update.</p>
-          <button type="button" className="btn" onClick={() => location.reload()}>
+          <button type="button" className="btn" onClick={reloadPage}>
             Reload to update
           </button>
         </div>

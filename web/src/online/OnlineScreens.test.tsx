@@ -13,6 +13,9 @@ import type { MockStore } from '../net/mock/server';
 import type { Transport } from '../net/socket';
 import { Sound } from '../sound/sound';
 import { session, stats, tableView, ui } from '../tableview/state';
+import { reloadPage } from './reload';
+
+vi.mock('./reload', () => ({ reloadPage: vi.fn<() => void>() }));
 
 function seeded(seed: number): () => number {
   let a = seed >>> 0;
@@ -369,6 +372,47 @@ describe('playing online', () => {
     expect(document.activeElement?.textContent).toBe('Join a table');
     await click('#online [aria-label="Back"]');
     expect(document.activeElement?.textContent).toBe('Play online');
+  });
+
+  it('tells the player to reload when the server no longer speaks the protocol of this page', async () => {
+    // The page says hello in a protocol the server has left behind: it answers PROTOCOL_UNSUPPORTED.
+    const old: Transport = async () => {
+      const inner = await server.transport()();
+      return {
+        send: (data) => {
+          const frame = JSON.parse(data) as { t: string; protocol?: number };
+          inner.send(frame.t === 'hello' ? JSON.stringify({ ...frame, protocol: 0 }) : data);
+        },
+        close: () => inner.close(),
+        get onmessage() {
+          return inner.onmessage;
+        },
+        set onmessage(handler) {
+          inner.onmessage = handler;
+        },
+        get onclose() {
+          return inner.onclose;
+        },
+        set onclose(handler) {
+          inner.onclose = handler;
+        },
+      };
+    };
+    await renderApp(old);
+    await click('[data-act="online"]');
+    await settle();
+    expect(texts('#online .pill')).toEqual(['Update needed']);
+    expect($('#online .notice[role="alert"] b')?.textContent).toBe('The tavern has moved on');
+    expect($('#online .notice[role="alert"] p')?.textContent).toBe(
+      'This page is older than the server. Reload to update.',
+    );
+    expect(button('Create a table').disabled).toBe(true);
+    expect(reloadPage).not.toHaveBeenCalled();
+    await press('Reload to update');
+    expect(reloadPage).toHaveBeenCalledTimes(1);
+    // It does not try again by itself: only a new page can speak to this server.
+    await settle(60_000);
+    expect(texts('#online .pill')).toEqual(['Update needed']);
   });
 
   it('shows the way to the offline modes when the server cannot be reached', async () => {
