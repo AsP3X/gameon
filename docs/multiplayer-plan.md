@@ -11,7 +11,7 @@ randoms), casual and ranked play, and a Rust server that is the only authority.
 
 ## 1. Where the project is today
 
-The whole project is one file, `Skull King Tavern.html` (2,541 lines, 183 KB, no build, no tests,
+The whole project started as one file, `legacy/Skull King Tavern.html` (2,541 lines, 183 KB, no build, no tests,
 no git). It is in better shape for this conversion than a single file suggests, because it was
 written in layers with the online move in mind:
 

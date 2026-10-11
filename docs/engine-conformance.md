@@ -5,8 +5,8 @@ exact shapes both produce. Part of the contract (`docs/agent-rules/protocol-cont
 
 ## 1. The reference
 
-The reference is the JavaScript in `Skull King Tavern.html` (at the repo root now; it moves to
-`legacy/` unchanged, so the line numbers hold):
+The reference is the JavaScript in `legacy/Skull King Tavern.html` (moved there from the repo root
+with its content unchanged, so the line numbers hold):
 
 | Lines | Part |
 | ----- | ---- |

@@ -19,6 +19,7 @@ import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { runInThisContext } from 'node:vm';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const OUT = join(ROOT, 'fixtures/engine');
@@ -59,7 +60,9 @@ function loadReference() {
   if (from < 0 || to < from) throw new Error('could not find the engine sections in the legacy file');
   const math = Object.create(Math);
   math.random = () => random();
-  return new Function('Math', `"use strict";${html.slice(from, to)}\nreturn {Rules,Engine,Bots};`)(math);
+  // The legacy script is the reference itself, read from this repo and pinned by hash above.
+  const source = `(function (Math) { "use strict";${html.slice(from, to)}\nreturn { Rules, Engine, Bots }; })`;
+  return runInThisContext(source, { filename: LEGACY_NAME })(math);
 }
 
 const { Rules, Engine, Bots } = loadReference();
@@ -67,6 +70,8 @@ const { Rules, Engine, Bots } = loadReference();
 /* ---------- 2. Small helpers ---------- */
 
 const json = (v) => JSON.parse(JSON.stringify(v));
+/** The order Array.prototype.sort uses for strings by default, spelled out. */
+const byCodeUnit = (a, b) => (a < b ? -1 : a > b ? 1 : 0);
 const int = (n) => Math.floor(random() * n);
 const pick = (list) => list[int(list.length)];
 const chance = (p) => random() < p;
@@ -165,7 +170,13 @@ const SCENARIOS = [
   [8, 'classic', 'brawl', 'base'], // 70 cards for 8: the schedule is capped at 8 cards
   [8, 'rascal', 'swift', 'abilities'],
   [8, 'classic', 'classic', 'all'], // 74 cards for 8: the classic schedule is capped at 9 cards
-].map(([players, scoring, format, expansions, tries]) => ({ players, scoring, format, expansions, tries: tries ?? 16 }));
+].map(([players, scoring, format, expansions, tries]) => ({
+  players,
+  scoring,
+  format,
+  expansions,
+  tries: tries ?? 16,
+}));
 
 /** Small, eventful games used to fill coverage rows the main list left open. */
 const BOOSTERS = [
@@ -379,7 +390,8 @@ function record(scenario, seed) {
     const roles = plays.map(roleOf);
     const beasts = plays.filter((p) => ['kraken', 'whale'].includes(kind(p.card)));
     if (result.effect === 'kraken') cover.add('trick:kraken');
-    if (result.effect === 'whale') cover.add(result.winner == null ? 'trick:whale-destroyed' : 'trick:whale-number-wins');
+    if (result.effect === 'whale')
+      cover.add(result.winner == null ? 'trick:whale-destroyed' : 'trick:whale-number-wins');
     if (beasts.length === 2) cover.add(`trick:both-beasts-${result.effect}-last`);
     if (roles.every((r) => r === 'escape')) cover.add('trick:all-escapes');
     plays.forEach((p) => {
@@ -408,7 +420,8 @@ function record(scenario, seed) {
         cover.add('tigress:pirate-wins-no-ability');
       }
       const lead = Rules.leadSuit(plays, deck);
-      if (wonCard.kind === 'num' && wonCard.suit === 'black' && lead && lead !== 'black') cover.add('trick:black-trumps');
+      if (wonCard.kind === 'num' && wonCard.suit === 'black' && lead && lead !== 'black')
+        cover.add('trick:black-trumps');
     }
   }
 
@@ -463,7 +476,8 @@ function record(scenario, seed) {
     const holding = (k) => options.find((o) => kind(o.card) === k);
     const beast = kinds.includes('kraken') ? holding('whale') : kinds.includes('whale') ? holding('kraken') : null;
     if (beast && chance(0.85)) return beast;
-    if (roles.includes('sk') && !roles.includes('mermaid') && holding('mermaid') && chance(0.7)) return holding('mermaid');
+    if (roles.includes('sk') && !roles.includes('mermaid') && holding('mermaid') && chance(0.7))
+      return holding('mermaid');
     if (roles.includes('pirate') && !roles.includes('sk') && holding('sk') && chance(0.6)) return holding('sk');
     if (roles.includes('pirate') && !roles.includes('sk') && chance(0.3)) {
       const second = holding('pirate') || options.find((o) => o.as === 'pirate');
@@ -563,11 +577,14 @@ function record(scenario, seed) {
     if (state.phase === 'trickEnd' || state.phase === 'roundEnd') {
       const tag = state.phase === 'trickEnd' ? 'act-at-trick-end' : 'act-at-round-end';
       const seat = int(n);
-      add(tag, pick([
-        { type: 'bid', seat, bid: 0 },
-        { type: 'play', seat, card: state.hands[seat][0] ?? 0 },
-        { type: 'ability', seat, choice: 0 },
-      ]));
+      add(
+        tag,
+        pick([
+          { type: 'bid', seat, bid: 0 },
+          { type: 'play', seat, card: state.hands[seat][0] ?? 0 },
+          { type: 'ability', seat, choice: 0 },
+        ]),
+      );
     }
 
     if (state.phase === 'ability') {
@@ -629,7 +646,8 @@ function record(scenario, seed) {
     } else if (state.phase === 'ability') {
       const p = state.pending;
       // The reference accepts any choice for the Seer and stores nothing.
-      if (p.kind === 'seer' && chance(0.3)) accept({ type: 'ability', seat: p.seat, choice: pick([7, [1, 2]]) }, 'quirk:seer-any-choice');
+      if (p.kind === 'seer' && chance(0.3))
+        accept({ type: 'ability', seat: p.seat, choice: pick([7, [1, 2]]) }, 'quirk:seer-any-choice');
       else accept({ type: 'ability', seat: p.seat, choice: chooseAbility() });
     } else {
       accept({ type: 'advance' });
@@ -678,22 +696,31 @@ function replay(fixture) {
   if (!same(viewsOf(state), fixture.initial.views)) throw new Error(`${fixture.name}: initial views differ on replay`);
   fixture.steps.forEach((step, index) => {
     const result = Engine.reduce(state, step.action);
-    if (!!result.error === step.ok) throw new Error(`${fixture.name} step ${index}: accepted/rejected differs on replay`);
+    if (!!result.error === step.ok)
+      throw new Error(`${fixture.name} step ${index}: accepted/rejected differs on replay`);
     if (result.error) {
-      if (rejectCode(result.error) !== step.reject) throw new Error(`${fixture.name} step ${index}: reject code differs`);
+      if (rejectCode(result.error) !== step.reject)
+        throw new Error(`${fixture.name} step ${index}: reject code differs`);
       return;
     }
     state = result.state;
     if (result.events.some((e) => e.type === 'roundStarted')) deal(state.round);
-    if (!same(json(result.events), step.events)) throw new Error(`${fixture.name} step ${index}: events differ on replay`);
+    if (!same(json(result.events), step.events))
+      throw new Error(`${fixture.name} step ${index}: events differ on replay`);
     if (!same(viewsOf(state), step.views)) throw new Error(`${fixture.name} step ${index}: views differ on replay`);
   });
-  if (!same(Rules.totals(state.log, state.cfg, n), fixture.final.totals)) throw new Error(`${fixture.name}: totals differ on replay`);
+  if (!same(Rules.totals(state.log, state.cfg, n), fixture.final.totals))
+    throw new Error(`${fixture.name}: totals differ on replay`);
 }
 
 function sortKeys(v) {
   if (Array.isArray(v)) return v.map(sortKeys);
-  if (v && typeof v === 'object') return Object.fromEntries(Object.keys(v).sort().map((k) => [k, sortKeys(v[k])]));
+  if (v && typeof v === 'object')
+    return Object.fromEntries(
+      Object.keys(v)
+        .sort(byCodeUnit)
+        .map((k) => [k, sortKeys(v[k])]),
+    );
   return v;
 }
 
@@ -752,12 +779,12 @@ function readme(files) {
   });
   const tags = new Map();
   files.forEach(({ game, name }) => {
-    [...game.cover].sort().forEach((tag) => {
+    [...game.cover].sort(byCodeUnit).forEach((tag) => {
       if (!tags.has(tag)) tags.set(tag, []);
       tags.get(tag).push(name);
     });
   });
-  const coverage = [...tags.keys()].sort().map((tag) => {
+  const coverage = [...tags.keys()].sort(byCodeUnit).map((tag) => {
     const list = tags.get(tag);
     return `| \`${tag}\` | ${list.length} | \`${list[0]}\` |`;
   });
@@ -793,15 +820,19 @@ ${coverage.join('\n')}
 function main() {
   const check = process.argv.includes('--check');
   const games = build();
-  const files = games.map((game) => ({ game, name: `${game.fixture.name}.json`, text: JSON.stringify(game.fixture) + '\n' }));
+  const files = games.map((game) => ({
+    game,
+    name: `${game.fixture.name}.json`,
+    text: JSON.stringify(game.fixture) + '\n',
+  }));
   const names = files.map((f) => f.name);
   if (new Set(names).size !== names.length) throw new Error('two fixtures share a name');
   const outputs = new Map(files.map((f) => [f.name, f.text]));
   outputs.set('README.md', readme(files));
 
   if (check) {
-    const onDisk = existsSync(OUT) ? readdirSync(OUT).sort() : [];
-    const expected = [...outputs.keys()].sort();
+    const onDisk = existsSync(OUT) ? readdirSync(OUT).sort(byCodeUnit) : [];
+    const expected = [...outputs.keys()].sort(byCodeUnit);
     const problems = [];
     if (JSON.stringify(onDisk) !== JSON.stringify(expected)) problems.push('the set of files differs');
     for (const [name, text] of outputs) {
