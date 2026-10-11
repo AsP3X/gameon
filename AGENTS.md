@@ -27,7 +27,7 @@ the rule.
 | [Keep the designs in sync with the UI](docs/agent-rules/design-sync.md) | Visible UI changes in `web/` | Every UI change also lands in `design/web.pen`, edited only through the Pencil MCP tools. |
 | [No deprecated APIs](docs/agent-rules/no-deprecated-apis.md) | Every code change | Don't call, extend or suppress deprecated APIs; replace them or implement the behavior. |
 | [No AI attribution](docs/agent-rules/no-ai-attribution.md) | Every commit and pull request | No `Co-Authored-By` trailer or "Generated with …" footer for an AI assistant. |
-| [Git: branches, worktrees, commits](docs/agent-rules/git.md) | Every git action | Feature branches off an up-to-date `dev`, one worktree per agent, prefixed messages, no push or merge unless the owner says so. |
+| [Git: branches, worktrees, commits](docs/agent-rules/git.md) | Every git action | Work on `dev`; no new branch or worktree unless the owner specifically asks for it; prefixed messages; no push unless the owner says so. |
 | [Data safety](docs/agent-rules/data-safety.md) | Anything destructive | Nothing that wipes volumes, databases, history or files without the owner naming that action. |
 | [Rust quality](docs/agent-rules/rust-quality.md) | `server/**/*.rs` | No panics outside tests, no lint suppressions, no blocking in async, `// Human:` / `// Agent:` comments. |
 | [API errors and migrations](docs/agent-rules/api-and-migrations.md) | `server/` HTTP, WebSocket and SQL | One error envelope, safe messages, applied migrations are immutable. |
