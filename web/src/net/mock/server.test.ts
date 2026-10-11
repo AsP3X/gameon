@@ -159,6 +159,110 @@ describe('connecting', () => {
   });
 });
 
+describe('a server with a store', () => {
+  /** What a page keeps for the mock between two loads. */
+  function memory(): { load(): string | null; save(data: string): void } {
+    let data: string | null = null;
+    return {
+      load: () => data,
+      save: (next) => {
+        data = next;
+      },
+    };
+  }
+  const make = (store: ReturnType<typeof memory>, seed = 5): MockServer =>
+    new MockServer({ random: seeded(seed), timers: { ...FAST, bidMs: 5000 }, bot: { minMs: 40, maxMs: 80 }, store });
+
+  it('is the same player for the same session, and somebody else without one', async () => {
+    server = make(memory());
+    const first = await connect(server.transport('this-page')),
+      again = await connect(server.transport('this-page')),
+      other = await connect(server.transport());
+    expect(last(again, 'welcome').me.user.id).toBe(last(first, 'welcome').me.user.id);
+    expect(first.closed).toBe(4001);
+    expect(last(other, 'welcome').me.user.id).not.toBe(last(first, 'welcome').me.user.id);
+  });
+
+  it('finds the table where it was after it is made anew: the seat offline, the hand and the clock as they were', async () => {
+    const store = memory();
+    server = make(store);
+    const page = await connect(server.transport('this-page'));
+    page.send({ t: 'lobby.create', visibility: 'private', settings: SETTINGS });
+    page.send({ t: 'lobby.addBot' });
+    page.send({ t: 'lobby.ready', ready: true });
+    await flush();
+    page.send({ t: 'lobby.start' });
+    await flush();
+    await until(() => view(page).bids[1] === -1, 'the bot bids');
+    const before = last(page, 'game.update'),
+      start = last(page, 'game.start');
+    await flush();
+
+    // The page is gone, and the server with it. The next one reads what was written down.
+    server.shutDown();
+    server = make(store, 99);
+    await flush();
+    const back = await connect(server.transport('this-page'));
+    const welcome = last(back, 'welcome');
+    expect(welcome.me).toMatchObject({
+      user: last(page, 'welcome').me.user,
+      active: { kind: 'game', id: start.gameId },
+    });
+    expect(welcome.lobby).toMatchObject({ code: lobbyOf(page).code, state: 'inGame' });
+    expect(welcome.game?.start).toEqual(start);
+    const snapshot = welcome.game?.update;
+    expect(snapshot?.view).toEqual(before.view);
+    expect(snapshot?.events).toEqual([]);
+    // The reload was a drop: one step for the seat going offline, and the clock ran on.
+    expect(snapshot?.rev).toBe(before.rev + 1);
+    expect(snapshot?.table).toEqual({ ...before.table, status: ['offline', 'bot'] });
+    // Coming back is a step again, written after the welcome.
+    expect(back.frames.at(-1)).toMatchObject({
+      t: 'game.update',
+      rev: before.rev + 2,
+      events: [{ type: 'seatStatus', seat: 0, status: 'online' }],
+      table: { status: ['online', 'bot'] },
+    });
+
+    // And the table goes on: a bid lands, and the bots play.
+    const bid = back.send({ t: 'game.bid', at: at(back), bid: 1 });
+    await until(() => view(back).phase !== 'bidding', 'the bids are in');
+    expect(answer(back, bid).reply.t).toBe('ok');
+    expect(view(back).bids[0]).toBe(1);
+  });
+
+  it('plays for a seat whose deadline passed while nobody was there', async () => {
+    const store = memory();
+    server = make(store);
+    const page = await connect(server.transport('this-page'));
+    page.send({ t: 'lobby.create', visibility: 'private', settings: SETTINGS });
+    page.send({ t: 'lobby.addBot' });
+    page.send({ t: 'lobby.ready', ready: true });
+    await flush();
+    page.send({ t: 'lobby.start' });
+    await flush();
+    expect(view(page).bids[0]).toBeNull();
+
+    server.shutDown();
+    vi.setSystemTime(Date.now() + 60_000); // a minute with no page: the five seconds to bid are long over
+    server = make(store, 99);
+    await vi.advanceTimersByTimeAsync(200);
+    const back = await connect(server.transport('this-page'));
+    expect(last(back, 'welcome').game?.update.view.bids[0]).not.toBeNull();
+  });
+
+  it('starts empty from a store that holds nothing it can read', async () => {
+    const store = memory();
+    store.save('{"v":7,"what":"another version"}');
+    server = make(store);
+    const client = await connect(server.transport('this-page'));
+    expect(last(client, 'welcome')).toMatchObject({ lobby: null, game: null });
+    store.save('not json');
+    server = make(store);
+    expect(last(await connect(server.transport('this-page')), 'welcome')).toMatchObject({ lobby: null, game: null });
+  });
+});
+
 describe('lobbies', () => {
   it('creates a private lobby with a code, lets a second player join by it, and tells both of every change', async () => {
     const host = await connect();
