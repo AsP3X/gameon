@@ -200,7 +200,7 @@ type LobbySummary = { id: LobbyId; hostName: string; settings: GameSettings; pla
 | -------------- | ------- | --- | ------ |
 | `lobby.create` | `{ visibility, settings }` | anyone not seated | `ok { lobby }` |
 | `lobby.join` | `{ code?: string, lobbyId?: string }` | anyone not seated | `ok { lobby }`. Send one. If both are present, `code` wins. |
-| `lobby.leave` | | member | `ok` |
+| `lobby.leave` | | member of an open lobby | `ok`. While the lobby is `inGame`, `LOBBY_STARTED`; leaving the seat is `game.leave`. |
 | `lobby.ready` | `{ ready: boolean }` | member | `ok` |
 | `lobby.settings` | `{ settings }` | host | `ok`; clears everyone's ready |
 | `lobby.addBot` | | host | `ok` |
@@ -208,10 +208,16 @@ type LobbySummary = { id: LobbyId; hostName: string; settings: GameSettings; pla
 | `lobby.kick` | `{ userId }` | host | `ok` |
 | `lobby.start` | | host | `ok`; needs ≥ 2 seats and every human ready |
 
-Pushes: `{ t: 'lobby.state', lobby }` to every member on any change; `{ t: 'lobby.closed', reason:
-'kicked' | 'closed' | 'idle' }` to someone removed. When the host leaves, the longest-present human
-becomes host; a lobby with no humans closes. After a game the lobby returns to `open` with the same
-members and nobody ready (that is the rematch).
+Pushes: `{ t: 'lobby.state', lobby }` to every member on any change, including the member whose
+message caused it. `ok` for `lobby.ready`, `lobby.settings`, `lobby.addBot` and `lobby.removeBot`
+does not carry the lobby, so that push is what moves the sender's screen. `{ t: 'lobby.closed',
+reason: 'kicked' | 'closed' | 'idle' }` goes to someone removed. When the host leaves, the
+longest-present human becomes host; a lobby with no humans closes. After a game the lobby returns
+to `open` with the same members and nobody ready (that is the rematch).
+
+While `state` is not `open`, `lobby.join`, `lobby.leave`, `lobby.ready`, `lobby.settings`,
+`lobby.addBot`, `lobby.removeBot`, `lobby.kick` and `lobby.start` are `LOBBY_STARTED`. `game.leave` removes that user from the
+lobby as well as from the seat. The members who remain are sent `lobby.state`. The leaver is not.
 
 ### 5.4 Queue
 
@@ -283,9 +289,12 @@ enum as `EngineEvent` so the wire union can be called `GameEvent`.
 | `game.emote` | `{ emote }` | `ok`; one per 2 seconds |
 | `game.leave` | | `ok`; a bot takes the seat. In ranked this is a forfeit. |
 
-`at` is `{ round: number, trick: number }`: the round index and the number of tricks already
-completed in it, as the client saw them. The server rejects a mismatch with `STALE_ACTION`. It stops
-a click that was aimed at one trick from landing in the next after a timeout played for the seat.
+`at` is `{ round: number, trick: number }`: the round index and the number of tricks of that round
+already finished, as the sender's view shows them. `trick` is the sum of `won` plus
+`log[round].destroyed`. A trick the Kraken took is in `destroyed` and counts. During `trickEnd` the
+trick just played is already in one of those two, so it counts. The trick on the table during
+`playing` or `ability` does not. The server rejects a mismatch with `STALE_ACTION`. It stops a
+click that was aimed at one trick from landing in the next after a timeout played for the seat.
 
 `choice`: Helmsman a `Seat`; Smuggler `CardId[]` of the same length as the cards drawn; Gambler
 `0 | 10 | 20`; Seer `null`; Giant `-1 | 0 | 1`.
@@ -311,7 +320,30 @@ The seat is a bot from that step. A later `welcome` for that user has `game: nul
 cannot be resumed. In ranked the leave is a forfeit, recorded then and scored last. `forfeited`
 and `rating` travel on `game.over`, sent to the leaver when the game ends. If the leaver has no
 socket at that moment, that `game.over` is written immediately after the next `welcome`, which
-still has `game: null`. It does not put the table back.
+still has `game: null`. It does not put the table back. The same delivery is owed to any seated
+player who had no socket when the game ended, leaver or not. `forfeited` is empty unless the game
+is ranked. In ranked it lists every seat that sent `game.leave`. `rating` is null unless the game
+is ranked.
+
+`lobby.start`'s `ok` does not carry the opening table. Every member, including the host, is then
+sent `lobby.state` with `state: 'inGame'`. On each seated human's socket the server then writes
+`game.start` and, next, a `game.update` for that game with `rev` 0 and `events: []`. That update
+is the opening view. The client draws the table from it and does not present its events. The first
+accepted step is `rev` 1.
+
+`game.ready` during `roundEnd` is `ok` and then a `game.update` whose `events` are empty and whose
+`table.ready` shows the new flags. `advance` to the next round is a later step of its own, when
+every connected human is ready or when the round-end deadline fires.
+
+A socket that arrives or drops during a game is a step of its own. `rev` increases by one,
+`events` is one `seatStatus`, and every seated socket is sent that `game.update`. The returning
+socket is sent it after `welcome`. `welcome.game.update`, when `welcome.game` is present, is a
+snapshot at the current `rev` with `events: []`. It is not a new step. A drop sets the status to
+`offline` at once. The 60s grace, and the change to `bot` when it runs out, are later steps. Two
+missed deadlines in a row set `away` as their own step.
+
+At `game.start`, a seat whose colour is already taken by an earlier seat gets the next free
+`TableColor`.
 
 Other pushes:
 
