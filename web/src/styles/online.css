@@ -38,6 +38,29 @@
   padding-inline: 8px;
 }
 
+/* The end of a ranked game: what it did to the rating, shown when the standings are. */
+.end-rating {
+  flex: none;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 800;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+.end-rating[hidden] {
+  display: none;
+}
+.end-rating b {
+  font-size: 16px;
+  font-weight: 900;
+}
+.end.done .end-rating {
+  opacity: 1;
+}
 /* The end of an online game has one way on, and it takes the whole row. */
 .end-actions > :only-child {
   grid-column: 1 / -1;
@@ -325,4 +348,70 @@ ul.tables {
 .queue-seat svg {
   width: 22px;
   height: 22px;
+}
+
+/* A ranked rating: the number, the tier, and the placement flag when it is set. */
+.rating {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.rating b,
+.plate b.unrated {
+  font-size: 20px;
+  font-weight: 900;
+}
+
+/* The ladder: the season on top, then one row per player. */
+.season b {
+  display: block;
+  font-size: 18px;
+  font-weight: 900;
+}
+.season small {
+  display: block;
+  color: var(--muted);
+  font-size: 13px;
+}
+ol.ladder {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.ladder li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 50px;
+  padding: 8px 12px;
+  border: 2px solid var(--line);
+  border-radius: 14px;
+}
+.ladder li.you {
+  border-color: var(--blue);
+  background: var(--blue-bg);
+}
+.ladder .rank {
+  flex: none;
+  min-width: 28px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 900;
+}
+.ladder li b {
+  display: block;
+  font-weight: 900;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ladder li small {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
 }

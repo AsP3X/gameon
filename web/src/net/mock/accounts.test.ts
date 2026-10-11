@@ -471,10 +471,9 @@ describe('the casual queue', () => {
     await ask(socket, { t: 'queue.join', mode: 'casual' });
     expect(await ask(socket, { t: 'queue.join', mode: 'ranked' })).toMatchObject({ code: 'ACCOUNT_REQUIRED' });
     expect(await ask(socket, { t: 'queue.join', mode: 'blitz' })).toMatchObject({ code: 'VALIDATION' });
-    // The mock has no ranked queue for anyone: an account is told so, not seated.
+    // An account may queue for ranked: that queue has tests of its own (ranked.test.ts).
     const anne = await (await account()).connect();
-    expect(await ask(anne, { t: 'queue.join', mode: 'ranked' })).toMatchObject({ code: 'INTERNAL' });
-    expect(last(anne, 'welcome').queue).toBeNull();
+    expect(await ask(anne, { t: 'queue.join', mode: 'ranked' })).toMatchObject({ t: 'ok', queue: { mode: 'ranked' } });
   });
 
   it('answers ALREADY_SEATED to anyone who is already in a queue, a lobby or a game', async () => {

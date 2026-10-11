@@ -49,8 +49,11 @@ export const saveSettings = (settings: GameSettings): void => Store.set(KEY, set
 
 const LEVEL = { easy: 'Easy', normal: 'Normal', hard: 'Hard' } as const;
 
-/** The two lines of the rules card in the lobby. */
-export function describeSettings(s: GameSettings): { title: string; detail: string } {
+/**
+ * The two lines of the rules card in the lobby. A ranked table starts without bots, so its card
+ * does not name their skill (`bots: false`).
+ */
+export function describeSettings(s: GameSettings, { bots = true } = {}): { title: string; detail: string } {
   const extras = [
     s.abilities ? 'Pirate abilities' : '',
     s.loot ? 'Loot' : '',
@@ -62,10 +65,12 @@ export function describeSettings(s: GameSettings): { title: string; detail: stri
     title: `${s.scoring === 'rascal' ? "Rascal's" : "Skull King's"} scoring · ${Rules.FORMATS[s.format].name}`,
     detail: [
       `Up to ${s.maxPlayers} pirates`,
-      `${LEVEL[s.botLevel]} bots`,
+      bots ? `${LEVEL[s.botLevel]} bots` : '',
       `${pace} pace`,
       extras.length ? extras.join(', ') : 'No extra cards',
-    ].join(' · '),
+    ]
+      .filter(Boolean)
+      .join(' · '),
   };
 }
 

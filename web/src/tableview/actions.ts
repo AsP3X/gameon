@@ -38,7 +38,7 @@ import { recordGame } from './stats';
 import { Store } from './store';
 import { Tracker, trkCreate, trkNow } from './tracker';
 import { TRK_ACTIONS } from './trackerActions';
-import { abilityToast, scored } from './views';
+import { abilityToast, ratingLine, scored } from './views';
 
 type EventOf<T extends EngineEvent['type']> = Extract<EngineEvent, { type: T }>;
 
@@ -214,6 +214,18 @@ export function openOnlineTable(table: Table, hooks: OnlineHooks): void {
   session.online = hooks;
   patchUi({ deal: true, lastPct: 0 });
   go('game');
+}
+/**
+ * The server's result for the online game on screen has arrived. A ranked one has a rating change,
+ * and the end screen may already be up: its line is filled in where it stands, so the finale
+ * that is playing is not drawn again. An end screen drawn later reads the change by itself.
+ */
+export function showOnlineResult(): void {
+  const change = session.online?.rating(),
+    line = $('.end-rating');
+  if (!change || ui.screen !== 'end' || !line) return;
+  line.innerHTML = ratingLine(change);
+  line.hidden = false;
 }
 /** Take the online table off the screen. The home screen is what is left underneath. */
 export function closeOnlineTable(): void {

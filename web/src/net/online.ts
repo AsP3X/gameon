@@ -19,12 +19,14 @@ import type {
   GameSettings,
   GameStart,
   GameUpdate,
+  LadderPage,
   Lobby,
   LobbyId,
   LobbySummary,
   Me,
   Profile,
   ProfilePatch,
+  QueueMode,
   QueueStatus,
   Seat,
   ServerConfig,
@@ -173,6 +175,16 @@ export class Online {
     return this.api.user(id);
   }
 
+  /** One page of the ladder: the first, or the one after the page whose `next` is given. */
+  ladder(after?: string): Promise<ApiResult<LadderPage>> {
+    return this.api.ladder(after);
+  }
+
+  /** The server's clock right now: what a deadline or a cooldown the server named is measured against. */
+  serverNow(): number {
+    return this.client.serverNow();
+  }
+
   /* ---------- lobby intents ---------- */
 
   /** The open public tables, as they are right now. Nothing pushes changes to this list. */
@@ -213,9 +225,15 @@ export class Online {
 
   /* ---------- the queue ---------- */
 
-  /** Wait for a quick-play table. The game starts by itself when the server has formed one. */
-  joinQueue(): Promise<Outcome> {
-    return this.ask({ t: 'queue.join', mode: 'casual' });
+  /**
+   * Wait for a quick-play or a ranked table. The game starts by itself when the server has formed
+   * one. Whether this player may queue for ranked is the server's to say.
+   */
+  async joinQueue(mode: QueueMode): Promise<Outcome> {
+    const r = await this.ask({ t: 'queue.join', mode });
+    // The refusal carries no time. `Me` does: read it again so the screen can say until when.
+    if (!r.ok && r.code === 'QUEUE_COOLDOWN') void this.refreshMe();
+    return r;
   }
   leaveQueue(): Promise<Outcome> {
     return this.ask({ t: 'queue.leave' });
@@ -244,6 +262,8 @@ export class Online {
     const played = this.played.get(table.gameId),
       left = table.hasLeft;
     if (played) played.left = left;
+    // Leaving a ranked game starts a cooldown, and only `Me` says until when.
+    if (left && table.mode === 'ranked') void this.refreshMe();
     table.dispose();
     this.set({ table: null, lobby: left ? null : this.state.lobby });
   }
@@ -259,7 +279,7 @@ export class Online {
     if (r.ok) this.set({ config: r.value });
   }
 
-  /** The player's own record changed on the server (a game ended): ask for it again. */
+  /** The player's own record changed on the server (a game ended, a ranked game was left): ask for it again. */
   private async refreshMe(): Promise<void> {
     const id = this.state.me?.user.id,
       r = await this.api.me();

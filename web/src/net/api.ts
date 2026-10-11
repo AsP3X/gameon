@@ -8,6 +8,7 @@
 import type {
   Credentials,
   ErrorCode,
+  LadderPage,
   LobbyList,
   Me,
   Profile,
@@ -36,6 +37,8 @@ export interface Backend {
 export type ApiResult<T> = { ok: true; value: T } | { ok: false; code: ErrorCode | 'OFFLINE'; message: string };
 
 const OFFLINE = { ok: false, code: 'OFFLINE', message: 'Not connected to the server.' } as const;
+/** How many ladder rows one page asks for. */
+export const LADDER_PAGE = 25;
 const UUID = /^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
 
 const isRecord = (x: unknown): x is Record<string, unknown> => typeof x === 'object' && x !== null;
@@ -74,6 +77,15 @@ export class Api {
   }
   lobbies(): Promise<ApiResult<LobbyList>> {
     return this.call('GET', '/lobbies');
+  }
+  /**
+   * One page of the current season's ladder. `after` is the `next` of the page before it: the
+   * server's own cursor, sent back as it came.
+   */
+  ladder(after?: string): Promise<ApiResult<LadderPage>> {
+    const query = new URLSearchParams({ limit: String(LADDER_PAGE) });
+    if (after != null) query.set('after', after);
+    return this.call('GET', `/ladder?${query.toString()}`);
   }
 
   /** The server is the authority on what is inside a 2xx body, so its fields are not checked here. */

@@ -11,6 +11,8 @@ const ESCAPES: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;'
 /** Makes a string safe to put into HTML text or a quoted attribute. */
 export const esc = (s: string | number): string => String(s).replace(/[&<>"']/g, (c) => ESCAPES[c]);
 export const sgn = (n: number): string => (n > 0 ? '+' + n : String(n));
+/** A number from the server as a whole one, with a real minus sign: a rating is shown, never worked out. */
+export const whole = (n: number): string => String(Math.round(n)).replace('-', '−');
 export const toneOf = (n: number): 'pos' | 'neg' | 'zero' => (n > 0 ? 'pos' : n < 0 ? 'neg' : 'zero');
 export const wait = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
 export const reduced = (): boolean => matchMedia('(prefers-reduced-motion: reduce)').matches;

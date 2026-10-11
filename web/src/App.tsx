@@ -5,7 +5,7 @@ import { appBackend, BUILD } from './net/connect';
 import { Online } from './net/online';
 import { SocketClient } from './net/socket';
 import { OnlineScreens } from './online/OnlineScreens';
-import { closeOnlineTable, mountTavern, openOnlineTable } from './tableview';
+import { closeOnlineTable, mountTavern, openOnlineTable, showOnlineResult } from './tableview';
 
 export interface AppProps {
   /** How the online screens reach a server. Tests hand in a mock server's browser. */
@@ -43,8 +43,17 @@ export function App({ backend = appBackend }: AppProps) {
   // The server seated this session at a table: play it where every game is played.
   useEffect(() => {
     if (!table) return;
-    openOnlineTable(table, { leave: () => online.leaveTable(), exit: () => online.closeTable() });
-    return closeOnlineTable;
+    openOnlineTable(table, {
+      leave: () => online.leaveTable(),
+      exit: () => online.closeTable(),
+      ranked: table.mode === 'ranked',
+      rating: () => table.result?.rating ?? null,
+    });
+    const unlisten = table.onResult(showOnlineResult);
+    return () => {
+      unlisten();
+      closeOnlineTable();
+    };
   }, [online, table]);
 
   useEffect(() => () => online.close(), [online]);

@@ -19,7 +19,7 @@ import { render } from './render';
 import { clearTimer, loadState, prefs, savePrefs, session, stage, ui } from './state';
 import { Tracker } from './tracker';
 
-export { closeOnlineTable, openOnlineTable } from './actions';
+export { closeOnlineTable, openOnlineTable, showOnlineResult } from './actions';
 export type { OnlineHooks } from './state';
 
 /** What the page around the renderer does for it. */
