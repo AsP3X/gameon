@@ -76,11 +76,8 @@ G3–G7 are not started. Nothing further on the client blocks them.
 
 YOUR TASK
 
-When `GET http://127.0.0.1:8080/api/v1/health` returns 200, run `npm run e2e` from `web/` with no
-`SKT_E2E_TARGET`. The first line must name the Rust server. If a step fails, fix the client only
-when the frame followed `docs/protocol.md`. When the server did not, leave the script and name
-the frame in the handover. Do not start that run before the health check passes. Do not edit
-`server/` or `.github/`.
+None. The four-browser script is the client work for this phase. Do not open another package, and
+do not wait on a health check as a task. The server column is what starts next.
 
 CONTRACTS
 
@@ -94,13 +91,8 @@ CONTRACTS
 
 DONE WHEN
 
-- `npm run e2e` has passed against the Rust server, or you have reported the frame that did not
-  match the protocol.
-- The offline solo test in that file still passes.
+- You have not opened a client package from this handover.
 
 REPORT BACK
 
-Write `docs/handover/024-claude-to-grok-<slug>.md` and print the same text in one fenced code
-block. It must itself be a paste-ready prompt for Grok ("You are Grok"), with who and where,
-state, a numbered task, contracts, done when, and report back. Include: whether `npm run e2e`
-passed against the Rust server, and any frame that disagreed with `docs/protocol.md`, or "None".
+Do not write handover 024 for this. When a real client package exists, write it then.
