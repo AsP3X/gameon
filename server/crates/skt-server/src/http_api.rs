@@ -12,7 +12,7 @@ use axum::response::{IntoResponse, Response};
 use skt_protocol::{Credentials, ErrorCode, Me, Profile, ProfilePatch, ServerConfig};
 use tokio::sync::{Mutex, mpsc};
 
-use crate::rate::{Budgets, RateGate};
+use crate::rate::{Budgets, RateGate, TrustedProxies, client_key};
 use crate::store::{Store, StoreFailure};
 use crate::world::Wire;
 use crate::world::World;
@@ -24,6 +24,7 @@ pub struct AppState {
     world: Arc<Mutex<World>>,
     store: Option<Store>,
     rates: RateGate,
+    trusted: TrustedProxies,
 }
 
 impl Default for AppState {
@@ -40,6 +41,7 @@ impl AppState {
             world: Arc::new(Mutex::new(World::new())),
             store: None,
             rates: RateGate::new(Budgets::standard()),
+            trusted: TrustedProxies::none(),
         }
     }
 
@@ -50,20 +52,32 @@ impl AppState {
     /// The database is unreachable or a migration fails.
     pub async fn connect(url: &str) -> Result<Self, String> {
         let store = Store::connect(url).await?;
-        Ok(Self::with_store(store, World::new(), Budgets::standard()))
+        let trusted = TrustedProxies::from_env()?;
+        Ok(Self::with_store(
+            store,
+            World::new(),
+            Budgets::standard(),
+            trusted,
+        ))
     }
 
     /// A migrated pool, a queue wait, and rate budgets. Tests use this.
     #[must_use]
     pub fn for_tests(pool: sqlx::PgPool, fill: std::time::Duration, budgets: Budgets) -> Self {
-        Self::with_store(Store::from_pool(pool), World::with_fill(fill), budgets)
+        Self::with_store(
+            Store::from_pool(pool),
+            World::with_fill(fill),
+            budgets,
+            TrustedProxies::none(),
+        )
     }
 
-    fn with_store(store: Store, world: World, budgets: Budgets) -> Self {
+    fn with_store(store: Store, world: World, budgets: Budgets, trusted: TrustedProxies) -> Self {
         Self {
             world: Arc::new(Mutex::new(world)),
             store: Some(store),
             rates: RateGate::new(budgets),
+            trusted,
         }
     }
 
@@ -129,7 +143,12 @@ pub async fn register(
     request: Request,
 ) -> Result<Response, AppError> {
     origin::check_origin(header_str(&headers, header::ORIGIN))?;
-    limit(state.rates.register(&caller(&headers, peer)).await)?;
+    limit(
+        state
+            .rates
+            .register(&caller(&headers, peer, &state.trusted))
+            .await,
+    )?;
     let token = session_cookie(&headers).ok_or(AppError::new(ErrorCode::Unauthenticated))?;
     remember(&state, &token).await?;
     let guest = {
@@ -169,7 +188,12 @@ pub async fn login(
     request: Request,
 ) -> Result<Response, AppError> {
     origin::check_origin(header_str(&headers, header::ORIGIN))?;
-    limit(state.rates.login(&caller(&headers, peer)).await)?;
+    limit(
+        state
+            .rates
+            .login(&caller(&headers, peer, &state.trusted))
+            .await,
+    )?;
     let JsonBody(body) = JsonBody::<Credentials>::from_request(request, &state).await?;
     let store = state
         .store
@@ -404,16 +428,17 @@ fn limit(result: Result<(), u64>) -> Result<(), AppError> {
     }
 }
 
-fn caller(headers: &HeaderMap, peer: SocketAddr) -> String {
-    if let Some(value) = headers
-        .get("x-forwarded-for")
-        .and_then(|value| value.to_str().ok())
-        && let Some(first) = value.split(',').next().map(str::trim)
-        && !first.is_empty()
-    {
-        return first.to_owned();
-    }
-    peer.to_string()
+fn caller(headers: &HeaderMap, peer: SocketAddr, trusted: &TrustedProxies) -> String {
+    client_key(
+        peer,
+        headers
+            .get("x-forwarded-for")
+            .and_then(|value| value.to_str().ok()),
+        headers
+            .get("x-real-ip")
+            .and_then(|value| value.to_str().ok()),
+        trusted,
+    )
 }
 
 fn valid_username(value: &str) -> bool {

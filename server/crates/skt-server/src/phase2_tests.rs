@@ -60,6 +60,39 @@ async fn http(
     (status, head.to_owned(), body.to_owned())
 }
 
+async fn http_forwarded(port: u16, forwarded_for: &str) -> u16 {
+    let body = r#"{"username":"nobody","password":"x"}"#;
+    let request = format!(
+        "POST /api/v1/auth/login HTTP/1.1\r\nHost: localhost\r\nOrigin: http://localhost\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\nX-Forwarded-For: {forwarded_for}\r\n\r\n{body}",
+        body.len()
+    );
+    let mut stream = TcpStream::connect(("127.0.0.1", port))
+        .await
+        .expect("connect");
+    stream.write_all(request.as_bytes()).await.expect("write");
+    let mut bytes = Vec::new();
+    stream.read_to_end(&mut bytes).await.expect("read");
+    let text = String::from_utf8_lossy(&bytes);
+    text.split_whitespace()
+        .nth(1)
+        .and_then(|value| value.parse().ok())
+        .unwrap_or(0)
+}
+
+#[sqlx::test(migrations = "../../migrations/postgres")]
+async fn eleven_logins_on_separate_connections_share_one_address(pool: sqlx::PgPool) {
+    let state = AppState::for_tests(pool, Duration::ZERO, crate::rate::Budgets::standard());
+    let port = serve(state).await;
+    let mut codes = Vec::new();
+    for index in 0..11 {
+        codes.push(http_forwarded(port, &format!("203.0.113.{index}")).await);
+    }
+    assert_eq!(
+        codes,
+        vec![401, 401, 401, 401, 401, 401, 401, 401, 401, 401, 429]
+    );
+}
+
 fn cookie_of(head: &str) -> String {
     head.lines()
         .find_map(|line| {

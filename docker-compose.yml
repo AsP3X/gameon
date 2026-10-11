@@ -50,6 +50,10 @@ services:
       SKT_PUBLIC_ORIGIN: ${SKT_PUBLIC_ORIGIN:-}
       SKT_SECURE_COOKIE: ${SKT_SECURE_COOKIE:-}
       DATABASE_URL: postgres://${POSTGRES_USER:-skt}:${POSTGRES_PASSWORD:-skt}@postgres:5432/${POSTGRES_DB:-skt}
+      # Docker bridge addresses. A direct connection to the published API port is not in this
+      # list, so it cannot choose its own rate-limit key. Add the proxy-network subnet here
+      # when Nginx Proxy Manager is not on 172.16.0.0/12.
+      SKT_TRUSTED_PROXIES: ${SKT_TRUSTED_PROXIES:-172.16.0.0/12}
     depends_on:
       postgres:
         condition: service_healthy

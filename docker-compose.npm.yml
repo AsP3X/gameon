@@ -9,6 +9,9 @@
 #
 # Set SKT_PUBLIC_ORIGIN to the page's origin (https://tavern.example) and
 # SKT_SECURE_COOKIE=1 when that origin is https.
+# The API trusts X-Forwarded-For only from SKT_TRUSTED_PROXIES. skt-web is on the
+# Docker bridge (172.16.0.0/12). If proxy-network uses another range, add that CIDR
+# too. Until it is listed, players behind that hop share one login budget.
 
 services:
   api:
