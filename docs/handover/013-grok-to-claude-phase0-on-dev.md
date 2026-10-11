@@ -3,12 +3,14 @@ You are Claude, the web engineer on Skull King Tavern (repo
 Rust server, Compose, deploy files and CI, and never edits `web/` except the generated protocol
 tree. You and Grok cannot see each other's sessions: the owner pastes handover prompts between you.
 This is handover 013, the answer to your 012. Both web branches are on `dev`. The gates passed.
-Phase 1 is not open.
+The owner then asked for your next slice: plan item C4. Grok's column of Phase 1 stays closed.
 
 READ FIRST, IN THIS ORDER
-1. `AGENTS.md`, then `docs/agent-rules/ownership-and-handover.md`, `git.md` and
-   `definition-of-done.md`.
-2. `docs/multiplayer-plan.md` §5. Phase 1 stays closed until the owner opens it.
+1. `AGENTS.md`, then `docs/agent-rules/ownership-and-handover.md`, `server-authority.md`,
+   `web-quality.md`, `design-sync.md`, `git.md` and `definition-of-done.md`.
+2. `docs/multiplayer-plan.md` §5, Phase 1, your row C4 only. The risk note in §8 names why C4 is
+   its own package.
+3. `web/src/table/table.ts` and `web/src/table/localTable.ts` on `dev`.
 
 STATE
 
@@ -56,31 +58,51 @@ Server gate, from `server/` on the same tree:
 
 `docs/protocol.md`: None.
 
-Phase 1 was not opened. G3–G7 are not started. `ServerConfig.emotes` is still empty. The recorded
-takes are still unconfirmed by ear.
+Grok's G3–G7 are not started. `ServerConfig.emotes` is still empty. The recorded takes are still
+unconfirmed by ear.
 
 YOUR TASK
 
-1. Stop. Claude's column of Phase 0 is on `dev`, and so is the server gate. Do not start C4 or C5
-   until the owner opens Phase 1.
-2. Leave `server/`, `.github/`, `fixtures/` and `legacy/` alone.
+C4 only, on a branch of your own cut from `dev`. The server is not part of this package.
+
+1. Make `Table.dispatch` asynchronous. `LocalTable` still answers from the local engine, and it
+   resolves on that same turn. A rejection comes back as a failed result and changes no view. A
+   dispatch that does not answer in time fails the same way and unlocks input. Cover both with
+   tests.
+2. A seat played on this device is an explicit local seat, not "every seat whose `bot` flag is
+   false". Pass-and-play keeps several human seats on one device and still shows the hand-over
+   curtain between them. Solo still has one local human. The scorekeeper is unchanged.
+3. Solo, pass-and-play and the scorekeeper keep the behavior the parity suite already checks. If a
+   visible control changes, draw it in `design/web.pen` with the Pencil tools before the code.
+4. Do not build the socket client, the mock server, or the lobby screens. Those are C5 and C6.
+   Leave `server/`, `.github/`, `fixtures/` and `legacy/` alone.
 
 CONTRACTS
 
 - Frozen: `docs/engine-conformance.md` §3–§5, `docs/protocol.md`, the 41 fixtures, and
   `legacy/Skull King Tavern.html` until a deliberate rule change.
+- The seat still comes from the session once a server exists. This package must not teach the
+  client to trust a seat number that arrived inside an action from the network. Local play may
+  keep sending the seat because there is no session yet.
 - Changed by Grok in this package: this handover only.
 - You may edit `web/` except `web/src/protocol/generated/`, and `design/` through the Pencil tools.
   You may not edit `server/` or `.github/`.
 
 DONE WHEN
 
-- You have not started Phase 1 from this handover.
+- `Table.dispatch` is asynchronous, and a test shows a rejection and a timeout each leaving the
+  view as it was.
+- Pass-and-play still hands one device between its human seats. Solo and the scorekeeper still pass
+  their existing tests.
+- From `web/`: `npx vp check`, `npx vp test` and `npx vp build` pass, and
+  `node scripts/generate-engine-fixtures.mjs --check` still prints that the fixtures match.
+- Any screen you changed is also in `design/web.pen`.
 
 REPORT BACK
 
-When the owner opens a later package, write `docs/handover/014-claude-to-grok-<slug>.md` and print
-the same text in one fenced code block. It must itself be a paste-ready prompt for Grok ("You are
-Grok"), with who and where, state, a numbered task, contracts, done when, and report back.
-Include any `docs/protocol.md` change, with the reason, or "None", and whether the owner has named
-the emote ids or confirmed the recorded takes by ear.
+Write `docs/handover/014-claude-to-grok-<slug>.md` and print the same text in one fenced code
+block. It must itself be a paste-ready prompt for Grok ("You are Grok"), with who and where,
+state, a numbered task, contracts, done when, and report back. Include: the new `dispatch`
+signature; how a local seat is chosen; the test counts; any `docs/protocol.md` change, with the
+reason, or "None"; and whether the owner has named the emote ids or confirmed the recorded takes
+by ear.
