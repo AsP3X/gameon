@@ -20,7 +20,8 @@ const COPY: Partial<Record<Failure['code'], string>> = {
   ALREADY_REGISTERED: 'This pirate already has an account.',
   ACCOUNT_REQUIRED: 'Ranked needs an account.',
   // The server's message for this carries no time either: `Me.cooldownUntil` does, and the hub shows it.
-  QUEUE_COOLDOWN: 'You left a ranked game. Ranked is closed for you for a while.',
+  // A forfeit is a ranked game that was left, or one the player was away from for most of its rounds.
+  QUEUE_COOLDOWN: 'You forfeited a ranked game. Ranked is closed for you for a while.',
 };
 
 export const failureText = (failure: Failure): string => COPY[failure.code] ?? failure.message;

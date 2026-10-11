@@ -105,7 +105,7 @@ export function RankedSection({ online, me, live, onLadder, onSignUp }: RankedSe
       {left != null && (
         <div className="notice" role="status">
           <b>Ranked is closed for you</b>
-          <p>You left a ranked game. It opens again in {waitText(left)}.</p>
+          <p>You forfeited a ranked game. It opens again in {waitText(left)}.</p>
         </div>
       )}
       <button type="button" className="btn blue" disabled={!live || finding || left != null} onClick={find}>
@@ -117,8 +117,8 @@ export function RankedSection({ online, me, live, onLadder, onSignUp }: RankedSe
         </p>
       ) : (
         <p className="muted">
-          The standard rules against other pirates, no bots. Leaving a ranked game scores last place and starts a
-          cooldown.
+          The standard rules against other pirates, no bots. Leaving a ranked game, or staying away for most of it,
+          scores last place and starts a cooldown.
         </p>
       )}
     </section>

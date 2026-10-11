@@ -187,7 +187,7 @@ describe('ranked, for an account', () => {
     const ranked = $('#online [aria-label="Ranked"]');
     expect(ranked?.querySelector('.plate')?.textContent).toBe('RatingUnratedPlay a ranked game to get a rating.Ladder');
     expect(ranked?.querySelector('p.muted')?.textContent).toBe(
-      'The standard rules against other pirates, no bots. Leaving a ranked game scores last place and starts a cooldown.',
+      'The standard rules against other pirates, no bots. Leaving a ranked game, or staying away for most of it, scores last place and starts a cooldown.',
     );
     await press('Find a ranked game');
     expect(sentOf('queue.join')).toEqual([expect.objectContaining({ mode: 'ranked' })]);
@@ -196,7 +196,7 @@ describe('ranked, for an account', () => {
     // The standard rules, without the skill of bots a ranked table does not start with.
     expect(texts('#online .plate small')).toEqual(['Up to 4 pirates · Standard pace · No extra cards']);
     expect(texts('#online p.muted').at(-1)).toBe(
-      'The game starts by itself when the table is full. A ranked table has no bots. Leaving a ranked game scores last place and starts a cooldown.',
+      'The game starts by itself when the table is full. A ranked table has no bots. Leaving a ranked game, or staying away for most of it, scores last place and starts a cooldown.',
     );
     // No waiting time is promised, and waiting does not bring bots.
     expect($('#online')?.textContent).not.toMatch(/\d+\s*(s|sec|seconds|min|minutes?)\b/);
@@ -242,7 +242,7 @@ describe('ranked, for an account', () => {
     expect((await me()).cooldownUntil).toBe(NOW + COOLDOWN_MS);
     const ranked = (): HTMLElement | null => $('#online [aria-label="Ranked"]');
     expect(ranked()?.querySelector('.notice')?.textContent).toBe(
-      'Ranked is closed for youYou left a ranked game. It opens again in 15 min.',
+      'Ranked is closed for youYou forfeited a ranked game. It opens again in 15 min.',
     );
     expect(button('Find a ranked game').disabled).toBe(true);
     // A tap on the closed button reaches nobody: the page still has sent one ranked join, the first.
@@ -254,7 +254,7 @@ describe('ranked, for an account', () => {
 
     await settle(COOLDOWN_MS - 30_000);
     expect(ranked()?.querySelector('.notice p')?.textContent).toBe(
-      'You left a ranked game. It opens again in less than a minute.',
+      'You forfeited a ranked game. It opens again in less than a minute.',
     );
     expect(button('Find a ranked game').disabled).toBe(true);
     // The others played on meanwhile: the result reached the leaver as news, with the forfeit and the rating.
