@@ -363,7 +363,8 @@ ul.tables {
   font-weight: 900;
 }
 
-/* The ladder: the season on top, then one row per player. */
+/* The ladder: the season on top, then one row per player. The list is `.ranking` and a row's number
+   `.place`: tavern.css already has a `.ladder` and a `.rank`, for the how-to-play sheet and the standings. */
 .season b {
   display: block;
   font-size: 18px;
@@ -374,7 +375,7 @@ ul.tables {
   color: var(--muted);
   font-size: 13px;
 }
-ol.ladder {
+ol.ranking {
   list-style: none;
   margin: 0;
   padding: 0;
@@ -382,7 +383,7 @@ ol.ladder {
   flex-direction: column;
   gap: 8px;
 }
-.ladder li {
+.ranking li {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -391,11 +392,11 @@ ol.ladder {
   border: 2px solid var(--line);
   border-radius: 14px;
 }
-.ladder li.you {
+.ranking li.you {
   border-color: var(--blue);
   background: var(--blue-bg);
 }
-.ladder .rank {
+.ranking .place {
   flex: none;
   min-width: 28px;
   text-align: center;
@@ -403,14 +404,14 @@ ol.ladder {
   font-size: 14px;
   font-weight: 900;
 }
-.ladder li b {
+.ranking li b {
   display: block;
   font-weight: 900;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.ladder li small {
+.ranking li small {
   display: block;
   color: var(--muted);
   font-size: 12px;

@@ -216,12 +216,12 @@ export function LadderScreen({ online, me, live, onBack }: LadderScreenProps) {
                   <p>Play a ranked game to be the first.</p>
                 </div>
               ) : (
-                <ol className="ladder" aria-label="Ladder">
+                <ol className="ranking" aria-label="Ladder">
                   {ladder.entries.map((entry) => {
                     const you = entry.user.id === me;
                     return (
                       <li key={entry.user.id} className={you ? 'you' : undefined}>
-                        <span className="rank num">{entry.rank}</span>
+                        <span className="place num">{entry.rank}</span>
                         <Avatar name={entry.user.name} color={entry.user.color} />
                         <span className="grow">
                           <b>{entry.user.name}</b>

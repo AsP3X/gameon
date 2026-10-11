@@ -325,8 +325,8 @@ describe('ranked, for an account', () => {
     await click('[aria-label="Back"]');
 
     await press('Ladder');
-    const rows = Array.from(document.querySelectorAll<HTMLElement>('#online .ladder li'));
-    expect(rows.map((li) => li.querySelector('.rank')?.textContent)).toEqual(['1', '2', '3', '4']);
+    const rows = Array.from(document.querySelectorAll<HTMLElement>('#online .ranking li'));
+    expect(rows.map((li) => li.querySelector('.place')?.textContent)).toEqual(['1', '2', '3', '4']);
     expect(
       rows.map((li) => li.querySelector('.grow b')?.textContent ?? '').toSorted((a, b) => a.localeCompare(b)),
     ).toEqual(['Anne', 'Calico', 'Kidd', 'Mary']);
@@ -422,14 +422,14 @@ describe('the ladder, a page at a time', () => {
     expect(online.getState().config).toBeNull();
     expect($('#online .season b')?.textContent).toBe('Season of the Kraken');
     expect($('#online .season small')?.textContent).toBe('1 Oct 2026 – 31 Dec 2026');
-    expect(document.querySelectorAll('#online .ladder li')).toHaveLength(25);
-    expect(texts('#online .ladder li:first-child small')).toEqual(['Bosun']);
-    expect(texts('#online .ladder li:first-child b')).toEqual(['Pirate 1', '1999']);
+    expect(document.querySelectorAll('#online .ranking li')).toHaveLength(25);
+    expect(texts('#online .ranking li:first-child small')).toEqual(['Bosun']);
+    expect(texts('#online .ranking li:first-child b')).toEqual(['Pirate 1', '1999']);
 
     await press('Show more');
     expect(asked.at(-1)).toBe('GET /ladder?limit=25&after=c%3A25');
-    expect(document.querySelectorAll('#online .ladder li')).toHaveLength(27);
-    expect(texts('#online .ladder li .rank').slice(-3)).toEqual(['25', '26', '27']);
+    expect(document.querySelectorAll('#online .ranking li')).toHaveLength(27);
+    expect(texts('#online .ranking li .place').slice(-3)).toEqual(['25', '26', '27']);
     // That was the last page: there is nothing more to ask for.
     expect(document.querySelector('#online .footbar')).toBeNull();
     online.dispose();
@@ -442,13 +442,13 @@ describe('the ladder, a page at a time', () => {
     );
     answers['/ladder?limit=25'] = { status: 200, body: { season, entries: [entry(1)], next: 'x' } };
     await press('Try again');
-    expect(document.querySelectorAll('#online .ladder li')).toHaveLength(1);
+    expect(document.querySelectorAll('#online .ranking li')).toHaveLength(1);
     await press('Show more');
     expect($('#online .footbar [role="alert"]')?.textContent).toBe("Couldn't load more. Try again.");
-    expect(document.querySelectorAll('#online .ladder li')).toHaveLength(1);
+    expect(document.querySelectorAll('#online .ranking li')).toHaveLength(1);
     answers['/ladder?limit=25&after=x'] = { status: 200, body: { season, entries: [entry(2)] } };
     await press('Show more');
-    expect(document.querySelectorAll('#online .ladder li')).toHaveLength(2);
+    expect(document.querySelectorAll('#online .ranking li')).toHaveLength(2);
     online.dispose();
   });
 });
