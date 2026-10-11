@@ -58,11 +58,13 @@ export function App({ backend = appBackend, memory = appMemory }: AppProps) {
       now: online.serverNow,
       ranked: table.mode === 'ranked',
       result: () => table.result,
+      record: () => setRecord(true),
     });
     const unlisten = table.onResult(showOnlineResult);
     return () => {
       unlisten();
       closeOnlineTable();
+      setRecord(false);
     };
   }, [online, table]);
 
@@ -81,11 +83,6 @@ export function App({ backend = appBackend, memory = appMemory }: AppProps) {
       <div id="app" ref={app} hidden={screens} inert={cut != null}></div>
       <canvas id="fx" ref={fx} hidden></canvas>
       {cut && <TableOverlay status={cut} online={online} />}
-      {table?.result && !record && (
-        <button id="record-open" type="button" className="btn ghost" onClick={() => setRecord(true)}>
-          The record
-        </button>
-      )}
       {table?.result && record && <GameRecord online={online} gameId={table.gameId} onClose={() => setRecord(false)} />}
       {screens && (
         <div id="online">

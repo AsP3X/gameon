@@ -775,7 +775,7 @@ export function endView(): string {
     ${rows ? `<ol class="standings ${rest.length > 4 ? 'two' : ''}">${rows}</ol>` : ''}
     ${aw ? `<div class="awards">${aw}</div>` : ''}
     </div>${ranked ? `<p class="end-rating" aria-live="polite"${change ? '' : ' hidden'}>${change ? ratingLine(change) : ''}</p>` : ''}
-    <div class="end-actions"><button class="btn" data-act="again">Play again</button>${session.online ? '' : '<button class="btn ghost" data-act="home">Home</button>'}</div>
+    <div class="end-actions${session.online ? ' online' : ''}"><button class="btn" data-act="again">Play again</button>${session.online ? '<button class="btn ghost" data-act="record">The record</button>' : '<button class="btn ghost" data-act="home">Home</button>'}</div>
     <p class="skip-hint" aria-hidden="true">Tap to skip</p>
   </div>`;
 }

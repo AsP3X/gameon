@@ -183,9 +183,9 @@
   margin-block: 6px 4px;
 }
 
-/* The end of an online game has one way on, and it takes the whole row. */
-.end-actions > :only-child {
-  grid-column: 1 / -1;
+/* The end of an online game: on to the next one, or back through this one. Neither label is short. */
+.end-actions.online {
+  grid-template-columns: 1fr 1fr;
 }
 
 .identity {
@@ -337,12 +337,6 @@ input.code-input[aria-invalid='true'] {
   color: var(--muted);
   font-size: 14px;
 }
-#record-open {
-  position: fixed;
-  z-index: 20;
-  right: 16px;
-  bottom: 24px;
-}
 #record {
   position: fixed;
   z-index: 30;
@@ -354,10 +348,18 @@ input.code-input[aria-invalid='true'] {
   flex-direction: column;
   gap: 12px;
 }
+/* The way back comes first in the page and second on the screen: the name of the sheet is above it. */
 #record .head {
   display: flex;
-  align-items: center;
+  flex-direction: column-reverse;
   gap: 12px;
+  text-align: center;
+}
+/* Each step says its own number: the list adds none. */
+#record ol {
+  list-style: none;
+  margin: 0;
+  padding: 0;
 }
 #record li p {
   overflow-wrap: anywhere;
