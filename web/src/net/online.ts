@@ -33,7 +33,8 @@ export type Notice =
   | { kind: 'lobbyClosed'; reason: CloseReason }
   /**
    * A game ended while its table was not on screen: the seat was left, or the result arrived after a
-   * reconnect. `place` is known when the table was opened from this page; after a reload it is not.
+   * reconnect. `place` is null only when the result did not say whose seat it is about and this
+   * device does not remember one. `left` is what this device remembers.
    */
   | {
       kind: 'gameOver';
@@ -271,10 +272,14 @@ export class Online {
   /**
    * The result of a game. At an open table the end screen already shows it. Anywhere else it is
    * news: it never puts a table back.
+   *
+   * The message names the receiver's seat (`seat`, §5.5). The seat this device remembers is only
+   * for a message without one, which the protocol still allows.
    */
   private gameOver(over: GameOver): void {
     const played = this.played.get(over.gameId),
-      r = over.result;
+      r = over.result,
+      seat = 'seat' in over && typeof over.seat === 'number' ? over.seat : (played?.seat ?? null);
     this.played.delete(over.gameId);
     this.remember();
     if (this.state.table?.gameId === over.gameId) return;
@@ -282,9 +287,9 @@ export class Online {
       notice: {
         kind: 'gameOver',
         left: played?.left ?? false,
-        place: played ? (r.places[played.seat] ?? null) : null,
+        place: seat == null ? null : (r.places[seat] ?? null),
         seats: r.places.length,
-        forfeited: played != null && r.forfeited.includes(played.seat),
+        forfeited: seat != null && r.forfeited.includes(seat),
         delta: r.rating ? r.rating.delta : null,
       },
     });

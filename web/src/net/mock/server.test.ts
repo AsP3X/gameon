@@ -422,6 +422,9 @@ describe('the table', () => {
       const over = p.frames.findIndex((f) => f.t === 'game.over');
       expect(p.frames[over - 1]).toMatchObject({ t: 'game.update', view: { phase: 'gameOver' } });
       expect(last(p, 'game.over').result).toMatchObject({ forfeited: [], rating: null });
+      // The result is the same for everyone. What differs is whose seat each frame is for.
+      expect(last(p, 'game.over')).toMatchObject({ seat: view(p).me });
+      expect(last(p, 'game.over').result).toEqual(last(a, 'game.over').result);
       // And the lobby is open again for the rematch, with nobody ready.
       expect(lobbyOf(p)).toMatchObject({ state: 'open', gameId: null });
       expect(lobbyOf(p).members.every((m) => m.kind === 'bot' || !m.ready)).toBe(true);
@@ -553,8 +556,11 @@ describe('the table', () => {
 
     await until(() => framesOf(b, 'game.over').length > 0, 'the game ends');
     expect(last(b, 'game.update').rev).toBeGreaterThan(rev + 50);
-    // After its last update the leaver's socket got the result and nothing else.
-    expect(a.frames.slice(mark)).toEqual([last(b, 'game.over')]);
+    // After its last update the leaver's socket got the result and nothing else: the same result
+    // the others got, for the seat it gave up.
+    expect(a.frames.slice(mark)).toEqual([{ ...last(b, 'game.over'), seat: 0 }]);
+    expect(last(b, 'game.over')).toMatchObject({ seat: 1 });
+    expect(last(a, 'game.over').result).toEqual(last(b, 'game.over').result);
     // The seat it gave up was played by a bot to the end.
     expect(last(b, 'game.over').result.totals).toHaveLength(3);
 
@@ -585,7 +591,10 @@ describe('the table', () => {
     const back = await connect(as);
     expect(back.frames.map((f) => f.t)).toEqual(['ok', 'welcome', 'game.over']);
     expect(last(back, 'welcome')).toMatchObject({ game: null, lobby: null });
-    expect(last(back, 'game.over')).toEqual(last(other, 'game.over'));
+    expect(last(back, 'game.over').result).toEqual(last(other, 'game.over').result);
+    expect(last(back, 'game.over')).toMatchObject({ gameId: last(other, 'game.over').gameId, seat: 0 });
+    // The host, the bot, then the one who joined: that is seat 2.
+    expect(last(other, 'game.over')).toMatchObject({ seat: 2 });
   });
 
   it('holds the seat of a player whose connection dropped: the welcome on the next socket is the game', async () => {

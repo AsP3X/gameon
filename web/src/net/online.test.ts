@@ -313,6 +313,32 @@ describe('Online', () => {
     });
   });
 
+  it('takes the seat a result is about from the message, and from memory only when it names none', async () => {
+    const result = { totals: [10, 20, 30], places: [3, 2, 1], forfeited: [2], rating: null, lobbyId: null };
+    // A device that knows nothing about the game: the message says it all.
+    welcome();
+    wire().say({ t: 'game.over', gameId: 'played-elsewhere', seat: 2, result });
+    expect(online.getState().notice).toMatchObject({
+      kind: 'gameOver',
+      left: false,
+      place: 1,
+      seats: 3,
+      forfeited: true,
+    });
+
+    // A device that remembers seat 0 is told seat 1: the server is the one that knows.
+    wire().onclose?.(1006);
+    await tick(500);
+    welcome({ lobby, game });
+    online.closeTable();
+    wire().say({ t: 'game.over', gameId: game.start.gameId, seat: 1, result: { ...result, places: [2, 1] } });
+    expect(online.getState().notice).toMatchObject({ place: 1, seats: 2 });
+
+    // Seat 0 is a real seat, not "no seat".
+    wire().say({ t: 'game.over', gameId: 'another', seat: 0, result });
+    expect(online.getState().notice).toMatchObject({ place: 3, forfeited: false });
+  });
+
   it('forgets everything on close()', () => {
     welcome({ lobby, game });
     online.close();

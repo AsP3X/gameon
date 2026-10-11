@@ -227,6 +227,11 @@ export class MockServer {
     return () => Promise.resolve().then(() => this.connect(account));
   }
 
+  /** Who a session is, making a guest of one nobody has seen: what `POST /auth/guest` answers. */
+  me(session: string): Me {
+    return (this.sessions.get(session) ?? this.guest(session)).me;
+  }
+
   /**
    * Cut every connection, as a network drop would: replies on their way are lost with it.
    * With `down`, nothing connects until restore().
@@ -937,16 +942,18 @@ export class MockServer {
         lobbyId: open ? room.lobby.id : null,
       },
     };
-    const tell = (account: Account): void => {
-      if (account.conn) this.write(account.conn, over);
-      else account.owed.push(over);
+    // Every receiver is told which seat was theirs (§5.5): the result alone does not say.
+    const tell = (account: Account, seat: Seat): void => {
+      const mine: GameOver = Object.assign({ seat }, over);
+      if (account.conn) this.write(account.conn, mine);
+      else account.owed.push(mine);
     };
-    game.players.forEach((account) => {
+    game.players.forEach((account, seat) => {
       if (!account) return;
       account.game = null;
-      tell(account);
+      tell(account, seat);
     });
-    game.leavers.forEach(({ account }) => tell(account));
+    game.leavers.forEach(({ account, seat }) => tell(account, seat));
     if (!open) return;
     room.lobby.state = 'open';
     room.lobby.gameId = null;
