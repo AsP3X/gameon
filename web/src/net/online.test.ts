@@ -5,6 +5,7 @@ import { readFileSync } from 'node:fs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 import type { Lobby, WelcomeGame } from '../protocol/generated';
 import { Online } from './online';
+import type { OnlineMemory, Remembered } from './online';
 import { SocketClient } from './socket';
 import type { Wire } from './socket';
 
@@ -33,11 +34,14 @@ function welcome(snapshot: { lobby?: Lobby | null; game?: WelcomeGame | null } =
 /** Answer the newest message of the page with ok. */
 const ok = (extra: object = {}): void => wire().say({ t: 'ok', re: wire().sent.at(-1)?.id, ...extra });
 
+/** Opens another hand-held wire. */
+let reopen: () => Promise<Wire>;
+
 beforeEach(async () => {
   vi.useFakeTimers();
   wires = [];
   changes = 0;
-  const transport = (): Promise<Wire> => {
+  const transport = (reopen = (): Promise<Wire> => {
     const sent: TestWire['sent'] = [];
     const w: TestWire = {
       sent,
@@ -49,7 +53,7 @@ beforeEach(async () => {
     };
     wires.push(w);
     return Promise.resolve(w);
-  };
+  });
   online = new Online(new SocketClient({ transport, build: 'test', random: () => 0.5 }));
   online.subscribe(() => changes++);
   online.open();
@@ -231,6 +235,108 @@ describe('Online', () => {
       table: null,
       notice: { kind: 'gameOver', left: false, place: null, seats: 3, forfeited: false, delta: null },
     });
+  });
+
+  describe('what one page leaves for the next', () => {
+    /** The device's memory, and a second page that reads it. */
+    function device(): { kept: Remembered | null; memory: OnlineMemory; page(): Online } {
+      const d = {
+        kept: null as Remembered | null,
+        memory: {
+          load: () => d.kept,
+          save: (r: Remembered) => {
+            d.kept = structuredClone(r);
+          },
+        },
+        page: () => new Online(new SocketClient({ transport: () => new Promise(() => {}), build: 'test' }), d.memory),
+      };
+      return d;
+    }
+    /** This test's own page, on the shared wires, with a memory. */
+    async function pageWith(memory: OnlineMemory): Promise<Online> {
+      online.dispose();
+      online = new Online(new SocketClient({ transport: reopen, build: 'test' }), memory);
+      online.open();
+      await tick();
+      return online;
+    }
+
+    it('remembers a seat once the server has said there is one, and nothing before', async () => {
+      const d = device();
+      expect(d.page().wasSeated).toBe(false);
+      await pageWith(d.memory);
+      expect(d.kept).toBeNull();
+      welcome();
+      expect(d.kept).toEqual({ seated: false, games: {} });
+      wire().say({ t: 'lobby.state', lobby });
+      expect(d.kept).toEqual({ seated: true, games: {} });
+      expect(d.page().wasSeated).toBe(true);
+    });
+
+    it('keeps the seat remembered while the link is down, and forgets it when the player walks away', async () => {
+      const d = device();
+      await pageWith(d.memory);
+      welcome({ lobby, game });
+      expect(d.kept).toEqual({ seated: true, games: { [game.start.gameId]: { seat: 0, left: false } } });
+      wire().onclose?.(1006);
+      expect(d.page().wasSeated).toBe(true);
+      online.close(); // the page goes away
+      expect(d.page().wasSeated).toBe(true);
+      online.close(true); // the player goes away
+      expect(d.page().wasSeated).toBe(false);
+    });
+
+    it('knows on the next page which seat was played, so a late result can say the place', async () => {
+      const d = device();
+      await pageWith(d.memory);
+      welcome({ lobby, game: { ...game, start: { ...game.start, me: 1 } } });
+      online.close();
+
+      await pageWith(d.memory);
+      welcome({ lobby: null, game: null });
+      wire().say({
+        t: 'game.over',
+        gameId: game.start.gameId,
+        result: { totals: [80, 20], places: [1, 2], forfeited: [], rating: null, lobbyId: null },
+      });
+      expect(online.getState().notice).toEqual({
+        kind: 'gameOver',
+        left: false,
+        place: 2,
+        seats: 2,
+        forfeited: false,
+        delta: null,
+      });
+      expect(online.getState().table).toBeNull();
+      // The result is in: that game is not kept any longer.
+      expect(d.kept).toEqual({ seated: false, games: {} });
+    });
+  });
+
+  it('takes the seat a result is about from the message, and from memory only when it names none', async () => {
+    const result = { totals: [10, 20, 30], places: [3, 2, 1], forfeited: [2], rating: null, lobbyId: null };
+    // A device that knows nothing about the game: the message says it all.
+    welcome();
+    wire().say({ t: 'game.over', gameId: 'played-elsewhere', seat: 2, result });
+    expect(online.getState().notice).toMatchObject({
+      kind: 'gameOver',
+      left: false,
+      place: 1,
+      seats: 3,
+      forfeited: true,
+    });
+
+    // A device that remembers seat 0 is told seat 1: the server is the one that knows.
+    wire().onclose?.(1006);
+    await tick(500);
+    welcome({ lobby, game });
+    online.closeTable();
+    wire().say({ t: 'game.over', gameId: game.start.gameId, seat: 1, result: { ...result, places: [2, 1] } });
+    expect(online.getState().notice).toMatchObject({ place: 1, seats: 2 });
+
+    // Seat 0 is a real seat, not "no seat".
+    wire().say({ t: 'game.over', gameId: 'another', seat: 0, result });
+    expect(online.getState().notice).toMatchObject({ place: 3, forfeited: false });
   });
 
   it('forgets everything on close()', () => {

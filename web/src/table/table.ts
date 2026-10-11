@@ -3,7 +3,7 @@
    is told what happened. Offline that is LocalTable (the reference engine plus bot timers); online
    it will be a socket client with the same localSeats / view(seat) / dispatch(action) / subscribe(fn). */
 import type { Action, TableView } from '../game';
-import type { EngineEvent, ErrorCode, Seat } from '../protocol/generated';
+import type { ErrorCode, GameEvent, Seat } from '../protocol/generated';
 
 /** The redacted view of one seat at the moment an update happened. */
 export type GetView = (seat: Seat) => TableView;
@@ -22,8 +22,11 @@ export interface UpdateInfo {
   last: boolean;
 }
 
-/** Called once per accepted action with what happened and the views right after it. */
-export type TableListener = (events: EngineEvent[], getView: GetView, info?: UpdateInfo) => void;
+/**
+ * Called once per accepted action with what happened and the views right after it. Offline the
+ * events are the engine's. A server adds its own: a seat whose connection changed, a seat it played for.
+ */
+export type TableListener = (events: GameEvent[], getView: GetView, info?: UpdateInfo) => void;
 
 /**
  * Why an action was not taken. A server answers with one of its error codes; `REJECTED` is the
@@ -56,7 +59,7 @@ export interface Table {
   /** Returns the function that unsubscribes. */
   subscribe(fn: TableListener): () => void;
   /** Start whatever the table does on its own after `events` (bots, the pause after a trick). */
-  schedule(events?: EngineEvent[]): void;
+  schedule(events?: GameEvent[]): void;
   /** Cancel everything `schedule` started. */
   stop(): void;
 }

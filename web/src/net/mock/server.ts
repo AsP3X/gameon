@@ -14,7 +14,11 @@
    What it is not: a security boundary or a reference for the rules. Accepted play goes through the
    reference engine in src/game (the seeded shuffle and the bots that read the whole state included),
    which the real server must never run. It has private lobbies only: no accounts, no queue, no
-   emotes, no away detection and no bot takeover after the grace period. */
+   emotes, no away detection and no bot takeover after the grace period.
+
+   Given a store, it writes its lobbies and games down after every change and picks them up again
+   when it is made anew. That is a page reload in development: the page, and with it this server and
+   every socket, is gone, and the next page finds the table where it was, with its seats offline. */
 import { Bots, Engine, Rules } from '../../game';
 import type { Action, GameState } from '../../game';
 import type {
@@ -39,6 +43,7 @@ import type {
 import { PROTOCOL } from '../messages';
 import type { ServerMessage } from '../messages';
 import type { Transport, Wire } from '../socket';
+import { deadlineMs, STANDARD_TIMERS } from '../timing';
 
 const COLORS: TableColor[] = ['#1cb0f6', '#ff9600', '#ce82ff', '#ff4b4b', '#58cc02', '#e5a400', '#2b70c9', '#ff5fbf'];
 const BOT_NAMES = ['Anne', 'Calico', 'Morgan', 'Ching', 'Kidd', 'Grace', 'Bart', 'Rackham'];
@@ -50,17 +55,6 @@ const CLOSE_BAD_FRAME = 1003;
 const CLOSE_TOO_BIG = 1009;
 const CLOSE_SUPERSEDED = 4001;
 const CLOSE_DROPPED = 1006;
-
-/** The defaults of §5.6. */
-export const STANDARD_TIMERS: Timers = {
-  bidMs: 45_000,
-  playMs: 30_000,
-  abilityMs: 30_000,
-  trickEndMs: 2500,
-  roundEndMs: 20_000,
-  disconnectGraceMs: 60_000,
-};
-const PACE = { relaxed: 2, standard: 1, fast: 0.5 } as const;
 
 const MESSAGES: Partial<Record<ErrorCode, string>> = {
   VALIDATION: 'That message is not valid.',
@@ -87,12 +81,41 @@ export interface MockOptions {
   timers?: Partial<Timers>;
   /** How long a bot seat waits before it moves, so people can follow. */
   bot?: { minMs: number; maxMs: number };
+  /** Where the server keeps its state between two lives. Without one it forgets everything. */
+  store?: MockStore;
+}
+export interface MockStore {
+  load(): string | null;
+  save(data: string): void;
+}
+
+/** What is written to the store: everything but the sockets and the timers. */
+interface Saved {
+  v: 1;
+  ids: number;
+  accounts: { session: string | null; me: Me; owed: GameOver[] }[];
+  /** `open` is false for the lobby of a running game that every human has left. */
+  rooms: { lobby: Lobby; humans: string[]; open: boolean }[];
+  games: {
+    id: string;
+    lobby: string;
+    state: GameState;
+    rev: number;
+    players: (string | null)[];
+    colors: TableColor[];
+    leavers: { user: string; seat: Seat }[];
+    status: SeatStatus[];
+    ready: boolean[];
+    deadline: Deadline | null;
+  }[];
 }
 
 type Timer = ReturnType<typeof setTimeout>;
 
 /** One player: what the session cookie stands for on the real server. */
 interface Account {
+  /** What a transport names to be this player again, as a cookie would. null for a player nobody can come back as. */
+  session: string | null;
   me: Me;
   conn: Conn | null;
   room: Room | null;
@@ -168,30 +191,45 @@ export class MockServer {
   private readonly random: () => number;
   private readonly timers: Timers;
   private readonly bot: { minMs: number; maxMs: number };
+  private readonly store: MockStore | null;
+  private readonly accounts = new Map<string, Account>();
+  private readonly sessions = new Map<string, Account>();
   private readonly rooms = new Set<Room>();
+  private readonly games = new Set<Game>();
   private readonly conns = new Set<Conn>();
   private ids = 0;
   private down = false;
+  private saving = false;
+  private ended = false;
 
   constructor({
     now = Date.now,
     random = Math.random,
     timers = {},
     bot = { minMs: 800, maxMs: 1500 },
+    store,
   }: MockOptions = {}) {
     this.now = now;
     this.random = random;
     this.timers = { ...STANDARD_TIMERS, ...timers };
     this.bot = bot;
+    this.store = store ?? null;
+    this.resume();
   }
 
   /**
-   * A new guest and the way to connect as them: what one browser profile is to the real server.
-   * Every call of the returned transport is another socket of the same player.
+   * A player and the way to connect as them: what one browser profile is to the real server.
+   * Every call of the returned transport is another socket of the same player. With a `session`,
+   * it is the player that session named before, also in an earlier life of a server with a store.
    */
-  transport(): Transport {
-    const account = this.guest();
+  transport(session?: string): Transport {
+    const account = (session != null ? this.sessions.get(session) : undefined) ?? this.guest(session ?? null);
     return () => Promise.resolve().then(() => this.connect(account));
+  }
+
+  /** Who a session is, making a guest of one nobody has seen: what `POST /auth/guest` answers. */
+  me(session: string): Me {
+    return (this.sessions.get(session) ?? this.guest(session)).me;
   }
 
   /**
@@ -209,11 +247,28 @@ export class MockServer {
     this.down = false;
   }
 
+  /**
+   * The end of this server, as when its page is closed: no timer fires again, no socket hears
+   * anything more, and nothing further is written to the store.
+   */
+  shutDown(): void {
+    this.down = true;
+    this.ended = true;
+    this.games.forEach((game) => this.disarm(game));
+    this.conns.forEach((conn) => {
+      conn.open = false;
+      conn.gone = true;
+      if (conn.helloTimer != null) clearTimeout(conn.helloTimer);
+    });
+    this.conns.clear();
+  }
+
   /* ---------- connections ---------- */
 
-  private guest(): Account {
+  private guest(session: string | null): Account {
     const n = 1000 + Math.floor(this.random() * 9000);
-    return {
+    const account: Account = {
+      session,
       me: {
         user: { id: this.uuid(), name: `Guest ${n}`, color: COLORS[n % COLORS.length], tier: null },
         guest: true,
@@ -228,6 +283,108 @@ export class MockServer {
       game: null,
       owed: [],
     };
+    this.accounts.set(account.me.user.id, account);
+    if (session != null) this.sessions.set(session, account);
+    return account;
+  }
+
+  /* ---------- between two lives ---------- */
+
+  /** Something changed: write the state down once this turn is over. */
+  private touch(): void {
+    if (!this.store || this.saving) return;
+    this.saving = true;
+    queueMicrotask(() => {
+      this.saving = false;
+      if (!this.ended) this.save();
+    });
+  }
+
+  private save(): void {
+    const id = (a: Account): string => a.me.user.id,
+      running = [...this.games].filter((g) => !g.over),
+      rooms = new Set([...this.rooms, ...running.map((g) => g.room)]);
+    const saved: Saved = {
+      v: 1,
+      ids: this.ids,
+      accounts: [...this.accounts.values()].map((a) => ({ session: a.session, me: a.me, owed: a.owed })),
+      rooms: [...rooms].map((r) => ({ lobby: r.lobby, humans: r.humans.map(id), open: this.rooms.has(r) })),
+      games: running.map((g) => ({
+        id: g.id,
+        lobby: g.room.lobby.id,
+        state: g.state,
+        rev: g.rev,
+        players: g.players.map((a) => (a ? id(a) : null)),
+        colors: g.colors,
+        leavers: g.leavers.map((l) => ({ user: id(l.account), seat: l.seat })),
+        status: g.status,
+        ready: g.ready,
+        deadline: g.deadline,
+      })),
+    };
+    this.store?.save(JSON.stringify(saved));
+  }
+
+  /**
+   * Pick up what an earlier life wrote down. Every socket of that life is gone, so every seated
+   * player is offline, each as a step of its own, and the clocks run on from where they were.
+   */
+  private resume(): void {
+    let saved: Saved;
+    try {
+      const raw: unknown = JSON.parse(this.store?.load() ?? 'null');
+      if (!isRecord(raw) || raw.v !== 1) return;
+      // The mock's own writing, in the one version it knows: read back as it was written.
+      saved = raw as unknown as Saved;
+    } catch {
+      return;
+    }
+    this.ids = saved.ids;
+    for (const a of saved.accounts) {
+      const account: Account = { session: a.session, me: a.me, conn: null, room: null, game: null, owed: a.owed };
+      this.accounts.set(a.me.user.id, account);
+      if (a.session != null) this.sessions.set(a.session, account);
+    }
+    const known = (ids: string[]): Account[] => ids.flatMap((x) => this.accounts.get(x) ?? []),
+      rooms = new Map<string, Room>();
+    for (const r of saved.rooms) {
+      const room: Room = { lobby: r.lobby, humans: known(r.humans) };
+      room.humans.forEach((a) => (a.room = room));
+      room.lobby.members.forEach((m) => {
+        if (m.kind === 'human') m.connected = false;
+      });
+      rooms.set(r.lobby.id, room);
+      if (r.open) this.rooms.add(room);
+    }
+    for (const g of saved.games) {
+      const room = rooms.get(g.lobby);
+      if (!room) continue;
+      const game: Game = {
+        id: g.id,
+        room,
+        state: g.state,
+        rev: g.rev,
+        players: g.players.map((x) => (x == null ? null : (this.accounts.get(x) ?? null))),
+        colors: g.colors,
+        leavers: g.leavers.flatMap((l) => {
+          const account = this.accounts.get(l.user);
+          return account ? [{ account, seat: l.seat }] : [];
+        }),
+        status: g.status,
+        ready: g.ready,
+        deadline: g.deadline,
+        timers: [],
+        over: false,
+      };
+      game.players.forEach((account, seat) => {
+        if (!account) return;
+        account.game = game;
+        if (game.status[seat] !== 'offline') game.rev++;
+        game.status[seat] = 'offline';
+      });
+      this.games.add(game);
+      this.arm(game);
+    }
   }
 
   private connect(account: Account): Wire {
@@ -262,6 +419,7 @@ export class MockServer {
 
   /** Queue one frame. Frames reach the client one by one, in the order they were written. */
   private write(conn: Conn | null, message: ServerMessage): void {
+    this.touch();
     if (!conn?.open) return;
     const data = JSON.stringify(message);
     queueMicrotask(() => {
@@ -276,6 +434,7 @@ export class MockServer {
   /** End a connection. `code` is what the client is told, after the frames already written; null if it hung up itself. */
   private hangUp(conn: Conn, code: number | null): void {
     if (!conn.open) return;
+    this.touch();
     conn.open = false;
     this.conns.delete(conn);
     if (conn.helloTimer != null) clearTimeout(conn.helloTimer);
@@ -495,6 +654,7 @@ export class MockServer {
   private unseat(account: Account): void {
     const room = account.room;
     if (!room) return;
+    this.touch();
     account.room = null;
     const lobby = room.lobby,
       id = account.me.user.id;
@@ -552,6 +712,7 @@ export class MockServer {
       timers: [],
       over: false,
     };
+    this.games.add(game);
     lobby.state = 'inGame';
     lobby.gameId = game.id;
     this.pushLobby(room);
@@ -670,6 +831,7 @@ export class MockServer {
    * Every other seated socket gets the update alone.
    */
   private step(game: Game, events: GameEvent[], actor?: Actor): void {
+    this.touch();
     game.rev++;
     game.over = game.state.phase === 'gameOver';
     this.plan(game);
@@ -689,18 +851,14 @@ export class MockServer {
     const s = game.state,
       human = (seat: Seat): boolean => game.players[seat] != null,
       humans = game.players.flatMap((a, i) => (a ? [i] : [])),
-      scale = PACE[game.room.lobby.settings.pace],
       prev = game.deadline;
-    let next: { kind: Deadline['kind']; seats: Seat[]; ms: number } | null = null;
+    let next: { kind: Deadline['kind']; seats: Seat[] } | null = null;
     if (game.over) next = null;
-    else if (s.phase === 'bidding')
-      next = { kind: 'bid', seats: humans.filter((i) => s.bids[i] == null), ms: this.timers.bidMs * scale };
-    else if (s.phase === 'playing' && s.turn != null && human(s.turn))
-      next = { kind: 'play', seats: [s.turn], ms: this.timers.playMs * scale };
+    else if (s.phase === 'bidding') next = { kind: 'bid', seats: humans.filter((i) => s.bids[i] == null) };
+    else if (s.phase === 'playing' && s.turn != null && human(s.turn)) next = { kind: 'play', seats: [s.turn] };
     else if (s.phase === 'ability' && s.pending && human(s.pending.seat))
-      next = { kind: 'ability', seats: [s.pending.seat], ms: this.timers.abilityMs * scale };
-    else if (s.phase === 'roundEnd')
-      next = { kind: 'nextRound', seats: humans.filter((i) => !game.ready[i]), ms: this.timers.roundEndMs };
+      next = { kind: 'ability', seats: [s.pending.seat] };
+    else if (s.phase === 'roundEnd') next = { kind: 'nextRound', seats: humans.filter((i) => !game.ready[i]) };
     if (!next || (!next.seats.length && next.kind !== 'nextRound')) {
       game.deadline = null;
       return;
@@ -710,7 +868,8 @@ export class MockServer {
       prev != null &&
       prev.kind === next.kind &&
       (next.kind === 'bid' || next.kind === 'nextRound' || prev.seats.join() === next.seats.join());
-    game.deadline = { kind: next.kind, seats: next.seats, at: running ? prev.at : this.now() + next.ms };
+    const ms = deadlineMs(next.kind, game.room.lobby.settings.pace, this.timers);
+    game.deadline = { kind: next.kind, seats: next.seats, at: running ? prev.at : this.now() + ms };
   }
 
   /** Start what the table does on its own from here: the bots, the pause after a trick, and the deadline. */
@@ -766,6 +925,7 @@ export class MockServer {
   /** After the final `game.update`: the result to everyone who played, and the lobby opens again. */
   private finish(game: Game): void {
     this.disarm(game);
+    this.games.delete(game);
     const s = game.state,
       totals = Rules.totals(s.log, s.cfg, s.seats.length),
       room = game.room,
@@ -782,16 +942,18 @@ export class MockServer {
         lobbyId: open ? room.lobby.id : null,
       },
     };
-    const tell = (account: Account): void => {
-      if (account.conn) this.write(account.conn, over);
-      else account.owed.push(over);
+    // Every receiver is told which seat was theirs (§5.5): the result alone does not say.
+    const tell = (account: Account, seat: Seat): void => {
+      const mine: GameOver = Object.assign({ seat }, over);
+      if (account.conn) this.write(account.conn, mine);
+      else account.owed.push(mine);
     };
-    game.players.forEach((account) => {
+    game.players.forEach((account, seat) => {
       if (!account) return;
       account.game = null;
-      tell(account);
+      tell(account, seat);
     });
-    game.leavers.forEach(({ account }) => tell(account));
+    game.leavers.forEach(({ account, seat }) => tell(account, seat));
     if (!open) return;
     room.lobby.state = 'open';
     room.lobby.gameId = null;

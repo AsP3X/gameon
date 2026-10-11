@@ -3,7 +3,7 @@
    actions) without changing behavior. */
 import { Engine, Rules } from '../game';
 import type { Action, GameState, TableView } from '../game';
-import type { AbilityChoice, EngineEvent, PlayedAs } from '../protocol/generated';
+import type { AbilityChoice, GameEvent, PlayedAs } from '../protocol/generated';
 import { Sound } from '../sound/sound';
 import type { SoundName } from '../sound/sound';
 import { humanSeats, LocalTable } from '../table/localTable';
@@ -40,7 +40,7 @@ import { Tracker, trkCreate, trkNow } from './tracker';
 import { TRK_ACTIONS } from './trackerActions';
 import { abilityToast, scored } from './views';
 
-type EventOf<T extends EngineEvent['type']> = Extract<EngineEvent, { type: T }>;
+type EventOf<T extends GameEvent['type']> = Extract<GameEvent, { type: T }>;
 
 /** One trick, several layers: who took it, what was captured, and any beast that interfered. */
 function trickSounds(v: TableView, e: EventOf<'trickResolved'>): void {
@@ -59,7 +59,7 @@ function trickSounds(v: TableView, e: EventOf<'trickResolved'>): void {
 
 /* ---------- Table updates (queued so animations never overlap) ---------- */
 interface Feed {
-  queue: { events: EngineEvent[]; getView: GetView; info?: UpdateInfo }[];
+  queue: { events: GameEvent[]; getView: GetView; info?: UpdateInfo }[];
   pumping: boolean;
 }
 /** The updates still to be shown. Every mount gets a feed of its own, so a presentation that is still
@@ -69,7 +69,7 @@ export function resetFeed(): void {
   feed.queue.length = 0;
   feed = { queue: [], pumping: false };
 }
-function onTableUpdate(events: EngineEvent[], getView: GetView, info?: UpdateInfo): void {
+function onTableUpdate(events: GameEvent[], getView: GetView, info?: UpdateInfo): void {
   feed.queue.push({ events, getView, info });
   void pump();
 }
@@ -87,13 +87,13 @@ async function pump(): Promise<void> {
   f.pumping = false;
 }
 async function present(
-  events: EngineEvent[],
+  events: GameEvent[],
   getView: GetView,
   current: () => boolean,
   info?: UpdateInfo,
 ): Promise<void> {
-  const has = (t: EngineEvent['type']): boolean => events.some((e) => e.type === t),
-    find = <T extends EngineEvent['type']>(t: T): EventOf<T> | undefined =>
+  const has = (t: GameEvent['type']): boolean => events.some((e) => e.type === t),
+    find = <T extends GameEvent['type']>(t: T): EventOf<T> | undefined =>
       events.find((e): e is EventOf<T> => e.type === t);
   const onTable = ui.screen === 'game' && !ui.curtain;
   const before = session.view;
@@ -124,6 +124,10 @@ async function present(
     if (e.type === 'trickResolved') trickSounds(v, e);
     if (e.type === 'trickCollected') Sound.play('sweep');
     if (e.type === 'abilityUsed') ui.toast = abilityToast(v, e);
+    // Online only: the deadline passed and the server made the move.
+    if (e.type === 'timedOut')
+      ui.toast =
+        e.seat === v.me ? 'Time ran out · the table played for you' : `${v.seats[e.seat].name} ran out of time`;
   });
   const collected = find('trickCollected');
   if (collected) ui.bump = collected.winner;
