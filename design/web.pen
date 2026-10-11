@@ -139136,6 +139136,18 @@
                   "letterSpacing": 1.05
                 }
               ]
+            },
+            {
+              "id": "sdIiH",
+              "type": "ref",
+              "ref": "h9ic3",
+              "name": "The record",
+              "width": "fill_container",
+              "descendants": {
+                "s5ytI": {
+                  "content": "THE RECORD"
+                }
+              }
             }
           ]
         }
@@ -140318,6 +140330,18 @@
                   "letterSpacing": 1.05
                 }
               ]
+            },
+            {
+              "id": "e5B5WQ",
+              "type": "ref",
+              "ref": "h9ic3",
+              "name": "The record",
+              "width": "fill_container",
+              "descendants": {
+                "s5ytI": {
+                  "content": "THE RECORD"
+                }
+              }
             }
           ]
         }
@@ -170801,6 +170825,18 @@
                   "letterSpacing": 1.05
                 }
               ]
+            },
+            {
+              "id": "ACLcn",
+              "type": "ref",
+              "ref": "h9ic3",
+              "name": "The record",
+              "width": "fill_container",
+              "descendants": {
+                "s5ytI": {
+                  "content": "THE RECORD"
+                }
+              }
             }
           ]
         }
@@ -172027,6 +172063,18 @@
                   "letterSpacing": 1.05
                 }
               ]
+            },
+            {
+              "id": "N19k9u",
+              "type": "ref",
+              "ref": "h9ic3",
+              "name": "The record",
+              "width": "fill_container",
+              "descendants": {
+                "s5ytI": {
+                  "content": "THE RECORD"
+                }
+              }
             }
           ]
         }
@@ -174370,6 +174418,1416 @@
               "fontFamily": "$f-ui",
               "fontSize": 14,
               "fontWeight": "700"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "Baf5p",
+      "x": 10000,
+      "y": 9600,
+      "name": "Online · the record",
+      "clip": true,
+      "width": 390,
+      "height": 844,
+      "fill": "$bg",
+      "layout": "vertical",
+      "gap": 12,
+      "padding": 16,
+      "children": [
+        {
+          "type": "frame",
+          "id": "lkyLL",
+          "name": "Head",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 12,
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "sQ2P8",
+              "name": "THE RECORD",
+              "fill": "$muted",
+              "content": "THE RECORD",
+              "lineHeight": 1.4,
+              "fontFamily": "$f-ui",
+              "fontSize": 13,
+              "fontWeight": "800",
+              "letterSpacing": 1.04
+            },
+            {
+              "id": "d7C8h",
+              "type": "ref",
+              "ref": "h9ic3",
+              "name": "Back to the scores",
+              "width": "fill_container",
+              "descendants": {
+                "s5ytI": {
+                  "content": "BACK TO THE SCORES"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "ra6dQ",
+          "name": "Steps",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 12,
+          "children": [
+            {
+              "type": "frame",
+              "id": "i5rXQ",
+              "name": "Step",
+              "width": "fill_container",
+              "layout": "vertical",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "n0GUfK",
+                  "name": "0 · deal",
+                  "fill": "$fg",
+                  "content": "0 · deal",
+                  "lineHeight": 1.4,
+                  "fontFamily": "$f-ui",
+                  "fontSize": 16,
+                  "fontWeight": "900"
+                },
+                {
+                  "type": "text",
+                  "id": "Fwx3G",
+                  "name": "{\"round\":0,\"cards\":[1]}",
+                  "fill": "$muted",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "{\"round\":0,\"cards\":[1]}",
+                  "lineHeight": 1.4,
+                  "fontFamily": "$f-ui",
+                  "fontSize": 16,
+                  "fontWeight": "700"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "Y2xsyD",
+              "name": "Step",
+              "width": "fill_container",
+              "layout": "vertical",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "E1lPMY",
+                  "name": "1 · bid · seat 0",
+                  "fill": "$fg",
+                  "content": "1 · bid · seat 0",
+                  "lineHeight": 1.4,
+                  "fontFamily": "$f-ui",
+                  "fontSize": 16,
+                  "fontWeight": "900"
+                },
+                {
+                  "type": "text",
+                  "id": "uBB6d",
+                  "name": "{\"bid\":1}",
+                  "fill": "$muted",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "{\"bid\":1}",
+                  "lineHeight": 1.4,
+                  "fontFamily": "$f-ui",
+                  "fontSize": 16,
+                  "fontWeight": "700"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "odaPT",
+              "name": "Step",
+              "width": "fill_container",
+              "layout": "vertical",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "F6Hm8O",
+                  "name": "2 · bid · seat 1",
+                  "fill": "$fg",
+                  "content": "2 · bid · seat 1",
+                  "lineHeight": 1.4,
+                  "fontFamily": "$f-ui",
+                  "fontSize": 16,
+                  "fontWeight": "900"
+                },
+                {
+                  "type": "text",
+                  "id": "mn9FH",
+                  "name": "{\"bid\":0}",
+                  "fill": "$muted",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "{\"bid\":0}",
+                  "lineHeight": 1.4,
+                  "fontFamily": "$f-ui",
+                  "fontSize": 16,
+                  "fontWeight": "700"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "KL3Pe",
+              "name": "Step",
+              "width": "fill_container",
+              "layout": "vertical",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "X5sn0s",
+                  "name": "3 · bid · seat 2",
+                  "fill": "$fg",
+                  "content": "3 · bid · seat 2",
+                  "lineHeight": 1.4,
+                  "fontFamily": "$f-ui",
+                  "fontSize": 16,
+                  "fontWeight": "900"
+                },
+                {
+                  "type": "text",
+                  "id": "ZVEqm",
+                  "name": "{\"bid\":1}",
+                  "fill": "$muted",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "{\"bid\":1}",
+                  "lineHeight": 1.4,
+                  "fontFamily": "$f-ui",
+                  "fontSize": 16,
+                  "fontWeight": "700"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "QKsO0",
+              "name": "Step",
+              "width": "fill_container",
+              "layout": "vertical",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "eGo9r",
+                  "name": "4 · bid · seat 3",
+                  "fill": "$fg",
+                  "content": "4 · bid · seat 3",
+                  "lineHeight": 1.4,
+                  "fontFamily": "$f-ui",
+                  "fontSize": 16,
+                  "fontWeight": "900"
+                },
+                {
+                  "type": "text",
+                  "id": "z9wtc1",
+                  "name": "{\"bid\":0}",
+                  "fill": "$muted",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "{\"bid\":0}",
+                  "lineHeight": 1.4,
+                  "fontFamily": "$f-ui",
+                  "fontSize": 16,
+                  "fontWeight": "700"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "WlLvc",
+              "name": "Step",
+              "width": "fill_container",
+              "layout": "vertical",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "rFR6Z",
+                  "name": "5 · play · seat 1",
+                  "fill": "$fg",
+                  "content": "5 · play · seat 1",
+                  "lineHeight": 1.4,
+                  "fontFamily": "$f-ui",
+                  "fontSize": 16,
+                  "fontWeight": "900"
+                },
+                {
+                  "type": "text",
+                  "id": "w6yFw5",
+                  "name": "{\"card\":12}",
+                  "fill": "$muted",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "{\"card\":12}",
+                  "lineHeight": 1.4,
+                  "fontFamily": "$f-ui",
+                  "fontSize": 16,
+                  "fontWeight": "700"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "e92E5",
+              "name": "Step",
+              "width": "fill_container",
+              "layout": "vertical",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "LM8rP",
+                  "name": "6 · play · seat 2",
+                  "fill": "$fg",
+                  "content": "6 · play · seat 2",
+                  "lineHeight": 1.4,
+                  "fontFamily": "$f-ui",
+                  "fontSize": 16,
+                  "fontWeight": "900"
+                },
+                {
+                  "type": "text",
+                  "id": "M4p54A",
+                  "name": "{\"card\":47}",
+                  "fill": "$muted",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "{\"card\":47}",
+                  "lineHeight": 1.4,
+                  "fontFamily": "$f-ui",
+                  "fontSize": 16,
+                  "fontWeight": "700"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "GKQGL",
+              "name": "Step",
+              "width": "fill_container",
+              "layout": "vertical",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "myBGV",
+                  "name": "7 · play · seat 3",
+                  "fill": "$fg",
+                  "content": "7 · play · seat 3",
+                  "lineHeight": 1.4,
+                  "fontFamily": "$f-ui",
+                  "fontSize": 16,
+                  "fontWeight": "900"
+                },
+                {
+                  "type": "text",
+                  "id": "b8BMnW",
+                  "name": "{\"card\":3}",
+                  "fill": "$muted",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "{\"card\":3}",
+                  "lineHeight": 1.4,
+                  "fontFamily": "$f-ui",
+                  "fontSize": 16,
+                  "fontWeight": "700"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "P0AH2Z",
+              "name": "Step",
+              "width": "fill_container",
+              "layout": "vertical",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "Xi51O",
+                  "name": "8 · play · seat 0",
+                  "fill": "$fg",
+                  "content": "8 · play · seat 0",
+                  "lineHeight": 1.4,
+                  "fontFamily": "$f-ui",
+                  "fontSize": 16,
+                  "fontWeight": "900"
+                },
+                {
+                  "type": "text",
+                  "id": "NZOqH",
+                  "name": "{\"card\":61}",
+                  "fill": "$muted",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "{\"card\":61}",
+                  "lineHeight": 1.4,
+                  "fontFamily": "$f-ui",
+                  "fontSize": 16,
+                  "fontWeight": "700"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "iVIQ0",
+              "name": "Step",
+              "width": "fill_container",
+              "layout": "vertical",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "qjXpW",
+                  "name": "9 · advance",
+                  "fill": "$fg",
+                  "content": "9 · advance",
+                  "lineHeight": 1.4,
+                  "fontFamily": "$f-ui",
+                  "fontSize": 16,
+                  "fontWeight": "900"
+                },
+                {
+                  "type": "text",
+                  "id": "SOIiy",
+                  "name": "{}",
+                  "fill": "$muted",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "{}",
+                  "lineHeight": 1.4,
+                  "fontFamily": "$f-ui",
+                  "fontSize": 16,
+                  "fontWeight": "700"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "vmW1r",
+              "name": "Step",
+              "width": "fill_container",
+              "layout": "vertical",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "le1ni",
+                  "name": "10 · deal",
+                  "fill": "$fg",
+                  "content": "10 · deal",
+                  "lineHeight": 1.4,
+                  "fontFamily": "$f-ui",
+                  "fontSize": 16,
+                  "fontWeight": "900"
+                },
+                {
+                  "type": "text",
+                  "id": "P6UKfG",
+                  "name": "{\"round\":1,\"cards\":[2]}",
+                  "fill": "$muted",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "{\"round\":1,\"cards\":[2]}",
+                  "lineHeight": 1.4,
+                  "fontFamily": "$f-ui",
+                  "fontSize": 16,
+                  "fontWeight": "700"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "jMh67",
+      "x": 11000,
+      "y": 9600,
+      "name": "Online · the record states",
+      "clip": true,
+      "width": 390,
+      "fill": "$bg",
+      "layout": "vertical",
+      "gap": 18,
+      "padding": [
+        16,
+        16,
+        24,
+        16
+      ],
+      "children": [
+        {
+          "type": "frame",
+          "id": "U65ft",
+          "name": "State · the record · loading",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 8,
+          "children": [
+            {
+              "type": "text",
+              "id": "uKx6f",
+              "name": "THE RECORD · LOADING",
+              "fill": "$faint",
+              "content": "THE RECORD · LOADING",
+              "lineHeight": 1.4,
+              "fontFamily": "$f-ui",
+              "fontSize": 11,
+              "fontWeight": "800",
+              "letterSpacing": 0.88
+            },
+            {
+              "type": "frame",
+              "id": "BLkqV",
+              "name": "Sheet",
+              "width": "fill_container",
+              "fill": "$bg",
+              "cornerRadius": 16,
+              "stroke": "$line",
+              "strokeWidth": 2,
+              "strokeAlignment": "inner",
+              "layout": "vertical",
+              "gap": 12,
+              "padding": 16,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "UiLGw",
+                  "name": "Head",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 12,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "rj5om",
+                      "name": "THE RECORD",
+                      "fill": "$muted",
+                      "content": "THE RECORD",
+                      "lineHeight": 1.4,
+                      "fontFamily": "$f-ui",
+                      "fontSize": 13,
+                      "fontWeight": "800",
+                      "letterSpacing": 1.04
+                    },
+                    {
+                      "id": "r4aCxE",
+                      "type": "ref",
+                      "ref": "h9ic3",
+                      "name": "Back to the scores",
+                      "width": "fill_container",
+                      "descendants": {
+                        "s5ytI": {
+                          "content": "BACK TO THE SCORES"
+                        }
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "h3AS8h",
+                  "name": "Loading the record.",
+                  "fill": "$muted",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "Loading the record.",
+                  "lineHeight": 1.4,
+                  "fontFamily": "$f-ui",
+                  "fontSize": 16,
+                  "fontWeight": "700"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "va3mN",
+          "name": "State · the record · empty",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 8,
+          "children": [
+            {
+              "type": "text",
+              "id": "mx0ZJ",
+              "name": "THE RECORD · EMPTY",
+              "fill": "$faint",
+              "content": "THE RECORD · EMPTY",
+              "lineHeight": 1.4,
+              "fontFamily": "$f-ui",
+              "fontSize": 11,
+              "fontWeight": "800",
+              "letterSpacing": 0.88
+            },
+            {
+              "type": "frame",
+              "id": "giMQi",
+              "name": "Sheet",
+              "width": "fill_container",
+              "fill": "$bg",
+              "cornerRadius": 16,
+              "stroke": "$line",
+              "strokeWidth": 2,
+              "strokeAlignment": "inner",
+              "layout": "vertical",
+              "gap": 12,
+              "padding": 16,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "ixN4L",
+                  "name": "Head",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 12,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "z2E19x",
+                      "name": "THE RECORD",
+                      "fill": "$muted",
+                      "content": "THE RECORD",
+                      "lineHeight": 1.4,
+                      "fontFamily": "$f-ui",
+                      "fontSize": 13,
+                      "fontWeight": "800",
+                      "letterSpacing": 1.04
+                    },
+                    {
+                      "id": "dVKJD",
+                      "type": "ref",
+                      "ref": "h9ic3",
+                      "name": "Back to the scores",
+                      "width": "fill_container",
+                      "descendants": {
+                        "s5ytI": {
+                          "content": "BACK TO THE SCORES"
+                        }
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "TLLor",
+                  "name": "This game has no record.",
+                  "fill": "$muted",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "This game has no record.",
+                  "lineHeight": 1.4,
+                  "fontFamily": "$f-ui",
+                  "fontSize": 16,
+                  "fontWeight": "700"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "XC7sJ",
+          "name": "State · the record · refused (the server's message)",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 8,
+          "children": [
+            {
+              "type": "text",
+              "id": "JaqIu",
+              "name": "THE RECORD · REFUSED (THE SERVER'S MESSAGE)",
+              "fill": "$faint",
+              "content": "THE RECORD · REFUSED (THE SERVER'S MESSAGE)",
+              "lineHeight": 1.4,
+              "fontFamily": "$f-ui",
+              "fontSize": 11,
+              "fontWeight": "800",
+              "letterSpacing": 0.88
+            },
+            {
+              "type": "frame",
+              "id": "H9Vpw",
+              "name": "Sheet",
+              "width": "fill_container",
+              "fill": "$bg",
+              "cornerRadius": 16,
+              "stroke": "$line",
+              "strokeWidth": 2,
+              "strokeAlignment": "inner",
+              "layout": "vertical",
+              "gap": 12,
+              "padding": 16,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "Y4EpIv",
+                  "name": "Head",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 12,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "da8DA",
+                      "name": "THE RECORD",
+                      "fill": "$muted",
+                      "content": "THE RECORD",
+                      "lineHeight": 1.4,
+                      "fontFamily": "$f-ui",
+                      "fontSize": 13,
+                      "fontWeight": "800",
+                      "letterSpacing": 1.04
+                    },
+                    {
+                      "id": "tff6q",
+                      "type": "ref",
+                      "ref": "h9ic3",
+                      "name": "Back to the scores",
+                      "width": "fill_container",
+                      "descendants": {
+                        "s5ytI": {
+                          "content": "BACK TO THE SCORES"
+                        }
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "sKOfv",
+                  "name": "No such game.",
+                  "fill": "$red-ink",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "No such game.",
+                  "lineHeight": 1.4,
+                  "fontFamily": "$f-ui",
+                  "fontSize": 14,
+                  "fontWeight": "700"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "rvkgC",
+      "x": 10450,
+      "y": 9600,
+      "name": "Online · the record · dark",
+      "theme": {
+        "mode": "dark"
+      },
+      "clip": true,
+      "width": 390,
+      "height": 844,
+      "fill": "$bg",
+      "layout": "vertical",
+      "gap": 12,
+      "padding": 16,
+      "children": [
+        {
+          "type": "frame",
+          "id": "egSVt",
+          "name": "Head",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 12,
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "oUeGB",
+              "name": "THE RECORD",
+              "fill": "$muted",
+              "content": "THE RECORD",
+              "lineHeight": 1.4,
+              "fontFamily": "$f-ui",
+              "fontSize": 13,
+              "fontWeight": "800",
+              "letterSpacing": 1.04
+            },
+            {
+              "id": "U1jp4",
+              "type": "ref",
+              "ref": "h9ic3",
+              "name": "Back to the scores",
+              "width": "fill_container",
+              "descendants": {
+                "s5ytI": {
+                  "content": "BACK TO THE SCORES"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "G8UQsI",
+          "name": "Steps",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 12,
+          "children": [
+            {
+              "type": "frame",
+              "id": "ax59Q",
+              "name": "Step",
+              "width": "fill_container",
+              "layout": "vertical",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "hmcCa",
+                  "name": "0 · deal",
+                  "fill": "$fg",
+                  "content": "0 · deal",
+                  "lineHeight": 1.4,
+                  "fontFamily": "$f-ui",
+                  "fontSize": 16,
+                  "fontWeight": "900"
+                },
+                {
+                  "type": "text",
+                  "id": "BzfBa",
+                  "name": "{\"round\":0,\"cards\":[1]}",
+                  "fill": "$muted",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "{\"round\":0,\"cards\":[1]}",
+                  "lineHeight": 1.4,
+                  "fontFamily": "$f-ui",
+                  "fontSize": 16,
+                  "fontWeight": "700"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "OcdVt",
+              "name": "Step",
+              "width": "fill_container",
+              "layout": "vertical",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "v8T24",
+                  "name": "1 · bid · seat 0",
+                  "fill": "$fg",
+                  "content": "1 · bid · seat 0",
+                  "lineHeight": 1.4,
+                  "fontFamily": "$f-ui",
+                  "fontSize": 16,
+                  "fontWeight": "900"
+                },
+                {
+                  "type": "text",
+                  "id": "I0GYn",
+                  "name": "{\"bid\":1}",
+                  "fill": "$muted",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "{\"bid\":1}",
+                  "lineHeight": 1.4,
+                  "fontFamily": "$f-ui",
+                  "fontSize": 16,
+                  "fontWeight": "700"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "xEViX",
+              "name": "Step",
+              "width": "fill_container",
+              "layout": "vertical",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "FEWwi",
+                  "name": "2 · bid · seat 1",
+                  "fill": "$fg",
+                  "content": "2 · bid · seat 1",
+                  "lineHeight": 1.4,
+                  "fontFamily": "$f-ui",
+                  "fontSize": 16,
+                  "fontWeight": "900"
+                },
+                {
+                  "type": "text",
+                  "id": "nu2c8",
+                  "name": "{\"bid\":0}",
+                  "fill": "$muted",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "{\"bid\":0}",
+                  "lineHeight": 1.4,
+                  "fontFamily": "$f-ui",
+                  "fontSize": 16,
+                  "fontWeight": "700"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "rP7yt",
+              "name": "Step",
+              "width": "fill_container",
+              "layout": "vertical",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "dripZ",
+                  "name": "3 · bid · seat 2",
+                  "fill": "$fg",
+                  "content": "3 · bid · seat 2",
+                  "lineHeight": 1.4,
+                  "fontFamily": "$f-ui",
+                  "fontSize": 16,
+                  "fontWeight": "900"
+                },
+                {
+                  "type": "text",
+                  "id": "Cc7IU",
+                  "name": "{\"bid\":1}",
+                  "fill": "$muted",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "{\"bid\":1}",
+                  "lineHeight": 1.4,
+                  "fontFamily": "$f-ui",
+                  "fontSize": 16,
+                  "fontWeight": "700"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "lc4q4",
+              "name": "Step",
+              "width": "fill_container",
+              "layout": "vertical",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "Ar3dH",
+                  "name": "4 · bid · seat 3",
+                  "fill": "$fg",
+                  "content": "4 · bid · seat 3",
+                  "lineHeight": 1.4,
+                  "fontFamily": "$f-ui",
+                  "fontSize": 16,
+                  "fontWeight": "900"
+                },
+                {
+                  "type": "text",
+                  "id": "Fh3f0",
+                  "name": "{\"bid\":0}",
+                  "fill": "$muted",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "{\"bid\":0}",
+                  "lineHeight": 1.4,
+                  "fontFamily": "$f-ui",
+                  "fontSize": 16,
+                  "fontWeight": "700"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "XYDNi",
+              "name": "Step",
+              "width": "fill_container",
+              "layout": "vertical",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "uhKW9",
+                  "name": "5 · play · seat 1",
+                  "fill": "$fg",
+                  "content": "5 · play · seat 1",
+                  "lineHeight": 1.4,
+                  "fontFamily": "$f-ui",
+                  "fontSize": 16,
+                  "fontWeight": "900"
+                },
+                {
+                  "type": "text",
+                  "id": "JwIhw",
+                  "name": "{\"card\":12}",
+                  "fill": "$muted",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "{\"card\":12}",
+                  "lineHeight": 1.4,
+                  "fontFamily": "$f-ui",
+                  "fontSize": 16,
+                  "fontWeight": "700"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "v1sr9V",
+              "name": "Step",
+              "width": "fill_container",
+              "layout": "vertical",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "VpTZO",
+                  "name": "6 · play · seat 2",
+                  "fill": "$fg",
+                  "content": "6 · play · seat 2",
+                  "lineHeight": 1.4,
+                  "fontFamily": "$f-ui",
+                  "fontSize": 16,
+                  "fontWeight": "900"
+                },
+                {
+                  "type": "text",
+                  "id": "vVBsI",
+                  "name": "{\"card\":47}",
+                  "fill": "$muted",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "{\"card\":47}",
+                  "lineHeight": 1.4,
+                  "fontFamily": "$f-ui",
+                  "fontSize": 16,
+                  "fontWeight": "700"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "KOaTX",
+              "name": "Step",
+              "width": "fill_container",
+              "layout": "vertical",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "sx6la",
+                  "name": "7 · play · seat 3",
+                  "fill": "$fg",
+                  "content": "7 · play · seat 3",
+                  "lineHeight": 1.4,
+                  "fontFamily": "$f-ui",
+                  "fontSize": 16,
+                  "fontWeight": "900"
+                },
+                {
+                  "type": "text",
+                  "id": "MhK7n",
+                  "name": "{\"card\":3}",
+                  "fill": "$muted",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "{\"card\":3}",
+                  "lineHeight": 1.4,
+                  "fontFamily": "$f-ui",
+                  "fontSize": 16,
+                  "fontWeight": "700"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "WFPHo",
+              "name": "Step",
+              "width": "fill_container",
+              "layout": "vertical",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "a5pVV",
+                  "name": "8 · play · seat 0",
+                  "fill": "$fg",
+                  "content": "8 · play · seat 0",
+                  "lineHeight": 1.4,
+                  "fontFamily": "$f-ui",
+                  "fontSize": 16,
+                  "fontWeight": "900"
+                },
+                {
+                  "type": "text",
+                  "id": "K68WC",
+                  "name": "{\"card\":61}",
+                  "fill": "$muted",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "{\"card\":61}",
+                  "lineHeight": 1.4,
+                  "fontFamily": "$f-ui",
+                  "fontSize": 16,
+                  "fontWeight": "700"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "AsFoI",
+              "name": "Step",
+              "width": "fill_container",
+              "layout": "vertical",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "woxiI",
+                  "name": "9 · advance",
+                  "fill": "$fg",
+                  "content": "9 · advance",
+                  "lineHeight": 1.4,
+                  "fontFamily": "$f-ui",
+                  "fontSize": 16,
+                  "fontWeight": "900"
+                },
+                {
+                  "type": "text",
+                  "id": "IMTOH",
+                  "name": "{}",
+                  "fill": "$muted",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "{}",
+                  "lineHeight": 1.4,
+                  "fontFamily": "$f-ui",
+                  "fontSize": 16,
+                  "fontWeight": "700"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "CdbUx",
+              "name": "Step",
+              "width": "fill_container",
+              "layout": "vertical",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "Susu5",
+                  "name": "10 · deal",
+                  "fill": "$fg",
+                  "content": "10 · deal",
+                  "lineHeight": 1.4,
+                  "fontFamily": "$f-ui",
+                  "fontSize": 16,
+                  "fontWeight": "900"
+                },
+                {
+                  "type": "text",
+                  "id": "KA7qk",
+                  "name": "{\"round\":1,\"cards\":[2]}",
+                  "fill": "$muted",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "{\"round\":1,\"cards\":[2]}",
+                  "lineHeight": 1.4,
+                  "fontFamily": "$f-ui",
+                  "fontSize": 16,
+                  "fontWeight": "700"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "kt4u8",
+      "x": 11450,
+      "y": 9600,
+      "name": "Online · the record states · dark",
+      "theme": {
+        "mode": "dark"
+      },
+      "clip": true,
+      "width": 390,
+      "fill": "$bg",
+      "layout": "vertical",
+      "gap": 18,
+      "padding": [
+        16,
+        16,
+        24,
+        16
+      ],
+      "children": [
+        {
+          "type": "frame",
+          "id": "LeAHr",
+          "name": "State · the record · loading",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 8,
+          "children": [
+            {
+              "type": "text",
+              "id": "nCNYa",
+              "name": "THE RECORD · LOADING",
+              "fill": "$faint",
+              "content": "THE RECORD · LOADING",
+              "lineHeight": 1.4,
+              "fontFamily": "$f-ui",
+              "fontSize": 11,
+              "fontWeight": "800",
+              "letterSpacing": 0.88
+            },
+            {
+              "type": "frame",
+              "id": "xdcPV",
+              "name": "Sheet",
+              "width": "fill_container",
+              "fill": "$bg",
+              "cornerRadius": 16,
+              "stroke": "$line",
+              "strokeWidth": 2,
+              "strokeAlignment": "inner",
+              "layout": "vertical",
+              "gap": 12,
+              "padding": 16,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "I2lOi",
+                  "name": "Head",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 12,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "u5yH6i",
+                      "name": "THE RECORD",
+                      "fill": "$muted",
+                      "content": "THE RECORD",
+                      "lineHeight": 1.4,
+                      "fontFamily": "$f-ui",
+                      "fontSize": 13,
+                      "fontWeight": "800",
+                      "letterSpacing": 1.04
+                    },
+                    {
+                      "id": "paQud",
+                      "type": "ref",
+                      "ref": "h9ic3",
+                      "name": "Back to the scores",
+                      "width": "fill_container",
+                      "descendants": {
+                        "s5ytI": {
+                          "content": "BACK TO THE SCORES"
+                        }
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "M032g",
+                  "name": "Loading the record.",
+                  "fill": "$muted",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "Loading the record.",
+                  "lineHeight": 1.4,
+                  "fontFamily": "$f-ui",
+                  "fontSize": 16,
+                  "fontWeight": "700"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "f2aFMD",
+          "name": "State · the record · empty",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 8,
+          "children": [
+            {
+              "type": "text",
+              "id": "lZaN0",
+              "name": "THE RECORD · EMPTY",
+              "fill": "$faint",
+              "content": "THE RECORD · EMPTY",
+              "lineHeight": 1.4,
+              "fontFamily": "$f-ui",
+              "fontSize": 11,
+              "fontWeight": "800",
+              "letterSpacing": 0.88
+            },
+            {
+              "type": "frame",
+              "id": "lIKBB",
+              "name": "Sheet",
+              "width": "fill_container",
+              "fill": "$bg",
+              "cornerRadius": 16,
+              "stroke": "$line",
+              "strokeWidth": 2,
+              "strokeAlignment": "inner",
+              "layout": "vertical",
+              "gap": 12,
+              "padding": 16,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "Ux2MZ",
+                  "name": "Head",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 12,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "UduCV",
+                      "name": "THE RECORD",
+                      "fill": "$muted",
+                      "content": "THE RECORD",
+                      "lineHeight": 1.4,
+                      "fontFamily": "$f-ui",
+                      "fontSize": 13,
+                      "fontWeight": "800",
+                      "letterSpacing": 1.04
+                    },
+                    {
+                      "id": "tWI9K",
+                      "type": "ref",
+                      "ref": "h9ic3",
+                      "name": "Back to the scores",
+                      "width": "fill_container",
+                      "descendants": {
+                        "s5ytI": {
+                          "content": "BACK TO THE SCORES"
+                        }
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "Bqmng",
+                  "name": "This game has no record.",
+                  "fill": "$muted",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "This game has no record.",
+                  "lineHeight": 1.4,
+                  "fontFamily": "$f-ui",
+                  "fontSize": 16,
+                  "fontWeight": "700"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "Qe22G",
+          "name": "State · the record · refused (the server's message)",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 8,
+          "children": [
+            {
+              "type": "text",
+              "id": "rxN8n",
+              "name": "THE RECORD · REFUSED (THE SERVER'S MESSAGE)",
+              "fill": "$faint",
+              "content": "THE RECORD · REFUSED (THE SERVER'S MESSAGE)",
+              "lineHeight": 1.4,
+              "fontFamily": "$f-ui",
+              "fontSize": 11,
+              "fontWeight": "800",
+              "letterSpacing": 0.88
+            },
+            {
+              "type": "frame",
+              "id": "dXeeu",
+              "name": "Sheet",
+              "width": "fill_container",
+              "fill": "$bg",
+              "cornerRadius": 16,
+              "stroke": "$line",
+              "strokeWidth": 2,
+              "strokeAlignment": "inner",
+              "layout": "vertical",
+              "gap": 12,
+              "padding": 16,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "Tv1pB",
+                  "name": "Head",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 12,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "BsQZI",
+                      "name": "THE RECORD",
+                      "fill": "$muted",
+                      "content": "THE RECORD",
+                      "lineHeight": 1.4,
+                      "fontFamily": "$f-ui",
+                      "fontSize": 13,
+                      "fontWeight": "800",
+                      "letterSpacing": 1.04
+                    },
+                    {
+                      "id": "B4H97",
+                      "type": "ref",
+                      "ref": "h9ic3",
+                      "name": "Back to the scores",
+                      "width": "fill_container",
+                      "descendants": {
+                        "s5ytI": {
+                          "content": "BACK TO THE SCORES"
+                        }
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "l3IkhY",
+                  "name": "No such game.",
+                  "fill": "$red-ink",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "No such game.",
+                  "lineHeight": 1.4,
+                  "fontFamily": "$f-ui",
+                  "fontSize": 14,
+                  "fontWeight": "700"
+                }
+              ]
             }
           ]
         }
