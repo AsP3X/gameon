@@ -250,15 +250,15 @@ pub fn half_width(waited: Duration) -> i32 {
 
 /// The oldest compatible four among the first [`WINDOW_OLDEST`], or nothing yet.
 ///
-/// Join order is the slice order. The set prefers players who have waited longer.
+/// `apart` is true when those two waiters must not sit together. Join order is the slice order.
 #[must_use]
-pub fn pick_table(waiters: &[Waiter]) -> Option<[usize; 4]> {
+pub fn pick_table(waiters: &[Waiter], apart: impl Fn(usize, usize) -> bool) -> Option<[usize; 4]> {
     let limit = waiters.len().min(WINDOW_OLDEST);
     if limit < 4 {
         return None;
     }
     let mut choice = [0; 4];
-    search(waiters, limit, 0, 0, &mut choice).then_some(choice)
+    search(waiters, limit, 0, 0, &mut choice, &apart).then_some(choice)
 }
 
 /// Calendar quarter containing `now_ms`, numbered from 2026 Q1 as season 1.
@@ -307,9 +307,10 @@ fn search(
     start: usize,
     depth: usize,
     choice: &mut [usize; 4],
+    apart: &impl Fn(usize, usize) -> bool,
 ) -> bool {
     if depth == 4 {
-        return group_ok(waiters, choice);
+        return group_ok(waiters, choice, apart);
     }
     for index in start..limit {
         choice[depth] = index;
@@ -319,6 +320,7 @@ fn search(
             index.saturating_add(1),
             depth.saturating_add(1),
             choice,
+            apart,
         ) {
             return true;
         }
@@ -326,7 +328,11 @@ fn search(
     false
 }
 
-fn group_ok(waiters: &[Waiter], choice: &[usize; 4]) -> bool {
+fn group_ok(
+    waiters: &[Waiter],
+    choice: &[usize; 4],
+    apart: &impl Fn(usize, usize) -> bool,
+) -> bool {
     choice.iter().enumerate().all(|(left, left_index)| {
         choice
             .iter()
@@ -338,7 +344,7 @@ fn group_ok(waiters: &[Waiter], choice: &[usize; 4]) -> bool {
                 let Some(right_waiter) = waiters.get(*right_index) else {
                     return false;
                 };
-                fits(left_waiter, right_waiter)
+                fits(left_waiter, right_waiter) && !apart(*left_index, *right_index)
             })
     })
 }
@@ -537,7 +543,7 @@ mod tests {
             rating: 0,
             waited: std::time::Duration::ZERO,
         };
-        assert_eq!(pick_table(&[close; 4]), Some([0, 1, 2, 3]));
+        assert_eq!(pick_table(&[close; 4], |_, _| false), Some([0, 1, 2, 3]));
         let mut mixed = vec![
             Waiter {
                 rating: 80,
@@ -547,11 +553,15 @@ mod tests {
             close,
             close,
         ];
-        assert_eq!(pick_table(&mixed), None);
+        assert_eq!(pick_table(&mixed, |_, _| false), None);
         for waiter in &mut mixed {
             waiter.waited = std::time::Duration::from_mins(2);
         }
-        assert_eq!(pick_table(&mixed), Some([0, 1, 2, 3]));
+        assert_eq!(pick_table(&mixed, |_, _| false), Some([0, 1, 2, 3]));
+        let six = [close; 6];
+        let apart =
+            |left: usize, right: usize| (left == 0 && right == 1) || (left == 1 && right == 0);
+        assert_eq!(pick_table(&six, apart), Some([0, 2, 3, 4]));
     }
 
     #[test]

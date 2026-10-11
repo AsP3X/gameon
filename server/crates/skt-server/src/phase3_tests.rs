@@ -401,3 +401,138 @@ async fn read_text(socket: &mut Socket) -> String {
     let frame = socket.next().await.expect("frame").expect("ok");
     frame.into_text().expect("text").to_string()
 }
+
+#[sqlx::test(migrations = "../../migrations/postgres")]
+async fn a_player_can_read_the_log_of_a_game_they_sat(pool: sqlx::PgPool) {
+    let state = AppState::for_tests(pool, Duration::from_mins(1), budgets());
+    let port = serve(state.clone()).await;
+    let (cookie, _) = account(port, "Aud").await;
+    let (other, _) = account(port, "Out").await;
+    let id = me_id(&cookie, port).await;
+    let game = "018f6b4a-6a2e-7c3a-8b1d-9e0f1a2b3c4f";
+    state
+        .record_for_test(crate::world::GameReport {
+            id: game.to_owned(),
+            mode: "casual",
+            seats: vec![crate::world::SeatTally {
+                user: skt_protocol::UserId::new(id),
+                seat: 0,
+                total: 10,
+                place: 1,
+                win: true,
+                bids_made: 1,
+                bids_total: 1,
+            }],
+            rated: Vec::new(),
+            overs: Vec::new(),
+            penalise: Vec::new(),
+            log: vec![
+                crate::world::LogEntry {
+                    kind: "deal",
+                    seat: None,
+                    body: r#"{"round":0,"cards":[1,2]}"#.to_owned(),
+                },
+                crate::world::LogEntry {
+                    kind: "bid",
+                    seat: Some(0),
+                    body: r#"{"bid":1}"#.to_owned(),
+                },
+            ],
+        })
+        .await;
+    let (status, _, body) = http(
+        port,
+        "GET",
+        &format!("/api/v1/games/{game}/log"),
+        &cookie,
+        "",
+    )
+    .await;
+    assert_eq!(status, 200, "{body}");
+    assert!(body.contains("\"kind\":\"deal\""), "{body}");
+    assert!(body.contains("\"kind\":\"bid\""), "{body}");
+    assert!(body.contains(&format!("\"gameId\":\"{game}\"")), "{body}");
+    let (status, _, body) = http(
+        port,
+        "GET",
+        &format!("/api/v1/games/{game}/log"),
+        &other,
+        "",
+    )
+    .await;
+    assert_eq!(status, 404, "{body}");
+    let (status, _, body) = http(port, "GET", &format!("/api/v1/games/{game}/log"), "", "").await;
+    assert_eq!(status, 401, "{body}");
+}
+
+#[sqlx::test(migrations = "../../migrations/postgres")]
+async fn a_private_party_waits_two_hours_before_ranked(pool: sqlx::PgPool) {
+    let state = AppState::for_tests(pool, Duration::from_mins(1), budgets());
+    let port = serve(state.clone()).await;
+    let mut ada = account(port, "Ada").await.1;
+    let mut bea = account(port, "Bea").await.1;
+    let mut cid = account(port, "Cid").await.1;
+    let mut dee = account(port, "Dee").await.1;
+    send(
+        &mut ada,
+        &format!(r#"{{"t":"lobby.create","id":2,"visibility":"private","settings":{PRIVATE}}}"#),
+    )
+    .await;
+    let created = read_text(&mut ada).await;
+    let code = created
+        .split("\"code\":\"")
+        .nth(1)
+        .unwrap()
+        .split('"')
+        .next()
+        .unwrap()
+        .to_owned();
+    send(
+        &mut bea,
+        &format!(r#"{{"t":"lobby.join","id":2,"code":"{code}"}}"#),
+    )
+    .await;
+    let _ = read_text(&mut bea).await;
+    let _ = read_text(&mut bea).await;
+    let _ = read_text(&mut ada).await;
+    send(&mut ada, r#"{"t":"lobby.ready","id":3,"ready":true}"#).await;
+    let _ = read_text(&mut ada).await;
+    let _ = read_text(&mut ada).await;
+    let _ = read_text(&mut bea).await;
+    send(&mut bea, r#"{"t":"lobby.ready","id":3,"ready":true}"#).await;
+    let _ = read_text(&mut bea).await;
+    let _ = read_text(&mut bea).await;
+    let _ = read_text(&mut ada).await;
+    send(&mut ada, r#"{"t":"lobby.start","id":4}"#).await;
+    assert!(saw(&mut ada, "game.start").await);
+    assert!(saw(&mut bea, "game.start").await);
+    for socket in [&mut ada, &mut bea] {
+        send(socket, r#"{"t":"game.leave","id":5}"#).await;
+        assert!(saw(socket, "\"t\":\"ok\"").await);
+    }
+    for socket in [&mut ada, &mut bea, &mut cid, &mut dee] {
+        send(socket, r#"{"t":"queue.join","id":6,"mode":"ranked"}"#).await;
+        assert!(saw(socket, "\"t\":\"ok\"").await);
+    }
+    assert!(!saw(&mut ada, "\"t\":\"game.start\"").await);
+    state.advance(Duration::from_hours(2)).await;
+    assert!(saw(&mut ada, "\"t\":\"game.start\"").await);
+    assert!(saw(&mut bea, "\"t\":\"game.start\"").await);
+    assert!(saw(&mut cid, "\"t\":\"game.start\"").await);
+    assert!(saw(&mut dee, "\"t\":\"game.start\"").await);
+}
+
+async fn saw(socket: &mut Socket, needle: &str) -> bool {
+    for _ in 0..12 {
+        let frame = tokio::time::timeout(Duration::from_millis(40), read_text(socket)).await;
+        let Ok(frame) = frame else {
+            return false;
+        };
+        if frame.contains(needle) {
+            return true;
+        }
+    }
+    false
+}
+
+const PRIVATE: &str = r#"{"maxPlayers":2,"scoring":"classic","format":"swift","loot":false,"kraken":false,"whale":false,"abilities":false,"botLevel":"normal","pace":"standard"}"#;

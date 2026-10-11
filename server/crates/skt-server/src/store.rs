@@ -356,6 +356,36 @@ impl Store {
         Ok(())
     }
 
+    /// The action log of a finished game, if `user` sat in it.
+    ///
+    /// # Errors
+    ///
+    /// The read failed.
+    pub async fn action_log(
+        &self,
+        game_id: &str,
+        user_id: &str,
+    ) -> Result<Option<Vec<(i32, String, Option<i32>, String)>>, StoreFailure> {
+        let seated: Option<i32> =
+            sqlx::query_scalar("SELECT seat FROM game_seats WHERE game_id = $1 AND user_id = $2")
+                .bind(game_id)
+                .bind(user_id)
+                .fetch_optional(&self.pool)
+                .await
+                .map_err(|err| database(&err))?;
+        if seated.is_none() {
+            return Ok(None);
+        }
+        let rows = sqlx::query_as(
+            "SELECT seq, kind, seat, body FROM action_log WHERE game_id = $1 ORDER BY seq",
+        )
+        .bind(game_id)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|err| database(&err))?;
+        Ok(Some(rows))
+    }
+
     async fn snap_of(&self, id: &str) -> Result<AccountSnap, StoreFailure> {
         let row: Option<AccountRow> = sqlx::query_as(
             "SELECT users.id, users.name, users.color, users.guest, users.username, stats.games, stats.wins, stats.bids_made, stats.bids_total, stats.best_score FROM users JOIN stats ON stats.user_id = users.id WHERE users.id = $1",

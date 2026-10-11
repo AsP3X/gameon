@@ -366,6 +366,47 @@ pub async fn lobbies(
     Ok(Json(state.world.lock().await.public_lobbies()))
 }
 
+pub async fn game_log(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+) -> Result<Json<skt_protocol::ActionLog>, AppError> {
+    let token = session_cookie(&headers).ok_or(AppError::new(ErrorCode::Unauthenticated))?;
+    remember(&state, &token).await?;
+    let user = state
+        .world
+        .lock()
+        .await
+        .me(&token)
+        .map_err(AppError::new)?
+        .user
+        .id;
+    let store = state
+        .store
+        .clone()
+        .ok_or(AppError::new(ErrorCode::Internal))?;
+    let rows = store
+        .action_log(&id, user.as_str())
+        .await
+        .map_err(|err| failure(&err))?;
+    let Some(rows) = rows else {
+        return Err(AppError::new(ErrorCode::NotFound));
+    };
+    let entries = rows
+        .into_iter()
+        .map(|(seq, kind, seat, body)| skt_protocol::ActionLogEntry {
+            seq: u32::try_from(seq).unwrap_or(u32::MAX),
+            kind,
+            seat: seat.and_then(|value| u8::try_from(value).ok()),
+            body,
+        })
+        .collect();
+    Ok(Json(skt_protocol::ActionLog {
+        game_id: skt_protocol::GameId::new(id),
+        entries,
+    }))
+}
+
 pub async fn ladder(
     State(state): State<AppState>,
     headers: HeaderMap,
