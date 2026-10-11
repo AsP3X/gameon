@@ -8,7 +8,7 @@ import { Rules } from '../game';
 import type { GameState, ScoreConfig, ScoreRecord, SeatConfig, TableView } from '../game';
 import type { BotLevel, CardId, Format, RoundRecord, Scoring, Seat } from '../protocol/generated';
 import { Sound } from '../sound/sound';
-import type { GetView, Table } from '../table/table';
+import type { DispatchResult, GetView, Table } from '../table/table';
 import { Store } from './store';
 
 export const COLORS = ['#1cb0f6', '#ff9600', '#ce82ff', '#ff4b4b', '#58cc02', '#e5a400', '#2b70c9', '#ff5fbf'];
@@ -139,7 +139,7 @@ export interface ScoreView {
 }
 
 export type Screen = 'home' | 'setup' | 'game' | 'end' | 'trackSetup' | 'track';
-export type Sheet = 'sound' | 'results' | 'board' | 'rules' | 'last' | 'peek' | 'trkResults' | 'trkBoard';
+export type Sheet = 'sound' | 'results' | 'board' | 'rules' | 'last' | 'peek' | 'leave' | 'trkResults' | 'trkBoard';
 
 /** What a swipe row deleted, kept for five seconds so it can be undone. */
 export type Undo = { kind: 'track'; data: TrackerState | null } | { kind: 'game'; data: GameState | null };
@@ -210,18 +210,35 @@ export const patchUi = (patch: Partial<Ui>): void => {
   Object.assign(ui, patch);
 };
 
+/**
+ * What the renderer asks of whoever put an online table on screen. Offline there is nobody to ask:
+ * leaving a table there is closing a screen.
+ */
+export interface OnlineHooks {
+  /** Give the seat up for good. An accepted leave is followed by the table's last update. */
+  leave(): Promise<DispatchResult>;
+  /** The table is done with on this device: take it off the screen and go back to the online screens. */
+  exit(): void;
+}
+
 export interface Session {
-  /** LocalTable (or, later, a network table) */
+  /** LocalTable offline, RemoteTable online */
   table: Table | null;
+  /** set while the open table is an online one */
+  online: OnlineHooks | null;
   /** the view currently on screen; after a scored game with real cards, that scoresheet's totals */
   view: TableView | ScoreView | null;
   /** the scoresheet of a game played with real cards */
   trk: TrackerState | null;
 }
-export const session: Session = { table: null, view: null, trk: null };
+export const session: Session = { table: null, online: null, view: null, trk: null };
 
-/** Where the renderer draws: set by mountTavern, cleared when it unmounts. */
-export const stage: { app: HTMLElement | null; fx: HTMLCanvasElement | null } = { app: null, fx: null };
+/** Where the renderer draws, and how it hands over to the online screens: set by mountTavern, cleared when it unmounts. */
+export const stage: { app: HTMLElement | null; fx: HTMLCanvasElement | null; online: (() => void) | null } = {
+  app: null,
+  fx: null,
+  online: null,
+};
 
 type Timer = ReturnType<typeof setTimeout>;
 /** Timeouts that outlive the function that set them. */
@@ -250,6 +267,7 @@ export function loadState(): void {
   refill(stats, defaultStats(), Store.get<Partial<Stats>>(Store.STATS) || {});
   refill(ui, initialUi());
   session.table = null;
+  session.online = null;
   session.view = null;
   session.trk = null;
 }
@@ -268,26 +286,30 @@ export function scoreView(): ScoreView {
   return v;
 }
 
-export const humansOf = (v: { seats: SeatConfig[] }): Seat[] =>
-  v.seats.map((p, i) => (p.bot ? -1 : i)).filter((i) => i >= 0);
-export const isPassAndPlay = (v: { seats: SeatConfig[] }): boolean => humansOf(v).length > 1;
-/** The human who must act next, if any. Drives the pass-and-play handoff. */
-export function humanActor(v: TableView): Seat | null {
+/**
+ * The seats played on this device for the game on screen: one in a solo game, several in
+ * pass-and-play. The table says which they are. A scoresheet has none: nobody plays a hand on it.
+ */
+export const localSeatsOf = (v: TableView | ScoreView): readonly Seat[] =>
+  isTableView(v) && session.table ? session.table.localSeats : [];
+export const isPassAndPlay = (v: TableView | ScoreView): boolean => localSeatsOf(v).length > 1;
+/** The local seat that must act next, if any. Drives the pass-and-play handoff. */
+export function localActor(v: TableView): Seat | null {
   const n = v.seats.length,
-    H = humansOf(v);
+    L = localSeatsOf(v);
   if (v.phase === 'bidding') {
-    const next = H.slice()
+    const next = L.slice()
       .sort((a, b) => ((a - ui.seat + n) % n) - ((b - ui.seat + n) % n))
       .find((i) => v.bids[i] == null);
     return next == null ? null : next;
   }
-  if (v.phase === 'playing') return v.turn == null || v.seats[v.turn].bot ? null : v.turn;
-  if (v.phase === 'ability') return !v.pending || v.seats[v.pending.seat].bot ? null : v.pending.seat;
+  if (v.phase === 'playing') return v.turn == null || !L.includes(v.turn) ? null : v.turn;
+  if (v.phase === 'ability') return !v.pending || !L.includes(v.pending.seat) ? null : v.pending.seat;
   return null;
 }
 /** Point the screen at the right seat; raise the curtain when the device changes hands. */
 export function syncSeat(getView: GetView): void {
-  const actor = humanActor(getView(ui.seat));
+  const actor = localActor(getView(ui.seat));
   if (actor != null && actor !== ui.seat) {
     ui.seat = actor;
     if (isPassAndPlay(getView(actor))) patchUi({ curtain: true, sel: null, bidPick: null, discard: [] });
@@ -295,4 +317,4 @@ export function syncSeat(getView: GetView): void {
   session.view = getView(ui.seat);
 }
 /** In pass-and-play, a hand is only shown while its owner has something to do. */
-export const handHidden = (v: TableView): boolean => isPassAndPlay(v) && humanActor(v) !== v.me;
+export const handHidden = (v: TableView): boolean => isPassAndPlay(v) && localActor(v) !== v.me;

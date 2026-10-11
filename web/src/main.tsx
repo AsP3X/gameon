@@ -8,6 +8,7 @@ import '@fontsource/nunito/900.css';
 import '@fontsource/pirata-one/400.css';
 import './styles/tokens.css';
 import './styles/tavern.css';
+import './styles/online.css';
 import { App } from './App';
 import { loadSamples } from './sound/samples';
 
