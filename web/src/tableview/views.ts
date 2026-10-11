@@ -173,7 +173,31 @@ function pips(b: number | null, w: number): string {
   else if (m <= 6) for (let k = 0; k < m; k++) dots += `<i class="${k < w ? (k < b ? 'ok' : 'over') : ''}"></i>`;
   return `<span class="bidline ${ui.reveal ? 'pop' : ''}"><span class="pips">${dots}</span><b class="num">${w}/${b}</b></span>`;
 }
+/** How long the ring's last stretch is: from here on it is red. */
+const HURRY_MS = 5000;
+/**
+ * Online: the clock of a seat the table is waiting on, as a ring around its avatar that empties
+ * until the deadline. The page only shows it. When it is empty the server plays for the seat.
+ * The ring runs as a CSS animation from what is left right now, so nothing has to redraw it.
+ */
+function deadlineRing(v: TableView, seat: Seat): string {
+  const d = v.online?.deadline;
+  if (!d || !session.online || !d.seats.includes(seat)) return '';
+  const left = Math.max(0, Math.round(d.at - session.online.now())),
+    gone = 100 * (1 - Math.min(1, left / d.total));
+  return `<svg class="ring" viewBox="0 0 50 50" aria-hidden="true" style="--gone:${gone.toFixed(1)};--left:${left}ms;--calm:${Math.max(0, left - HURRY_MS)}ms;--ticks:${Math.max(1, Math.ceil(left / 1000))}"><circle class="ring-track" cx="25" cy="25" r="23"/><circle class="ring-left${left <= HURRY_MS ? ' hurry' : ''}" cx="25" cy="25" r="23" pathLength="100"/></svg>`;
+}
+/** Online: where the player of another seat is, when they are not simply there. */
+function presenceTag(v: TableView, seat: Seat): string {
+  const status = v.online?.status[seat];
+  if (status === 'offline') return '<span class="presence off">Offline</span>';
+  if (status === 'away') return '<span class="presence away">Away</span>';
+  // `bot` on a seat that started as a person: a bot took it over.
+  if (status === 'bot' && !v.seats[seat].bot) return '<span class="presence bot">Bot</span>';
+  return '';
+}
 function seatBid(v: TableView, i: Seat): string {
+  if (v.phase === 'roundEnd' && v.online?.ready[i]) return '<span class="ready">Ready</span>';
   if (v.phase !== 'bidding') return pips(v.bids[i], v.won[i]);
   const b = v.bids[i];
   if (b == null) return '<span class="thinking" aria-label="Thinking"><i></i><i></i><i></i></span>';
@@ -186,8 +210,11 @@ function statusText(v: TableView): string {
       return v.bids[v.me] == null && !handHidden(v)
         ? 'How many tricks will you win?'
         : `Waiting on ${v.bids.filter((b) => b == null).length} more`;
-    case 'playing':
-      return v.turn == null || v.turn === v.me ? 'Your turn' : `${who(v, v.turn)} is thinking…`;
+    case 'playing': {
+      if (v.turn == null || v.turn === v.me) return 'Your turn';
+      const status = v.online?.status[v.turn];
+      return `${who(v, v.turn)} is ${status === 'offline' ? 'offline' : status === 'away' ? 'away' : 'thinking'}…`;
+    }
     case 'trickEnd': {
       const r = v.lastTrick?.result;
       if (!r) return '';
@@ -358,6 +385,13 @@ function actionsView(v: TableView): string {
     return bidSheet(v.cards);
   }
   if (v.phase === 'ability' && v.pending?.seat === me) return abilityPanel(v);
+  if (v.phase === 'roundEnd' && v.online?.ready[me]) {
+    // Online: this seat has said it is ready. The round starts when the connected players all have, or on its own.
+    const { ready, status } = v.online,
+      waiting = ready.filter((r, i) => !r && (status[i] === 'online' || status[i] === 'away')).length,
+      next = v.round === v.rounds - 1 ? 'final scores are coming' : 'next round is coming';
+    return `<button class="btn" disabled>Ready · ${waiting ? `waiting for ${waiting} more` : next}</button>`;
+  }
   if (v.phase === 'roundEnd') return `<button class="btn" data-act="results">See round results</button>`;
   if (v.phase === 'ability' && v.pending) return hint(`${esc(v.seats[v.pending.seat].name)} is deciding…`);
   return '';
@@ -382,7 +416,10 @@ export function gameView(): string {
       const p = v.seats[i],
         turn = (v.phase === 'playing' && v.turn === i) || (v.phase === 'ability' && v.pending?.seat === i),
         won = res && res.winner === i;
-      return `<div class="seat ${turn ? 'turn' : ''} ${won ? 'won' : ''} ${ui.bump === i ? 'bump' : ''}">${avatar(p, '', `seat-${i}`)}${i === v.dealer ? '<span class="dealer" title="Dealer">D</span>' : ''}${multi && !p.bot ? '<span class="human-tag" title="Human player">H</span>' : ''}
+      const presence = presenceTag(v, i),
+        gone = presence && v.online?.status[i] !== 'away' ? ' gone' : '';
+      // Offline none of the three online parts is there, and the markup is the legacy page's to the letter.
+      return `<div class="seat ${turn ? 'turn' : ''} ${won ? 'won' : ''} ${ui.bump === i ? 'bump' : ''}${gone}">${avatar(p, '', `seat-${i}`)}${deadlineRing(v, i)}${presence}${i === v.dealer ? '<span class="dealer" title="Dealer">D</span>' : ''}${multi && !p.bot ? '<span class="human-tag" title="Human player">H</span>' : ''}
       <span class="sname">${esc(p.name)}</span>${seatBid(v, i)}<span class="sscore num">${tot[i]} pts</span></div>`;
     })
     .join('');
@@ -429,7 +466,7 @@ export function gameView(): string {
       <div class="trick" data-anchor="deck">${plays || `<p class="empty">${v.phase === 'bidding' ? 'Cards are dealt.<br>Place your bids.' : 'Waiting for the lead…'}</p>`}</div>
       <div class="status" role="status">${statusText(v)}</div>${bonusText(v)}
     </div>
-    <div class="mebar ${myTurn || (v.phase === 'ability' && v.pending?.seat === me) ? 'turn' : ''} ${res && res.winner === me ? 'won' : ''} ${ui.bump === me ? 'bump' : ''}">${avatar(meP, '', `seat-${me}`)}
+    <div class="mebar ${myTurn || (v.phase === 'ability' && v.pending?.seat === me) ? 'turn' : ''} ${res && res.winner === me ? 'won' : ''} ${ui.bump === me ? 'bump' : ''}">${avatar(meP, '', `seat-${me}`)}${deadlineRing(v, me)}
       <div class="grow"><div class="pname">${esc(meP.name)}${me === v.dealer ? ' <span class="pill gold" style="padding:0 6px">Dealer</span>' : ''}</div><span class="muted num" style="font-size:14px">${tot[me]} pts</span></div>
       ${seatBid(v, me)}</div>
     <div class="hand ${hidden ? 'hidden' : ''} ${myTurn && !ui.waiting ? 'myturn' : ''}" style="--cw:${cw}px;--ov:${ov}px">${handHtml}</div>
@@ -487,10 +524,14 @@ export function resultsSheet(): string {
     })
     .join('');
   const last = v.round === v.rounds - 1;
+  // Online the round does not wait for this button alone.
+  const note = v.online
+    ? `<p class="muted sheet-note">${last ? 'The final scores come' : 'The next round starts'} when everyone is ready, or on ${last ? 'their' : 'its'} own.</p>`
+    : '';
   return `<div class="sheet-scrim" data-act="closeSheet"></div><div class="sheet ${tone}" role="dialog" aria-label="Round results"><div class="in">
     <div class="row">${mascot(tone === 'bad' ? 'sad' : 'happy', 'sm ' + (tone === 'bad' ? 'droop' : 'jump'))}<div class="grow"><h2 class="title">${title}</h2><p>Round ${v.round + 1} of ${v.rounds}</p></div></div>
     <div class="stack" style="gap:8px">${rows}</div>
-    <button class="btn ${tone === 'bad' ? 'red' : tone === 'mid' ? 'gold' : ''} wake late" data-act="next">${last ? 'See final scores' : 'Next round'}</button>
+    <button class="btn ${tone === 'bad' ? 'red' : tone === 'mid' ? 'gold' : ''} wake late" data-act="next">${last ? 'See final scores' : 'Next round'}</button>${note}
   </div></div>`;
 }
 export function boardSheet(v: ScoreView = scoreView(), editable = false): string {

@@ -8,11 +8,16 @@
    The order of the frames is the contract. An accepted intent is answered `ok`, and the very next
    message on this socket is the `game.update` of that step: that update, once on screen, gives the
    input back. An `err` is the whole answer and gives it back at once. Updates of other seats that
-   arrive in between do not. */
+   arrive in between do not.
+
+   Every view also carries what the server says about the table itself (`online`): who is connected,
+   who is ready, and the deadline the table is waiting on. The deadline only says when it ends. How
+   long its clock runs in all is known when the step that started it arrives; a clock that is already
+   running when the table opens is taken to be a standard one, or as long as what is left of it. */
 import type { Action, TableView } from '../game';
 import type {
   Card,
-  EngineEvent,
+  Deadline,
   GameEvent,
   GameId,
   GameResult,
@@ -23,6 +28,7 @@ import type {
 } from '../protocol/generated';
 import type { ClientRequest } from '../net/messages';
 import type { LinkEvent, SocketClient } from '../net/socket';
+import { deadlineMs } from '../net/timing';
 import type { DispatchResult, Table, TableListener, UpdateInfo } from './table';
 
 /** The intents the server answers with `ok` and then, as the next message, that step's `game.update`. */
@@ -34,10 +40,11 @@ const PAIRED: ReadonlySet<ClientRequest['t']> = new Set([
   'game.leave',
 ]);
 
-const isEngineEvent = (e: GameEvent): e is EngineEvent => e.type !== 'seatStatus' && e.type !== 'timedOut';
+/** A deadline and how long its clock runs from start to finish. */
+type Clock = Deadline & { total: number };
 
-/** The view the renderer draws: the seat's wire view plus what `game.start` said once. */
-function tableView(start: GameStart, update: GameUpdate): TableView {
+/** The view the renderer draws: the seat's wire view, what `game.start` said once, and the state of the table. */
+function tableView(start: GameStart, update: GameUpdate, clock: Clock | null): TableView {
   const s = start.settings,
     deck: Card[] = [];
   for (const card of start.deck) deck[card.id] = card;
@@ -54,6 +61,7 @@ function tableView(start: GameStart, update: GameUpdate): TableView {
       whale: s.whale,
     },
     deck,
+    online: { status: update.table.status, ready: update.table.ready, deadline: clock },
   };
 }
 
@@ -71,6 +79,7 @@ export class RemoteTable implements Table {
   private readonly sent = new Set<ClientRequest>();
   private start: GameStart;
   private rev: number;
+  private clock: Clock | null = null;
   private current: TableView;
   /** Set by an `ok`: the intent whose `game.update` is the next message. */
   private due: ClientRequest['t'] | null = null;
@@ -79,15 +88,18 @@ export class RemoteTable implements Table {
   /** What `game.over` said, once it has: the standings, and in ranked this seat's rating change. */
   private over: GameResult | null = null;
 
-  /** `update` is the snapshot the table opens with: the one after `game.start`, or the one in `welcome`. */
-  constructor(client: SocketClient, start: GameStart, update: GameUpdate) {
+  /**
+   * `update` is the view the table opens with. `opening` says it is the one that follows
+   * `game.start`, where every clock starts now. The one in a `welcome` is a table already under way.
+   */
+  constructor(client: SocketClient, start: GameStart, update: GameUpdate, opening = false) {
     this.client = client;
     this.gameId = start.gameId;
     this.mode = start.mode;
     this.localSeats = [start.me];
     this.start = start;
     this.rev = update.rev;
-    this.current = tableView(start, update);
+    this.current = this.viewOf(update, opening);
     this.unlisten = client.subscribe((event) => this.onLink(event));
   }
 
@@ -145,7 +157,8 @@ export class RemoteTable implements Table {
   resync(start: GameStart, update: GameUpdate): void {
     this.start = start;
     this.rev = update.rev;
-    this.current = tableView(start, update);
+    this.clock = null;
+    this.current = this.viewOf(update, false);
     this.due = null;
     this.left = false;
     this.emit([], { unlock: true, last: false });
@@ -221,10 +234,10 @@ export class RemoteTable implements Table {
     if (!fresh && !due) return; // older than what is on screen: dropped
     if (fresh) {
       this.rev = update.rev;
-      this.current = tableView(this.start, update);
+      this.current = this.viewOf(update, true);
     }
     this.left = due === 'game.leave';
-    this.emit(fresh ? update.events.filter(isEngineEvent) : [], { unlock: due != null, last: this.left });
+    this.emit(fresh ? update.events : [], { unlock: due != null, last: this.left });
   }
 
   private settle(due: ClientRequest['t']): void {
@@ -232,7 +245,24 @@ export class RemoteTable implements Table {
     this.emit([], { unlock: true, last: this.left });
   }
 
-  private emit(events: EngineEvent[], info: UpdateInfo): void {
+  /**
+   * The view after `update`. `step` says the update is a step the table just took (or its opening
+   * view), so a deadline it brings is one that starts now. In a snapshot the clock may have been
+   * running for a while.
+   */
+  private viewOf(update: GameUpdate, step: boolean): TableView {
+    const d = update.table.deadline,
+      running = this.clock;
+    if (!d) this.clock = null;
+    else if (running && running.kind === d.kind && running.at === d.at) this.clock = { ...d, total: running.total };
+    else {
+      const left = Math.max(1, d.at - this.client.serverNow());
+      this.clock = { ...d, total: step ? left : Math.max(left, deadlineMs(d.kind, this.start.settings.pace)) };
+    }
+    return tableView(this.start, update, this.clock);
+  }
+
+  private emit(events: GameEvent[], info: UpdateInfo): void {
     const view = this.current,
       me = this.start.me;
     const getView = (seat: Seat): TableView => {

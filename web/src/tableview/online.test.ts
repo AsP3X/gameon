@@ -4,8 +4,8 @@
    test says what each update is, as RemoteTable would (see table.ts, UpdateInfo). */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 import { Bots, Engine } from '../game';
-import type { Action, GameState } from '../game';
-import type { Seat } from '../protocol/generated';
+import type { Action, GameState, OnlineInfo, TableView } from '../game';
+import type { GameEvent, Seat } from '../protocol/generated';
 import type { DispatchResult, Table, TableListener, UpdateInfo } from '../table/table';
 import { closeOnlineTable, mountTavern, openOnlineTable } from './index';
 import { session, stats, tableView, ui } from './state';
@@ -17,6 +17,8 @@ const OTHERS: UpdateInfo = { unlock: false, last: false };
 let app: HTMLDivElement;
 let unmount: (() => void) | null = null;
 let state: GameState;
+/** What the server says about the table itself. The test sets it; every view from then on carries it. */
+let online: OnlineInfo | undefined;
 let subs: Set<TableListener>;
 /** What the local seat sent, in order. Nothing is applied until the test says so. */
 let sent: Action[];
@@ -31,14 +33,31 @@ function click(selector: string): void {
 const text = (selector: string): string | undefined => app.querySelector(selector)?.textContent ?? undefined;
 const settle = (ms = 0): Promise<void> => vi.advanceTimersByTimeAsync(ms).then(() => {});
 
+/** The views of one moment: the engine's, with what the server says about the table. */
+function views(): (seat: Seat) => TableView {
+  const snap = state,
+    info = online;
+  return (seat) => ({ ...Engine.view(snap, seat), online: info });
+}
 /** The server takes a step: the state moves on and the table says what happened, and what kind of update it is. */
-function step(action: Action, info: UpdateInfo): void {
+function step(action: Action, info: UpdateInfo, extra: GameEvent[] = []): void {
   const r = Engine.reduce(state, action);
   if (r.error != null) throw new Error(r.error);
   state = r.state;
-  const snap = r.state;
-  subs.forEach((fn) => fn(r.events, (seat) => Engine.view(snap, seat), info));
+  const getView = views();
+  subs.forEach((fn) => fn([...r.events, ...extra], getView, info));
 }
+/** A step that moves no card: somebody's connection, somebody's "ready". */
+function tell(about: OnlineInfo, info: UpdateInfo, events: GameEvent[] = []): void {
+  online = about;
+  const getView = views();
+  subs.forEach((fn) => fn(events, getView, info));
+}
+const present = (status: OnlineInfo['status'] = ['online', 'online', 'bot']): OnlineInfo => ({
+  status,
+  ready: [false, false, false],
+  deadline: null,
+});
 /** The move the seat whose turn it is would make, if it were a bot. */
 function nextMove(): Action {
   const s = state;
@@ -63,7 +82,7 @@ function openTable(): void {
   });
   const table: Table = {
     localSeats: [0],
-    view: (seat: Seat) => Engine.view(state, seat),
+    view: (seat: Seat) => views()(seat),
     dispatch(action) {
       sent.push(action);
       return Promise.resolve({ ok: true });
@@ -75,7 +94,7 @@ function openTable(): void {
     schedule: () => {},
     stop: () => {},
   };
-  openOnlineTable(table, { leave, exit, ranked: false, result: () => null });
+  openOnlineTable(table, { leave, exit, now: () => Date.now(), ranked: false, result: () => null });
 }
 
 beforeEach(() => {
@@ -88,6 +107,7 @@ beforeEach(() => {
   app = document.querySelector<HTMLDivElement>('#app') ?? document.createElement('div');
   const fx = document.querySelector<HTMLCanvasElement>('#fx') ?? document.createElement('canvas');
   subs = new Set();
+  online = undefined;
   sent = [];
   leave = vi.fn<() => Promise<DispatchResult>>().mockResolvedValue({ ok: true });
   exit = vi.fn<() => void>();
@@ -212,6 +232,159 @@ describe('an online table', () => {
     click('.end-top [data-act="home"]');
     expect(exit).toHaveBeenCalledTimes(2);
     expect(app.querySelector('.sheet')).toBeNull(); // nothing to ask: the game is over
+  });
+});
+
+describe('the clock of an online table', () => {
+  const NOW = 1_700_000_000_000;
+  const ringOf = (el: Element | null): Record<string, string> =>
+    Object.fromEntries(
+      (el?.getAttribute('style') ?? '')
+        .split(';')
+        .filter(Boolean)
+        .map((pair) => pair.split(':')),
+    );
+
+  it('draws a ring on every seat the deadline names, from what is left of the clock right now', async () => {
+    vi.setSystemTime(NOW);
+    online = { ...present(), deadline: { kind: 'bid', seats: [0, 1], at: NOW + 30_000, total: 45_000 } };
+    openTable();
+    // Remy and this seat are on the clock. Anne is a bot: nobody waits for her.
+    const seats = Array.from(app.querySelectorAll('.seat'));
+    expect(seats.map((s) => s.querySelector('.ring') != null)).toEqual([true, false]);
+    expect(app.querySelector('.mebar .ring')).not.toBeNull();
+    // A third of the clock is gone, 30 seconds are left, and the last five of them are red.
+    expect(ringOf(app.querySelector('.mebar .ring'))).toEqual({
+      '--gone': '33.3',
+      '--left': '30000ms',
+      '--calm': '25000ms',
+      '--ticks': '30',
+    });
+    expect(app.querySelector('.ring-left.hurry')).toBeNull();
+    expect(app.querySelector('.ring')?.getAttribute('aria-hidden')).toBe('true');
+
+    // Remy bids: the same clock runs on for this seat alone, 26 seconds later.
+    vi.setSystemTime(NOW + 26_000);
+    online = { ...present(), deadline: { kind: 'bid', seats: [0], at: NOW + 30_000, total: 45_000 } };
+    step({ type: 'bid', seat: 1, bid: 1 }, OTHERS);
+    await settle();
+    expect(app.querySelectorAll('.seat .ring')).toHaveLength(0);
+    expect(ringOf(app.querySelector('.mebar .ring'))).toEqual({
+      '--gone': '91.1',
+      '--left': '4000ms',
+      '--calm': '0ms',
+      '--ticks': '4',
+    });
+    expect(app.querySelector('.mebar .ring-left.hurry')).not.toBeNull();
+
+    // Past the deadline the ring is empty and stays: the move is the server's to make.
+    vi.setSystemTime(NOW + 31_000);
+    step({ type: 'bid', seat: 2, bid: 0 }, OTHERS);
+    await settle();
+    expect(ringOf(app.querySelector('.mebar .ring'))).toMatchObject({ '--gone': '100.0', '--left': '0ms' });
+    expect(tableView().bids[0]).toBeNull();
+    expect(sent).toEqual([]);
+  });
+
+  it('says so when the server played for a seat whose time ran out', async () => {
+    openTable();
+    online = present();
+    step({ type: 'bid', seat: 1, bid: 1 }, OTHERS, [{ type: 'timedOut', seat: 1 }]);
+    await settle();
+    expect(text('.felt .pill.gold')).toBe('<b>Remy</b> ran out of time');
+    expect(app.querySelector('.felt .pill.gold b')).toBeNull();
+    step({ type: 'bid', seat: 0, bid: 1 }, OTHERS, [{ type: 'timedOut', seat: 0 }]);
+    await settle();
+    expect(text('.felt .pill.gold')).toBe('Time ran out · the table played for you');
+  });
+
+  it('has no ring, no tag and no note at a table that is not online', () => {
+    openTable();
+    expect(app.querySelector('.ring, .presence, .sheet-note')).toBeNull();
+    expect(app.querySelector('.seat.gone')).toBeNull();
+  });
+});
+
+describe('who is at an online table', () => {
+  it('tags a seat whose player is offline, away, or replaced by a bot, and says whom the table waits for', async () => {
+    online = present();
+    openTable();
+    expect(app.querySelector('.presence')).toBeNull();
+
+    tell(present(['online', 'offline', 'bot']), OTHERS, [{ type: 'seatStatus', seat: 1, status: 'offline' }]);
+    await settle();
+    const remy = (): Element => app.querySelectorAll('.seat')[0];
+    expect(remy().querySelector('.presence.off')?.textContent).toBe('Offline');
+    expect(remy().classList.contains('gone')).toBe(true);
+    // Anne has been a bot from the start: that is not news.
+    expect(app.querySelectorAll('.seat')[1].querySelector('.presence')).toBeNull();
+
+    // The cards go round until it is Remy's turn.
+    step({ type: 'bid', seat: 0, bid: 1 }, ANSWER);
+    step({ type: 'bid', seat: 1, bid: 0 }, OTHERS);
+    step({ type: 'bid', seat: 2, bid: 0 }, OTHERS);
+    while (state.phase !== 'gameOver' && !(state.phase === 'playing' && state.turn === 1)) step(nextMove(), OTHERS);
+    await settle(1000);
+    expect(text('.status')).toBe('<b>Remy</b> is offline…');
+
+    tell(present(['online', 'away', 'bot']), OTHERS, [{ type: 'seatStatus', seat: 1, status: 'away' }]);
+    await settle();
+    expect(remy().querySelector('.presence.away')?.textContent).toBe('Away');
+    expect(remy().classList.contains('gone')).toBe(false);
+    expect(text('.status')).toBe('<b>Remy</b> is away…');
+
+    tell(present(['online', 'bot', 'bot']), OTHERS, [{ type: 'seatStatus', seat: 1, status: 'bot' }]);
+    await settle();
+    expect(remy().querySelector('.presence.bot')?.textContent).toBe('Bot');
+    expect(remy().classList.contains('gone')).toBe(true);
+    expect(text('.status')).toBe('<b>Remy</b> is thinking…');
+
+    tell(present(), OTHERS, [{ type: 'seatStatus', seat: 1, status: 'online' }]);
+    await settle();
+    expect(app.querySelector('.presence')).toBeNull();
+  });
+
+  it('waits after "ready" until the others are, and shows who is', async () => {
+    online = present();
+    openTable();
+    for (let i = 0; i < 100 && state.phase !== 'roundEnd'; i++) {
+      step(nextMove(), OTHERS);
+      await settle(20);
+    }
+    await settle(3000);
+    expect(state.phase).toBe('roundEnd');
+    // The results came up by themselves, with what happens next.
+    expect(text('.sheet .sheet-note')).toBe('The next round starts when everyone is ready, or on its own.');
+    click('[data-act="next"]');
+    expect(sent).toEqual([{ type: 'advance' }]);
+    expect(app.querySelector('.sheet')).toBeNull();
+    expect(text('.actions')).toBe('Locked in');
+
+    // The server's answer: this seat is ready, Remy is not. The round does not start yet.
+    tell({ ...present(), ready: [true, false, false] }, ANSWER);
+    await settle();
+    expect(state.phase).toBe('roundEnd');
+    expect(text('.actions')).toBe('Ready · waiting for 1 more');
+    expect(app.querySelector<HTMLButtonElement>('.actions button')?.disabled).toBe(true);
+    expect(text('.mebar .ready')).toBe('Ready');
+    expect(app.querySelectorAll('.seat .ready')).toHaveLength(0);
+
+    // A player who is not connected is not waited for.
+    tell({ ...present(['online', 'offline', 'bot']), ready: [true, false, false] }, OTHERS);
+    await settle();
+    expect(text('.actions')).toBe('Ready · next round is coming');
+
+    tell({ ...present(), ready: [true, true, false] }, OTHERS);
+    await settle();
+    expect(text('.actions')).toBe('Ready · next round is coming');
+    expect(app.querySelectorAll('.seat .ready')).toHaveLength(1);
+
+    // The advance is the server's step. The new round deals, and nobody is ready for the one after.
+    online = present();
+    step({ type: 'advance' }, OTHERS);
+    await settle();
+    expect(tableView()).toMatchObject({ phase: 'bidding', round: 1 });
+    expect(app.querySelector('.bidsheet')).not.toBeNull();
   });
 });
 

@@ -197,6 +197,12 @@ export interface MockOptions {
   bot?: { minMs: number; maxMs: number };
   /** How long the casual queue waits for a full table before bots take the open seats. The protocol names no time. */
   queueFillMs?: number;
+  /** Where the server keeps its state between two lives. Without one it forgets everything. */
+  store?: MockStore;
+}
+export interface MockStore {
+  load(): string | null;
+  save(data: string): void;
 }
 
 type Timer = ReturnType<typeof setTimeout>;
@@ -207,6 +213,8 @@ interface Browser {
 }
 /** One player: a guest, or a registered account that any browser may log in to. */
 interface Account {
+  /** What a transport names to be this player again. null when nobody can come back as them. */
+  session: string | null;
   me: Me;
   /** The login of a registered account: the username in lower case, and the password as it was typed. */
   login: { name: string; password: string } | null;
@@ -308,7 +316,10 @@ export class MockServer {
   private readonly timers: Timers;
   private readonly bot: { minMs: number; maxMs: number };
   private readonly queueFillMs: number;
+  private readonly store: MockStore | null;
+  private readonly sessions = new Map<string, Account>();
   private readonly rooms = new Set<Room>();
+  private readonly games = new Set<Game>();
   private readonly conns = new Set<Conn>();
   /** Every player there ever was, by user id. */
   private readonly accounts = new Map<string, Account>();
@@ -317,6 +328,8 @@ export class MockServer {
   private queueTimer: Timer | null = null;
   private ids = 0;
   private down = false;
+  private saving = false;
+  private ended = false;
 
   constructor({
     now = Date.now,
@@ -324,12 +337,15 @@ export class MockServer {
     timers = {},
     bot = { minMs: 800, maxMs: 1500 },
     queueFillMs = 6000,
+    store,
   }: MockOptions = {}) {
     this.now = now;
     this.random = random;
     this.timers = { ...STANDARD_TIMERS, ...timers };
     this.bot = bot;
     this.queueFillMs = queueFillMs;
+    this.store = store ?? null;
+    this.resume();
   }
 
   /**
@@ -340,12 +356,24 @@ export class MockServer {
     return this.backend({ session: null });
   }
 
+  /** REST and sockets for one named session, created if this server has not seen it. */
+  page(session: string): Backend {
+    return this.backend({ session: this.sessions.get(session) ?? this.guest(session) });
+  }
+
   /**
-   * A new guest and the way to connect as them. Every call of the returned transport is another
-   * socket of the same player.
+   * A player and the way to connect as them. Every call of the returned transport is another socket
+   * of the same player. With a `session`, it is the player that session named before, also in an
+   * earlier life of a server with a store.
    */
-  transport(): Transport {
-    return this.backend({ session: this.guest() }).transport;
+  transport(session?: string): Transport {
+    const account = session != null ? (this.sessions.get(session) ?? this.guest(session)) : this.guest();
+    return this.backend({ session: account }).transport;
+  }
+
+  /** Who a session is, making a guest of one nobody has seen: what `POST /auth/guest` answers. */
+  me(session: string): Me {
+    return this.profile(this.sessions.get(session) ?? this.guest(session));
   }
 
   private backend(browser: Browser): Backend {
@@ -375,11 +403,34 @@ export class MockServer {
     this.down = false;
   }
 
+  /**
+   * The end of this server, as when its page is closed: no timer fires again, and nothing further
+   * is written to the store.
+   */
+  shutDown(): void {
+    this.down = true;
+    this.ended = true;
+    if (this.queueTimer != null) clearTimeout(this.queueTimer);
+    this.queueTimer = null;
+    this.games.forEach((game) => this.disarm(game));
+    this.conns.forEach((conn) => {
+      conn.open = false;
+      conn.gone = true;
+      if (conn.helloTimer != null) clearTimeout(conn.helloTimer);
+    });
+    this.conns.clear();
+  }
+
   /* ---------- connections ---------- */
 
-  private guest(): Account {
+  private guest(session: string | null = null): Account {
+    if (session != null) {
+      const existing = this.sessions.get(session);
+      if (existing) return existing;
+    }
     const n = 1000 + Math.floor(this.random() * 9000);
     const account: Account = {
+      session,
       me: {
         user: { id: this.uuid(), name: `Guest ${n}`, color: COLORS[n % COLORS.length], tier: null },
         guest: true,
@@ -398,6 +449,7 @@ export class MockServer {
       owed: [],
     };
     this.accounts.set(account.me.user.id, account);
+    if (session != null) this.sessions.set(session, account);
     return account;
   }
 
@@ -438,6 +490,7 @@ export class MockServer {
     queueMicrotask(() => {
       if (!conn.gone && !conn.cut) conn.wire.onmessage?.(data);
     });
+    this.touch();
   }
 
   private fail(conn: Conn, re: number, code: ErrorCode, message = MESSAGES[code] ?? code): void {
@@ -530,7 +583,7 @@ export class MockServer {
       seat = game ? game.players.indexOf(account) : -1;
     return {
       t: 'welcome',
-      me: this.me(account),
+      me: this.profile(account),
       serverTime: this.now(),
       lobby: account.room ? account.room.lobby : null,
       queue: account.queued ? this.queueStatus(account) : null,
@@ -539,7 +592,7 @@ export class MockServer {
   }
 
   /** `Me` as REST and `welcome` give it: with where a reconnect would land. */
-  private me(account: Account): Me {
+  private profile(account: Account): Me {
     // A cooldown that has run out is no cooldown.
     if (account.me.cooldownUntil != null && account.me.cooldownUntil <= this.now()) account.me.cooldownUntil = null;
     return {
@@ -588,7 +641,7 @@ export class MockServer {
     if (path === '/config') return ok(this.config());
     if (path === '/auth/guest') {
       browser.session ??= this.guest();
-      return ok(this.me(browser.session));
+      return ok(this.profile(browser.session));
     }
     if (path === '/auth/login') {
       const c = credentials(body);
@@ -598,7 +651,7 @@ export class MockServer {
       // The session is replaced: whoever this browser was before is logged out of it.
       if (browser.session !== found) this.endSession(browser);
       browser.session = found;
-      return ok(this.me(found));
+      return ok(this.profile(found));
     }
 
     const account = browser.session;
@@ -619,10 +672,10 @@ export class MockServer {
       account.login = { name: c.username.toLowerCase(), password: c.password };
       account.me.guest = false;
       account.me.username = c.username;
-      return ok(this.me(account));
+      return ok(this.profile(account));
     }
     if (path === '/me') {
-      if (method === 'GET') return ok(this.me(account));
+      if (method === 'GET') return ok(this.profile(account));
       if (!isRecord(body)) return fail('VALIDATION');
       // Both fields are checked before either is written: a refused patch changes nothing.
       const name = 'name' in body ? displayName(body.name) : undefined,
@@ -632,7 +685,7 @@ export class MockServer {
       if (name !== undefined) account.me.user.name = name;
       if (color !== undefined) account.me.user.color = color;
       if (account.room && (name !== undefined || color !== undefined)) this.pushLobby(account.room);
-      return ok(this.me(account));
+      return ok(this.profile(account));
     }
     if (path === '/lobbies') {
       const lobbies: LobbySummary[] = [...this.rooms]
@@ -734,7 +787,7 @@ export class MockServer {
     // Who may ask comes before where they are: a guest is told `ACCOUNT_REQUIRED`, and a leaver
     // `QUEUE_COOLDOWN`, even when seated (§5.4). The message carries no time: `GET /me` does.
     if (mode === 'ranked' && account.me.guest) return this.fail(conn, m.id, 'ACCOUNT_REQUIRED');
-    if (mode === 'ranked' && (this.me(account).cooldownUntil ?? 0) > this.now())
+    if (mode === 'ranked' && (this.profile(account).cooldownUntil ?? 0) > this.now())
       return this.fail(conn, m.id, 'QUEUE_COOLDOWN');
     if (account.room || account.game || account.queued) return this.fail(conn, m.id, 'ALREADY_SEATED');
     const queue = this.queues[mode];
@@ -992,6 +1045,7 @@ export class MockServer {
       timers: [],
       over: false,
     };
+    this.games.add(game);
     if (room) {
       room.lobby.gameId = game.id;
       this.pushLobby(room);
@@ -1237,11 +1291,15 @@ export class MockServer {
         if (score.hit) stats.bidsMade++;
       });
     });
-    /** What one seat is told: the standings for all, and in ranked this seat's own rating change. */
+    /**
+     * What one seat is told: whose seat it is, the standings for all, and in ranked this seat's own
+     * rating change.
+     */
     const tell = (account: Account, seat: Seat): void => {
       const over: GameOver = {
         t: 'game.over',
         gameId: game.id,
+        seat,
         result: {
           totals,
           places,
@@ -1253,6 +1311,7 @@ export class MockServer {
       if (account.conn) this.write(account.conn, over);
       else account.owed.push(over);
     };
+    this.games.delete(game);
     game.players.forEach((account, seat) => {
       if (!account) return;
       account.game = null;
@@ -1281,6 +1340,145 @@ export class MockServer {
     account.me.rating = after;
     account.me.user.tier = after.tier;
     return { before, after, delta: after.value - before.value };
+  }
+
+  /* ---------- between two lives ---------- */
+
+  /** Something changed: write the state down once this turn is over. */
+  private touch(): void {
+    if (!this.store || this.saving) return;
+    this.saving = true;
+    queueMicrotask(() => {
+      this.saving = false;
+      if (!this.ended) this.save();
+    });
+  }
+
+  private save(): void {
+    const id = (a: Account): string => a.me.user.id;
+    const running = [...this.games].filter((g) => !g.over);
+    const saved = {
+      v: 1 as const,
+      ids: this.ids,
+      accounts: [...this.accounts.values()].map((a) => ({
+        session: a.session,
+        me: a.me,
+        login: a.login,
+        leaves: a.leaves,
+        owed: a.owed,
+      })),
+      rooms: [...this.rooms].map((r) => ({ lobby: r.lobby, humans: r.humans.map(id) })),
+      games: running.map((g) => ({
+        id: g.id,
+        lobby: g.room?.lobby.id ?? null,
+        mode: g.mode,
+        settings: g.settings,
+        state: g.state,
+        rev: g.rev,
+        players: g.players.map((a) => (a ? id(a) : null)),
+        colors: g.colors,
+        tiers: g.tiers,
+        leavers: g.leavers.map((l) => ({ user: id(l.account), seat: l.seat })),
+        status: g.status,
+        ready: g.ready,
+        deadline: g.deadline,
+      })),
+    };
+    this.store?.save(JSON.stringify(saved));
+  }
+
+  /**
+   * Pick up what an earlier life wrote down. Every socket of that life is gone, so every seated
+   * player is offline, and the clocks run on from where they were.
+   */
+  private resume(): void {
+    let saved: {
+      v: number;
+      ids: number;
+      accounts: { session: string | null; me: Me; login: Account['login']; leaves?: number; owed: GameOver[] }[];
+      rooms: { lobby: Lobby; humans: string[] }[];
+      games: {
+        id: string;
+        lobby: string | null;
+        mode: TableMode;
+        settings: GameSettings;
+        state: GameState;
+        rev: number;
+        players: (string | null)[];
+        colors: TableColor[];
+        tiers?: (string | null)[];
+        leavers: { user: string; seat: Seat }[];
+        status: SeatStatus[];
+        ready: boolean[];
+        deadline: Deadline | null;
+      }[];
+    };
+    try {
+      const raw: unknown = JSON.parse(this.store?.load() ?? 'null');
+      if (!isRecord(raw) || raw.v !== 1) return;
+      saved = raw as typeof saved;
+    } catch {
+      return;
+    }
+    this.ids = saved.ids;
+    for (const a of saved.accounts) {
+      const account: Account = {
+        session: a.session,
+        me: a.me,
+        login: a.login,
+        conn: null,
+        room: null,
+        game: null,
+        queued: null,
+        leaves: a.leaves ?? 0,
+        owed: a.owed,
+      };
+      this.accounts.set(a.me.user.id, account);
+      if (a.session != null) this.sessions.set(a.session, account);
+    }
+    const known = (ids: string[]): Account[] => ids.flatMap((x) => this.accounts.get(x) ?? []);
+    const rooms = new Map<string, Room>();
+    for (const r of saved.rooms) {
+      const room: Room = { lobby: r.lobby, humans: known(r.humans) };
+      room.humans.forEach((a) => (a.room = room));
+      room.lobby.members.forEach((m) => {
+        if (m.kind === 'human') m.connected = false;
+      });
+      rooms.set(r.lobby.id, room);
+      this.rooms.add(room);
+    }
+    for (const g of saved.games) {
+      const room = g.lobby == null ? null : (rooms.get(g.lobby) ?? null);
+      if (g.lobby != null && !room) continue;
+      const game: Game = {
+        id: g.id,
+        room,
+        mode: g.mode,
+        settings: g.settings,
+        state: g.state,
+        rev: g.rev,
+        players: g.players.map((x) => (x == null ? null : (this.accounts.get(x) ?? null))),
+        colors: g.colors,
+        tiers: g.tiers ?? g.players.map(() => null),
+        leavers: g.leavers.flatMap((l) => {
+          const account = this.accounts.get(l.user);
+          return account ? [{ account, seat: l.seat }] : [];
+        }),
+        status: g.status,
+        ready: g.ready,
+        deadline: g.deadline,
+        timers: [],
+        over: false,
+      };
+      game.players.forEach((account, seat) => {
+        if (!account) return;
+        account.game = game;
+        if (game.status[seat] !== 'offline') game.rev++;
+        game.status[seat] = 'offline';
+      });
+      this.games.add(game);
+      this.arm(game);
+    }
   }
 
   /* ---------- ids ---------- */

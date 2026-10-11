@@ -9,7 +9,12 @@
    ends it: the socket of the old one is given up, and what was known about it with it.
 
    The screens read it with subscribe() and getState(), which is what React's useSyncExternalStore
-   wants: getState() returns the same object until something changed. */
+   wants: getState() returns the same object until something changed.
+
+   One thing is kept on the device between two pages (`OnlineMemory`): whether the player was seated
+   in a lobby or at a table, so a reload connects again by itself, and which seat they had in a
+   running game, so the result of a game that ended in between can say where they finished. Both are
+   conveniences. Where the player really is, is what the next `welcome` says. */
 import type {
   CloseReason,
   Credentials,
@@ -44,7 +49,8 @@ export type Notice =
   | { kind: 'lobbyClosed'; reason: CloseReason }
   /**
    * A game ended while its table was not on screen: the seat was left, or the result arrived after a
-   * reconnect. `place` is known when the table was opened from this page; after a reload it is not.
+   * reconnect. `place` is null only when the result did not say whose seat it is about and this
+   * device does not remember one. `left` is what this device remembers.
    */
   | {
       kind: 'gameOver';
@@ -66,6 +72,19 @@ export interface OnlineState {
   notice: Notice | null;
   /** What the server said about itself (`GET /config`): the quick-play rules are in it. null until it answered. */
   config: ServerConfig | null;
+}
+
+/** What a page leaves behind for the next one. Plain JSON. */
+export interface Remembered {
+  /** The player sat in a lobby or at a table when the server was last heard. */
+  seated: boolean;
+  /** The seat played in each game that has not reported its result yet. */
+  games: Record<GameId, { seat: Seat; left: boolean }>;
+}
+/** Where `Remembered` is kept: localStorage in the page, an object in a test. */
+export interface OnlineMemory {
+  load(): Remembered | null;
+  save(remembered: Remembered): void;
 }
 
 /** The answer to an intent. `ok` says the server accepted it; what it changed arrives as state. */
@@ -90,14 +109,28 @@ export class Online {
   private state: OnlineState = EMPTY;
   /** A `game.start` whose first `game.update` has not arrived: the table opens with both. */
   private starting: GameStart | null = null;
-  /** The seat this page played in each game it opened, and whether it left it. */
-  private readonly played = new Map<GameId, { seat: Seat; left: boolean }>();
+  /** The seat this device played in each game it opened, and whether it left it. */
+  private readonly played: Map<GameId, { seat: Seat; left: boolean }>;
+  private readonly memory: OnlineMemory | null;
+  private seated: boolean;
 
-  constructor(client: SocketClient, api: Api) {
+  constructor(client: SocketClient, api: Api, memory: OnlineMemory | null = null) {
     this.client = client;
     this.api = api;
+    this.memory = memory;
+    const remembered = memory?.load();
+    this.seated = remembered?.seated === true;
+    this.played = new Map(Object.entries(remembered?.games ?? {}));
     this.unlisten = client.subscribe((event) => this.onLink(event));
   }
+
+  /** Whether the last page on this device left a seat behind: then this one connects without being asked. */
+  get wasSeated(): boolean {
+    return this.seated;
+  }
+
+  /** The server's clock, in Unix milliseconds: what a deadline or a cooldown the server named is measured against. */
+  serverNow = (): number => this.client.serverNow();
 
   getState = (): OnlineState => this.state;
 
@@ -119,12 +152,20 @@ export class Online {
     this.client.retry();
   }
 
-  /** Hang up and forget everything. The server keeps the seat for as long as its grace period says. */
-  close(): void {
+  /**
+   * Hang up and forget what the server said. The server keeps the seat for as long as its grace
+   * period says, and the device still remembers that there was one, unless `forget` says the player
+   * walked away on purpose.
+   */
+  close(forget = false): void {
     this.client.stop();
     this.state.table?.dispose();
     this.starting = null;
     this.state = { ...EMPTY, config: this.state.config };
+    if (forget) {
+      this.seated = false;
+      this.remember();
+    }
     this.notify();
   }
 
@@ -178,11 +219,6 @@ export class Online {
   /** One page of the ladder: the first, or the one after the page whose `next` is given. */
   ladder(after?: string): Promise<ApiResult<LadderPage>> {
     return this.api.ladder(after);
-  }
-
-  /** The server's clock right now: what a deadline or a cooldown the server named is measured against. */
-  serverNow(): number {
-    return this.client.serverNow();
   }
 
   /* ---------- lobby intents ---------- */
@@ -264,6 +300,7 @@ export class Online {
     if (played) played.left = left;
     // Leaving a ranked game starts a cooldown, and only `Me` says until when.
     if (left && table.mode === 'ranked') void this.refreshMe();
+    this.remember();
     table.dispose();
     this.set({ table: null, lobby: left ? null : this.state.lobby });
   }
@@ -307,7 +344,7 @@ export class Online {
           table = open;
         } else {
           open?.dispose();
-          if (game) table = this.seat(game.start, game.update);
+          if (game) table = this.seat(game.start, game.update, false);
         }
         return this.set({ status: 'online', me, lobby, queue, table });
       }
@@ -338,7 +375,7 @@ export class Online {
             this.starting = null;
             this.state.table?.dispose();
             // A table the queue made is where the queue ends: no `queue.status` says so.
-            return this.set({ table: this.seat(start, m), queue: null });
+            return this.set({ table: this.seat(start, m, true), queue: null });
           }
           case 'game.over':
             return this.gameOver(m);
@@ -349,28 +386,34 @@ export class Online {
     }
   }
 
-  private seat(start: GameStart, update: GameUpdate): RemoteTable {
-    this.played.set(start.gameId, { seat: start.me, left: false });
-    return new RemoteTable(this.client, start, update);
+  /** `opening` is the update right after `game.start`; the other way in is the snapshot of a `welcome`. */
+  private seat(start: GameStart, update: GameUpdate, opening: boolean): RemoteTable {
+    if (!this.played.has(start.gameId)) this.played.set(start.gameId, { seat: start.me, left: false });
+    return new RemoteTable(this.client, start, update, opening);
   }
 
   /**
    * The result of a game. At an open table the end screen already shows it. Anywhere else it is
    * news: it never puts a table back.
+   *
+   * The message names the receiver's seat (`seat`, §5.5). The seat this device remembers is only
+   * for a message without one, which the protocol still allows.
    */
   private gameOver(over: GameOver): void {
     const played = this.played.get(over.gameId),
-      r = over.result;
+      r = over.result,
+      seat = 'seat' in over && typeof over.seat === 'number' ? over.seat : (played?.seat ?? null);
     this.played.delete(over.gameId);
+    this.remember();
     void this.refreshMe();
     if (this.state.table?.gameId === over.gameId) return;
     this.set({
       notice: {
         kind: 'gameOver',
         left: played?.left ?? false,
-        place: played ? (r.places[played.seat] ?? null) : null,
+        place: seat == null ? null : (r.places[seat] ?? null),
         seats: r.places.length,
-        forfeited: played != null && r.forfeited.includes(played.seat),
+        forfeited: seat != null && r.forfeited.includes(seat),
         delta: r.rating ? r.rating.delta : null,
       },
     });
@@ -378,7 +421,16 @@ export class Online {
 
   private set(patch: Partial<OnlineState>): void {
     this.state = { ...this.state, ...patch };
+    // Only what the server said counts: while the link is down, the last known seat stays remembered.
+    if (this.state.status === 'online') {
+      this.seated = this.state.lobby != null || this.state.table != null;
+      this.remember();
+    }
     this.notify();
+  }
+
+  private remember(): void {
+    this.memory?.save({ seated: this.seated, games: Object.fromEntries(this.played) });
   }
 
   private notify(): void {

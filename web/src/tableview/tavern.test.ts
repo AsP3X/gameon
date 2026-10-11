@@ -8,8 +8,9 @@ import type { GameState } from '../game';
 import type { Seat } from '../protocol/generated';
 import { DISPATCH_TIMEOUT_MS } from '../table/table';
 import type { DispatchResult, Table, TableListener } from '../table/table';
+import { Sound } from '../sound/sound';
 import { showTable } from './actions';
-import { mountTavern } from './index';
+import { coverTavern, mountTavern } from './index';
 import { go, render } from './render';
 import { prefs, session, tableView, ui } from './state';
 import { Store } from './store';
@@ -286,6 +287,39 @@ describe('mountTavern', () => {
     click('[data-act="board"]');
     expect(all('.sheet .lb .pname').map((el) => el.textContent)).toContain(name);
     expect(app.querySelector('img')).toBeNull();
+  });
+
+  it('asks for the menu music on the home screen and nowhere else', () => {
+    const music = vi.spyOn(Sound, 'music');
+    const wanted = (): boolean | undefined => music.mock.calls.at(-1)?.[0];
+    mount();
+    expect(wanted()).toBe(true);
+    click('[data-act="soundSheet"]'); // a sheet over the home screen is still the home screen
+    expect(wanted()).toBe(true);
+    click('[data-act="closeSheet"]');
+    click('[data-act="setup"]');
+    expect(wanted()).toBe(false);
+    click('[data-act="start"]');
+    expect(wanted()).toBe(false);
+    go('home');
+    expect(wanted()).toBe(true);
+    coverTavern(true); // the page shows the online screens instead
+    expect(wanted()).toBe(false);
+    coverTavern(false);
+    expect(wanted()).toBe(true);
+    const hidden = vi.spyOn(document, 'hidden', 'get').mockReturnValue(true);
+    document.dispatchEvent(new Event('visibilitychange'));
+    expect(wanted()).toBe(false);
+    hidden.mockReturnValue(false);
+    document.dispatchEvent(new Event('visibilitychange'));
+    expect(wanted()).toBe(true);
+    const hush = vi.spyOn(Sound, 'hush');
+    unmount?.();
+    unmount = null;
+    expect(hush).toHaveBeenCalledTimes(1);
+    music.mockClear();
+    document.dispatchEvent(new Event('visibilitychange')); // no listener left to ask for it
+    expect(music).not.toHaveBeenCalled();
   });
 
   it('cleans up: no sprite, no listeners, no running table', async () => {

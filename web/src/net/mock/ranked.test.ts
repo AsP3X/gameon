@@ -11,6 +11,7 @@ import type { ServerMessage } from '../messages';
 import { connectRaw, framesOf } from './raw';
 import type { RawClient } from './raw';
 import { MockServer, STANDARD } from './server';
+import type { MockStore } from './server';
 
 function seeded(seed: number): () => number {
   let a = seed >>> 0;
@@ -491,5 +492,80 @@ describe('the ladder', () => {
       `?after=${stranger}`,
     ])
       expect(await viewer.call('GET', `/ladder${query}`)).toEqual({ status: 400, body: error('VALIDATION') });
+  });
+});
+
+describe('a ranked table and a mock that is made anew', () => {
+  /** What a page keeps for the mock between two loads. */
+  function memory(): MockStore {
+    let data: string | null = null;
+    return {
+      load: () => data,
+      save: (next) => {
+        data = next;
+      },
+    };
+  }
+  const make = (store: MockStore): MockServer =>
+    new MockServer({
+      random: seeded(5),
+      timers: FAST,
+      bot: { minMs: 40, maxMs: 80 },
+      queueFillMs: QUEUE_FILL_MS,
+      store,
+    });
+  /** The account of one named page: registered the first time it is asked for, the same one after that. */
+  async function paged(name: string): Promise<Player> {
+    const b = server.page(`page-${name}`);
+    const me = async (): Promise<Me> => (await b.rest('GET', '/me')).body as Me;
+    if ((await me()).guest) {
+      await b.rest('PATCH', '/me', { name });
+      expect((await b.rest('POST', '/auth/register', { username: `paged_${name}`, password: 'x' })).status).toBe(200);
+    }
+    const connect = async (): Promise<RawClient> => {
+      const client = await connectRaw(b.transport);
+      await flush();
+      return client;
+    };
+    return { call: (method, path, body) => b.rest(method, path, body), me, connect, socket: await connect() };
+  }
+  const everyone = async (): Promise<Player[]> => {
+    const players: Player[] = [];
+    for (const name of NAMES) players.push(await paged(name));
+    return players;
+  };
+
+  it('finds the table with the tiers it was dealt with, and still counts a leave from before', async () => {
+    const store = memory();
+    server = make(store);
+    const before = await everyone();
+    // A first game, so that every seat has a tier to be announced with in the second.
+    await queueUp(before);
+    await played(before);
+    await queueUp(before);
+    const start = last(before[0].socket, 'game.start'),
+      tiers = start.seats.map((seat) => seat.tier);
+    expect(tiers.every((tier) => tier != null)).toBe(true);
+    const leftAt = Date.now();
+    expect(await ask(before[1].socket, { t: 'game.leave' })).toMatchObject({ t: 'ok' });
+
+    // The page is gone, and the server with it. The next one reads what was written down.
+    server.shutDown();
+    server = make(store);
+    await flush();
+    const after = await everyone(),
+      [anne, calico] = after;
+    const back = last(anne.socket, 'welcome').game?.start;
+    expect(back).toMatchObject({ gameId: start.gameId, mode: 'ranked' });
+    expect(back?.seats.map((seat) => seat.tier)).toEqual(tiers);
+    expect((await calico.me()).cooldownUntil).toBe(leftAt + 15 * MINUTE_MS);
+
+    // The game ends by its deadlines. Once ranked is open again, a second leave closes it for twice as long.
+    await vi.advanceTimersByTimeAsync(15 * MINUTE_MS);
+    expect((await calico.me()).cooldownUntil).toBeNull();
+    await queueUp(after);
+    const leftAgain = Date.now();
+    expect(await ask(calico.socket, { t: 'game.leave' })).toMatchObject({ t: 'ok' });
+    expect((await calico.me()).cooldownUntil).toBe(leftAgain + 30 * MINUTE_MS);
   });
 });

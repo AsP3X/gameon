@@ -1,6 +1,7 @@
 /* Render: turns the state into the page. One call rebuilds #app from strings, then replays the
    motion that connects the old picture to the new one.
    Ported from the legacy build (legacy/Skull King Tavern.html, section 13) without changing behavior. */
+import { Sound } from '../sound/sound';
 import { $ } from './dom';
 import { animateBar, countUp, flip, snapshot } from './motion';
 import { clearTimer, patchUi, stage, ui } from './state';
@@ -41,9 +42,18 @@ const SHEETS: Record<Sheet, () => string> = {
   trkBoard: () => boardSheet(trkView(), true),
 };
 
+/**
+ * The menu music belongs to the home screen: it plays while that is what the player looks at, and
+ * not under a table, a setup screen, the online screens or a tab that is in the background.
+ */
+export function tuneMenu(): void {
+  Sound.music(!!stage.app && ui.screen === 'home' && !stage.covered && !document.hidden);
+}
+
 export function render(): void {
   const app = stage.app;
   if (!app) return; // unmounted: a late timer or a finished animation has nothing to draw on
+  tuneMenu();
   const snap = ui.screen === 'game' && !ui.curtain ? snapshot() : null;
   let html = VIEWS[ui.screen]();
   if (ui.screen === 'game' && ui.curtain) html += curtainView();

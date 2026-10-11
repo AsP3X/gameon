@@ -219,6 +219,8 @@ export interface OnlineHooks {
   leave(): Promise<DispatchResult>;
   /** The table is done with on this device: take it off the screen and go back to the online screens. */
   exit(): void;
+  /** The server's clock, in Unix milliseconds: the one every deadline is on. */
+  now(): number;
   /** A ranked game: leaving it is a forfeit, and the player is told so before they do it. */
   ranked: boolean;
   /**
@@ -240,11 +242,21 @@ export interface Session {
 }
 export const session: Session = { table: null, online: null, view: null, trk: null };
 
-/** Where the renderer draws, and how it hands over to the online screens: set by mountTavern, cleared when it unmounts. */
-export const stage: { app: HTMLElement | null; fx: HTMLCanvasElement | null; online: (() => void) | null } = {
+/**
+ * Where the renderer draws, and how it hands over to the online screens: set by mountTavern, cleared
+ * when it unmounts. `covered` is the page's to set (coverTavern): it shows something else in the
+ * renderer's place.
+ */
+export const stage: {
+  app: HTMLElement | null;
+  fx: HTMLCanvasElement | null;
+  online: (() => void) | null;
+  covered: boolean;
+} = {
   app: null,
   fx: null,
   online: null,
+  covered: false,
 };
 
 type Timer = ReturnType<typeof setTimeout>;

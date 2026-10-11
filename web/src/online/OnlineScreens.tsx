@@ -44,12 +44,12 @@ function noticeText(notice: Notice): { title: string; text: string } {
         ? { title: 'The table was closed', text: 'Nothing happened at it for too long.' }
         : { title: 'The table was closed', text: 'Nobody was left to host it.' };
   const parts = [
-    notice.left ? 'You left before the end.' : '',
+    notice.left ? 'You left before the end.' : 'It ended while you were away.',
     notice.place != null ? `Final place: ${ordinal(notice.place)} of ${notice.seats}.` : '',
     notice.forfeited ? 'It counts as a forfeit.' : '',
     notice.delta != null ? `Rating ${notice.delta > 0 ? '+' : ''}${whole(notice.delta)}.` : '',
   ].filter(Boolean);
-  return { title: 'Your last game is over', text: parts.join(' ') || 'It ended while you were away.' };
+  return { title: 'Your last game is over', text: parts.join(' ') };
 }
 
 /** What stands between the player and the server, if anything. */
@@ -315,6 +315,7 @@ export function OnlineScreens({ online, state, onExit }: OnlineScreensProps) {
         lobby={lobby}
         me={me}
         status={state.status}
+        notice={state.notice ? noticeText(state.notice) : null}
         onRules={() => setOver({ lobby: lobby.id, view: 'rules' })}
         onPlayer={(id) => setOver({ lobby: lobby.id, player: id })}
       />

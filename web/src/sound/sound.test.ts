@@ -1,32 +1,48 @@
 /* Recorded takes in the mixer: a sound that has them plays one of them, varied, and a sound that has
    none (yet, or because they could not be read) plays its synthesised recipe. The recipes themselves
-   are held against the legacy build in tableview/parity/sound.test.ts. */
+   are held against the legacy build in tableview/parity/sound.test.ts.
+   And the menu music: one recorded tune that goes round while it is wanted and sound is on. */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 
 /** What the mixer built, in order: just enough of Web Audio to see which voices a sound used. */
 interface FakeNode {
   kind: string;
   buffer: unknown;
+  loop: boolean;
+  loopStart: number;
+  loopEnd: number;
   playbackRate: { value: number };
-  gain: { value: number };
+  /** `target` is where the last setTargetAtTime sends the value. */
+  gain: { value: number; target: number | null };
   startedAt: number | null;
+  /** Where in its buffer the source started. */
+  offset: number | null;
+  stoppedAt: number | null;
 }
 let made: FakeNode[] = [];
 /** What decodeAudioData does with a file; a test swaps it to make decoding fail. */
 let decodeFile: (file: ArrayBuffer) => Promise<unknown>;
 
-const param = () => ({
-  value: 0,
-  setValueAtTime: () => {},
-  exponentialRampToValueAtTime: () => {},
-  setTargetAtTime: () => {},
-});
+const param = () => {
+  const self = {
+    value: 0,
+    target: null as number | null,
+    setValueAtTime: () => {},
+    exponentialRampToValueAtTime: () => {},
+    setTargetAtTime: (target: number) => {
+      self.target = target;
+    },
+  };
+  return self;
+};
 function node(kind: string) {
   const self = {
     kind,
     buffer: null as unknown,
     type: '',
     loop: false,
+    loopStart: 0,
+    loopEnd: 0,
     gain: param(),
     frequency: param(),
     detune: param(),
@@ -38,11 +54,16 @@ function node(kind: string) {
     attack: param(),
     release: param(),
     startedAt: null as number | null,
+    offset: null as number | null,
+    stoppedAt: null as number | null,
     connect: <T>(to: T): T => to,
-    start: (at: number) => {
+    start: (at: number, offset?: number) => {
       self.startedAt = at;
+      self.offset = offset ?? null;
     },
-    stop: () => {},
+    stop: (at?: number) => {
+      self.stoppedAt = at ?? 0;
+    },
   };
   made.push(self);
   return self;
@@ -257,5 +278,130 @@ describe('recorded takes', () => {
     await settle();
     Sound.use({ muted: true, volume: 0.8, ambience: false, haptics: true });
     expect(playCard(Sound)).toEqual([]);
+  });
+});
+
+describe('menu music', () => {
+  const LOOP = { starts: 0.5, repeats: 60 };
+  const file = (): ArrayBuffer => new Uint8Array([9]).buffer;
+  /** The sources that play the tune, in the order they were started. */
+  const tunes = (): FakeNode[] => made.filter((v) => v.kind === 'source' && v.buffer === 'take 9');
+  /** The gain the tune was last sent to. Its own gain node is the one made right after its source. */
+  const sentTo = (tune: FakeNode | undefined): number | null | undefined =>
+    tune && made[made.indexOf(tune) + 1]?.gain.target;
+
+  it('waits for the first tap, then plays the tune round its loop, fading in', async () => {
+    const Sound = await mixer();
+    Sound.tune(file(), LOOP);
+    Sound.music(true);
+    await settle();
+    expect(made).toEqual([]); // no audio graph before the first tap
+    Sound.unlock();
+    await settle();
+    const [tune, ...more] = tunes();
+    expect(more).toEqual([]);
+    expect(tune).toMatchObject({ loop: true, loopStart: 0.25, loopEnd: 60.25, startedAt: 5, offset: 0.5 });
+    expect(sentTo(tune)).toBe(0.3);
+    expect(tune?.stoppedAt).toBeNull();
+  });
+
+  it('decodes the tune only once it is wanted, and ahead of the first tap where the browser can', async () => {
+    let decoded = 0;
+    vi.stubGlobal(
+      'OfflineAudioContext',
+      class {
+        decodeAudioData = (f: ArrayBuffer) => {
+          decoded++;
+          return decodeFile(f);
+        };
+      },
+    );
+    const Sound = await mixer();
+    Sound.tune(file(), LOOP);
+    await settle();
+    expect(decoded).toBe(0);
+    Sound.music(true);
+    Sound.music(true);
+    await settle();
+    expect(decoded).toBe(1);
+    Sound.unlock();
+    expect(tunes()).toHaveLength(1); // decoded already: it starts with the tap
+  });
+
+  it('starts when the tune arrives after it was asked for', async () => {
+    const Sound = await mixer();
+    Sound.unlock();
+    Sound.music(true);
+    expect(tunes()).toEqual([]);
+    Sound.tune(file(), LOOP);
+    await settle();
+    expect(tunes()).toHaveLength(1);
+  });
+
+  it('plays one tune however often it is asked for, and fades it out when it is no longer wanted', async () => {
+    const Sound = await mixer();
+    Sound.tune(file(), LOOP);
+    Sound.unlock();
+    Sound.music(true);
+    await settle();
+    Sound.music(true);
+    Sound.setLevel();
+    expect(tunes()).toHaveLength(1);
+    Sound.music(false);
+    expect(sentTo(tunes()[0])).toBe(0);
+    expect(tunes()[0]?.stoppedAt).toBe(6);
+    Sound.music(false);
+    Sound.music(true); // back on the menu: from the top
+    expect(tunes()).toHaveLength(2);
+    expect(tunes()[1]).toMatchObject({ offset: 0.5, stoppedAt: null });
+  });
+
+  it('is silent while sound is off and comes back when it is turned on', async () => {
+    const prefs = { muted: true, volume: 0.8, ambience: false, haptics: true };
+    const Sound = await mixer();
+    Sound.use(prefs);
+    Sound.tune(file(), LOOP);
+    Sound.unlock();
+    Sound.music(true);
+    await settle();
+    expect(tunes()).toEqual([]);
+    prefs.muted = false;
+    Sound.setLevel();
+    await settle();
+    expect(tunes()).toHaveLength(1);
+    prefs.muted = true;
+    Sound.setLevel();
+    expect(tunes()[0]?.stoppedAt).toBe(6);
+  });
+
+  it('stops when the table leaves the page, without building an audio graph for it', async () => {
+    const Sound = await mixer();
+    Sound.tune(file(), LOOP);
+    Sound.music(true);
+    Sound.hush();
+    expect(made).toEqual([]);
+    Sound.unlock();
+    await settle();
+    expect(tunes()).toEqual([]); // no longer wanted
+    Sound.music(true);
+    await settle();
+    Sound.hush();
+    expect(tunes().map((v) => v.stoppedAt)).toEqual([6]);
+  });
+
+  it('leaves the menu quiet when the tune cannot be decoded', async () => {
+    decodeFile = () => Promise.reject(new Error('not audio'));
+    const Sound = await mixer();
+    Sound.tune(file(), LOOP);
+    Sound.unlock();
+    Sound.music(true);
+    await settle();
+    expect(made.filter((v) => v.kind === 'source')).toEqual([]);
+    decodeFile = () => {
+      throw new TypeError('decodeAudioData wants callbacks here');
+    };
+    Sound.tune(file(), LOOP);
+    await settle();
+    expect(made.filter((v) => v.kind === 'source')).toEqual([]);
   });
 });

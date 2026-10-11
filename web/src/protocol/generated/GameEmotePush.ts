@@ -2,7 +2,7 @@
 import type { Seat } from "./Seat";
 
 /**
- * An emote from a seat. `emote` is not a fixed list in this draft.
+ * An emote from a seat. `emote` is one id from [`crate::EMOTES`].
  */
 export type GameEmotePush = {
   /**

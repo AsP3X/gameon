@@ -9,6 +9,9 @@ import { App } from '../App';
 import { connectRaw, framesOf } from '../net/mock/raw';
 import type { RawClient } from '../net/mock/raw';
 import { MockServer } from '../net/mock/server';
+import type { MockStore } from '../net/mock/server';
+import type { Transport } from '../net/socket';
+import { Sound } from '../sound/sound';
 import { session, stats, tableView, ui } from '../tableview/state';
 
 function seeded(seed: number): () => number {
@@ -62,17 +65,30 @@ async function type(selector: string, value: string): Promise<void> {
     await vi.advanceTimersByTimeAsync(0);
   });
 }
-async function renderApp(): Promise<void> {
+async function renderApp(transport: Transport = server.transport()): Promise<void> {
   root = createRoot(host);
   await act(async () => {
     root?.render(
       <StrictMode>
-        <App backend={server.browser()} />
+        <App
+          backend={{
+            transport,
+            rest: () => Promise.reject(new Error('This screen test has no REST')),
+          }}
+        />
       </StrictMode>,
     );
     await vi.advanceTimersByTimeAsync(0);
   });
 }
+/** The page goes away: closed, or about to be loaded again. What it left in localStorage stays. */
+function closePage(): void {
+  act(() => root?.unmount());
+  root = null;
+}
+const CLOCKS = { bidMs: 3000, playMs: 300, abilityMs: 300, trickEndMs: 100, roundEndMs: 200 };
+const makeServer = (store?: MockStore): MockServer =>
+  new MockServer({ random: seeded(4), timers: CLOCKS, bot: { minMs: 40, maxMs: 80 }, store });
 /** From the home screen to the lobby of a new private table with three seats and five short rounds. */
 async function createTable(): Promise<void> {
   await click('[data-act="online"]');
@@ -91,11 +107,7 @@ beforeEach(() => {
   localStorage.clear();
   document.body.innerHTML = '<div id="root"></div>';
   host = document.querySelector<HTMLDivElement>('#root') ?? document.createElement('div');
-  server = new MockServer({
-    random: seeded(4),
-    timers: { bidMs: 3000, playMs: 300, abilityMs: 300, trickEndMs: 100, roundEndMs: 200 },
-    bot: { minMs: 40, maxMs: 80 },
-  });
+  server = makeServer();
 });
 
 afterEach(() => {
@@ -135,6 +147,17 @@ describe('playing online', () => {
     expect($('#app .home')).not.toBeNull();
   });
 
+  it('stops the menu music while the hub is where the home screen was, and brings it back with it', async () => {
+    const music = vi.spyOn(Sound, 'music');
+    const wanted = (): boolean | undefined => music.mock.calls.at(-1)?.[0];
+    await renderApp();
+    expect(wanted()).toBe(true);
+    await click('[data-act="online"]');
+    expect(wanted()).toBe(false);
+    await click('[aria-label="Back"]');
+    expect(wanted()).toBe(true);
+  });
+
   it('creates a private table, adds a bot, readies, starts and bids once at the table', async () => {
     await renderApp();
     await createTable();
@@ -172,11 +195,15 @@ describe('playing online', () => {
     expect(document.querySelectorAll('#app .hand .hslot')).toHaveLength(5);
     expect(texts('#app .seat .sname')).toEqual(['Anne']);
     expect($('#app .bidsheet')).not.toBeNull();
+    // The bid is on the server's clock: a ring around this seat, none around the bot, who has none.
+    expect($('#app .mebar .ring')?.getAttribute('style')).toContain('--left:3000ms');
+    expect($('#app .seat .ring')).toBeNull();
 
     $('#bid')?.dispatchEvent(new KeyboardEvent('keydown', { key: '2', bubbles: true, cancelable: true }));
     await click('[data-act="bid"]');
     expect(tableView().bids[0]).toBe(2);
     expect(ui.waiting).toBe(false);
+    expect($('#app .ring')).toBeNull(); // nobody is waited for on a clock now
     // The bot bids on the server's clock, and the bids are turned over for everyone at once.
     await settle(1500);
     expect(tableView().phase).not.toBe('bidding');
@@ -366,6 +393,226 @@ describe('playing online', () => {
     await settle();
     expect(texts('#online .pill')).toEqual(['Connected']);
     expect(elsewhere.closed).toBe(4001);
+  });
+
+  describe('at a table with a friend', () => {
+    let friend: RawClient;
+    /** This page hosts a table of three: itself, a friend on another connection, and a bot. The game is on. */
+    async function seated(transport?: Transport): Promise<void> {
+      await renderApp(transport);
+      await click('[data-act="online"]');
+      await press('Create a table');
+      await click('[aria-label="Fewer seats"]');
+      await press('Swift-n-Salty');
+      await press('Create table');
+      friend = await connectRaw(server.transport('the-friend'));
+      await settle();
+      friend.send({ t: 'lobby.join', code: $('#online .code')?.textContent ?? '' });
+      friend.send({ t: 'lobby.ready', ready: true });
+      await press('Add a bot');
+      await press("I'm ready");
+      await press('Start game');
+      expect(ui.screen).toBe('game');
+    }
+    const seatOf = (name: RegExp): HTMLElement => {
+      const seat = Array.from(document.querySelectorAll<HTMLElement>('#app .seat')).find((el) =>
+        name.test(el.querySelector('.sname')?.textContent ?? ''),
+      );
+      if (!seat) throw new Error(`No seat for ${name}`);
+      return seat;
+    };
+
+    it('shows the bid deadline as a ring on both people, and takes it off each as they bid', async () => {
+      await seated();
+      expect($('#app .mebar .ring')).not.toBeNull();
+      expect(seatOf(/^Guest/).querySelector('.ring')).not.toBeNull();
+      expect(seatOf(/^Anne/).querySelector('.ring')).toBeNull();
+      // A second in, a third of the clock is gone.
+      await settle(1000);
+      friend.send({ t: 'game.bid', at: { round: 0, trick: 0 }, bid: 0 });
+      await settle();
+      expect(seatOf(/^Guest/).querySelector('.ring')).toBeNull();
+      const style = $('#app .mebar .ring')?.getAttribute('style') ?? '';
+      expect(style).toContain('--left:2000ms');
+      expect(style).toContain('--gone:33.3');
+
+      // The deadline passes: the server bids for this seat, and says so.
+      await settle(1990);
+      expect(tableView().bids[0]).toBeNull();
+      for (let i = 0; i < 100 && tableView().bids[0] == null; i++) await settle(10);
+      expect(tableView().bids[0]).not.toBeNull();
+      expect(tableView().phase).not.toBe('bidding');
+      expect($('#app .felt .pill.gold')?.textContent).toBe('Time ran out · the table played for you');
+    });
+
+    it('tags the friend as offline when their connection drops, and takes the tag off when they are back', async () => {
+      await seated();
+      expect($('#app .presence')).toBeNull();
+      friend.close();
+      await settle();
+      const seat = seatOf(/^Guest/);
+      expect(seat.querySelector('.presence.off')?.textContent).toBe('Offline');
+      expect(seat.classList.contains('gone')).toBe(true);
+      expect(session.table?.view(0).online?.status).toEqual(['online', 'offline', 'bot']);
+
+      friend = await connectRaw(server.transport('the-friend'));
+      await settle();
+      expect($('#app .presence')).toBeNull();
+      expect(seatOf(/^Guest/).classList.contains('gone')).toBe(false);
+    });
+
+    it('covers the table while the server cannot be heard, and comes back to the same hand', async () => {
+      await seated();
+      const hand = tableView().hand;
+      $('#bid')?.dispatchEvent(new KeyboardEvent('keydown', { key: '1', bubbles: true, cancelable: true }));
+      await click('[data-act="bid"]');
+      expect(tableView().bids[0]).toBe(1);
+      expect($('.table-overlay')).toBeNull();
+      expect($('#app')?.hasAttribute('inert')).toBe(false);
+
+      server.drop(true);
+      await settle();
+      expect($('.table-overlay h2')?.textContent).toBe('Connection lost');
+      expect($('.table-overlay')?.getAttribute('role')).toBe('alertdialog');
+      expect($('#app')?.hasAttribute('inert')).toBe(true);
+      expect(ui.screen).toBe('game'); // the table stays where it was, underneath
+
+      server.restore();
+      await press('Try now');
+      await settle();
+      expect($('.table-overlay')).toBeNull();
+      expect($('#app')?.hasAttribute('inert')).toBe(false);
+      expect(tableView().hand).toEqual(hand);
+      expect(tableView().bids[0]).toBe(1);
+    });
+
+    it('says so on the table when the same player connects from somewhere else', async () => {
+      const as = server.transport('this-page');
+      await seated(as);
+      await connectRaw(as);
+      await settle();
+      expect($('.table-overlay h2')?.textContent).toBe('Playing in another tab');
+      expect(button('Play here')).toBeDefined();
+    });
+  });
+
+  describe('after a reload', () => {
+    /** A mock that outlives its page, as the one behind `?mock` does in sessionStorage. */
+    let kept: string | null;
+    const store: MockStore = {
+      load: () => kept,
+      save: (data) => {
+        kept = data;
+      },
+    };
+    beforeEach(() => {
+      kept = null;
+      server = makeServer(store);
+    });
+    /** The page is loaded again: everything in it is new, the mock included. Only what was stored is left. */
+    async function reload(): Promise<void> {
+      await settle();
+      closePage();
+      server.shutDown();
+      server = makeServer(store);
+      await renderApp(server.transport('this-page'));
+      await settle();
+    }
+    /** A game of this page and one bot, with this seat's bid already in. */
+    async function midHand(): Promise<void> {
+      await renderApp(server.transport('this-page'));
+      await createTable();
+      await press('Add a bot');
+      await press("I'm ready");
+      await press('Start game');
+      $('#bid')?.dispatchEvent(new KeyboardEvent('keydown', { key: '2', bubbles: true, cancelable: true }));
+      await click('[data-act="bid"]');
+      await settle(1500);
+      expect(tableView().phase).toBe('playing');
+    }
+
+    it('goes straight back to the table and the same hand, without being asked', async () => {
+      await midHand();
+      const before = tableView(),
+        sent = { hand: before.hand, bids: before.bids, trick: before.trick, round: before.round };
+      await reload();
+      // No tap on "Play online": the last page was seated, so this one connected by itself.
+      expect($('#online')).toBeNull();
+      expect($('#app')?.hidden).toBe(false);
+      expect(ui.screen).toBe('game');
+      expect(session.table?.localSeats).toEqual([0]);
+      const after = tableView();
+      expect({ hand: after.hand, bids: after.bids, trick: after.trick, round: after.round }).toEqual(sent);
+      expect(document.querySelectorAll('#app .hand .hslot')).toHaveLength(after.hand.length);
+      // The seat is online again, and the table goes on from here.
+      expect(after.online?.status).toEqual(['online', 'bot']);
+      expect($('.table-overlay')).toBeNull();
+      await settle(2000);
+      const later = tableView();
+      expect({ round: later.round, hand: later.hand }).not.toEqual({ round: sent.round, hand: sent.hand });
+    });
+
+    it('goes back to the lobby when that is where the player sat', async () => {
+      await renderApp(server.transport('this-page'));
+      await createTable();
+      await press('Add a bot');
+      const code = $('#online .code')?.textContent;
+      await reload();
+      expect($('#online h2')?.textContent).toBe('Table');
+      expect($('#online .code')?.textContent).toBe(code);
+      expect(texts('#online .member small')).toEqual(['Host · you', 'Bot · Normal']);
+    });
+
+    it('stays on the home screen when the player was only looking at the hub', async () => {
+      await renderApp(server.transport('this-page'));
+      await click('[data-act="online"]');
+      await settle();
+      await reload();
+      expect($('#online')).toBeNull();
+      expect($('#app .home')).not.toBeNull();
+    });
+
+    it('shows the result of a game that ended while the page was away, and opens no table for it', async () => {
+      await midHand();
+      await settle();
+      closePage();
+      // Nobody is at the table. The deadlines play this seat's cards, and the game runs to its end.
+      await settle(120_000);
+      await renderApp(server.transport('this-page'));
+      await settle();
+      // welcome has no game, and the stored game.over follows it: this is the lobby again, with the news.
+      expect(session.table).toBeNull();
+      expect(ui.screen).toBe('home');
+      expect($('#app')?.hidden).toBe(true);
+      expect($('#online h2')?.textContent).toBe('Table');
+      expect($('#online .notice.gold b')?.textContent).toBe('Your last game is over');
+      expect($('#online .notice.gold p')?.textContent).toMatch(
+        /^It ended while you were away\. Final place: (1st|2nd) of 2\.$/,
+      );
+      await press('OK');
+      expect($('#online .notice')).toBeNull();
+    });
+
+    it('shows the result of a game the player left, on the hub, the next time they come online', async () => {
+      await midHand();
+      await click('#app .g-top [data-act="home"]');
+      await click('[data-act="leaveTable"]');
+      await settle();
+      expect($('#online h2')?.textContent).toBe('Play online');
+      closePage();
+      await settle(120_000);
+
+      // Not seated any more: the next page waits to be asked.
+      await renderApp(server.transport('this-page'));
+      expect($('#online')).toBeNull();
+      await click('[data-act="online"]');
+      await settle();
+      expect($('#online h2')?.textContent).toBe('Play online');
+      expect(session.table).toBeNull();
+      expect($('#online .notice.gold p')?.textContent).toMatch(
+        /^You left before the end\. Final place: (1st|2nd) of 2\.$/,
+      );
+    });
   });
 
   it('leaves the offline game as it was: a solo round after a visit to the hub is saved and counted on the device', async () => {

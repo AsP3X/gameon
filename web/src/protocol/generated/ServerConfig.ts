@@ -28,7 +28,7 @@ export type ServerConfig = {
    */
   season: Season | null;
   /**
-   * Emote ids this process accepts. The draft does not fix the list.
+   * Emote ids this process accepts. See [`EMOTES`].
    */
   emotes: Array<string>;
 };

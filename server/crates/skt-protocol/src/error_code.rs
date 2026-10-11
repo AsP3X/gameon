@@ -134,7 +134,7 @@ impl ErrorCode {
             Self::ProtocolUnsupported => "Reload to update.",
             Self::UsernameTaken => "That username is taken.",
             Self::UsernameInvalid => "That username is not allowed.",
-            Self::WeakPassword => "That password is too weak.",
+            Self::WeakPassword => "Enter a password.",
             Self::InvalidCredentials => "Wrong username or password.",
             Self::AlreadyRegistered => "This account is already registered.",
             Self::LobbyNotFound => "No lobby with that code.",

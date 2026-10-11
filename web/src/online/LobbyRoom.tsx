@@ -30,13 +30,15 @@ export interface LobbyRoomProps {
   lobby: Lobby;
   me: Me;
   status: LinkStatus;
+  /** Something that ended while the player was away, until they have read it. */
+  notice: { title: string; text: string } | null;
   onRules: () => void;
   /** A human at the table was tapped: show who they are. */
   onPlayer: (id: UserId) => void;
 }
 
 /** The table before the game: who is at it, who is ready, the rules, and the host's start. */
-export function LobbyRoom({ online, lobby, me, status, onRules, onPlayer }: LobbyRoomProps) {
+export function LobbyRoom({ online, lobby, me, status, notice, onRules, onPlayer }: LobbyRoomProps) {
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   useEffect(() => {
@@ -93,6 +95,22 @@ export function LobbyRoom({ online, lobby, me, status, onRules, onPlayer }: Lobb
             <div className="notice" role="status">
               <b>Connection lost</b>
               <p>Trying again. Your seat is kept while you are away.</p>
+            </div>
+          )}
+          {notice && (
+            <div className="notice gold" role="status">
+              <b>{notice.title}</b>
+              <p>{notice.text}</p>
+              <button
+                type="button"
+                className="btn ghost"
+                onClick={() => {
+                  Sound.play('tap');
+                  online.dismissNotice();
+                }}
+              >
+                OK
+              </button>
             </div>
           )}
           <div className="plate">
