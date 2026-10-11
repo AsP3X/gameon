@@ -13,6 +13,9 @@ import type { MockStore } from '../net/mock/server';
 import type { Transport } from '../net/socket';
 import { Sound } from '../sound/sound';
 import { session, stats, tableView, ui } from '../tableview/state';
+import { reloadPage } from './reload';
+
+vi.mock('./reload', () => ({ reloadPage: vi.fn<() => void>() }));
 
 function seeded(seed: number): () => number {
   let a = seed >>> 0;
@@ -359,6 +362,73 @@ describe('playing online', () => {
     });
   });
 
+  it('takes the keyboard to the title of each screen it opens', async () => {
+    await renderApp();
+    await click('[data-act="online"]');
+    await settle();
+    expect(document.activeElement).toBe($('#online h2'));
+    expect(document.activeElement?.textContent).toBe('Play online');
+    await press('Join with a code');
+    expect(document.activeElement?.textContent).toBe('Join a table');
+    await click('#online [aria-label="Back"]');
+    expect(document.activeElement?.textContent).toBe('Play online');
+  });
+
+  it('tells the player to reload when the server no longer speaks the protocol of this page', async () => {
+    // The page says hello in a protocol the server has left behind: it answers PROTOCOL_UNSUPPORTED.
+    const old: Transport = async () => {
+      const inner = await server.transport()();
+      return {
+        send: (data) => {
+          const frame = JSON.parse(data) as { t: string; protocol?: number };
+          inner.send(frame.t === 'hello' ? JSON.stringify({ ...frame, protocol: 0 }) : data);
+        },
+        close: () => inner.close(),
+        get onmessage() {
+          return inner.onmessage;
+        },
+        set onmessage(handler) {
+          inner.onmessage = handler;
+        },
+        get onclose() {
+          return inner.onclose;
+        },
+        set onclose(handler) {
+          inner.onclose = handler;
+        },
+      };
+    };
+    await renderApp(old);
+    await click('[data-act="online"]');
+    await settle();
+    expect(texts('#online .pill')).toEqual(['Update needed']);
+    expect($('#online .notice[role="alert"] b')?.textContent).toBe('The tavern has moved on');
+    expect($('#online .notice[role="alert"] p')?.textContent).toBe(
+      'This page is older than the server. Reload to update.',
+    );
+    expect(button('Create a table').disabled).toBe(true);
+    expect(reloadPage).not.toHaveBeenCalled();
+    await press('Reload to update');
+    expect(reloadPage).toHaveBeenCalledTimes(1);
+    // It does not try again by itself: only a new page can speak to this server.
+    await settle(60_000);
+    expect(texts('#online .pill')).toEqual(['Update needed']);
+  });
+
+  it('shows the way to the offline modes when the server cannot be reached', async () => {
+    server.drop(true);
+    await renderApp();
+    await click('[data-act="online"]');
+    await settle();
+    expect($('#online .notice p:last-of-type')?.textContent).toBe(
+      'Bots, one phone for the crew and the scoresheet need no connection.',
+    );
+    await press('Play offline');
+    expect($('#online')).toBeNull();
+    expect($('#app .home')).not.toBeNull();
+    expect(ui.screen).toBe('home');
+  });
+
   it('says when the server cannot be reached, keeps trying, and recovers', async () => {
     server.drop(true);
     await renderApp();
@@ -366,6 +436,7 @@ describe('playing online', () => {
     await settle();
     expect(texts('#online .pill')).toEqual(['Offline']);
     expect($('#online .notice b')?.textContent).toBe("Can't reach the tavern");
+    expect(texts('#online .notice .btn')).toEqual(['Try now', 'Play offline']);
     expect(button('Create a table').disabled).toBe(true);
     server.restore();
     await press('Try now');
@@ -474,6 +545,8 @@ describe('playing online', () => {
       await settle();
       expect($('.table-overlay h2')?.textContent).toBe('Connection lost');
       expect($('.table-overlay')?.getAttribute('role')).toBe('alertdialog');
+      // The table underneath takes no input: the keyboard is on the one thing that can be done.
+      expect(document.activeElement).toBe($('.table-overlay button'));
       expect($('#app')?.hasAttribute('inert')).toBe(true);
       expect(ui.screen).toBe('game'); // the table stays where it was, underneath
 

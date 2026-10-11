@@ -1,6 +1,8 @@
+import { useEffect, useRef } from 'react';
 import type { Online } from '../net/online';
 import type { LinkStatus } from '../net/socket';
 import { Sound } from '../sound/sound';
+import { reloadPage } from './reload';
 
 const COPY: Record<Exclude<LinkStatus, 'online'>, { title: string; text: string; action: string }> = {
   idle: { title: 'Connection lost', text: '', action: 'Try now' },
@@ -30,6 +32,11 @@ export function TableOverlay({ status, online }: { status: Exclude<LinkStatus, '
   const copy = COPY[status],
     text = copy.text || COPY.offline.text,
     reload = status === 'unsupported';
+  // The table underneath is inert: the keyboard has to be on the one thing that can be done.
+  const action = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    action.current?.focus({ preventScroll: true });
+  }, []);
   return (
     <div
       className="table-overlay"
@@ -43,10 +50,11 @@ export function TableOverlay({ status, online }: { status: Exclude<LinkStatus, '
         <p id="overlay-text">{text}</p>
         <button
           type="button"
+          ref={action}
           className={reload ? 'btn' : 'btn ghost'}
           onClick={() => {
             Sound.play('tap');
-            if (reload) location.reload();
+            if (reload) reloadPage();
             else online.retry();
           }}
         >

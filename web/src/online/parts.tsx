@@ -1,4 +1,5 @@
 /* Small pieces the online screens share: the header row, a player's avatar, a rating and the stat tiles. */
+import { useEffect, useRef } from 'react';
 import type { ReactNode } from 'react';
 import type { Rating, Stats, TableColor } from '../protocol/generated';
 import { Sound } from '../sound/sound';
@@ -7,8 +8,18 @@ import { BackIcon } from './icons';
 
 export const initialOf = (name: string): string => (name.trim()[0] || '?').toUpperCase();
 
-/** The row at the top of a screen: back, the title, and whatever belongs at the right. */
+/**
+ * The row at the top of a screen: back, the title, and whatever belongs at the right.
+ *
+ * A new screen takes the keyboard to its title. The button that led here is gone with the screen
+ * it was on, and without this the next Tab would start from the top of the page, and a screen
+ * reader would say nothing about where the player now is.
+ */
 export function Head(props: { title: string; back?: string; onBack: () => void; children?: ReactNode }) {
+  const title = useRef<HTMLHeadingElement>(null);
+  useEffect(() => {
+    title.current?.focus({ preventScroll: true });
+  }, [props.title]);
   return (
     <div className="row head">
       <button
@@ -22,7 +33,9 @@ export function Head(props: { title: string; back?: string; onBack: () => void; 
       >
         <BackIcon />
       </button>
-      <h2 className="grow">{props.title}</h2>
+      <h2 className="grow" tabIndex={-1} ref={title}>
+        {props.title}
+      </h2>
       {props.children}
     </div>
   );

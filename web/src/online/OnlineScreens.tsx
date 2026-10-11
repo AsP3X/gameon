@@ -17,6 +17,7 @@ import { Head, initialOf } from './parts';
 import { PlayerScreen, ProfileScreen } from './Profile';
 import { PublicTables } from './PublicTables';
 import { QueueScreen } from './Queue';
+import { reloadPage } from './reload';
 import { LadderScreen, RankedSection } from './Ranked';
 import { loadSettings, MIN_SEATS, saveSettings } from './settings';
 import { SettingsForm } from './SettingsForm';
@@ -53,7 +54,7 @@ function noticeText(notice: Notice): { title: string; text: string } {
 }
 
 /** What stands between the player and the server, if anything. */
-function LinkNotice({ status, online }: { status: LinkStatus; online: Online }) {
+function LinkNotice({ status, online, onOffline }: { status: LinkStatus; online: Online; onOffline: () => void }) {
   const again = (): void => {
     Sound.play('tap');
     online.retry();
@@ -75,6 +76,17 @@ function LinkNotice({ status, online }: { status: LinkStatus; online: Online }) 
           <button type="button" className="btn ghost" onClick={again}>
             Try now
           </button>
+          <p>Bots, one phone for the crew and the scoresheet need no connection.</p>
+          <button
+            type="button"
+            className="btn ghost"
+            onClick={() => {
+              Sound.play('back');
+              onOffline();
+            }}
+          >
+            Play offline
+          </button>
         </div>
       );
     case 'superseded':
@@ -92,7 +104,7 @@ function LinkNotice({ status, online }: { status: LinkStatus; online: Online }) 
         <div className="notice" role="alert">
           <b>The tavern has moved on</b>
           <p>This page is older than the server. Reload to update.</p>
-          <button type="button" className="btn" onClick={() => location.reload()}>
+          <button type="button" className="btn" onClick={reloadPage}>
             Reload to update
           </button>
         </div>
@@ -147,7 +159,7 @@ function Hub(props: { online: Online; state: OnlineState; onExit: () => void; on
             Profile
           </button>
         </div>
-        <LinkNotice status={state.status} online={online} />
+        <LinkNotice status={state.status} online={online} onOffline={props.onExit} />
         {notice && (
           <div className="notice gold" role="status">
             <b>{notice.title}</b>

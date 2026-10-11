@@ -401,6 +401,61 @@ describe('mountTavern', () => {
   });
 });
 
+describe('the keyboard', () => {
+  /** A solo game with the bids in and the cards in hand. */
+  async function dealt(): Promise<void> {
+    mount();
+    startSoloGame();
+    await vi.advanceTimersByTimeAsync(3000);
+    key('#bid', '2');
+    click('[data-act="bid"]');
+    await vi.advanceTimersByTimeAsync(600);
+    await untilMyTurn();
+  }
+
+  it('stays on the card it was on when the table is drawn again', async () => {
+    await dealt();
+    const cards = all('.hand button');
+    expect(cards.length).toBeGreaterThan(2);
+    cards[2].focus();
+    const name = cards[2].getAttribute('aria-label');
+    render();
+    // A redraw replaces every element: it is the same card, not the same node.
+    expect(document.activeElement).not.toBe(cards[2]);
+    expect(document.activeElement).toBe(all('.hand button')[2]);
+    expect(document.activeElement?.getAttribute('aria-label')).toBe(name);
+  });
+
+  it('goes into a sheet that opens, cannot reach what is behind it, and comes back when it closes', async () => {
+    await dealt();
+    const opener = (): HTMLElement | null => document.querySelector<HTMLElement>('.g-top [data-act="board"]');
+    opener()?.focus();
+    click('.g-top [data-act="board"]');
+    const sheet = document.querySelector<HTMLElement>('.sheet');
+    expect(sheet?.getAttribute('aria-label')).toBe('Scoreboard');
+    expect(document.activeElement).toBe(sheet);
+    expect(document.querySelector<HTMLElement>('.game')?.inert).toBe(true);
+    // Tapping the scrim is how a sheet is closed: it has to stay live.
+    expect(document.querySelector<HTMLElement>('.sheet-scrim')?.inert).toBe(false);
+    expect(sheet?.inert).toBe(false);
+
+    // The table is drawn again under the open sheet: the keyboard stays in the sheet.
+    render();
+    expect(document.activeElement).toBe(document.querySelector('.sheet'));
+
+    key('.sheet', 'Escape');
+    expect(document.querySelector('.sheet')).toBeNull();
+    expect(document.querySelector<HTMLElement>('.game')?.inert).toBe(false);
+    expect(document.activeElement).toBe(opener());
+  });
+
+  it('is left where it is when nothing in the page had it', async () => {
+    await dealt();
+    render();
+    expect(document.activeElement).toBe(document.body);
+  });
+});
+
 describe('a table that does not take an action', () => {
   const silent = (): Promise<DispatchResult> => new Promise(() => {});
   /** The open table. */

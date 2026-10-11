@@ -358,12 +358,26 @@ describe('ranked, for an account', () => {
     await click('[data-act="record"]');
     await settle();
     expect($('#record .label')?.textContent).toBe('The record');
+    // A dialog over the end screen: it has the keyboard, and the table under it takes no input.
+    expect($('#record')?.getAttribute('role')).toBe('dialog');
+    expect($('#record')?.getAttribute('aria-labelledby')).toBe($('#record .label')?.id);
+    expect(document.activeElement).toBe($('#record'));
+    expect($('#app')?.hasAttribute('inert')).toBe(true);
     const steps = texts('#record li b');
     expect(steps.length).toBeGreaterThan(0);
     expect(steps[0]).toBe('0 · deal');
     await press('Back to the scores');
     expect($('#record')).toBeNull();
+    expect($('#app')?.hasAttribute('inert')).toBe(false);
     expect(ui.screen).toBe('end');
+    // Escape closes it too, like the table's own sheets.
+    await click('[data-act="record"]');
+    await settle();
+    await act(async () => {
+      $('#record')?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect($('#record')).toBeNull();
 
     await click('[data-act="again"]');
     await settle();

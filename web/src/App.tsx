@@ -78,12 +78,14 @@ export function App({ backend = appBackend, memory = appMemory }: AppProps) {
   useEffect(() => coverTavern(screens), [screens]);
   // The table is on screen and the server is not there: what it shows may be old.
   const cut = table != null && state.status !== 'online' ? state.status : null;
+  // The record is a dialog over the end screen: the table underneath takes no input while it is open.
+  const shown = record && table?.result != null;
   return (
     <>
-      <div id="app" ref={app} hidden={screens} inert={cut != null}></div>
+      <div id="app" ref={app} hidden={screens} inert={cut != null || shown}></div>
       <canvas id="fx" ref={fx} hidden></canvas>
       {cut && <TableOverlay status={cut} online={online} />}
-      {table?.result && record && <GameRecord online={online} gameId={table.gameId} onClose={() => setRecord(false)} />}
+      {table && shown && <GameRecord online={online} gameId={table.gameId} onClose={() => setRecord(false)} />}
       {screens && (
         <div id="online">
           <OnlineScreens

@@ -36,3 +36,6 @@ Playwright's own once: `npx playwright-core install chromium`.
 - `mockHost.ts`: the mock server with a real HTTP and WebSocket door, sessions by cookie.
 - `player.ts`: one context, its page, every frame it exchanged, and the hands that click.
 - `four-players.e2e.ts`: the script.
+- `ranked-smoke.e2e.ts`: four accounts at one ranked table, and the record of the game.
+- `pwa.e2e.ts`: the built page as an installed app. It builds the page, serves it with `vp preview`
+  in front of the mock host, and takes both away: the page must still open and deal a game.
