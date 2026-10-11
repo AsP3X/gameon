@@ -4,13 +4,14 @@
    whole table is alive on the other side. docs/protocol.md §5.2 and §5.5. */
 import { readFileSync } from 'node:fs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test';
+import { Api } from '../net/api';
 import { MockServer } from '../net/mock/server';
 import { connectRaw, framesOf } from '../net/mock/raw';
 import type { RawClient } from '../net/mock/raw';
 import { Online } from '../net/online';
 import { SocketClient } from '../net/socket';
 import type { Transport, Wire } from '../net/socket';
-import type { EngineEvent, GameSettings, GameUpdate, WelcomeGame } from '../protocol/generated';
+import type { GameEvent, GameSettings, GameUpdate, WelcomeGame } from '../protocol/generated';
 import { RemoteTable } from './remoteTable';
 import type { UpdateInfo } from './table';
 
@@ -30,7 +31,7 @@ function seeded(seed: number): () => number {
 const tick = (ms = 0): Promise<void> => vi.advanceTimersByTimeAsync(ms).then(() => {});
 /** What a listener of the table was told, one line per update. */
 interface Heard {
-  events: EngineEvent['type'][];
+  events: GameEvent['type'][];
   info: UpdateInfo | undefined;
   bids: (number | null)[];
 }
@@ -151,7 +152,7 @@ describe('RemoteTable, frame by frame', () => {
     expect(heard[0].info).toEqual({ unlock: false, last: false });
   });
 
-  it('drops an update that is older than the one on screen, and leaves out the events only a server has', () => {
+  it('drops an update that is older than the one on screen, and passes on the events only a server has', () => {
     wire.say(
       update(5, {
         events: [
@@ -164,8 +165,45 @@ describe('RemoteTable, frame by frame', () => {
     wire.say(update(5, { view: { ...sample.update.view, bids: [9, 9] } }));
     wire.say(update(4, { view: { ...sample.update.view, bids: [9, 9] } }));
     wire.say(update(9, { gameId: 'another-game' }));
-    expect(heard).toEqual([{ events: ['bidPlaced'], info: { unlock: false, last: false }, bids: [2, -1] }]);
+    expect(heard).toEqual([
+      { events: ['seatStatus', 'bidPlaced', 'timedOut'], info: { unlock: false, last: false }, bids: [2, -1] },
+    ]);
     expect(table.view(0).bids).toEqual([2, -1]);
+  });
+
+  it('says who is there, who is ready and whose clock is running, and how long that clock is', () => {
+    // The table opened on a snapshot whose clock was already running: taken to be the standard one.
+    const now = Date.now();
+    expect(table.view(0).online).toEqual({
+      status: ['online', 'bot'],
+      ready: [false, false],
+      deadline: { kind: 'bid', seats: [0, 1], at: sample.update.table.deadline?.at, total: expect.any(Number) },
+    });
+    const table2 = (at: number, seats: number[], kind: 'bid' | 'play' = 'play'): GameUpdate['table'] => ({
+      status: ['offline', 'bot'],
+      ready: [true, false],
+      deadline: { kind, seats, at },
+    });
+    // A step that brings a new deadline starts its clock: what is left is the whole of it.
+    wire.say(update(2, { table: table2(now + 12_000, [0]) }));
+    expect(table.view(0).online).toEqual({
+      status: ['offline', 'bot'],
+      ready: [true, false],
+      deadline: { kind: 'play', seats: [0], at: now + 12_000, total: 12_000 },
+    });
+    // The same deadline in a later step is the same clock, however much of it has run.
+    vi.setSystemTime(now + 9000);
+    wire.say(update(3, { table: table2(now + 12_000, [0]) }));
+    expect(table.view(0).online?.deadline?.total).toBe(12_000);
+    // No deadline, no clock.
+    wire.say(update(4, { table: { ...table2(0, []), deadline: null } }));
+    expect(table.view(0).online?.deadline).toBeNull();
+    // After a reconnect the clock is met while it runs: a standard play clock at standard pace is 30 seconds,
+    table.resync(sample.start, update(5, { table: table2(now + 20_000, [0]) }));
+    expect(table.view(0).online?.deadline?.total).toBe(30_000);
+    // unless more than that is left of it.
+    table.resync(sample.start, update(6, { table: table2(now + 80_000, [0], 'bid') }));
+    expect(table.view(0).online?.deadline?.total).toBe(71_000);
   });
 
   it('gives the input back even when the server breaks the pair', async () => {
@@ -184,7 +222,7 @@ describe('RemoteTable, frame by frame', () => {
     wire.say({ t: 'ok', re: wire.sent[1].id });
     wire.say(update(2, { events: [{ type: 'seatStatus', seat: 0, status: 'bot' }] }));
     expect(await left).toEqual({ ok: true });
-    expect(heard).toEqual([{ events: [], info: { unlock: true, last: true }, bids: [2, -1] }]);
+    expect(heard).toEqual([{ events: ['seatStatus'], info: { unlock: true, last: true }, bids: [2, -1] }]);
     wire.say(update(3, { events: [{ type: 'bidPlaced', seat: 1 }] }));
     expect(heard).toHaveLength(1);
   });
@@ -257,7 +295,7 @@ describe('RemoteTable at a table on the mock server', () => {
       return wire;
     };
     client = new SocketClient({ transport, build: 'test', random: () => 0.5 });
-    online = new Online(client);
+    online = new Online(client, new Api(() => Promise.reject(new Error('These tests have no REST'))));
   });
   afterEach(() => online.dispose());
 
@@ -347,7 +385,7 @@ describe('RemoteTable at a table on the mock server', () => {
       heard = listen(table);
     expect(await online.leaveTable()).toEqual({ ok: true });
     await tick();
-    expect(heard).toEqual([{ events: [], info: { unlock: true, last: true }, bids: [null, null, null] }]);
+    expect(heard).toEqual([{ events: ['seatStatus'], info: { unlock: true, last: true }, bids: [null, null, null] }]);
     // Whoever shows the table takes it down now.
     online.closeTable();
     expect(online.getState()).toMatchObject({ table: null, lobby: null, notice: null });

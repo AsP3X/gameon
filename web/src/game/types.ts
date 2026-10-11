@@ -8,6 +8,7 @@ import type {
   BotLevel,
   Card,
   CardId,
+  Deadline,
   EngineEvent,
   EngineView,
   Format,
@@ -17,6 +18,7 @@ import type {
   RoundRecord,
   Scoring,
   Seat,
+  SeatStatus,
   Trick,
 } from '../protocol/generated';
 
@@ -113,11 +115,31 @@ export type ReduceResult =
   | { state: GameState; events: EngineEvent[]; error?: undefined }
   | { state: GameState; events: EngineEvent[]; error: string };
 
-/** What the offline table shows one seat: the wire view plus the static data a server sends once. */
+/**
+ * What only a table on a server knows about its seats (docs/protocol.md §5.5, `TableInfo`): who is
+ * there, who is ready for the next round, and whose clock is running.
+ */
+export interface OnlineInfo {
+  /** Per seat. `bot` on a seat that started as a person means a bot took it over. */
+  status: SeatStatus[];
+  /** Per seat, during `roundEnd`. */
+  ready: boolean[];
+  /**
+   * The clock the table is waiting on. `at` is on the server's clock. `total` is how long that clock
+   * runs from start to finish, so what is left can be drawn as a share of it.
+   */
+  deadline: (Deadline & { total: number }) | null;
+}
+
+/**
+ * What a table shows one seat: the wire view plus the static data a server sends once.
+ * `online` is there on a table a server runs, and absent offline.
+ */
 export interface TableView extends EngineView {
   seats: SeatConfig[];
   cfg: GameConfig;
   deck: Card[];
+  online?: OnlineInfo;
 }
 
 /** A card a bot wants to play. */

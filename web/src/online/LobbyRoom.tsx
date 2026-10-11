@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { Online, Outcome } from '../net/online';
 import type { LinkStatus } from '../net/socket';
-import type { Lobby, Me, Member } from '../protocol/generated';
+import type { Lobby, Me, Member, UserId } from '../protocol/generated';
 import { Sound } from '../sound/sound';
 import { cssColor } from '../tableview/dom';
 import { failureText } from './copy';
@@ -30,11 +30,15 @@ export interface LobbyRoomProps {
   lobby: Lobby;
   me: Me;
   status: LinkStatus;
+  /** Something that ended while the player was away, until they have read it. */
+  notice: { title: string; text: string } | null;
   onRules: () => void;
+  /** A human at the table was tapped: show who they are. */
+  onPlayer: (id: UserId) => void;
 }
 
 /** The table before the game: who is at it, who is ready, the rules, and the host's start. */
-export function LobbyRoom({ online, lobby, me, status, onRules }: LobbyRoomProps) {
+export function LobbyRoom({ online, lobby, me, status, notice, onRules, onPlayer }: LobbyRoomProps) {
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   useEffect(() => {
@@ -93,6 +97,22 @@ export function LobbyRoom({ online, lobby, me, status, onRules }: LobbyRoomProps
               <p>Trying again. Your seat is kept while you are away.</p>
             </div>
           )}
+          {notice && (
+            <div className="notice gold" role="status">
+              <b>{notice.title}</b>
+              <p>{notice.text}</p>
+              <button
+                type="button"
+                className="btn ghost"
+                onClick={() => {
+                  Sound.play('tap');
+                  online.dismissNotice();
+                }}
+              >
+                OK
+              </button>
+            </div>
+          )}
           <div className="plate">
             <span className="grow">
               <span className="label">Table code</span>
@@ -124,10 +144,24 @@ export function LobbyRoom({ online, lobby, me, status, onRules }: LobbyRoomProps
                   >
                     {initialOf(nameOf(m))}
                   </span>
-                  <span className="grow">
-                    <b>{nameOf(m)}</b>
-                    <small>{role}</small>
-                  </span>
+                  {m.kind === 'human' ? (
+                    <button
+                      type="button"
+                      className="member-link grow"
+                      onClick={() => {
+                        Sound.play('tap');
+                        onPlayer(m.user.id);
+                      }}
+                    >
+                      <b>{m.user.name}</b>
+                      <small>{role}</small>
+                    </button>
+                  ) : (
+                    <span className="grow">
+                      <b>{m.name}</b>
+                      <small>{role}</small>
+                    </span>
+                  )}
                   {m.kind === 'human' ? (
                     <span className={`pill ${m.ready ? 'green' : 'soft'}`}>{m.ready ? 'Ready' : 'Not ready'}</span>
                   ) : host && open ? (

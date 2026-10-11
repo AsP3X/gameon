@@ -219,6 +219,8 @@ export interface OnlineHooks {
   leave(): Promise<DispatchResult>;
   /** The table is done with on this device: take it off the screen and go back to the online screens. */
   exit(): void;
+  /** The server's clock, in Unix milliseconds: the one every deadline is on. */
+  now(): number;
 }
 
 export interface Session {

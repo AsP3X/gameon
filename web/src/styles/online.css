@@ -38,6 +38,127 @@
   padding-inline: 8px;
 }
 
+/* ---------- at the table, online ---------- */
+
+/* The clock of a seat the table is waiting on: a ring around the avatar that empties until the
+   deadline. It starts where the clock is right now (--gone, in hundredths of the ring) and runs for
+   what is left (--left). The last five seconds are red. */
+.ring {
+  position: absolute;
+  top: 2px;
+  left: 50%;
+  width: 50px;
+  height: 50px;
+  margin-left: -25px;
+  transform: rotate(-90deg);
+  pointer-events: none;
+}
+.mebar {
+  position: relative;
+}
+.mebar .ring {
+  top: 50%;
+  left: 6px;
+  margin: -25px 0 0;
+}
+.ring circle {
+  fill: none;
+  stroke-width: 3.5;
+}
+.ring-track {
+  stroke: var(--line);
+}
+.ring-left {
+  stroke: var(--blue);
+  stroke-linecap: round;
+  stroke-dasharray: 100;
+  stroke-dashoffset: var(--gone);
+  animation:
+    ringEmpty var(--left) linear forwards,
+    ringHurry 1ms linear var(--calm) forwards;
+}
+.ring-left.hurry {
+  stroke: var(--red);
+}
+@keyframes ringEmpty {
+  to {
+    stroke-dashoffset: 100;
+  }
+}
+@keyframes ringHurry {
+  to {
+    stroke: var(--red);
+  }
+}
+/* The ring is a clock, not decoration: with reduced motion it still runs, one step a second. */
+@media (prefers-reduced-motion: reduce) {
+  .ring .ring-left {
+    animation:
+      ringEmpty var(--left) steps(var(--ticks), end) forwards,
+      ringHurry 1ms linear var(--calm) forwards !important;
+  }
+}
+
+/* Where the player of a seat is, when they are not simply there. It sits on the lower edge of the avatar. */
+.presence {
+  position: absolute;
+  top: 40px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 1px 6px;
+  border-radius: 99px;
+  box-shadow: 0 0 0 2px var(--bg);
+  font-size: 10px;
+  font-weight: 900;
+  line-height: 1.3;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.presence.off {
+  background: var(--red-bg);
+  color: var(--red-ink);
+}
+.presence.away {
+  background: var(--gold-bg);
+  color: var(--gold-d);
+}
+.presence.bot {
+  background: var(--soft);
+  color: var(--muted);
+}
+.seat.gone .avatar {
+  opacity: 0.5;
+}
+.sheet-note {
+  text-align: center;
+  font-size: 13px;
+}
+
+/* The table cannot be reached: a card over it says so, and the table underneath takes no input. */
+.table-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: color-mix(in srgb, var(--c-sk) 60%, transparent);
+}
+.table-overlay .box {
+  width: 100%;
+  max-width: 420px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 22px 18px 20px;
+  border-radius: 22px;
+  background: var(--bg);
+}
+.table-overlay .btn {
+  margin-block: 6px 4px;
+}
+
 /* The end of an online game has one way on, and it takes the whole row. */
 .end-actions > :only-child {
   grid-column: 1 / -1;
@@ -200,4 +321,129 @@ input.code-input[aria-invalid='true'] {
   flex: 1;
   min-width: 0;
   padding-inline: 8px;
+}
+
+/* The player's identity on the hub is a plate: who they are, and the way to their profile. */
+.plate.identity small {
+  line-height: 1.4;
+}
+.plate.identity b {
+  font-size: 16px;
+}
+
+/* A text field that takes the row. */
+input.field {
+  flex: none;
+  width: 100%;
+  min-height: 46px;
+}
+input.field[aria-invalid='true'] {
+  border-color: var(--red);
+}
+
+/* Who a profile is about: the big avatar, the name, and what kind of account it is. */
+.who {
+  gap: 14px;
+  padding-block: 4px;
+}
+.who b {
+  display: block;
+  font-size: 20px;
+  font-weight: 900;
+  overflow-wrap: anywhere;
+}
+.who .pill {
+  margin-top: 4px;
+}
+
+/* The eight table colours: four to a row, each a 48 px target around its dot. */
+.swatches {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+}
+.swatch {
+  display: grid;
+  place-items: center;
+  height: 48px;
+  border: 0;
+  background: none;
+  padding: 0;
+}
+.swatch i {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  /* The ring of the chosen colour: a gap in the page colour, then the text colour. */
+  box-shadow: 0 0 0 3px var(--bg);
+}
+.swatch[aria-checked='true'] i {
+  box-shadow:
+    0 0 0 3px var(--bg),
+    0 0 0 6px var(--fg);
+}
+
+/* A human at the table is a button to their profile; it looks like the row it is in. */
+.member-link {
+  display: block;
+  min-height: 44px;
+  border: 0;
+  background: none;
+  padding: 0;
+  text-align: left;
+  color: inherit;
+  font: inherit;
+}
+
+/* The public tables. */
+ul.tables {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.tables .plate b {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mini[disabled] {
+  color: var(--faint);
+  box-shadow: none;
+}
+
+/* Waiting in the queue: one dot per seat the table needs. */
+.searching {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding-top: 18px;
+  text-align: center;
+}
+.queue-seats {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  padding-bottom: 6px;
+}
+.queue-seat {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 2px solid var(--line);
+  color: var(--faint);
+  font-size: 16px;
+  font-weight: 900;
+}
+.queue-seat.found {
+  border: 0;
+  background: var(--green);
+  color: var(--white);
+  box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.18);
+}
+.queue-seat svg {
+  width: 22px;
+  height: 22px;
 }
