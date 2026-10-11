@@ -1,8 +1,8 @@
-/* Small pieces the online screens share: the header row, a player's avatar and the stat tiles. */
+/* Small pieces the online screens share: the header row, a player's avatar, a rating and the stat tiles. */
 import type { ReactNode } from 'react';
-import type { Stats, TableColor } from '../protocol/generated';
+import type { Rating, Stats, TableColor } from '../protocol/generated';
 import { Sound } from '../sound/sound';
-import { cssColor } from '../tableview/dom';
+import { cssColor, whole } from '../tableview/dom';
 import { BackIcon } from './icons';
 
 export const initialOf = (name: string): string => (name.trim()[0] || '?').toUpperCase();
@@ -32,6 +32,20 @@ export function Avatar(props: { name: string; color: TableColor; size?: 'sm' | '
   return (
     <span className={`avatar ${props.size ?? 'sm'}`} style={{ background: cssColor(props.color) }} aria-hidden="true">
       {initialOf(props.name)}
+    </span>
+  );
+}
+
+/**
+ * A ranked rating as the server sent it: the number, the tier's name, and whether these are still
+ * placement games. The tier is never worked out from the number here.
+ */
+export function RatingBadge({ rating }: { rating: Rating }) {
+  return (
+    <span className="rating">
+      <b className="num">{whole(rating.value)}</b>
+      <span className="pill gold">{rating.tier}</span>
+      {rating.provisional && <span className="pill soft">Placement</span>}
     </span>
   );
 }

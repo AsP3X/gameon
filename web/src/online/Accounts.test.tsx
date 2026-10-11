@@ -150,8 +150,15 @@ describe('the hub', () => {
     await openHub();
     expect($('#online .identity small')?.textContent).toBe('Playing as a guest');
     expect($('#online .identity b')?.textContent).toMatch(/^Guest \d{4}$/);
-    expect(texts('#online .label')).toEqual(['Quick play', 'Public tables', 'Your own table']);
-    expect(texts('#online .wrap .btn')).toEqual(['Find a game', 'Browse tables', 'Create a table', 'Join with a code']);
+    expect(texts('#online .label')).toEqual(['Quick play', 'Ranked', 'Public tables', 'Your own table']);
+    expect(texts('#online .wrap .btn')).toEqual([
+      'Find a game',
+      'Create an account',
+      'Ladder',
+      'Browse tables',
+      'Create a table',
+      'Join with a code',
+    ]);
     expect(texts('#online .pill')).toEqual(['Connected']);
   });
 });
@@ -469,6 +476,8 @@ describe('quick play', () => {
     // Nobody touches anything: the deadlines play this seat, and the game runs to its end.
     for (let i = 0; i < 600 && ui.screen !== 'end'; i++) await settle(250);
     expect(ui.screen).toBe('end');
+    // A casual game moves no rating: the end screen has no rating line at all.
+    expect($('#app .end-rating')).toBeNull();
     await click('[data-act="again"]');
     await settle();
     // A quick-play table has no lobby to go back to: this is the hub.

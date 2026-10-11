@@ -7,7 +7,7 @@ import type { OnlineMemory } from './net/online';
 import { SocketClient } from './net/socket';
 import { OnlineScreens } from './online/OnlineScreens';
 import { TableOverlay } from './online/TableOverlay';
-import { closeOnlineTable, mountTavern, openOnlineTable } from './tableview';
+import { closeOnlineTable, coverTavern, mountTavern, openOnlineTable, showOnlineResult } from './tableview';
 
 export interface AppProps {
   /** How the online screens reach a server. Tests hand in a mock server's browser. */
@@ -54,8 +54,14 @@ export function App({ backend = appBackend, memory = appMemory }: AppProps) {
       leave: () => online.leaveTable(),
       exit: () => online.closeTable(),
       now: online.serverNow,
+      ranked: table.mode === 'ranked',
+      result: () => table.result,
     });
-    return closeOnlineTable;
+    const unlisten = table.onResult(showOnlineResult);
+    return () => {
+      unlisten();
+      closeOnlineTable();
+    };
   }, [online, table]);
 
   useEffect(() => {
@@ -64,6 +70,8 @@ export function App({ backend = appBackend, memory = appMemory }: AppProps) {
   }, [online]);
 
   const screens = inOnline && !table;
+  // The online screens take the renderer's place: its home screen is still there, but not to be seen.
+  useEffect(() => coverTavern(screens), [screens]);
   // The table is on screen and the server is not there: what it shows may be old.
   const cut = table != null && state.status !== 'online' ? state.status : null;
   return (

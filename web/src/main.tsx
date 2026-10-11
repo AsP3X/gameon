@@ -10,6 +10,7 @@ import './styles/tokens.css';
 import './styles/tavern.css';
 import './styles/online.css';
 import { App } from './App';
+import { loadMusic } from './sound/music';
 import { loadSamples } from './sound/samples';
 
 const root = document.getElementById('root');
@@ -21,3 +22,5 @@ createRoot(root).render(
 );
 // The recorded card sounds. Nothing waits for them: the table plays the synthesised ones until they are in.
 void loadSamples();
+// The menu music. The home screen is up before it is in, and stays quiet if it never arrives.
+void loadMusic();

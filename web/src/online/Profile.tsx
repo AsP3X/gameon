@@ -8,7 +8,7 @@ import { Sound } from '../sound/sound';
 import { cssColor } from '../tableview/dom';
 import { TABLE_COLORS } from './colors';
 import { failureText, NAME_MAX } from './copy';
-import { Avatar, Head, StatTiles } from './parts';
+import { Avatar, Head, RatingBadge, StatTiles } from './parts';
 
 type Note = { tone: 'error' | 'ok'; text: string };
 
@@ -85,6 +85,12 @@ export function ProfileScreen({ online, me, live, onBack, onSignUp, onSignIn, on
             <StatTiles stats={me.stats} />
             {me.stats.games === 0 && <p className="muted">No online games yet. Your first one counts here.</p>}
           </section>
+          {!me.guest && (
+            <section className="stack" aria-label="Ranked">
+              <span className="label">Ranked</span>
+              {me.rating ? <RatingBadge rating={me.rating} /> : <p className="muted">No ranked games yet.</p>}
+            </section>
+          )}
           <section className="stack">
             <label className="label" htmlFor="display-name">
               Display name
@@ -237,6 +243,12 @@ export function PlayerScreen(props: { online: Online; id: UserId; onBack: () => 
               <StatTiles stats={result.value.stats} />
               {result.value.stats.games === 0 && <p className="muted">No online games yet.</p>}
             </section>
+            {result.value.rating && (
+              <section className="stack" aria-label="Ranked">
+                <span className="label">Ranked</span>
+                <RatingBadge rating={result.value.rating} />
+              </section>
+            )}
           </>
         )}
       </div>

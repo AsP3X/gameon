@@ -14,8 +14,18 @@
    What it is not: a security boundary or a reference for the rules. Accepted play goes through the
    reference engine in src/game (the seeded shuffle and the bots that read the whole state included),
    which the real server must never run. Accounts live in the page's memory and are gone with it,
-   passwords included, as they were typed. The queue is casual only. There are no emotes, no away
-   detection, no bot takeover after the grace period, no rate limit on REST and no ranked play.
+   passwords included, as they were typed. There are no emotes, no away detection, no bot takeover
+   after the grace period and no rate limit on REST.
+
+   Ranked follows the rules of docs/protocol.md §4, §5.4 and §5.5 in everything a screen can see:
+   the tier bands, placement ending with the fifth game, the cooldown that doubles with every
+   leave, the season that is the UTC calendar quarter, and a ladder paged by user id. Two things it
+   does not do. It does not rate: where the server runs Weng-Lin, the mock moves a rating by a
+   fixed step for each place, so its numbers have the right shape and mean nothing. And it has no
+   skill window: the first four accounts in the ranked queue sit down, whatever their ratings.
+   It also never sees a season end, so it has no soft reset. And since it never marks a seat away,
+   it has no forfeit for a ranked seat that was away for most of the game (§5.6): in the mock a
+   forfeit is a `game.leave`.
 
    A browser() is one browser profile: a cookie jar that holds at most one session, the REST calls
    that carry it, and the sockets opened with it. */
@@ -32,12 +42,17 @@ import type {
   GameSettings,
   GameStart,
   GameUpdate,
+  LadderEntry,
+  LadderPage,
   Lobby,
   LobbySummary,
   Me,
   Member,
   Profile,
+  QueueMode,
   QueueStatus,
+  Rating,
+  Season,
   Seat,
   SeatStatus,
   ServerConfig,
@@ -89,6 +104,50 @@ export const STANDARD: GameSettings = {
 /** §4: 3–16 characters of A–Z a–z 0–9 _. The reserved list is not named, so the mock has none. */
 const USERNAME = /^[A-Za-z0-9_]{3,16}$/;
 const NAME_MAX = 16;
+/** The tiers and the value each one ends below (§4). From 48 it is Skull King. */
+const TIERS: readonly (readonly [below: number, name: string])[] = [
+  [8, 'Deckhand'],
+  [16, 'Bosun'],
+  [24, 'Quartermaster'],
+  [32, 'First Mate'],
+  [40, 'Captain'],
+  [48, 'Pirate Lord'],
+];
+const tierOf = (value: number): string => TIERS.find(([below]) => value < below)?.[1] ?? 'Skull King';
+/** The ranked games of a season that are placement games: the fifth one ends placement. */
+const PLACEMENT_GAMES = 5;
+/**
+ * What a ranked game does to a rating in the mock, by place. NOT the rating model: the server
+ * runs Weng-Lin and the number is whatever that gives. This only makes ratings move, so tiers and
+ * the end of placement can be seen.
+ */
+const MOCK_RATING_STEP = [6, 2, -2, -6];
+const MINUTE_MS = 60_000;
+const DAY_MS = 86_400_000;
+/** How long the n-th ranked leave of a season closes the ranked queue: 15 minutes, doubled each time, a day at most. */
+const cooldownAfter = (leaves: number): number => Math.min(DAY_MS, 15 * MINUTE_MS * 2 ** (leaves - 1));
+/** The season that contains `at`: the UTC calendar quarter. Season 1 is 2026 Q1. */
+function seasonAt(at: number): Season {
+  const date = new Date(at),
+    year = date.getUTCFullYear(),
+    quarter = Math.floor(date.getUTCMonth() / 3);
+  return {
+    id: (year - 2026) * 4 + quarter + 1,
+    name: `${year} Q${quarter + 1}`,
+    startsAt: Date.UTC(year, quarter * 3, 1),
+    endsAt: Date.UTC(year, quarter * 3 + 3, 1),
+  };
+}
+/** Strings in the order of their UTF-8 bytes, which is how the ladder breaks a tie of values. */
+function byBytes(a: string, b: string): number {
+  const x = BYTES.encode(a),
+    y = BYTES.encode(b);
+  for (let i = 0; i < Math.min(x.length, y.length); i++) if (x[i] !== y[i]) return x[i] - y[i];
+  return x.length - y.length;
+}
+const BYTES = new TextEncoder();
+const LADDER_PAGE = 25;
+const LADDER_MAX = 100;
 
 /** The HTTP status of each code REST can answer with (§3). */
 const STATUS: Partial<Record<ErrorCode, number>> = {
@@ -112,6 +171,7 @@ const MESSAGES: Partial<Record<ErrorCode, string>> = {
   INVALID_CREDENTIALS: 'Wrong username or password.',
   ALREADY_REGISTERED: 'This player already has an account.',
   ACCOUNT_REQUIRED: 'Ranked needs an account.',
+  QUEUE_COOLDOWN: 'You cannot queue yet.',
   RATE_LIMITED: 'Too many messages. Slow down.',
   PROTOCOL_UNSUPPORTED: 'This page is too old for the server. Reload to update.',
   LOBBY_NOT_FOUND: 'No table has that code.',
@@ -161,8 +221,10 @@ interface Account {
   conn: Conn | null;
   room: Room | null;
   game: Game | null;
-  /** When this player joined the casual queue, while they wait in it. */
-  queued: number | null;
+  /** The queue this player waits in, and since when. */
+  queued: { mode: QueueMode; since: number } | null;
+  /** How many ranked games this player has left this season: each one makes the next cooldown longer. */
+  leaves: number;
   /** Results of games that ended while this player had no socket: written right after the next `welcome`. */
   owed: GameOver[];
 }
@@ -197,7 +259,9 @@ interface Game {
   /** Who plays each seat. null is a bot seat, or one whose player left. */
   players: (Account | null)[];
   colors: TableColor[];
-  /** Those who left, and the seat they gave up. */
+  /** The tier each seat is announced with in `game.start`: its account's at the deal, if it had a rating. */
+  tiers: (string | null)[];
+  /** Those who left, and the seat they gave up. In ranked that is a forfeit. */
   leavers: { account: Account; seat: Seat }[];
   status: SeatStatus[];
   ready: boolean[];
@@ -259,8 +323,8 @@ export class MockServer {
   private readonly conns = new Set<Conn>();
   /** Every player there ever was, by user id. */
   private readonly accounts = new Map<string, Account>();
-  /** The casual queue, in the order they joined. */
-  private readonly queue: Account[] = [];
+  /** The two queues, each in the order its players joined. */
+  private readonly queues: Record<QueueMode, Account[]> = { casual: [], ranked: [] };
   private queueTimer: Timer | null = null;
   private ids = 0;
   private down = false;
@@ -381,6 +445,7 @@ export class MockServer {
       room: null,
       game: null,
       queued: null,
+      leaves: 0,
       owed: [],
     };
     this.accounts.set(account.me.user.id, account);
@@ -521,22 +586,24 @@ export class MockServer {
       me: this.profile(account),
       serverTime: this.now(),
       lobby: account.room ? account.room.lobby : null,
-      queue: account.queued != null ? this.queueStatus(account) : null,
+      queue: account.queued ? this.queueStatus(account) : null,
       game: game && seat >= 0 ? { start: this.gameStart(game, seat), update: this.update(game, seat, []) } : null,
     };
   }
 
   /** `Me` as REST and `welcome` give it: with where a reconnect would land. */
   private profile(account: Account): Me {
+    // A cooldown that has run out is no cooldown.
+    if (account.me.cooldownUntil != null && account.me.cooldownUntil <= this.now()) account.me.cooldownUntil = null;
     return {
       ...account.me,
       active: account.game
         ? { kind: 'game', id: account.game.id }
         : account.room
           ? { kind: 'lobby', id: account.room.lobby.id }
-          : account.queued != null
-            ? // The protocol gives a queue no id: the mock names the mode.
-              { kind: 'queue', id: 'casual' }
+          : account.queued
+            ? // A queue's id is its mode: `casual` is written down, `ranked` is the mock's.
+              { kind: 'queue', id: account.queued.mode }
             : null,
     };
   }
@@ -544,13 +611,15 @@ export class MockServer {
   /* ---------- REST ---------- */
 
   /** One request under /api/v1, answered as §3 and §4 say: the status and the JSON body. */
-  private http(browser: Browser, method: string, path: string, body: unknown): RestResponse {
+  private http(browser: Browser, method: string, target: string, body: unknown): RestResponse {
     if (this.down) throw new Error('The mock server is down');
     const ok = (value: unknown): RestResponse => ({ status: 200, body: value });
     const fail = (code: ErrorCode, message = MESSAGES[code] ?? code): RestResponse => ({
       status: STATUS[code] ?? 500,
       body: { error: { code, message } },
     });
+    // A query belongs to the request, not to the path: only the ladder reads one.
+    const [path, search = ''] = target.split('?', 2);
     const user = /^\/users\/([^/]+)$/.exec(path);
     const methods: Record<string, string> = {
       '/health': 'GET',
@@ -561,6 +630,7 @@ export class MockServer {
       '/auth/logout': 'POST',
       '/me': 'GET PATCH',
       '/lobbies': 'GET',
+      '/ladder': 'GET',
     };
     const allowed = user ? 'GET' : methods[path];
     if (allowed == null) return fail('NOT_FOUND');
@@ -631,6 +701,10 @@ export class MockServer {
         });
       return ok({ lobbies });
     }
+    if (path === '/ladder') {
+      const page = this.ladder(new URLSearchParams(search));
+      return typeof page === 'string' ? fail(page) : ok(page);
+    }
     if (user) {
       const found = this.accounts.get(user[1]);
       if (!found) return fail('NOT_FOUND');
@@ -641,7 +715,41 @@ export class MockServer {
   }
 
   private config(): ServerConfig {
-    return { protocol: PROTOCOL, build: 'mock', timers: this.timers, standard: STANDARD, season: null, emotes: [] };
+    return {
+      protocol: PROTOCOL,
+      build: 'mock',
+      timers: this.timers,
+      standard: STANDARD,
+      season: seasonAt(this.now()),
+      emotes: [],
+    };
+  }
+
+  /**
+   * One page of the current season's ladder: everyone with a ranked game, highest value first, then
+   * by display name in byte order, then by user id. Ranks count from 1 with no ties. `after` is the
+   * user id of the last row the caller has; `next` is the id of this page's last row, while more
+   * follow. Any season but the current one is `NOT_FOUND`; a limit that is not 1 to 100, or an
+   * `after` that is not on the ladder, is `VALIDATION`. An entry is the public player and the
+   * rating: no username, no stats, no session.
+   */
+  private ladder(query: URLSearchParams): LadderPage | 'NOT_FOUND' | 'VALIDATION' {
+    const season = seasonAt(this.now()),
+      limit = query.has('limit') ? Number(query.get('limit')) : LADDER_PAGE,
+      after = query.get('after');
+    if (query.has('season') && query.get('season') !== String(season.id)) return 'NOT_FOUND';
+    if (!isInt(limit) || limit < 1 || limit > LADDER_MAX) return 'VALIDATION';
+    const rated = [...this.accounts.values()]
+      .flatMap((a) => (a.me.rating ? [{ user: a.me.user, rating: a.me.rating }] : []))
+      .sort(
+        (a, b) => b.rating.value - a.rating.value || byBytes(a.user.name, b.user.name) || byBytes(a.user.id, b.user.id),
+      );
+    const from = after == null ? 0 : rated.findIndex((e) => e.user.id === after) + 1;
+    if (after != null && from === 0) return 'VALIDATION';
+    const entries: LadderEntry[] = rated.slice(from, from + limit).map((e, i) => ({ rank: from + i + 1, ...e }));
+    const page: LadderPage = { season, entries };
+    if (from + limit < rated.length && entries.length) page.next = entries[entries.length - 1].user.id;
+    return page;
   }
 
   /** Usernames are unique whatever their case. */
@@ -670,69 +778,80 @@ export class MockServer {
   private onQueue(conn: Conn, m: ClientMessage): void {
     const account = conn.account;
     if (m.t === 'queue.leave') {
-      // Leaving a queue one is not in is answered `ok` as well: the protocol has no code for it.
+      // Leaving a queue one is not in is answered `ok` as well.
       this.unqueue(account);
       return this.write(conn, { t: 'ok', re: m.id });
     }
     if (m.t !== 'queue.join' || !oneOf(m.mode, ['casual', 'ranked'])) return this.fail(conn, m.id, 'VALIDATION');
-    // Who may ask comes before where they are: a guest is told `ACCOUNT_REQUIRED` even when seated.
-    if (m.mode === 'ranked' && account.me.guest) return this.fail(conn, m.id, 'ACCOUNT_REQUIRED');
-    if (account.room || account.game || account.queued != null) return this.fail(conn, m.id, 'ALREADY_SEATED');
-    if (m.mode === 'ranked') return this.fail(conn, m.id, 'INTERNAL', 'The mock server has no ranked queue.');
-    account.queued = this.now();
-    this.queue.push(account);
+    const mode = m.mode;
+    // Who may ask comes before where they are: a guest is told `ACCOUNT_REQUIRED`, and a leaver
+    // `QUEUE_COOLDOWN`, even when seated (§5.4). The message carries no time: `GET /me` does.
+    if (mode === 'ranked' && account.me.guest) return this.fail(conn, m.id, 'ACCOUNT_REQUIRED');
+    if (mode === 'ranked' && (this.profile(account).cooldownUntil ?? 0) > this.now())
+      return this.fail(conn, m.id, 'QUEUE_COOLDOWN');
+    if (account.room || account.game || account.queued) return this.fail(conn, m.id, 'ALREADY_SEATED');
+    const queue = this.queues[mode];
+    account.queued = { mode, since: this.now() };
+    queue.push(account);
     this.write(conn, { t: 'ok', re: m.id, queue: this.queueStatus(account) });
-    this.pushQueue(account);
-    if (this.queue.length >= STANDARD.maxPlayers) this.seatQueue();
-    else this.queueTimer ??= setTimeout(() => this.seatQueue(), this.queueFillMs);
+    this.pushQueue(mode, account);
+    if (queue.length >= STANDARD.maxPlayers) this.seatQueue(mode);
+    // Only the casual queue gives up waiting: a ranked table never starts with a bot.
+    else if (mode === 'casual') this.queueTimer ??= setTimeout(() => this.seatQueue('casual'), this.queueFillMs);
   }
 
   private queueStatus(account: Account): QueueStatus {
+    const mode = account.queued?.mode ?? 'casual';
     return {
-      mode: 'casual',
-      since: account.queued ?? this.now(),
-      found: this.queue.length,
+      mode,
+      since: account.queued?.since ?? this.now(),
+      found: this.queues[mode].length,
       needed: STANDARD.maxPlayers,
     };
   }
 
-  /** The queue changed: everyone waiting in it is told, except the one whose reply already said so. */
-  private pushQueue(except?: Account): void {
-    this.queue.forEach((a) => {
+  /** A queue changed: everyone waiting in it is told, except the one whose reply already said so. */
+  private pushQueue(mode: QueueMode, except?: Account): void {
+    this.queues[mode].forEach((a) => {
       if (a !== except) this.write(a.conn, { t: 'queue.status', queue: this.queueStatus(a) });
     });
   }
 
   private unqueue(account: Account): void {
-    if (account.queued == null) return;
+    if (!account.queued) return;
+    const mode = account.queued.mode,
+      queue = this.queues[mode];
     account.queued = null;
-    this.queue.splice(this.queue.indexOf(account), 1);
-    this.pushQueue();
-    if (!this.queue.length && this.queueTimer != null) {
+    queue.splice(queue.indexOf(account), 1);
+    this.pushQueue(mode);
+    if (mode === 'casual' && !queue.length && this.queueTimer != null) {
       clearTimeout(this.queueTimer);
       this.queueTimer = null;
     }
   }
 
   /**
-   * A table forms: the first four in the queue, or whoever waited long enough with bots in the open
-   * seats. The queue ends for them without another `queue.status`: `game.start` is what says so.
-   * The table has no lobby, so there is none to go back to after the game.
+   * A table forms: the first four in the queue, or, in the casual queue, whoever waited long enough
+   * with bots in the open seats. The queue ends for them without another `queue.status`:
+   * `game.start` is what says so. The table has no lobby, so there is none to go back to after the game.
    */
-  private seatQueue(): void {
-    if (this.queueTimer != null) clearTimeout(this.queueTimer);
-    this.queueTimer = null;
-    const humans = this.queue.splice(0, STANDARD.maxPlayers);
+  private seatQueue(mode: QueueMode): void {
+    const queue = this.queues[mode];
+    if (mode === 'casual') {
+      if (this.queueTimer != null) clearTimeout(this.queueTimer);
+      this.queueTimer = null;
+    }
+    const humans = queue.splice(0, STANDARD.maxPlayers);
     if (!humans.length) return;
     humans.forEach((a) => {
       a.queued = null;
     });
     const members: Member[] = humans.map((a) => ({ kind: 'human', user: a.me.user, ready: true, connected: true }));
     while (members.length < STANDARD.maxPlayers) members.push(this.botFor(members, STANDARD.botLevel));
-    this.openTable(members, humans, STANDARD, 'casual', null);
-    if (this.queue.length) {
-      this.pushQueue();
-      this.queueTimer = setTimeout(() => this.seatQueue(), this.queueFillMs);
+    this.openTable(members, humans, STANDARD, mode, null);
+    if (queue.length) {
+      this.pushQueue(mode);
+      if (mode === 'casual') this.queueTimer = setTimeout(() => this.seatQueue('casual'), this.queueFillMs);
     }
   }
 
@@ -743,7 +862,7 @@ export class MockServer {
       room = account.room,
       ok = (lobby?: Lobby): void => this.write(conn, lobby ? { t: 'ok', re: m.id, lobby } : { t: 'ok', re: m.id });
     if (m.t === 'lobby.create') {
-      if (room || account.game || account.queued != null) return this.fail(conn, m.id, 'ALREADY_SEATED');
+      if (room || account.game || account.queued) return this.fail(conn, m.id, 'ALREADY_SEATED');
       if (!isSettings(m.settings) || !oneOf(m.visibility, ['private', 'public']))
         return this.fail(conn, m.id, 'VALIDATION');
       const made: Room = {
@@ -765,7 +884,7 @@ export class MockServer {
       return ok(made.lobby);
     }
     if (m.t === 'lobby.join') {
-      if (room || account.game || account.queued != null) return this.fail(conn, m.id, 'ALREADY_SEATED');
+      if (room || account.game || account.queued) return this.fail(conn, m.id, 'ALREADY_SEATED');
       const code = typeof m.code === 'string' ? m.code.trim().toUpperCase() : null;
       const found = [...this.rooms].find((r) => (code != null ? r.lobby.code === code : r.lobby.id === m.lobbyId));
       if (!found) return this.fail(conn, m.id, 'LOBBY_NOT_FOUND');
@@ -917,6 +1036,8 @@ export class MockServer {
       rev: 0,
       players,
       colors: seats.map((p) => p.color),
+      // A seat is announced with the tier its account has at the deal, at any table; a bot's is null.
+      tiers: players.map((a) => a?.me.rating?.tier ?? null),
       leavers: [],
       status: players.map((a) => (a ? (a.conn ? 'online' : 'offline') : 'bot')),
       ready: players.map(() => false),
@@ -956,7 +1077,7 @@ export class MockServer {
           color: game.colors[i],
           bot: p.bot,
           userId: account ? account.me.user.id : null,
-          tier: null,
+          tier: game.tiers[i],
         };
       }),
       me: seat,
@@ -1010,6 +1131,9 @@ export class MockServer {
         game.players[seat] = null;
         game.leavers.push({ account, seat });
         account.game = null;
+        // Leaving a ranked game is a forfeit, and it closes the ranked queue from this moment:
+        // for longer with every leave of the season.
+        if (game.mode === 'ranked') account.me.cooldownUntil = this.now() + cooldownAfter(++account.leaves);
         this.step(game, [{ type: 'seatStatus', seat, status: 'bot' }], actor);
         return this.unseat(account);
       }
@@ -1143,11 +1267,19 @@ export class MockServer {
       totals = Rules.totals(s.log, s.cfg, s.seats.length),
       room = game.room,
       open = room != null && this.rooms.has(room),
-      places = totals.map((t) => 1 + totals.filter((x) => x > t).length);
-    // The game counts for everyone still in their seat, before anyone is told it is over: a
-    // `GET /me` that follows `game.over` already has it. A seat that was left is not counted.
+      ranked = game.mode === 'ranked',
+      // A leave is a forfeit in ranked only: the seat is placed last, whatever the bot scored in it.
+      forfeited = ranked ? game.leavers.map((l) => l.seat) : [],
+      places = totals.map((t, seat) =>
+        forfeited.includes(seat)
+          ? totals.length
+          : 1 + totals.filter((x, other) => x > t && !forfeited.includes(other)).length,
+      );
+    // A custom or a casual game counts for everyone still in their seat, before anyone is told it
+    // is over: a `GET /me` that follows `game.over` already has it. A seat that was left is not
+    // counted. A ranked game changes no `Stats` at all: it is counted in the rating's `games`.
     game.players.forEach((account, seat) => {
-      if (!account) return;
+      if (!account || ranked) return;
       const stats = account.me.stats;
       stats.games++;
       if (places[seat] === 1) stats.wins++;
@@ -1159,22 +1291,25 @@ export class MockServer {
         if (score.hit) stats.bidsMade++;
       });
     });
-    const over: GameOver = {
-      t: 'game.over',
-      gameId: game.id,
-      result: {
-        totals,
-        places,
-        // A leave is a forfeit in ranked only, and the mock has no ranked games.
-        forfeited: [],
-        rating: null,
-        lobbyId: open && room ? room.lobby.id : null,
-      },
-    };
+    /**
+     * What one seat is told: whose seat it is, the standings for all, and in ranked this seat's own
+     * rating change.
+     */
     const tell = (account: Account, seat: Seat): void => {
-      const mine: GameOver = Object.assign({ seat }, over);
-      if (account.conn) this.write(account.conn, mine);
-      else account.owed.push(mine);
+      const over: GameOver = {
+        t: 'game.over',
+        gameId: game.id,
+        seat,
+        result: {
+          totals,
+          places,
+          forfeited,
+          rating: ranked ? this.rate(account, places[seat]) : null,
+          lobbyId: open && room ? room.lobby.id : null,
+        },
+      };
+      if (account.conn) this.write(account.conn, over);
+      else account.owed.push(over);
     };
     this.games.delete(game);
     game.players.forEach((account, seat) => {
@@ -1190,6 +1325,21 @@ export class MockServer {
       if (x.kind === 'human') x.ready = false;
     });
     this.pushLobby(room);
+  }
+
+  /**
+   * Move a rating after a ranked game, and say what it was and what it is. The shape is the
+   * server's: a whole number, `delta` the difference of the two values, the tier of the band the
+   * value is in, and placement until the fifth game. The step is the mock's own (MOCK_RATING_STEP).
+   */
+  private rate(account: Account, place: number): { before: Rating; after: Rating; delta: number } {
+    const before = account.me.rating ?? { value: 0, tier: tierOf(0), provisional: true, games: 0 },
+      value = before.value + (MOCK_RATING_STEP[place - 1] ?? MOCK_RATING_STEP[MOCK_RATING_STEP.length - 1]),
+      games = before.games + 1,
+      after = { value, tier: tierOf(value), provisional: games < PLACEMENT_GAMES, games };
+    account.me.rating = after;
+    account.me.user.tier = after.tier;
+    return { before, after, delta: after.value - before.value };
   }
 
   /* ---------- between two lives ---------- */
@@ -1214,6 +1364,7 @@ export class MockServer {
         session: a.session,
         me: a.me,
         login: a.login,
+        leaves: a.leaves,
         owed: a.owed,
       })),
       rooms: [...this.rooms].map((r) => ({ lobby: r.lobby, humans: r.humans.map(id) })),
@@ -1226,6 +1377,7 @@ export class MockServer {
         rev: g.rev,
         players: g.players.map((a) => (a ? id(a) : null)),
         colors: g.colors,
+        tiers: g.tiers,
         leavers: g.leavers.map((l) => ({ user: id(l.account), seat: l.seat })),
         status: g.status,
         ready: g.ready,
@@ -1243,7 +1395,7 @@ export class MockServer {
     let saved: {
       v: number;
       ids: number;
-      accounts: { session: string | null; me: Me; login: Account['login']; owed: GameOver[] }[];
+      accounts: { session: string | null; me: Me; login: Account['login']; leaves?: number; owed: GameOver[] }[];
       rooms: { lobby: Lobby; humans: string[] }[];
       games: {
         id: string;
@@ -1254,6 +1406,7 @@ export class MockServer {
         rev: number;
         players: (string | null)[];
         colors: TableColor[];
+        tiers?: (string | null)[];
         leavers: { user: string; seat: Seat }[];
         status: SeatStatus[];
         ready: boolean[];
@@ -1277,6 +1430,7 @@ export class MockServer {
         room: null,
         game: null,
         queued: null,
+        leaves: a.leaves ?? 0,
         owed: a.owed,
       };
       this.accounts.set(a.me.user.id, account);
@@ -1305,6 +1459,7 @@ export class MockServer {
         rev: g.rev,
         players: g.players.map((x) => (x == null ? null : (this.accounts.get(x) ?? null))),
         colors: g.colors,
+        tiers: g.tiers ?? g.players.map(() => null),
         leavers: g.leavers.flatMap((l) => {
           const account = this.accounts.get(l.user);
           return account ? [{ account, seat: l.seat }] : [];
