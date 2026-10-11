@@ -209,6 +209,27 @@ async function openPort(): Promise<Stage> {
   return { ...page, win: window, stored, sounds: () => Sound.names(), play, close };
 }
 
+/* ---------- the one place the port is drawn differently on purpose ---------- */
+
+/* The legacy page asks for a bid with a row of chips; the port asks with a slider on a sheet
+   (views.ts, bidSheet). Both end in the same button. So the two are compared on what a bid control
+   says, not on how it is drawn: how many bids it offers, and what its button reads and whether it
+   can be pressed. Everything around it is still compared as markup. */
+function pageHtml(app: HTMLElement): string {
+  const html = app.innerHTML,
+    actions = app.querySelector('.actions'),
+    send = actions?.querySelector<HTMLButtonElement>('[data-act="bid"]');
+  if (!actions || !send) return html;
+  const slider = actions.querySelector('#bid');
+  const offered = slider
+    ? Number(slider.getAttribute('aria-valuemax')) + 1
+    : actions.querySelectorAll('[data-act="bidPick"]').length;
+  const drawn = actions.innerHTML,
+    at = html.indexOf(drawn);
+  const said = `[bid control: ${offered} bids, "${send.textContent}"${send.disabled ? ', disabled' : ''}]`;
+  return at < 0 ? html : html.slice(0, at) + said + html.slice(at + drawn.length);
+}
+
 /* ---------- driving a build ---------- */
 
 /** Where a pointer is, for the swipe gesture. */
@@ -232,7 +253,7 @@ export class Run {
   note(what: string, extra?: string): void {
     const s = this.stage;
     const shot = JSON.stringify({
-      html: s.app.innerHTML,
+      html: pageHtml(s.app),
       enter: s.app.hasAttribute('data-enter'),
       cls: s.app.className,
       banners: Array.from(s.doc.querySelectorAll('.banner'), (b) => b.outerHTML),
@@ -255,9 +276,25 @@ export class Run {
     if (!el) throw new Error(`Step ${this.tick}: nothing matches ${selector}`);
     return el;
   }
-  click(selector: string): void {
+  click(selector: string, what = `click ${selector}`): void {
     this.find(selector).dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
-    this.note(`click ${selector}`);
+    this.note(what);
+  }
+  /**
+   * Bid the way the build on stage asks for it: a chip on the legacy page, the slider in the port
+   * (a digit key sets it in one step, as one tap on a chip did). `i` picks which bid.
+   */
+  bid(i: number): void {
+    const slider = this.stage.app.querySelector('.actions #bid');
+    if (slider) {
+      const bid = i % (Number(slider.getAttribute('aria-valuemax')) + 1);
+      slider.dispatchEvent(new KeyboardEvent('keydown', { key: bid > 9 ? 'End' : String(bid), bubbles: true }));
+      this.note('pick a bid');
+    } else {
+      const chips = this.stage.app.querySelectorAll('.actions [data-act="bidPick"]').length;
+      this.click(`.actions [data-act="bidPick"][data-v="${i % chips}"]`, 'pick a bid');
+    }
+    this.click('.actions [data-act="bid"]', 'send the bid');
   }
   type(selector: string, value: string): void {
     const el = this.find(selector);
@@ -343,11 +380,8 @@ export class Run {
       else if (this.has('.sheet [data-act="next"]')) this.click('.sheet [data-act="next"]');
       else if (this.has('.sheet button[data-act="seerDone"]')) this.click('.sheet button[data-act="seerDone"]');
       else if (this.has('.actions [data-act="results"]')) this.click('.actions [data-act="results"]');
-      else if (this.has('.actions [data-act="bidPick"]')) {
-        const chips = this.stage.app.querySelectorAll('.actions [data-act="bidPick"]').length;
-        this.click(`.actions [data-act="bidPick"][data-v="${i % chips}"]`);
-        this.click('.actions [data-act="bid"]');
-      } else if (this.has('.actions [data-act="peek"]')) this.click('.actions [data-act="peek"]');
+      else if (this.has('.actions [data-act="bid"]')) this.bid(i);
+      else if (this.has('.actions [data-act="peek"]')) this.click('.actions [data-act="peek"]');
       else if (this.has('.actions .seatpick button')) this.click('.actions .seatpick button:last-child');
       else if (this.has('.actions [data-act="ability"][disabled]')) this.click('.hand .hslot:not(.discard)'); // Smuggler: one more card to throw back
       else if (this.has('.actions [data-act="ability"]')) this.click('.actions [data-act="ability"]:last-child');

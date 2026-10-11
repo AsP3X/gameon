@@ -306,6 +306,34 @@ function abilityPanel(v: TableView): string {
   }
   return '';
 }
+/** How a bid reads to a screen reader. */
+export const bidText = (bid: number): string => (bid === 1 ? '1 trick' : `${bid} tricks`);
+/**
+ * The bid, on a sheet that rises from the bottom edge under the hand: a slider from 0 to the cards
+ * dealt, then the button that sends it. Nothing is picked until the slider is touched, so a bid of 0
+ * is a choice like any other. The slider is drawn here and driven in events.ts. It is not a native
+ * range input: the table is redrawn while a finger is on it (a bot bids), and a native drag would
+ * end with its element. A deliberate difference from the legacy page, which had a row of chips.
+ */
+export function bidSheet(cards: number): string {
+  const bid = ui.bidPick,
+    set = bid != null,
+    rise = ui.deal || ui.enter || ui.reveal,
+    wake = ui.just != null && ui.just.startsWith('pick');
+  const stops = Array.from(
+    { length: cards + 1 },
+    (_, k) => `<span class="${k === bid ? 'on' : ''}" style="--i:${k}">${k}</span>`,
+  ).join('');
+  return `<div class="bidsheet${rise ? ' rise' : ''}" role="group" aria-labelledby="bid-title">
+      <h2 id="bid-title">Your bid</h2>
+      <div class="bidslider${set ? ' set' : ''}" id="bid" role="slider" tabindex="0" aria-labelledby="bid-title" aria-valuemin="0" aria-valuemax="${cards}" aria-valuenow="${bid ?? 0}" aria-valuetext="${set ? bidText(bid) : 'No bid yet'}" style="--v:${bid ?? 0};--max:${cards}">
+        <span class="bid-out num" aria-hidden="true">${set ? bid : 'Slide to set your bid'}</span>
+        <span class="bid-track"><i class="bid-fill"></i><i class="bid-thumb"></i></span>
+        <span class="bid-stops" aria-hidden="true">${stops}</span>
+      </div>
+      <button class="btn${wake ? ' wake' : ''}" data-act="bid"${set ? '' : ' disabled'}>${set ? 'Bid ' + bid : 'Choose your bid'}</button>
+    </div>`;
+}
 /** Buttons only where a card can't do the job: bidding, abilities, the Tigress choice, round results.
     Cards are played straight from the hand: tap to lift, tap the same card again to play it. */
 function actionsView(v: TableView): string {
@@ -327,13 +355,7 @@ function actionsView(v: TableView): string {
   if (handHidden(v) && v.phase !== 'roundEnd') return hint('Hand hidden · pass-and-play');
   if (v.phase === 'bidding') {
     if (v.bids[me] != null) return `<button class="btn" disabled>You bid ${v.bids[me]} · waiting for the crew</button>`;
-    const chips = Array.from(
-      { length: v.cards + 1 },
-      (_, b) =>
-        `<button class="chip ${ui.just === 'pick' + b ? 'just' : ''}" data-act="bidPick" data-v="${b}" aria-pressed="${ui.bidPick === b}">${b}</button>`,
-    ).join('');
-    return `<div class="chips" role="group" aria-label="Your bid">${chips}</div>
-      <button class="btn ${ui.just && ui.just.startsWith('pick') ? 'wake' : ''}" data-act="bid" ${ui.bidPick == null ? 'disabled' : ''}>${ui.bidPick == null ? 'Choose your bid' : 'Bid ' + ui.bidPick}</button>`;
+    return bidSheet(v.cards);
   }
   if (v.phase === 'ability' && v.pending?.seat === me) return abilityPanel(v);
   if (v.phase === 'roundEnd') return `<button class="btn" data-act="results">See round results</button>`;

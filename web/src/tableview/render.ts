@@ -1,6 +1,7 @@
 /* Render: turns the state into the page. One call rebuilds #app from strings, then replays the
    motion that connects the old picture to the new one.
    Ported from the legacy build (legacy/Skull King Tavern.html, section 13) without changing behavior. */
+import { $ } from './dom';
 import { animateBar, countUp, flip, snapshot } from './motion';
 import { clearTimer, patchUi, stage, ui } from './state';
 import type { Screen, Sheet } from './state';
@@ -47,7 +48,11 @@ export function render(): void {
   else if (ui.sheet) html += SHEETS[ui.sheet]();
   app.toggleAttribute('data-enter', ui.enter);
   app.classList.toggle('full', ui.screen === 'end' || ui.screen === 'home');
+  // The bid slider is the one control a redraw can take from under the keyboard: a bot's bid
+  // redraws the table while the player is still stepping through theirs.
+  const onBid = document.activeElement?.id === 'bid';
   app.innerHTML = html;
+  if (onBid) $('#bid')?.focus();
   flip(snap);
   animateBar();
   if (ui.anim || ui.enter) {

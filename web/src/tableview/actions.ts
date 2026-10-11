@@ -362,12 +362,6 @@ export const ACTIONS: Record<string, ActionFn | undefined> = {
     }
     startGame();
   },
-  bidPick(d) {
-    ui.bidPick = Number(d.v);
-    ui.just = 'pick' + d.v;
-    Sound.play('bidTick', Number(d.v));
-    render();
-  },
   bid() {
     if (ui.bidPick == null) return;
     const b = ui.bidPick;
@@ -524,4 +518,4 @@ export const UI_SOUNDS: Record<string, SoundName | undefined> = {
 /** Actions that close a sheet: it slides away first, then the action runs. */
 export const CLOSING = new Set(['closeSheet', 'next', 'seerDone', 'trkNext']);
 /** Actions that talk to the table: ignored while the last one is still unanswered. */
-export const GAME_INPUT = new Set(['bid', 'bidPick', 'pick', 'play', 'ability', 'peek', 'seerDone', 'next']);
+export const GAME_INPUT = new Set(['bid', 'pick', 'play', 'ability', 'peek', 'seerDone', 'next']);
