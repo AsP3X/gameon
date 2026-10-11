@@ -1,7 +1,10 @@
 /* Sound: the table's effects and the sea ambience.
-   Ported from the legacy build (legacy/Skull King Tavern.html, section 7) without changing behavior.
+   Ported from the legacy build (legacy/Skull King Tavern.html, section 7). The synthesiser is that
+   port, unchanged. Recorded takes are an addition the legacy build does not have.
 
-   Everything is synthesised with Web Audio: no files to load, nothing blocked by the page sandbox.
+   Every sound is synthesised with Web Audio: no files to load, nothing blocked by the page sandbox.
+   A sound that was given recorded takes (Sound.samples) plays one of those instead, and keeps its
+   recipe for as long as it has none.
    Graph: voices -> master gain -> soft limiter -> speakers, with a small send to a room reverb.
    Sounds are named recipes; call Sound.play(name, arg). */
 
@@ -33,6 +36,11 @@ let rig: Rig | null = null;
 let amb: Ambience | null = null;
 let bus: GainNode | null = null;
 const last: Partial<Record<SoundName, number>> = {};
+/** Recorded takes that were handed in but could not be decoded yet, still encoded (see decoder). */
+const waiting: Partial<Record<SoundName, ArrayBuffer[]>> = {};
+/** The decoded takes of a sound, and which one it played last. */
+const takes: Partial<Record<SoundName, AudioBuffer[]>> = {};
+const lastTake: Partial<Record<SoundName, number>> = {};
 const level = (): number => (prefs.muted ? 0 : Math.pow(prefs.volume == null ? 0.8 : prefs.volume, 1.6));
 
 function boot(): Rig | null {
@@ -70,7 +78,46 @@ function boot(): Rig | null {
   } catch {
     rig = null;
   }
+  if (rig) for (const name of Object.keys(waiting) as SoundName[]) decode(rig.ctx, name);
   return rig;
+}
+
+/**
+ * What can decode a take right now. Before the first tap the page may not start audio, but an
+ * offline context may decode: so the takes are ready when the first sound is asked for. A browser
+ * without one decodes when the audio graph is built.
+ */
+function decoder(): BaseAudioContext | null {
+  if (rig) return rig.ctx;
+  if (typeof OfflineAudioContext === 'undefined') return null;
+  try {
+    return new OfflineAudioContext(1, 1, 44100);
+  } catch {
+    return null;
+  }
+}
+
+/** Decode the takes that are waiting for this sound. One that cannot be decoded is left out. */
+function decode(ctx: BaseAudioContext, name: SoundName): void {
+  const files = waiting[name];
+  if (!files) return;
+  delete waiting[name];
+  const ready: AudioBuffer[] = [];
+  takes[name] = ready;
+  for (const file of files) {
+    try {
+      void ctx.decodeAudioData(file).then(
+        (buffer) => {
+          ready.push(buffer);
+        },
+        () => {
+          // Not audio this browser can read: the sound has one take fewer.
+        },
+      );
+    } catch {
+      // The same, for a browser whose decodeAudioData does not return a promise.
+    }
+  }
 }
 
 /* --- voices --- */
@@ -406,6 +453,45 @@ const RECIPES = {
 export type SoundName = keyof typeof RECIPES;
 const LIB: Record<SoundName, Recipe> = RECIPES;
 
+/* --- recorded takes --- */
+/** How a sound's takes are played: level, room send, and how far the speed (and with it the pitch) drifts either way. */
+interface TakeMix {
+  v: number;
+  room: number;
+  drift: number;
+}
+/* Every take is stored at the same loudness (web README, "Recorded sounds"). `v` puts it where the
+   sound's recipe sat in the mix: the card recipe renders about that loud, the tap a third of it. */
+const TAKES = {
+  tap: { v: 0.32, room: 0.05, drift: 0.04 },
+  cardPlay: { v: 1, room: 0.08, drift: 0.06 },
+} satisfies Partial<Record<SoundName, TakeMix>>;
+/** The sounds that can be given recorded takes. */
+export type SampledSound = keyof typeof TAKES;
+const TAKE_MIX: Partial<Record<SoundName, TakeMix>> = TAKES;
+
+/** Play one of the sound's takes: never the one it played last, each time a little faster or slower. False if it has none. */
+function take(r: Rig, t: number, name: SoundName): boolean {
+  const ready = takes[name],
+    mix = TAKE_MIX[name];
+  if (!ready?.length || !mix) return false;
+  const n = ready.length,
+    prev = lastTake[name];
+  const k =
+    prev == null || n < 2 ? Math.floor(Math.random() * n) : (prev + 1 + Math.floor(Math.random() * (n - 1))) % n;
+  lastTake[name] = k;
+  const s = r.ctx.createBufferSource(),
+    g = r.ctx.createGain();
+  s.buffer = ready[k];
+  s.playbackRate.value = 1 + (Math.random() * 2 - 1) * mix.drift;
+  g.gain.value = mix.v;
+  s.connect(g);
+  g.connect(bus || r.master);
+  send(r, g, mix.room);
+  s.start(t);
+  return true;
+}
+
 /* --- sea ambience: brown noise through a low filter, swelling like waves --- */
 /* Mix: three tiers, measured from rendered peaks. Interface ~0.06, game events ~0.12-0.2, highlights ~0.25. */
 const MIX: Partial<Record<SoundName, number>> = {
@@ -485,7 +571,8 @@ export const Sound = {
     bus.gain.value = MIX[name] || 1;
     bus.connect(r.master);
     try {
-      LIB[name](r.ctx.currentTime + 0.01, arg);
+      const t = r.ctx.currentTime + 0.01;
+      if (!take(r, t, name)) LIB[name](t, arg);
     } catch {
       // A sound that cannot be built is skipped; the game goes on.
     }
@@ -514,6 +601,15 @@ export const Sound = {
     const r = boot();
     if (r && r.ctx.state === 'suspended') void r.ctx.resume();
     if (prefs.ambience && !prefs.muted) ambience(true);
+  },
+  /**
+   * Give a sound recorded takes to play in place of its recipe: encoded audio files, as fetched.
+   * Until one is decoded the recipe plays.
+   */
+  samples(name: SampledSound, files: ArrayBuffer[]): void {
+    waiting[name] = files;
+    const ctx = decoder();
+    if (ctx) decode(ctx, name);
   },
   /** Every sound there is. */
   names: (): SoundName[] => Object.keys(LIB) as SoundName[],

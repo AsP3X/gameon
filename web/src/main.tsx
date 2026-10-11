@@ -9,6 +9,7 @@ import '@fontsource/pirata-one/400.css';
 import './styles/tokens.css';
 import './styles/tavern.css';
 import { App } from './App';
+import { loadSamples } from './sound/samples';
 
 const root = document.getElementById('root');
 if (!root) throw new Error('index.html has no #root element');
@@ -17,3 +18,5 @@ createRoot(root).render(
     <App />
   </StrictMode>,
 );
+// The recorded card sounds. Nothing waits for them: the table plays the synthesised ones until they are in.
+void loadSamples();
