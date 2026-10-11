@@ -322,3 +322,128 @@ input.code-input[aria-invalid='true'] {
   min-width: 0;
   padding-inline: 8px;
 }
+
+/* The player's identity on the hub is a plate: who they are, and the way to their profile. */
+.plate.identity small {
+  line-height: 1.4;
+}
+.plate.identity b {
+  font-size: 16px;
+}
+
+/* A text field that takes the row. */
+input.field {
+  flex: none;
+  width: 100%;
+  min-height: 46px;
+}
+input.field[aria-invalid='true'] {
+  border-color: var(--red);
+}
+
+/* Who a profile is about: the big avatar, the name, and what kind of account it is. */
+.who {
+  gap: 14px;
+  padding-block: 4px;
+}
+.who b {
+  display: block;
+  font-size: 20px;
+  font-weight: 900;
+  overflow-wrap: anywhere;
+}
+.who .pill {
+  margin-top: 4px;
+}
+
+/* The eight table colours: four to a row, each a 48 px target around its dot. */
+.swatches {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+}
+.swatch {
+  display: grid;
+  place-items: center;
+  height: 48px;
+  border: 0;
+  background: none;
+  padding: 0;
+}
+.swatch i {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  /* The ring of the chosen colour: a gap in the page colour, then the text colour. */
+  box-shadow: 0 0 0 3px var(--bg);
+}
+.swatch[aria-checked='true'] i {
+  box-shadow:
+    0 0 0 3px var(--bg),
+    0 0 0 6px var(--fg);
+}
+
+/* A human at the table is a button to their profile; it looks like the row it is in. */
+.member-link {
+  display: block;
+  min-height: 44px;
+  border: 0;
+  background: none;
+  padding: 0;
+  text-align: left;
+  color: inherit;
+  font: inherit;
+}
+
+/* The public tables. */
+ul.tables {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.tables .plate b {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mini[disabled] {
+  color: var(--faint);
+  box-shadow: none;
+}
+
+/* Waiting in the queue: one dot per seat the table needs. */
+.searching {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding-top: 18px;
+  text-align: center;
+}
+.queue-seats {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  padding-bottom: 6px;
+}
+.queue-seat {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 2px solid var(--line);
+  color: var(--faint);
+  font-size: 16px;
+  font-weight: 900;
+}
+.queue-seat.found {
+  border: 0;
+  background: var(--green);
+  color: var(--white);
+  box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.18);
+}
+.queue-seat svg {
+  width: 22px;
+  height: 22px;
+}

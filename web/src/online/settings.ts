@@ -68,3 +68,12 @@ export function describeSettings(s: GameSettings): { title: string; detail: stri
     ].join(' · '),
   };
 }
+
+/** The two lines under a host's name in the public list: how full the table is, and what is played. */
+export function describeTable(s: GameSettings, players: number): { seats: string; rules: string } {
+  const { title, detail } = describeSettings(s);
+  return {
+    seats: `${players} of ${s.maxPlayers} pirates · ${title}`,
+    rules: detail.split(' · ').slice(1).join(' · '),
+  };
+}
