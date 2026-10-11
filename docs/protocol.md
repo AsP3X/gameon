@@ -161,6 +161,11 @@ type Welcome = {
 takes this one. A second socket for the same user closes the first with `{ t: 'superseded' }` and
 close code 4001.
 
+A reply is written only to the socket its message arrived on. Closing that socket ends every `id`
+still waiting on it. The next socket receives no `ok` or `err` for those ids. The client forgets
+them and does not send the intent again. `welcome` shows whether it was accepted: a game intent
+that landed is in `welcome.game`, and one that did not is absent from that snapshot.
+
 Heartbeat: the client sends `{ t: 'ping', id }` every 15 seconds; the reply is
 `{ t: 'ok', re, serverTime }`. The server drops a socket that has been silent for 45 seconds.
 
@@ -296,6 +301,17 @@ finishes both writes before it takes the next step. An `err` is the whole answer
 and is not followed by a `game.update`. Other seats receive the step as a `game.update` only.
 When the step ends the game, `game.over` follows that `game.update`. An accepted `game.emote` is
 the same pair with the `game.emote` push in place of `game.update`. `protocol` stays 1.
+
+A bot move, a timeout and the server's `advance` are steps of their own. Each is its own
+`game.update`, written to a socket only after both frames of an earlier pair are queued on it.
+
+`game.leave` uses the `ok` then `game.update` pair, and that socket then receives no further
+`game.update` for the game. The client takes the table down when that update has been presented.
+The seat is a bot from that step. A later `welcome` for that user has `game: null`, and the hand
+cannot be resumed. In ranked the leave is a forfeit, recorded then and scored last. `forfeited`
+and `rating` travel on `game.over`, sent to the leaver when the game ends. If the leaver has no
+socket at that moment, that `game.over` is written immediately after the next `welcome`, which
+still has `game: null`. It does not put the table back.
 
 Other pushes:
 
