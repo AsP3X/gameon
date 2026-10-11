@@ -456,10 +456,10 @@ async fn drive(
                         .world
                         .lock()
                         .await
-                        .reject(&user, id, skt_protocol::ErrorCode::RateLimited);
+                        .reject(&user, conn, id, skt_protocol::ErrorCode::RateLimited);
                     continue;
                 }
-                state.world.lock().await.on_message(&user, &text);
+                state.world.lock().await.on_message(&user, conn, &text);
                 state.persist_penalties().await;
                 if !greeted && state.world.lock().await.greeted(&user, conn) {
                     greeted = true;

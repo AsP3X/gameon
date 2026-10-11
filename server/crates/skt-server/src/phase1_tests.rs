@@ -81,7 +81,12 @@ async fn a_second_socket_closes_the_first_with_4001() {
             }
         }
     });
-    let _second = open_socket(port, &cookie).await;
+    let mut second = open_socket(port, &cookie).await;
+    send(
+        &mut second,
+        r#"{"t":"hello","id":1,"protocol":1,"build":"test"}"#,
+    )
+    .await;
     let mut saw_text = false;
     let mut saw_close = false;
     for _ in 0..4 {
@@ -101,6 +106,30 @@ async fn a_second_socket_closes_the_first_with_4001() {
         }
     }
     assert!(saw_text && saw_close, "text {saw_text} close {saw_close}");
+}
+
+#[tokio::test]
+async fn an_ungreeted_socket_does_not_replace_the_live_one() {
+    let state = AppState::for_socket_tests(Duration::from_secs(5), Duration::from_secs(45));
+    let port = serve(state).await;
+    let cookie = guest(port).await;
+    let mut first = open_socket(port, &cookie).await;
+    send(
+        &mut first,
+        r#"{"t":"hello","id":1,"protocol":1,"build":"test"}"#,
+    )
+    .await;
+    let _ = read_text(&mut first).await;
+    let _ = read_text(&mut first).await;
+    let mut second = open_socket(port, &cookie).await;
+    send(&mut first, r#"{"t":"ping","id":2}"#).await;
+    let reply = read_text(&mut first).await;
+    assert!(reply.contains("\"t\":\"ok\""), "{reply}");
+    second.close(None).await.expect("close");
+    send(&mut first, r#"{"t":"ping","id":3}"#).await;
+    let again = read_text(&mut first).await;
+    assert!(again.contains("\"t\":\"ok\""), "{again}");
+    assert!(!again.contains("superseded"), "{again}");
 }
 
 fn close_frame(code: u16) -> tokio_tungstenite::tungstenite::protocol::CloseFrame {

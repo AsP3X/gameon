@@ -196,6 +196,8 @@ describe('four players at one table', () => {
     for (const p of players) {
       await expect.poll(() => p.page.locator('#app .end .end-top .label').textContent()).toBe('Final scores');
       expect(p.view).toMatchObject({ phase: 'gameOver', round: 4, rounds: 5 });
+      // The end screen follows the final `game.update`. `game.over` is the next frame, after the result is stored.
+      await until(() => p.framesOf('game.over').length === 1, `${p.name} receives game.over`, 10_000);
       const results = p.framesOf('game.over');
       expect(results).toHaveLength(1);
       expect(results[0].result.totals).toEqual(players[0].framesOf('game.over')[0].result.totals);
