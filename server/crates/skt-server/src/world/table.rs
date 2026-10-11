@@ -74,6 +74,8 @@ pub struct GameReport {
     pub rated: Vec<RatedResult>,
     /// `game.over` for each human, sent after the result is stored.
     pub overs: Vec<(UserId, GameOver)>,
+    /// Ranked seats that were away for most rounds. A `game.leave` is not repeated here.
+    pub penalise: Vec<UserId>,
 }
 
 /// Skill copied onto a seat when the game opens.
@@ -108,6 +110,10 @@ struct Running {
     report: Option<GameReport>,
     owed: HashMap<UserId, GameOver>,
     forfeited: Vec<Seat>,
+    /// Rounds that reached round end.
+    rounds: u32,
+    /// How many of those rounds ended while this seat was away.
+    away_rounds: Vec<u32>,
 }
 
 /// Every game in the process.
@@ -177,6 +183,7 @@ impl Tables {
         } else {
             TableMode::Custom
         };
+        let players = seats.len();
         let mut running = Running {
             id: id.clone(),
             lobby_id: lobby.id.clone(),
@@ -196,6 +203,8 @@ impl Tables {
             report: None,
             owed: HashMap::new(),
             forfeited: Vec::new(),
+            rounds: 0,
+            away_rounds: vec![0; players],
         };
         running.ready.resize(running.seats.len(), false);
         running.arm(now);
@@ -715,10 +724,14 @@ impl Running {
     }
 
     fn advance(&mut self, now: Instant, live: &HashMap<UserId, super::Live>) -> bool {
+        let round_end = self.state.phase() == Phase::RoundEnd;
         let mut deals = DeckShuffle::new(self.state.deck().len());
         let Ok(events) = self.state.advance(&mut deals) else {
             return false;
         };
+        if round_end {
+            self.note_round_end();
+        }
         self.ready.fill(false);
         let wire: Vec<GameEvent> = events.into_iter().map(GameEvent::Engine).collect();
         self.publish(&wire, None, live);
@@ -874,7 +887,8 @@ impl Running {
             .state
             .totals()
             .unwrap_or_else(|_| vec![0; self.players()]);
-        let forfeited_index: Vec<usize> = self.forfeited.iter().map(|seat| seat.index()).collect();
+        let forfeits = self.ranked_forfeits();
+        let forfeited_index: Vec<usize> = forfeits.iter().map(|seat| seat.index()).collect();
         let places = if self.mode == TableMode::Ranked {
             rating::ranked_places(&totals, &forfeited_index)
         } else {
@@ -930,7 +944,7 @@ impl Running {
                         totals: totals.clone(),
                         places: places.clone(),
                         forfeited: if self.mode == TableMode::Ranked {
-                            self.forfeited.clone()
+                            forfeits.clone()
                         } else {
                             Vec::new()
                         },
@@ -947,7 +961,51 @@ impl Running {
             seats: tallies,
             rated,
             overs,
+            penalise: self.away_penalties(&forfeits),
         });
+    }
+
+    fn note_round_end(&mut self) {
+        self.rounds = self.rounds.saturating_add(1);
+        for (index, count) in self.away_rounds.iter_mut().enumerate() {
+            if self.status.get(index) == Some(&SeatStatus::Away) {
+                *count = count.saturating_add(1);
+            }
+        }
+    }
+
+    /// `game.leave` seats, plus a ranked seat that was away for most rounds.
+    fn ranked_forfeits(&self) -> Vec<Seat> {
+        let mut seats = self.forfeited.clone();
+        if self.mode != TableMode::Ranked {
+            return seats;
+        }
+        for index in 0..self.players() {
+            let away = self.away_rounds.get(index).copied().unwrap_or(0);
+            if !rating::away_is_forfeit(away, self.rounds) {
+                continue;
+            }
+            let seat = Seat::from_index(u8::try_from(index).unwrap_or(0));
+            if !seats.contains(&seat) {
+                seats.push(seat);
+            }
+        }
+        seats
+    }
+
+    fn away_penalties(&self, forfeits: &[Seat]) -> Vec<UserId> {
+        if self.mode != TableMode::Ranked {
+            return Vec::new();
+        }
+        forfeits
+            .iter()
+            .filter(|seat| !self.forfeited.contains(seat))
+            .filter_map(|seat| {
+                self.seats
+                    .get(seat.index())
+                    .and_then(|play| play.user.clone())
+            })
+            .collect()
     }
 
     fn rated_changes(

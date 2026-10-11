@@ -302,8 +302,7 @@ waiting is not seated. Each waiter has a window around the ordinal they had on j
 with no rating uses 0. The window starts at ±10 and grows by ±10 for every 15 seconds spent
 waiting. Two waiters match only when each is inside the other's window. The server looks at the
 12 who have waited the longest and seats the oldest compatible four. Four accounts on 0 match at
-once, in join order. `game.start` then carries each human's `SeatInfo.tier`: the tier string when
-that account already has a visible rating, otherwise null.
+once, in join order. `SeatInfo.tier` on that `game.start` follows the rule under the `SeatInfo` type.
 
 A table made by either queue has no lobby. `game.start` carries `lobbyId: null`. Casual carries
 `mode: 'casual'`. Ranked carries `mode: 'ranked'`. `settings` are `config.standard`. Humans sit in
@@ -342,6 +341,10 @@ type Card =
   | { id: CardId; kind: 'pirate'; ability: 'helm' | 'smuggler' | 'gambler' | 'seer' | 'giant' }
   | { id: CardId; kind: 'escape' | 'tigress' | 'sk' | 'mermaid' | 'loot' | 'kraken' | 'whale' };
 type SeatInfo = { name: string; color: TableColor; bot: boolean; userId: UserId | null; tier: string | null };
+
+`SeatInfo.tier` is the account's tier when that account has a visible rating at the deal, and null
+when it does not. A custom table, a casual table and a ranked table use that same rule. A bot seat
+is null. The client draws a tier from a `Rating`, not from `SeatInfo`.
 
 type GameUpdate = {
   t: 'game.update';
@@ -487,6 +490,14 @@ meets a clock while it is already running uses that scaled length, or the time r
 is longer. A missed deadline plays the bot's move for that turn and emits `timedOut`. Two in a row
 set the seat to `away`; an away seat is played after 1.5 seconds and returns to `online` on the
 player's next accepted intent. Round end waits for `online` and `away` humans, as §5.5 says.
+
+In a ranked game, a seat that is `away` when more than half of the rounds end is a forfeit. A
+round counts at the moment it ends. Coming back to `online` before that moment keeps the round
+off the count. The forfeit is applied when the game ends, not when the seat first goes `away`:
+the place is last, the seat is appended to `forfeited` after any `game.leave` seats, and
+`Me.cooldownUntil` is set then, by the same steps as a leave. A seat that already sent
+`game.leave` is not penalised again. Casual and custom games do not do this. The away player is
+still seated, so `game.over` arrives on the open table, not as a notice after `game.leave`.
 
 ## 6. What a seat never receives
 

@@ -48,6 +48,7 @@ async fn ladder_pages_hide_usernames_and_reject_a_bad_query(pool: sqlx::PgPool) 
             mode: "ranked",
             seats: vec![],
             overs: vec![],
+            penalise: vec![],
             rated: vec![rated(&id, 0, 1, 30.0)],
         })
         .await;
@@ -103,8 +104,8 @@ async fn a_ranked_leave_is_last_and_rated_and_cooled_down(pool: sqlx::PgPool) {
         overs.push(until_over(socket).await);
     }
     for over in &overs {
-        assert!(over.contains("\"places\":[4,"), "{over}");
-        assert!(over.contains("\"forfeited\":[0]"), "{over}");
+        assert!(over.contains("\"places\":[4,4,4,4]"), "{over}");
+        assert!(over.contains("\"forfeited\":[0,1,2,3]"), "{over}");
         assert!(over.contains("\"rating\":{"), "{over}");
         assert!(over.contains("\"games\":1"), "{over}");
         assert_eq!(over.matches("\"rating\":").count(), 1, "{over}");
@@ -115,6 +116,9 @@ async fn a_ranked_leave_is_last_and_rated_and_cooled_down(pool: sqlx::PgPool) {
     assert!(me.contains("\"games\":0"), "{me}");
     assert!(me.contains("\"cooldownUntil\":"), "{me}");
     assert!(!me.contains("\"cooldownUntil\":null"), "{me}");
+    let (status, _, other) = http(port, "GET", "/api/v1/me", &cookies[1], "").await;
+    assert_eq!(status, 200, "{other}");
+    assert!(!other.contains("\"cooldownUntil\":null"), "{other}");
     send(
         &mut sockets[0],
         r#"{"t":"queue.join","id":10,"mode":"ranked"}"#,
@@ -166,6 +170,7 @@ async fn a_far_rating_waits_for_the_window_to_widen(pool: sqlx::PgPool) {
             mode: "ranked",
             seats: vec![],
             overs: vec![],
+            penalise: vec![],
             rated: vec![rated(&id, 0, 1, 105.0)],
         })
         .await;

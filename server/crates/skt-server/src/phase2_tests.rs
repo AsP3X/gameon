@@ -300,6 +300,7 @@ async fn stats_are_visible_on_me_after_a_recorded_game(pool: sqlx::PgPool) {
             mode: "casual",
             rated: vec![],
             overs: vec![],
+            penalise: vec![],
             seats: vec![crate::world::SeatTally {
                 user: skt_protocol::UserId::new(id),
                 seat: 0,
@@ -395,6 +396,7 @@ async fn a_ranked_result_does_not_change_casual_stats(pool: sqlx::PgPool) {
             mode: "ranked",
             rated: vec![],
             overs: vec![],
+            penalise: vec![],
             seats: vec![crate::world::SeatTally {
                 user: skt_protocol::UserId::new(id),
                 seat: 0,

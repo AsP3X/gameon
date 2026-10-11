@@ -120,11 +120,14 @@ impl AppState {
             } else {
                 true
             };
-            let mut world = self.world.lock().await;
-            world.deliver(&report);
-            if stored {
-                world.apply_report(&report);
+            {
+                let mut world = self.world.lock().await;
+                world.deliver(&report);
+                if stored {
+                    world.apply_report(&report);
+                }
             }
+            self.persist_penalties().await;
         }
     }
 

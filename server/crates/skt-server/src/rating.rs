@@ -159,6 +159,12 @@ pub fn active_cooldown(until: Option<i64>, now_ms: i64) -> Option<i64> {
     until.filter(|until| *until > now_ms)
 }
 
+/// A ranked seat that was away at the end of more than half the rounds is a forfeit.
+#[must_use]
+pub fn away_is_forfeit(away_rounds: u32, rounds: u32) -> bool {
+    rounds > 0 && away_rounds.saturating_mul(2) > rounds
+}
+
 /// How long ranked stays closed after a leave. `leaves` includes the one just taken.
 #[must_use]
 pub fn cooldown_ms(leaves: u32) -> i64 {
@@ -397,8 +403,8 @@ fn civil_from_unix_days(unix_days: i64) -> (i32, u32, u32) {
 mod tests {
     use super::{
         COOLDOWN_BASE_MS, COOLDOWN_CAP_MS, PLACEMENT_GAMES, Waiter, active_cooldown, active_leaves,
-        civil_from_unix_days, cooldown_ms, ordinal, pick_table, prior, ranked_places, rate,
-        season_at, tier_name, to_rating, unix_days_from_civil,
+        away_is_forfeit, civil_from_unix_days, cooldown_ms, ordinal, pick_table, prior,
+        ranked_places, rate, season_at, tier_name, to_rating, unix_days_from_civil,
     };
     use skillratings::MultiTeamOutcome;
     use skillratings::weng_lin::{WengLinConfig, WengLinRating, weng_lin_multi_team};
@@ -483,6 +489,14 @@ mod tests {
             ordinal(got[2].mu, got[2].sigma)
         );
         assert!(ordinal(got[3].mu, got[3].sigma) > ordinal(got[0].mu, got[0].sigma));
+    }
+
+    #[test]
+    fn away_for_most_rounds_is_a_forfeit() {
+        assert!(!away_is_forfeit(0, 0));
+        assert!(!away_is_forfeit(2, 5));
+        assert!(away_is_forfeit(3, 5));
+        assert!(away_is_forfeit(1, 1));
     }
 
     #[test]

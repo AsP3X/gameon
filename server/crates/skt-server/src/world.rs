@@ -309,6 +309,9 @@ impl World {
         for rated in &report.rated {
             self.identity.set_rated(&rated.user, rated.after, season);
         }
+        for user in &report.penalise {
+            self.penalise(user);
+        }
         self.tables.deliver(report, &self.live);
     }
 
