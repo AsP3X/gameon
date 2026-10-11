@@ -1,5 +1,4 @@
-//! Replays recorded games. `fixtures/engine` is Claude's generator. `tests/reference` is a
-//! stand-in recorded from the legacy reducer until those fixtures land.
+//! Replays every game in `fixtures/engine`. A checkout without that directory fails.
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -26,37 +25,22 @@ struct Table {
 }
 
 #[test]
-fn reference_games_match_the_legacy_reducer() {
-    replay_dir(&PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/reference"));
-}
-
-#[test]
-fn engine_fixtures_match_when_present() {
+fn engine_fixtures_replay() {
     let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../../fixtures/engine");
-    if !path.exists() {
-        eprintln!("fixtures/engine is absent; conformance replay skipped");
-        return;
-    }
+    assert!(
+        path.is_dir(),
+        "fixtures/engine is missing; a checkout without it cannot pass"
+    );
     let games = json_files(&path);
     assert!(
         !games.is_empty(),
-        "fixtures/engine exists but contains no JSON fixtures"
+        "fixtures/engine contains no JSON fixtures"
     );
-    for game in games {
-        replay_file(&game);
+    let count = games.len();
+    for game in &games {
+        replay_file(game);
     }
-}
-
-fn replay_dir(path: &Path) {
-    let games = json_files(path);
-    assert!(
-        !games.is_empty(),
-        "no reference games in {}",
-        path.display()
-    );
-    for game in games {
-        replay_file(&game);
-    }
+    eprintln!("replayed {count} engine fixtures");
 }
 
 fn json_files(path: &Path) -> Vec<PathBuf> {
@@ -95,7 +79,7 @@ fn replay_file(path: &Path) {
 
 impl Table {
     fn start(name: &str, fixture: &Value) -> Self {
-        let rules = rules_of(&fixture["settings"]);
+        let rules = rules_of(name, &fixture["settings"]);
         let players = narrow(name, &fixture["players"]);
         let dealer = Seat::from_index(narrow(name, &fixture["dealer"]));
         let rounds = fixture["deals"]
@@ -218,29 +202,36 @@ fn step_code(error: StepError) -> String {
     }
 }
 
-fn rules_of(value: &Value) -> Ruleset {
-    let scoring = if value["scoring"] == "rascal" {
-        Scoring::Rascal
-    } else {
-        Scoring::Classic
+fn rules_of(name: &str, value: &Value) -> Ruleset {
+    let scoring = match value["scoring"].as_str() {
+        Some("classic") => Scoring::Classic,
+        Some("rascal") => Scoring::Rascal,
+        other => panic!("{name} has scoring {other:?}"),
     };
-    let format = match value["format"].as_str().unwrap_or("swift") {
-        "classic" => skt_engine::Format::Classic,
-        "brawl" => skt_engine::Format::Brawl,
-        "even" => skt_engine::Format::Even,
-        "whirl" => skt_engine::Format::Whirl,
-        _ => skt_engine::Format::Swift,
+    let format = match value["format"].as_str() {
+        Some("classic") => skt_engine::Format::Classic,
+        Some("brawl") => skt_engine::Format::Brawl,
+        Some("even") => skt_engine::Format::Even,
+        Some("whirl") => skt_engine::Format::Whirl,
+        Some("swift") => skt_engine::Format::Swift,
+        other => panic!("{name} has format {other:?}"),
     };
     Ruleset::new(
         scoring,
         format,
         skt_engine::Expansions {
-            loot: value["loot"].as_bool() == Some(true),
-            kraken: value["kraken"].as_bool() == Some(true),
-            whale: value["whale"].as_bool() == Some(true),
+            loot: bool_flag(name, value, "loot"),
+            kraken: bool_flag(name, value, "kraken"),
+            whale: bool_flag(name, value, "whale"),
         },
-        value["abilities"].as_bool() == Some(true),
+        bool_flag(name, value, "abilities"),
     )
+}
+
+fn bool_flag(name: &str, value: &Value, key: &str) -> bool {
+    value[key]
+        .as_bool()
+        .unwrap_or_else(|| panic!("{name} settings.{key} must be a boolean"))
 }
 
 fn ids(name: &str, value: &Value) -> Vec<CardId> {
