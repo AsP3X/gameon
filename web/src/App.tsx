@@ -47,7 +47,7 @@ export function App({ backend = appBackend }: AppProps) {
       leave: () => online.leaveTable(),
       exit: () => online.closeTable(),
       ranked: table.mode === 'ranked',
-      rating: () => table.result?.rating ?? null,
+      result: () => table.result,
     });
     const unlisten = table.onResult(showOnlineResult);
     return () => {

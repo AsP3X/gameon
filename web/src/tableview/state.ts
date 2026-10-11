@@ -6,7 +6,7 @@
    every module mutates the same ones. `loadState()` fills them from storage when the table mounts. */
 import { Rules } from '../game';
 import type { GameState, ScoreConfig, ScoreRecord, SeatConfig, TableView } from '../game';
-import type { BotLevel, CardId, Format, RatingChange, RoundRecord, Scoring, Seat } from '../protocol/generated';
+import type { BotLevel, CardId, Format, GameResult, RoundRecord, Scoring, Seat } from '../protocol/generated';
 import { Sound } from '../sound/sound';
 import type { DispatchResult, GetView, Table } from '../table/table';
 import { Store } from './store';
@@ -221,8 +221,11 @@ export interface OnlineHooks {
   exit(): void;
   /** A ranked game: leaving it is a forfeit, and the player is told so before they do it. */
   ranked: boolean;
-  /** This seat's rating change, once the server has sent the result of a ranked game. null until then, and in any other game. */
-  rating(): RatingChange | null;
+  /**
+   * What the server said the game came to (`game.over`), once it has: every seat's place, the seats
+   * that forfeited, and in ranked this seat's rating change. null until then.
+   */
+  result(): GameResult | null;
 }
 
 export interface Session {

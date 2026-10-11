@@ -278,6 +278,43 @@ describe('ranked, for an account', () => {
     expect($('#online h2')?.textContent).toBe('Ranked');
   });
 
+  it('ranks the end screen by the places the server sent: a seat that forfeited is last and marked, whatever it scored', async () => {
+    await openHub('anne_login');
+    await press('Find a ranked game');
+    const [calico, mary] = await threeMore();
+    // Calico gives the seat up at the deal: a bot plays it to the end, and the server places it last.
+    calico.send({ t: 'game.leave' });
+    await settle();
+    for (let i = 0; i < 800 && ui.screen !== 'end'; i++) await settle(250);
+    expect(ui.screen).toBe('end');
+    await settle();
+    const { result } = framesOf(mary, 'game.over')[0];
+    expect(result).toMatchObject({ forfeited: [1] });
+    expect(result.places[1]).toBe(4);
+    const names = ['Anne', 'Calico', 'Mary', 'Kidd'];
+    // The hero is whoever the server placed first, and the list below is in the server's order.
+    const first = names.filter((_, seat) => result.places[seat] === 1);
+    expect($('#app .hero-win h1')?.textContent).toBe(first.join(' & '));
+    const rows = Array.from(document.querySelectorAll<HTMLElement>('#app .standings li'));
+    expect(rows.map((li) => Number(li.querySelector('.rank')?.textContent))).toEqual(
+      result.places.filter((place) => place > 1).toSorted((a, b) => a - b),
+    );
+    const last = rows[rows.length - 1];
+    expect(last.querySelector('.pname')?.textContent).toBe('Calico');
+    expect(last.querySelector('.rank')?.textContent).toBe('4');
+    expect(last.querySelector('.pill')?.textContent).toBe('Forfeit');
+    // Its points are the points as played: they are shown, and they did not decide the place.
+    expect(last.querySelector('b.num')?.getAttribute('data-final')).toBe(String(result.totals[1]));
+    expect(rows.filter((li) => li.querySelector('.pill'))).toHaveLength(1);
+    // The page stayed to the end: the rating line is here, and no "you left" notice follows on the hub.
+    expect($('#app .end-rating')?.hidden).toBe(false);
+    await click('[data-act="again"]');
+    await settle();
+    expect($('#online h2')?.textContent).toBe('Play online');
+    expect($('#online .notice.gold')).toBeNull();
+    expect((await me()).cooldownUntil).toBeNull();
+  });
+
   it('keeps the casual leave sheet as it was', async () => {
     await openHub('anne_login');
     await press('Find a game');

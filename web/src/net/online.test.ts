@@ -319,6 +319,21 @@ describe('Online', () => {
     expect(online.getState().table?.gameId).toBe(game.start.gameId);
   });
 
+  it('gives a result that arrives at the open table to the table, and makes no notice of it: also a forfeit for being away', () => {
+    welcome({ game });
+    const seat = game.start.me;
+    wire().say({
+      t: 'game.over',
+      gameId: game.start.gameId,
+      result: { totals: [0, 0], places: [2, 1], forfeited: [seat], rating: null, lobbyId: null },
+    });
+    // The player is still at the table: the end screen there shows the place and the forfeit.
+    // "You left before the end" is for a seat that was given up with `game.leave`, and nothing else.
+    expect(online.getState().notice).toBeNull();
+    expect(online.getState().table?.result).toMatchObject({ forfeited: [seat], places: [2, 1] });
+    expect(online.getState().table?.hasLeft).toBe(false);
+  });
+
   it('asks a public table for a seat by its id', () => {
     welcome();
     void online.joinPublicLobby(lobby.id);

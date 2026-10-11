@@ -5,7 +5,7 @@
 import { Rules } from '../game';
 import type { GameState, Score, ScoreConfig, ScoreRecord, TableView } from '../game';
 import { clamp, fill } from '../game/util';
-import type { AbilityUsed, Card, CardId, RatingChange, Seat } from '../protocol/generated';
+import type { AbilityUsed, Card, CardId, GameResult, RatingChange, Seat } from '../protocol/generated';
 import { avatar, cardBack, cardHTML, ICON, mascot } from './art';
 import type { FaceCard } from './art';
 import { esc, initial, sgn, toneOf, whole } from './dom';
@@ -657,6 +657,38 @@ function awards(v: ScoreView): Award[] {
     A.push({ c: 'var(--blue)', i: ICON.crown, t: 'Biggest haul', d: `${a.who} · ${sgn(a.v)} in one round` });
   return A;
 }
+/** One seat on the end screen: its points, where it finished, and whether it gave the game up. */
+export interface Standing {
+  i: Seat;
+  t: number;
+  rank: number;
+  forfeit: boolean;
+}
+/**
+ * Where each seat finished, best first. Offline, and online until the server's result is in, that
+ * is the order of the points. Online the places are the server's: a seat that forfeited a ranked
+ * game is last whatever was scored in it, and the client does not decide that from the points.
+ */
+export function standings(totals: number[], result: GameResult | null): Standing[] {
+  const places = result && result.places.length === totals.length ? result.places : null,
+    forfeited = result?.forfeited ?? [];
+  return totals
+    .map((t, i) => ({
+      t,
+      i,
+      rank: places ? places[i] : 1 + totals.filter((x) => x > t).length,
+      forfeit: forfeited.includes(i),
+    }))
+    .sort((a, b) => a.rank - b.rank || b.t - a.t);
+}
+/** Whether the server's result puts the seats anywhere else than their points do: the end screen has to be drawn again then. */
+export function movesStandings(result: GameResult): boolean {
+  const v = scoreView(),
+    tot = Rules.totals(v.log, v.cfg, v.seats.length),
+    drawn = standings(tot, null),
+    told = standings(tot, result);
+  return drawn.some((x, k) => x.i !== told[k].i || x.rank !== told[k].rank || x.forfeit !== told[k].forfeit);
+}
 /** One screen, no scrolling. Rendered in its pre-reveal state; playFinale() uncovers it step by step. */
 export function endView(): string {
   const v = scoreView(),
@@ -664,22 +696,23 @@ export function endView(): string {
     tot = Rules.totals(v.log, v.cfg, n),
     H = localSeatsOf(v),
     solo = H.length === 1,
-    // Only a ranked game has a rating line. It stays empty until the server's result is in.
+    // Online, the server's result says who finished where, once it is in. Only a ranked game has a
+    // rating line, which stays empty until then.
+    result = session.online?.result() ?? null,
     ranked = session.online?.ranked === true,
-    change = session.online?.rating() ?? null;
-  const order = tot
-    .map((t, i) => ({ t, i }))
-    .sort((a, b) => b.t - a.t)
-    .map((x) => ({ ...x, rank: 1 + tot.filter((t) => t > x.t).length }));
-  const winners = order.filter((x) => x.rank === 1),
-    rest = order.filter((x) => x.rank > 1);
+    change = result?.rating ?? null;
+  const order = standings(tot, result),
+    // First place, or the best place there is should the server have given nobody the first.
+    best = Math.min(...order.map((x) => x.rank));
+  const winners = order.filter((x) => x.rank === best),
+    rest = order.filter((x) => x.rank > best);
   const done = ui.finaleDone,
     shown = (t: number): number => (done ? t : 0);
   const rows = rest
     .map((x, k) => {
       const p = v.seats[x.i];
       return `<li class="${solo && x.i === H[0] ? 'you' : ''}" data-step="${rest.length - 1 - k}"><span class="rank ${x.rank <= 3 ? 'r' + x.rank : ''}">${x.rank}</span>${avatar(p, 'sm')}
-      <span class="grow pname">${esc(p.name)}</span><b class="num" data-final="${x.t}">${shown(x.t)}</b></li>`;
+      <span class="grow pname">${esc(p.name)}</span>${x.forfeit ? '<span class="pill soft">Forfeit</span>' : ''}<b class="num" data-final="${x.t}">${shown(x.t)}</b></li>`;
     })
     .join('');
   const aw = awards(v)

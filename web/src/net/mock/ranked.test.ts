@@ -259,6 +259,13 @@ describe('the result of a ranked game', () => {
       // A ranked game is counted in the rating's `games`, and changes no `Stats`.
       expect(me.stats).toEqual({ games: 0, wins: 0, bidsMade: 0, bidsTotal: 0, bestScore: null });
     }
+    // With a rating, the seat is announced with its tier at a casual table too. A bot's is null.
+    const rated = players[0],
+      tier = (await rated.me()).user.tier;
+    await ask(rated.socket, { t: 'queue.join', mode: 'casual' });
+    await vi.advanceTimersByTimeAsync(QUEUE_FILL_MS);
+    expect(last(rated.socket, 'game.start')).toMatchObject({ mode: 'casual' });
+    expect(last(rated.socket, 'game.start').seats.map((s) => s.tier)).toEqual([tier, null, null, null]);
     // Whatever the model, between equals a better place is never worth less.
     for (const [a, placeA] of places.entries())
       for (const [b, placeB] of places.entries())
@@ -299,7 +306,7 @@ describe('the result of a ranked game', () => {
     expect((await anne.me()).rating).toBeNull();
     expect((await anne.me()).stats.games).toBe(1);
     expect((await anne.call('GET', '/ladder')).body).toMatchObject({ entries: [] });
-    // A casual table announces no tiers.
+    // A seat says the tier its account has at the deal, at any table: this one has none, and a bot never has.
     expect(last(anne.socket, 'game.start').seats.map((s) => s.tier)).toEqual([null, null, null, null]);
   });
 });

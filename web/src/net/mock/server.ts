@@ -23,7 +23,9 @@
    does not do. It does not rate: where the server runs Weng-Lin, the mock moves a rating by a
    fixed step for each place, so its numbers have the right shape and mean nothing. And it has no
    skill window: the first four accounts in the ranked queue sit down, whatever their ratings.
-   It also never sees a season end, so it has no soft reset.
+   It also never sees a season end, so it has no soft reset. And since it never marks a seat away,
+   it has no forfeit for a ranked seat that was away for most of the game (§5.6): in the mock a
+   forfeit is a `game.leave`.
 
    A browser() is one browser profile: a cookie jar that holds at most one session, the REST calls
    that carry it, and the sockets opened with it. */
@@ -249,7 +251,7 @@ interface Game {
   /** Who plays each seat. null is a bot seat, or one whose player left. */
   players: (Account | null)[];
   colors: TableColor[];
-  /** The tier each seat is announced with in `game.start`: a ranked player's, if they had a rating at the deal. */
+  /** The tier each seat is announced with in `game.start`: its account's at the deal, if it had a rating. */
   tiers: (string | null)[];
   /** Those who left, and the seat they gave up. In ranked that is a forfeit. */
   leavers: { account: Account; seat: Seat }[];
@@ -981,8 +983,8 @@ export class MockServer {
       rev: 0,
       players,
       colors: seats.map((p) => p.color),
-      // A tier is announced only at a ranked table, and only for an account that has a rating.
-      tiers: players.map((a) => (mode === 'ranked' ? (a?.me.rating?.tier ?? null) : null)),
+      // A seat is announced with the tier its account has at the deal, at any table; a bot's is null.
+      tiers: players.map((a) => a?.me.rating?.tier ?? null),
       leavers: [],
       status: players.map((a) => (a ? (a.conn ? 'online' : 'offline') : 'bot')),
       ready: players.map(() => false),

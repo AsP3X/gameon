@@ -75,7 +75,7 @@ function openTable(): void {
     schedule: () => {},
     stop: () => {},
   };
-  openOnlineTable(table, { leave, exit, ranked: false, rating: () => null });
+  openOnlineTable(table, { leave, exit, ranked: false, result: () => null });
 }
 
 beforeEach(() => {
