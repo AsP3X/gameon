@@ -26,8 +26,9 @@ pub use output::{
     write_fixtures,
 };
 pub use pushes::{
-    CloseReason, ErrMessage, GameEmotePush, GameOver, LobbyClosed, LobbyStatePush, OkReply,
-    QueueStatusPush, Superseded, Welcome, WelcomeGame,
+    CloseReason, ErrMessage, ErrTag, GameEmotePush, GameOver, GameOverTag, LobbyClosed,
+    LobbyClosedTag, LobbyStatePush, LobbyStateTag, OkReply, OkTag, QueueStatusPush, QueueStatusTag,
+    Superseded, SupersededTag, Welcome, WelcomeGame, WelcomeTag,
 };
 pub use rest::{
     Active, Credentials, Health, LadderEntry, LadderPage, Me, Profile, ProfilePatch, Rating,
@@ -35,8 +36,8 @@ pub use rest::{
 };
 pub use settings::{ExpansionFlags, GameSettings, Pace};
 pub use table::{
-    Deadline, DeadlineKind, GameEvent, GameResult, GameStart, GameUpdate, OnlineEvent,
-    RatingChange, SeatInfo, SeatStatus, TableInfo,
+    Deadline, DeadlineKind, GameEvent, GameResult, GameStart, GameStartTag, GameUpdate,
+    GameUpdateTag, OnlineEvent, RatingChange, SeatInfo, SeatStatus, TableInfo,
 };
 
 pub use skt_engine::GameEvent as EngineEvent;

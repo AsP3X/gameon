@@ -1,0 +1,58 @@
+# Rendered by the nginx image envsubst entrypoint.
+# Substitutes ${API_UPSTREAM} only. Other $names are nginx variables.
+
+server {
+    listen 80;
+    server_name _;
+    root /usr/share/nginx/html;
+    index index.html;
+
+    absolute_redirect off;
+    port_in_redirect off;
+
+    # Posts are small JSON intents. The menu track is a response, not an upload.
+    client_max_body_size 1m;
+
+    include /etc/nginx/security-headers.conf;
+
+    # Text only. MP3 and WAV do not shrink, and audio/mpeg stays out of this list.
+    gzip on;
+    gzip_vary on;
+    gzip_min_length 1024;
+    gzip_types text/css application/javascript application/json image/svg+xml font/woff2;
+
+    resolver 127.0.0.11 valid=10s ipv6=off;
+
+    location /api/ {
+        include /etc/nginx/api-proxy.conf;
+        set $skt_api ${API_UPSTREAM};
+        proxy_pass $skt_api;
+    }
+
+    # Hashed build output, including tavern-<hash>.mp3. One long cache lifetime.
+    location /assets/ {
+        include /etc/nginx/security-headers.conf;
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+        try_files $uri =404;
+    }
+
+    # Fetch the whole file. Do not compress it.
+    location ~* \.(mp3|wav|ogg)$ {
+        include /etc/nginx/security-headers.conf;
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+        gzip off;
+        try_files $uri =404;
+    }
+
+    location = /index.html {
+        include /etc/nginx/security-headers.conf;
+        add_header Cache-Control "no-cache, must-revalidate";
+        try_files $uri =404;
+    }
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}
