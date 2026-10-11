@@ -205,7 +205,7 @@ impl World {
         self.identity.guest_of(id)
     }
 
-    /// Public server description. Emotes stay empty until the owner names them.
+    /// Public server description.
     #[must_use]
     pub fn config() -> ServerConfig {
         ServerConfig {
@@ -214,7 +214,7 @@ impl World {
             timers: skt_protocol::Timers::standard(),
             standard: skt_protocol::GameSettings::standard(),
             season: Some(rating::season_at(identity::unix_now().get())),
-            emotes: Vec::new(),
+            emotes: skt_protocol::emote_ids(),
         }
     }
 
@@ -402,7 +402,9 @@ impl World {
             ClientMessage::LobbyStart { id } => self.start(user, id),
             ClientMessage::QueueJoin { id, mode } => self.join_queue(user, id, mode),
             ClientMessage::QueueLeave { id } => self.leave_queue(user, id),
-            ClientMessage::GameEmote { id, .. } => self.fail_live(user, id, ErrorCode::Validation),
+            ClientMessage::GameEmote { id, emote } => {
+                self.tables.emote(user, id, &emote, self.now, &self.live);
+            }
             other => {
                 let (left, ranked_leave) =
                     self.tables

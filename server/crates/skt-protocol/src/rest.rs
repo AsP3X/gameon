@@ -78,6 +78,17 @@ impl Timers {
     }
 }
 
+/// Emote ids the server accepts, in the order `GET /config` lists them.
+pub const EMOTES: &[&str] = &[
+    "yoho", "arr", "nice", "oops", "thinking", "laugh", "cry", "gg",
+];
+
+/// Owned copy of [`EMOTES`] for `ServerConfig`.
+#[must_use]
+pub fn emote_ids() -> Vec<String> {
+    EMOTES.iter().map(|id| (*id).to_owned()).collect()
+}
+
 /// `GET /api/v1/config`. Public.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
@@ -93,7 +104,7 @@ pub struct ServerConfig {
     pub standard: GameSettings,
     /// The live season, or `null` when there is none.
     pub season: Option<Season>,
-    /// Emote ids this process accepts. The draft does not fix the list.
+    /// Emote ids this process accepts. See [`EMOTES`].
     pub emotes: Vec<String>,
 }
 

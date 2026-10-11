@@ -5,10 +5,10 @@ use std::time::{Duration, Instant};
 
 use skt_engine::{BotLevel, Expansions, GameState, Phase, Ruleset, Seat};
 use skt_protocol::{
-    ClientMessage, Deadline, DeadlineKind, EngineView, ErrMessage, ErrTag, ErrorCode, GameEvent,
-    GameId, GameOver, GameOverTag, GameResult, GameStart, GameStartTag, GameUpdate, GameUpdateTag,
-    Lobby, LobbyId, Member, MessageId, OkReply, OkTag, OnlineEvent, RatingChange, SeatInfo,
-    SeatStatus, TableInfo, TableMode, UserId, WelcomeGame,
+    ClientMessage, Deadline, DeadlineKind, EngineView, ErrMessage, ErrTag, ErrorCode,
+    GameEmotePush, GameEmoteTag, GameEvent, GameId, GameOver, GameOverTag, GameResult, GameStart,
+    GameStartTag, GameUpdate, GameUpdateTag, Lobby, LobbyId, Member, MessageId, OkReply, OkTag,
+    OnlineEvent, RatingChange, SeatInfo, SeatStatus, TableInfo, TableMode, UserId, WelcomeGame,
 };
 
 use crate::rating::{self, PlayerSkill};
@@ -24,6 +24,8 @@ struct SeatPlay {
     started_bot: bool,
     misses: u8,
     offline_since: Option<Instant>,
+    /// When this seat last sent an accepted emote.
+    last_emote: Option<Instant>,
     prior_mu: f64,
     prior_sigma: f64,
     prior_games: u32,
@@ -309,6 +311,61 @@ impl Tables {
         })];
         running.publish(&events, None, live);
         running.arm(now);
+    }
+
+    /// Broadcast one emote. The sender gets `ok` and then the push. Other seats get the push only.
+    pub fn emote(
+        &mut self,
+        user: &UserId,
+        id: MessageId,
+        emote: &str,
+        now: Instant,
+        live: &HashMap<UserId, super::Live>,
+    ) {
+        let Some((game_id, seat)) = self.seat_of.get(user).cloned() else {
+            fail(live, user, id, ErrorCode::NotInGame);
+            return;
+        };
+        let Some(running) = self.games.get_mut(&game_id) else {
+            fail(live, user, id, ErrorCode::NotInGame);
+            return;
+        };
+        if running.over
+            || running
+                .seats
+                .get(seat.index())
+                .is_none_or(|play| play.user.is_none())
+        {
+            fail(live, user, id, ErrorCode::NotInGame);
+            return;
+        }
+        if !skt_protocol::EMOTES.contains(&emote) {
+            fail(live, user, id, ErrorCode::Validation);
+            return;
+        }
+        let index = seat.index();
+        if running.seats[index]
+            .last_emote
+            .is_some_and(|last| now.saturating_duration_since(last) < Duration::from_secs(2))
+        {
+            fail(live, user, id, ErrorCode::RateLimited);
+            return;
+        }
+        running.seats[index].last_emote = Some(now);
+        let push = GameEmotePush {
+            tag: GameEmoteTag::Value,
+            seat,
+            emote: emote.to_owned(),
+        };
+        ok(live, user, id);
+        for play in &running.seats {
+            let Some(seated) = &play.user else {
+                continue;
+            };
+            if let Some(socket) = live.get(seated) {
+                super::send(&socket.out, &push);
+            }
+        }
     }
 
     pub fn act(
@@ -1278,6 +1335,7 @@ fn seats_from(
                     started_bot: false,
                     misses: 0,
                     offline_since: None,
+                    last_emote: None,
                     prior_mu: 25.0,
                     prior_sigma: 25.0 / 3.0,
                     prior_games: 0,
@@ -1304,6 +1362,7 @@ fn seats_from(
                     started_bot: true,
                     misses: 0,
                     offline_since: None,
+                    last_emote: None,
                     prior_mu: 25.0,
                     prior_sigma: 25.0 / 3.0,
                     prior_games: 0,

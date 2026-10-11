@@ -26,13 +26,13 @@ pub use output::{
     write_fixtures,
 };
 pub use pushes::{
-    CloseReason, ErrMessage, ErrTag, GameEmotePush, GameOver, GameOverTag, LobbyClosed,
-    LobbyClosedTag, LobbyStatePush, LobbyStateTag, OkReply, OkTag, QueueStatusPush, QueueStatusTag,
-    Superseded, SupersededTag, Welcome, WelcomeGame, WelcomeTag,
+    CloseReason, ErrMessage, ErrTag, GameEmotePush, GameEmoteTag, GameOver, GameOverTag,
+    LobbyClosed, LobbyClosedTag, LobbyStatePush, LobbyStateTag, OkReply, OkTag, QueueStatusPush,
+    QueueStatusTag, Superseded, SupersededTag, Welcome, WelcomeGame, WelcomeTag,
 };
 pub use rest::{
-    Active, Credentials, Health, LadderEntry, LadderPage, Me, Profile, ProfilePatch, Rating,
-    Season, ServerConfig, Stats, TableColor, Timers, User,
+    Active, Credentials, EMOTES, Health, LadderEntry, LadderPage, Me, Profile, ProfilePatch,
+    Rating, Season, ServerConfig, Stats, TableColor, Timers, User, emote_ids,
 };
 pub use settings::{ExpansionFlags, GameSettings, Pace};
 pub use table::{

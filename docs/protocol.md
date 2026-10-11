@@ -96,7 +96,7 @@ type ServerConfig = {
   timers: Timers;                   // the defaults: 45s bid, 30s play, 30s ability, 2.5s trick end, 20s round end, 60s grace
   standard: GameSettings;           // quick play and ranked, spelled out below
   season: Season | null;
-  emotes: string[];                 // ids this process accepts; this draft does not fix the list
+  emotes: string[];                 // yoho, arr, nice, oops, thinking, laugh, cry, gg
 };
 type TableColor =
   | '#1cb0f6' | '#ff9600' | '#ce82ff' | '#ff4b4b'
@@ -122,9 +122,11 @@ type ProfilePatch = { name?: string; color?: TableColor };   // omitted fields a
 `standard` is the quick-play and ranked ruleset: 4 players, classic scoring, format `brawl`, loot,
 kraken, whale and abilities off, `botLevel` `normal`, `pace` `standard`.
 
-`emotes` is the list the running server accepts. This draft does not name the ids. An empty list
-means the server currently accepts none. `game.emote` carries one id from that list; the sample
-uses the placeholder `"example"`, which is not an accepted id.
+`emotes` is the list the running server accepts, in this order: `yoho`, `arr`, `nice`, `oops`,
+`thinking`, `laugh`, `cry`, `gg`. An empty list means that process accepts none. `game.emote`
+carries one id from that list. A second emote from the same seat within 2 seconds is
+`RATE_LIMITED` and is not sent on. The sample message uses the placeholder `"example"`, which is
+not an accepted id.
 
 Username: 3–16 characters of `A–Z a–z 0–9 _`, unique case-insensitively. There is no reserved-name
 list. `name` is the display name: 1–16 Unicode code points after trimming, and no character in

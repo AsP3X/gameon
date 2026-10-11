@@ -163,23 +163,66 @@ async fn silence_after_hello_closes_the_socket() {
     assert_eq!(frame, Message::Close(Some(close_frame(1000))), "{frame:?}");
 }
 
+#[test]
+fn config_lists_the_eight_emotes() {
+    assert_eq!(
+        crate::world::World::config().emotes,
+        [
+            "yoho", "arr", "nice", "oops", "thinking", "laugh", "cry", "gg"
+        ]
+    );
+}
+
 #[tokio::test]
-async fn an_emote_is_refused_while_the_list_is_empty() {
+async fn an_emote_outside_a_game_is_not_in_game() {
     let state = AppState::for_socket_tests(Duration::from_secs(5), Duration::from_secs(45));
     let port = serve(state).await;
-    let cookie = guest(port).await;
-    let mut socket = open_socket(port, &cookie).await;
-    send(
-        &mut socket,
-        r#"{"t":"hello","id":1,"protocol":1,"build":"test"}"#,
-    )
-    .await;
-    let _ = read_text(&mut socket).await;
-    let _ = read_text(&mut socket).await;
+    let mut socket = open_socket(port, &guest(port).await).await;
+    hello(&mut socket).await;
     send(&mut socket, r#"{"t":"game.emote","id":2,"emote":"yoho"}"#).await;
     let reply = read_text(&mut socket).await;
-    assert!(reply.contains("VALIDATION"), "{reply}");
-    assert!(reply.contains("\"re\":2"), "{reply}");
+    assert!(reply.contains("NOT_IN_GAME"), "{reply}");
+}
+
+#[tokio::test]
+async fn an_emote_reaches_both_seats_and_the_next_one_waits() {
+    let state = AppState::for_socket_tests(Duration::from_secs(5), Duration::from_secs(45));
+    let port = serve(state.clone()).await;
+    let mut host = open_socket(port, &guest(port).await).await;
+    let mut mate = open_socket(port, &guest(port).await).await;
+    hello(&mut host).await;
+    hello(&mut mate).await;
+    send(&mut host, &create(2)).await;
+    let code = quoted(&read_text(&mut host).await, "code");
+    send(&mut mate, &join(2, &code)).await;
+    let _ = read_until(&mut mate, "\"t\":\"ok\"").await;
+    let _ = read_until(&mut host, "lobby.state").await;
+    send(&mut host, r#"{"t":"lobby.ready","id":3,"ready":true}"#).await;
+    let _ = read_until(&mut host, "\"t\":\"ok\"").await;
+    let _ = read_until(&mut mate, "lobby.state").await;
+    send(&mut mate, r#"{"t":"lobby.ready","id":3,"ready":true}"#).await;
+    let _ = read_until(&mut mate, "\"t\":\"ok\"").await;
+    let _ = read_until(&mut host, "lobby.state").await;
+    send(&mut host, r#"{"t":"lobby.start","id":4}"#).await;
+    let _ = read_until(&mut host, "\"t\":\"game.update\"").await;
+    let _ = read_until(&mut mate, "\"t\":\"game.update\"").await;
+    send(&mut host, r#"{"t":"game.emote","id":5,"emote":"yoho"}"#).await;
+    let accepted = read_text(&mut host).await;
+    assert!(accepted.contains("\"t\":\"ok\""), "{accepted}");
+    let pushed = read_text(&mut host).await;
+    assert!(pushed.contains("\"emote\":\"yoho\""), "{pushed}");
+    let seen = read_until(&mut mate, "\"t\":\"game.emote\"").await;
+    assert!(seen.contains("yoho"), "{seen}");
+    send(&mut host, r#"{"t":"game.emote","id":6,"emote":"nope"}"#).await;
+    let unknown = read_text(&mut host).await;
+    assert!(unknown.contains("VALIDATION"), "{unknown}");
+    send(&mut host, r#"{"t":"game.emote","id":7,"emote":"gg"}"#).await;
+    let limited = read_text(&mut host).await;
+    assert!(limited.contains("RATE_LIMITED"), "{limited}");
+    state.advance(Duration::from_secs(2)).await;
+    send(&mut host, r#"{"t":"game.emote","id":8,"emote":"gg"}"#).await;
+    let again = read_text(&mut host).await;
+    assert!(again.contains("\"t\":\"ok\""), "{again}");
 }
 
 #[tokio::test]
