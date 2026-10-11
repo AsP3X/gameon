@@ -1,0 +1,58 @@
+import type { Online } from '../net/online';
+import type { LinkStatus } from '../net/socket';
+import { Sound } from '../sound/sound';
+
+const COPY: Record<Exclude<LinkStatus, 'online'>, { title: string; text: string; action: string }> = {
+  idle: { title: 'Connection lost', text: '', action: 'Try now' },
+  connecting: { title: 'Connection lost', text: '', action: 'Try now' },
+  offline: {
+    title: 'Connection lost',
+    text: 'Getting you back to the table. Your seat is kept while you are away, and the table plays for you when your time runs out.',
+    action: 'Try now',
+  },
+  superseded: {
+    title: 'Playing in another tab',
+    text: 'This player is connected from another tab or device. Only one can play at a time.',
+    action: 'Play here',
+  },
+  unsupported: {
+    title: 'The tavern has moved on',
+    text: 'This page is older than the server. Reload to update.',
+    action: 'Reload to update',
+  },
+};
+
+/**
+ * Over the table while the server cannot be heard: what is on the table underneath may be old, so
+ * it takes no input until the next `welcome` has replaced it.
+ */
+export function TableOverlay({ status, online }: { status: Exclude<LinkStatus, 'online'>; online: Online }) {
+  const copy = COPY[status],
+    text = copy.text || COPY.offline.text,
+    reload = status === 'unsupported';
+  return (
+    <div
+      className="table-overlay"
+      role="alertdialog"
+      aria-modal="true"
+      aria-labelledby="overlay-title"
+      aria-describedby="overlay-text"
+    >
+      <div className="box">
+        <h2 id="overlay-title">{copy.title}</h2>
+        <p id="overlay-text">{text}</p>
+        <button
+          type="button"
+          className={reload ? 'btn' : 'btn ghost'}
+          onClick={() => {
+            Sound.play('tap');
+            if (reload) location.reload();
+            else online.retry();
+          }}
+        >
+          {copy.action}
+        </button>
+      </div>
+    </div>
+  );
+}

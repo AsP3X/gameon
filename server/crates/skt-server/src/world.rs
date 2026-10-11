@@ -58,6 +58,8 @@ pub struct World {
     penalties: Vec<PenaltyWrite>,
     /// Current socket for a user, if `hello` has been accepted.
     live: HashMap<UserId, Live>,
+    /// Upgrades waiting for `hello`, keyed by connection id. They are not the player's socket yet.
+    pending: HashMap<u64, Pending>,
     now: Instant,
 }
 
@@ -154,7 +156,11 @@ impl Line {
 struct Live {
     id: u64,
     out: Outbox,
-    greeted: bool,
+}
+
+/// A socket that has upgraded and has not had its `hello` accepted yet.
+struct Pending {
+    out: Outbox,
 }
 
 impl World {
@@ -178,6 +184,7 @@ impl World {
             fill,
             penalties: Vec::new(),
             live: HashMap::new(),
+            pending: HashMap::new(),
             now: Instant::now(),
         }
     }
@@ -227,33 +234,25 @@ impl World {
         self.me_for_token(token).ok_or(ErrorCode::Unauthenticated)
     }
 
-    /// Attach `out` as this user's only socket. A previous socket is superseded.
+    /// Remember an upgraded socket until its `hello` is accepted.
+    ///
+    // Human: Opening a socket and dropping it must not kick the player who is already at the table.
+    // Agent: WRITES pending; does not replace `live` and does not send superseded.
     pub fn bind(&mut self, token: &str, out: Outbox) -> Result<(UserId, u64), ErrorCode> {
         let user = self
             .identity
             .user_for_token(token)
             .ok_or(ErrorCode::Unauthenticated)?;
         let id = self.identity.next_conn();
-        if let Some(previous) = self.live.insert(
-            user.clone(),
-            Live {
-                id,
-                out,
-                greeted: false,
-            },
-        ) {
-            send(
-                &previous.out,
-                &skt_protocol::Superseded {
-                    tag: skt_protocol::SupersededTag::Value,
-                },
-            );
-        }
+        self.pending.insert(id, Pending { out });
         Ok((user, id))
     }
 
     /// The socket closed. A seated player becomes `offline` when this was their live socket.
     pub fn disconnect(&mut self, user: &UserId, id: u64) {
+        if self.pending.remove(&id).is_some() {
+            return;
+        }
         let current = self.live.get(user).is_some_and(|live| live.id == id);
         if !current {
             return;
@@ -263,13 +262,13 @@ impl World {
         self.tables.on_socket(user, false, self.now, &self.live);
     }
 
-    /// One client frame.
-    pub fn on_message(&mut self, user: &UserId, text: &str) {
-        let Some(live) = self.live.get(user) else {
+    /// One client frame from connection `conn`.
+    pub fn on_message(&mut self, user: &UserId, conn: u64, text: &str) {
+        if self.pending.contains_key(&conn) {
+            self.hello(user, conn, text);
             return;
-        };
-        if !live.greeted {
-            self.hello(user, text);
+        }
+        if self.live.get(user).is_none_or(|live| live.id != conn) {
             return;
         }
         if let Some(id) = message_id(text)
@@ -343,17 +342,30 @@ impl World {
         }
     }
 
-    fn hello(&mut self, user: &UserId, text: &str) {
+    fn hello(&mut self, user: &UserId, conn: u64, text: &str) {
+        let Some(pending) = self.pending.get(&conn) else {
+            return;
+        };
+        let out = pending.out.clone();
         let Ok(ClientMessage::Hello { id, protocol, .. }) = serde_json::from_str(text) else {
-            self.fail_live(user, MessageId::new(0), ErrorCode::Validation);
+            fail_out(&out, MessageId::new(0), ErrorCode::Validation);
             return;
         };
         if protocol != skt_protocol::PROTOCOL {
-            self.fail_live(user, id, ErrorCode::ProtocolUnsupported);
+            fail_out(&out, id, ErrorCode::ProtocolUnsupported);
             return;
         }
-        if let Some(live) = self.live.get_mut(user) {
-            live.greeted = true;
+        self.pending.remove(&conn);
+        // Human: The new page is the player only once it has said hello. The previous page is told to stop.
+        // Agent: REPLACES live; WRITES superseded and close 4001 on the previous outbox; then welcome on the new one.
+        if let Some(previous) = self.live.insert(user.clone(), Live { id: conn, out }) {
+            send(
+                &previous.out,
+                &skt_protocol::Superseded {
+                    tag: skt_protocol::SupersededTag::Value,
+                },
+            );
+            let _ = previous.out.send(Wire::Close(4001));
         }
         self.ok(user, id, None, true);
         self.push_welcome(user);
@@ -1174,6 +1186,23 @@ impl World {
         );
     }
 
+    /// Reject one frame on connection `conn`, whether or not it has said hello.
+    pub fn reject(&self, user: &UserId, conn: u64, id: MessageId, code: ErrorCode) {
+        if let Some(pending) = self.pending.get(&conn) {
+            fail_out(&pending.out, id, code);
+            return;
+        }
+        if self.live.get(user).is_some_and(|live| live.id == conn) {
+            self.fail_live(user, id, code);
+        }
+    }
+
+    /// Whether this connection has sent an accepted `hello`.
+    #[must_use]
+    pub fn greeted(&self, user: &UserId, conn: u64) -> bool {
+        self.live.get(user).is_some_and(|live| live.id == conn)
+    }
+
     fn fail_live(&self, user: &UserId, id: MessageId, code: ErrorCode) {
         self.send(
             user,
@@ -1194,7 +1223,7 @@ impl World {
     }
 }
 
-fn message_id(text: &str) -> Option<MessageId> {
+pub(crate) fn message_id(text: &str) -> Option<MessageId> {
     let value: serde_json::Value = serde_json::from_str(text).ok()?;
     let id = value.get("id")?.as_u64()?;
     u32::try_from(id).ok().map(MessageId::new)
@@ -1216,6 +1245,18 @@ fn send(out: &Outbox, frame: &impl serde::Serialize) {
     if let Ok(text) = serde_json::to_string(frame) {
         let _ = out.send(Wire::Text(text));
     }
+}
+
+fn fail_out(out: &Outbox, id: MessageId, code: ErrorCode) {
+    send(
+        out,
+        &ErrMessage {
+            tag: ErrTag::Value,
+            re: id,
+            code,
+            message: code.message().to_owned(),
+        },
+    );
 }
 
 fn bot_name(members: &[Member]) -> String {

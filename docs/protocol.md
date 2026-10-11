@@ -185,8 +185,10 @@ clock. Those three fields are omitted when they do not apply. They are not sent 
 
 Server → client pushes have no `re`.
 
-Limits: 4 KB per frame; 20 messages per second per connection, then `RATE_LIMITED`; a frame that
-is not valid JSON closes the socket with code 1003.
+Limits: 4 KB per frame, and a longer frame closes the socket with code 1009. 20 messages per
+second per connection, then `RATE_LIMITED` for that frame and it is not applied. A frame that is
+not valid JSON closes the socket with code 1003. No `hello` within 5 seconds, or 45 seconds with
+no frame, closes the socket.
 
 ### 5.2 Connecting
 
@@ -204,8 +206,9 @@ type Welcome = {
 ```
 
 `welcome` is a complete snapshot. After any reconnect the client throws its online state away and
-takes this one. A second socket for the same user closes the first with `{ t: 'superseded' }` and
-close code 4001.
+takes this one. A second socket replaces the first when its `hello` is accepted, and the first is
+then closed with `{ t: 'superseded' }` and close code 4001. A socket that closes before `hello`
+does not replace the current one, and it is not a drop.
 
 A reply is written only to the socket its message arrived on. Closing that socket ends every `id`
 still waiting on it. The next socket receives no `ok` or `err` for those ids. The client forgets

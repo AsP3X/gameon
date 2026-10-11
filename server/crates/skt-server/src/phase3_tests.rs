@@ -49,6 +49,7 @@ async fn ladder_pages_hide_usernames_and_reject_a_bad_query(pool: sqlx::PgPool) 
             seats: vec![],
             overs: vec![],
             penalise: vec![],
+            log: vec![],
             rated: vec![rated(&id, 0, 1, 30.0)],
         })
         .await;
@@ -62,7 +63,7 @@ async fn ladder_pages_hide_usernames_and_reject_a_bad_query(pool: sqlx::PgPool) 
 
 #[sqlx::test(migrations = "../../migrations/postgres")]
 async fn a_ranked_leave_is_last_and_rated_and_cooled_down(pool: sqlx::PgPool) {
-    let state = AppState::for_tests(pool, Duration::from_mins(1), budgets());
+    let state = AppState::for_tests(pool.clone(), Duration::from_mins(1), budgets());
     let port = serve(state.clone()).await;
     let mut sockets = Vec::new();
     let mut cookies = Vec::new();
@@ -156,6 +157,18 @@ async fn a_ranked_leave_is_last_and_rated_and_cooled_down(pool: sqlx::PgPool) {
     .await;
     assert_eq!(status, 200, "{page}");
     assert!(page.contains("\"rank\":3"), "{page}");
+    let deals: i64 = sqlx::query_scalar("SELECT count(*) FROM action_log WHERE kind = 'deal'")
+        .fetch_one(&pool)
+        .await
+        .expect("deals");
+    let steps: i64 = sqlx::query_scalar(
+        "SELECT count(*) FROM action_log WHERE kind = 'bid' OR kind = 'play' OR kind = 'ability'",
+    )
+    .fetch_one(&pool)
+    .await
+    .expect("steps");
+    assert!(deals > 0, "{deals}");
+    assert!(steps > 0, "{steps}");
 }
 
 #[sqlx::test(migrations = "../../migrations/postgres")]
@@ -171,6 +184,7 @@ async fn a_far_rating_waits_for_the_window_to_widen(pool: sqlx::PgPool) {
             seats: vec![],
             overs: vec![],
             penalise: vec![],
+            log: vec![],
             rated: vec![rated(&id, 0, 1, 105.0)],
         })
         .await;
