@@ -24,6 +24,7 @@ let subs: Set<TableListener>;
 let sent: Action[];
 let leave: ReturnType<typeof vi.fn<() => Promise<DispatchResult>>>;
 let exit: ReturnType<typeof vi.fn<() => void>>;
+let record: ReturnType<typeof vi.fn<() => void>>;
 
 function click(selector: string): void {
   const el = document.querySelector<HTMLElement>(selector);
@@ -94,7 +95,7 @@ function openTable(): void {
     schedule: () => {},
     stop: () => {},
   };
-  openOnlineTable(table, { leave, exit, now: () => Date.now(), ranked: false, result: () => null });
+  openOnlineTable(table, { leave, exit, now: () => Date.now(), ranked: false, result: () => null, record });
 }
 
 beforeEach(() => {
@@ -111,6 +112,7 @@ beforeEach(() => {
   sent = [];
   leave = vi.fn<() => Promise<DispatchResult>>().mockResolvedValue({ ok: true });
   exit = vi.fn<() => void>();
+  record = vi.fn<() => void>();
   unmount = mountTavern(app, fx);
 });
 
@@ -225,8 +227,15 @@ describe('an online table', () => {
     expect(localStorage.getItem(Store.STATS)).toBeNull();
     expect(Store.loadGame()).toEqual(saved);
 
-    // One way on from here: back to the lobby, where the next game starts.
-    expect(Array.from(app.querySelectorAll('.end-actions button'), (b) => b.textContent)).toEqual(['Play again']);
+    // Two buttons, side by side: the record is the page's to show, and the way on is back to the
+    // lobby, where the next game starts.
+    expect(Array.from(app.querySelectorAll('.end-actions.online button'), (b) => b.textContent)).toEqual([
+      'Play again',
+      'The record',
+    ]);
+    click('[data-act="record"]');
+    expect(record).toHaveBeenCalledTimes(1);
+    expect(exit).not.toHaveBeenCalled();
     click('[data-act="again"]');
     expect(exit).toHaveBeenCalledTimes(1);
     click('.end-top [data-act="home"]');

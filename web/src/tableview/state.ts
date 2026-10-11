@@ -228,6 +228,8 @@ export interface OnlineHooks {
    * that forfeited, and in ranked this seat's rating change. null until then.
    */
   result(): GameResult | null;
+  /** Show the steps the server stored of this game. The page around the table shows them. */
+  record(): void;
 }
 
 export interface Session {

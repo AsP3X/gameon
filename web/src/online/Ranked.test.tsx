@@ -352,6 +352,19 @@ describe('ranked, for an account', () => {
     // A ranked game is in the rating, not in the online record.
     expect((await me()).stats.games).toBe(0);
 
+    // The record is one of the two buttons under the scores, and covers neither of them.
+    expect(texts('#app .end-actions .btn')).toEqual(['Play again', 'The record']);
+    expect($('#record')).toBeNull();
+    await click('[data-act="record"]');
+    await settle();
+    expect($('#record .label')?.textContent).toBe('The record');
+    const steps = texts('#record li b');
+    expect(steps.length).toBeGreaterThan(0);
+    expect(steps[0]).toBe('0 · deal');
+    await press('Back to the scores');
+    expect($('#record')).toBeNull();
+    expect(ui.screen).toBe('end');
+
     await click('[data-act="again"]');
     await settle();
     expect($('#online h2')?.textContent).toBe('Play online');

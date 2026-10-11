@@ -327,6 +327,9 @@ export const ACTIONS: Record<string, ActionFn | undefined> = {
   online() {
     stage.online?.();
   },
+  record() {
+    session.online?.record();
+  },
   leaveTable() {
     const online = session.online;
     if (!online) return;
@@ -597,6 +600,7 @@ export const UI_SOUNDS: Record<string, SoundName | undefined> = {
   board: 'sheetUp',
   last: 'sheetUp',
   results: 'sheetUp',
+  record: 'sheetUp',
   peek: 'sheetUp',
   soundSheet: 'sheetUp',
   closeSheet: 'sheetDown',
