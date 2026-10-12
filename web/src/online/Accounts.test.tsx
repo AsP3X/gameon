@@ -483,7 +483,7 @@ describe('quick play', () => {
     expect(document.querySelectorAll('#online .queue-seat')).toHaveLength(4);
     expect(document.querySelectorAll('#online .queue-seat.found')).toHaveLength(1);
     // The rules are the server's standard ruleset, and no waiting time is promised.
-    expect(texts('#online .plate b')).toEqual(["Skull King's scoring · Skip to the Brawl"]);
+    expect(texts('#online .plate b')).toEqual(["Skull King's scoring · Classic"]);
     expect($('#online')?.textContent).not.toMatch(/\d+\s*(s|sec|seconds|minutes?)\b/);
 
     const other = await someone();

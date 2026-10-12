@@ -120,6 +120,8 @@ describe('the session', () => {
     expect(await b.call('GET', '/auth/guest')).toEqual({ status: 400, body: error('VALIDATION') });
     expect(await b.call('GET', '/health')).toEqual({ status: 200, body: { ok: true } });
     expect((await b.call('GET', '/config')).body).toMatchObject({ protocol: 1, standard: STANDARD, emotes: [] });
+    // The deal quick play and ranked are played with: the classic one, ten rounds of 1 to 10 cards.
+    expect((await b.call('GET', '/config')).body).toMatchObject({ standard: { format: 'classic', maxPlayers: 4 } });
   });
 });
 

@@ -94,11 +94,11 @@ export const STANDARD_TIMERS: Timers = {
 const PACE = { relaxed: 2, standard: 1, fast: 0.5 } as const;
 /** How long the table waits before it plays the turn of a seat that is `out` (§5.6). */
 const OUT_SEAT_MS = 1500;
-/** The quick-play ruleset of §4. */
+/** The ruleset of §4 that quick play and ranked are played with: the classic deal, ten rounds of 1 to 10 cards. */
 export const STANDARD: GameSettings = {
   maxPlayers: 4,
   scoring: 'classic',
-  format: 'brawl',
+  format: 'classic',
   loot: false,
   kraken: false,
   whale: false,
