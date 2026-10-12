@@ -1,6 +1,7 @@
 # Nginx Proxy Manager overlay: no host ports. NPM talks to skt-web and skt-api on
 # proxy-network, so publishing a host port is not required. The API and the page
-# join that network.
+# join that network. The setup screen can replace these lists; ./deploy.sh then
+# passes .deploy/networks.yml last.
 #
 #   docker network create proxy-network
 #   PROXY_MODE=npm ./deploy.sh

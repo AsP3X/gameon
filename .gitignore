@@ -20,3 +20,6 @@ server/target/
 
 # Optional Postgres folder from ./deploy.sh --data-dir. Named volumes are the default.
 /data/
+
+# Compose network overlay written by ./deploy.sh. The next start replaces it.
+/.deploy/

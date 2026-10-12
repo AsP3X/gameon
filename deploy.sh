@@ -106,12 +106,15 @@ show_help() {
   the shipped defaults, and s writes them. q quits and writes nothing. The r key
   does not touch the database. Storage is optional: left keeps the named volume
   skt_pg_data, right uses ./data, and enter on that line edits the path.
+  Enter on Networks opens a dialog. Left and right there pick postgres, the API
+  or the page. a adds a Docker network and x removes one. skt-internal stays on
+  every container. q in that dialog returns to this screen and writes nothing.
   While the database is only inside the skt-postgres container, the reach mode, the
-  Postgres port and the database user, password and name cannot be changed: that
-  would recreate the container and delete what it stores. On the named volume or in
-  a data folder, reach mode and host ports can change and the data stays. The user,
-  password and database name still stay, because Postgres applies them only when the
-  data directory is first created.
+  Postgres port, the Postgres networks and the database user, password and name
+  cannot be changed: that would recreate the container and delete what it stores.
+  On the named volume or in a data folder, reach mode, host ports and networks can
+  change and the data stays. The user, password and database name still stay,
+  because Postgres applies them only when the data directory is first created.
   A start without a terminal copies .env.example and does not ask.
 
   ${BOLD}Environment${NC} (.env, or the defaults in .env.example):
@@ -123,15 +126,19 @@ show_help() {
     POSTGRES_PASSWORD   database password
     SKT_TRUSTED_PROXIES extra proxy addresses, comma-separated
     SKT_DATA_DIR        optional data folder. Unset means the named volume.
+    SKT_NETWORKS_POSTGRES  optional. Unset keeps skt-internal.
+    SKT_NETWORKS_API       optional. Unset keeps skt-internal, plus proxy-network in NPM.
+    SKT_NETWORKS_WEB       optional. Same default as the API.
     RUST_LOG            API log level
     NO_COLOR            disable coloured output
 
   ${BOLD}NPM${NC} (PROXY_MODE=npm, no host ports), the same choice as the setup screen:
     Nginx Proxy Manager talks to the containers on the Docker network, so no
     published host port is required and the setup does not ask for one.
-    The stack joins the external proxy-network. ./deploy.sh creates that network
-    when it is missing. Point Nginx Proxy Manager at http://skt-web:80, turn
-    websockets on, and set SKT_PUBLIC_ORIGIN.
+    By default the API and the page join proxy-network, and Postgres stays on
+    skt-internal. The Networks dialog can attach more, or take proxy-network off.
+    ./deploy.sh creates a listed network when it is missing. Point Nginx Proxy
+    Manager at http://skt-web:80, turn websockets on, and set SKT_PUBLIC_ORIGIN.
 
 EOF
 }
@@ -195,6 +202,13 @@ env_value() {
   file_value .env "$1"
 }
 
+# True when the file contains a KEY= line. A comment does not count.
+file_has_key() {
+  local file="$1" key="$2"
+  [[ -f "$file" ]] || return 1
+  grep -qE "^${key}=" "$file"
+}
+
 # local, or npm. external and proxy are the same choice as npm.
 canon_proxy_mode() {
   local mode
@@ -218,6 +232,16 @@ SETUP_PROXIES=""
 SETUP_DATA=""
 # Last folder path chosen on the setup screen, so left/right can return to it.
 SETUP_DATA_HELD=""
+# Comma-separated Docker networks for each container. skt-internal is always first.
+SETUP_NET_POSTGRES="skt-internal"
+SETUP_NET_API="skt-internal"
+SETUP_NET_WEB="skt-internal"
+# 0 until a network key was saved or the dialog adds or removes one. While it stays
+# 0, switching This machine / NPM puts the lists back to that mode's defaults.
+SETUP_NET_CUSTOM=0
+SETUP_NET_SVC=0
+SETUP_NET_ROW=0
+SETUP_NET_ERROR=""
 SETUP_PGUSER="skt"
 SETUP_PGDB="skt"
 SETUP_PICK=0
@@ -244,6 +268,7 @@ load_setup_from() {
   SETUP_PGUSER="${SETUP_PGUSER:-skt}"
   SETUP_PGDB="$(file_value "$file" POSTGRES_DB)"
   SETUP_PGDB="${SETUP_PGDB:-skt}"
+  net_load_from "$file"
 }
 
 setup_blank() {
@@ -321,6 +346,9 @@ setup_check() {
     printf 'The data folder is optional. Leave it empty for the named volume. A path cannot contain $ " '\'' \\ # or be / itself.\n' >&2
     return 1
   }
+  SETUP_NET_POSTGRES="$(net_normalize "$SETUP_NET_POSTGRES")"
+  SETUP_NET_API="$(net_normalize "$SETUP_NET_API")"
+  SETUP_NET_WEB="$(net_normalize "$SETUP_NET_WEB")"
   setup_blank
 }
 
@@ -331,6 +359,247 @@ valid_data_dir() {
   case "$dir" in
     *[\$\"\'\\\#]*|*$'\n'*|/) return 1 ;;
   esac
+}
+
+trim_space() {
+  local s="$1"
+  s="${s#"${s%%[![:space:]]*}"}"
+  s="${s%"${s##*[![:space:]]}"}"
+  printf '%s' "$s"
+}
+
+# Docker network names we will attach. bridge, host and none are the daemon's
+# built-ins; the containers find each other on skt-internal, which is handled apart.
+net_valid_name() {
+  local name="$1"
+  [[ "$name" =~ ^[A-Za-z0-9][A-Za-z0-9_.-]*$ ]] || return 1
+  (( ${#name} <= 128 )) || return 1
+  case "$name" in
+    bridge|host|none) return 1 ;;
+  esac
+}
+
+net_contains() {
+  [[ ",$1," == *",$2,"* ]]
+}
+
+# One name per line. The stored form is comma-separated and has no spaces.
+net_items() {
+  local list="$1" item noglob=0
+  # A hand-edited value may contain * or ?. Splitting must not expand it.
+  if [[ $- != *f* ]]; then
+    set -f
+    noglob=1
+  fi
+  local IFS=,
+  for item in $list; do
+    [[ -n "$item" ]] && printf '%s\n' "$item"
+  done
+  if [[ "$noglob" -eq 1 ]]; then
+    set +f
+  fi
+}
+
+net_count() {
+  local n=0 item
+  while IFS= read -r item; do
+    [[ -n "$item" ]] && n=$((n + 1))
+  done < <(net_items "$1")
+  printf '%s' "$n"
+}
+
+net_at() {
+  local list="$1" index="$2" i=0 item
+  while IFS= read -r item; do
+    if (( i == index )); then
+      printf '%s' "$item"
+      return 0
+    fi
+    i=$((i + 1))
+  done < <(net_items "$list")
+  return 1
+}
+
+net_index() {
+  local list="$1" want="$2" i=0 item
+  while IFS= read -r item; do
+    if [[ "$item" == "$want" ]]; then
+      printf '%s' "$i"
+      return 0
+    fi
+    i=$((i + 1))
+  done < <(net_items "$list")
+  printf '0'
+  return 1
+}
+
+# skt-internal first, then the others in the order they were added. Invalid
+# tokens and duplicates are dropped. The containers always share skt-internal.
+net_normalize() {
+  local raw="$1" item trimmed out=""
+  while IFS= read -r item; do
+    trimmed="$(trim_space "$item")"
+    [[ -n "$trimmed" ]] || continue
+    [[ "$trimmed" == "skt-internal" ]] && continue
+    net_valid_name "$trimmed" || continue
+    net_contains "$out" "$trimmed" && continue
+    if [[ -z "$out" ]]; then
+      out="$trimmed"
+    else
+      out="${out},${trimmed}"
+    fi
+  done < <(net_items "$raw")
+  if [[ -n "$out" ]]; then
+    printf 'skt-internal,%s' "$out"
+  else
+    printf 'skt-internal'
+  fi
+}
+
+# What a container joins when its key is absent. NPM puts the API and the page
+# on proxy-network so Nginx Proxy Manager can reach them. Postgres stays private.
+net_default() {
+  local svc="$1" mode="$2"
+  if [[ "$svc" != "postgres" && "$mode" == "npm" ]]; then
+    printf 'skt-internal,proxy-network'
+  else
+    printf 'skt-internal'
+  fi
+}
+
+net_svc_name() {
+  case "$1" in
+    0) printf 'postgres' ;;
+    1) printf 'api' ;;
+    2) printf 'web' ;;
+  esac
+}
+
+net_svc_get() {
+  case "$1" in
+    postgres) printf '%s' "$SETUP_NET_POSTGRES" ;;
+    api) printf '%s' "$SETUP_NET_API" ;;
+    web) printf '%s' "$SETUP_NET_WEB" ;;
+  esac
+}
+
+net_svc_set() {
+  case "$1" in
+    postgres) SETUP_NET_POSTGRES="$2" ;;
+    api) SETUP_NET_API="$2" ;;
+    web) SETUP_NET_WEB="$2" ;;
+  esac
+}
+
+net_apply_mode_defaults() {
+  [[ "$SETUP_NET_CUSTOM" == "1" ]] && return 0
+  SETUP_NET_POSTGRES="$(net_default postgres "$SETUP_MODE")"
+  SETUP_NET_API="$(net_default api "$SETUP_MODE")"
+  SETUP_NET_WEB="$(net_default web "$SETUP_MODE")"
+}
+
+net_load_one() {
+  local svc="$1" key="$2" file="$3" value
+  if file_has_key "$file" "$key"; then
+    value="$(net_normalize "$(file_value "$file" "$key")")"
+  else
+    value="$(net_default "$svc" "$SETUP_MODE")"
+  fi
+  net_svc_set "$svc" "$value"
+}
+
+# A saved key, even one that matches the default, means the lists are the user's.
+# Absent keys follow the reach mode, including a later switch on this screen.
+net_load_from() {
+  local file="$1"
+  if file_has_key "$file" SKT_NETWORKS_POSTGRES \
+    || file_has_key "$file" SKT_NETWORKS_API \
+    || file_has_key "$file" SKT_NETWORKS_WEB; then
+    SETUP_NET_CUSTOM=1
+    net_load_one postgres SKT_NETWORKS_POSTGRES "$file"
+    net_load_one api SKT_NETWORKS_API "$file"
+    net_load_one web SKT_NETWORKS_WEB "$file"
+  else
+    SETUP_NET_CUSTOM=0
+    net_apply_mode_defaults
+  fi
+}
+
+# The list Compose will use. A missing key uses the mode default, so an .env
+# that never mentioned networks keeps today's NPM or local attachment.
+net_saved() {
+  local svc="$1" mode="$2" key value
+  case "$svc" in
+    postgres) key=SKT_NETWORKS_POSTGRES ;;
+    api) key=SKT_NETWORKS_API ;;
+    web) key=SKT_NETWORKS_WEB ;;
+  esac
+  if file_has_key .env "$key"; then
+    value="$(file_value .env "$key")"
+  else
+    value="$(net_default "$svc" "$mode")"
+  fi
+  net_normalize "$value"
+}
+
+net_effective() {
+  net_saved "$1" "$(canon_proxy_mode "${PROXY_MODE:-local}")"
+}
+
+net_add() {
+  local svc="$1" name
+  name="$(trim_space "$2")"
+  if [[ "$name" == "skt-internal" ]]; then
+    SETUP_NET_ERROR="skt-internal is already on every container."
+    return 1
+  fi
+  if ! net_valid_name "$name"; then
+    SETUP_NET_ERROR="A network name starts with a letter or a number, then letters, numbers, dots, underscores or dashes, up to 128 characters. bridge, host and none are not used."
+    return 1
+  fi
+  if net_contains "$(net_svc_get "$svc")" "$name"; then
+    SETUP_NET_ERROR="${svc} is already on ${name}."
+    return 1
+  fi
+  net_svc_set "$svc" "$(net_normalize "$(net_svc_get "$svc"),${name}")"
+  SETUP_NET_CUSTOM=1
+  SETUP_NET_ERROR=""
+}
+
+net_without() {
+  local list="$1" drop="$2" item out=""
+  while IFS= read -r item; do
+    [[ -z "$item" || "$item" == "$drop" ]] && continue
+    if [[ -z "$out" ]]; then
+      out="$item"
+    else
+      out="${out},${item}"
+    fi
+  done < <(net_items "$list")
+  printf '%s' "$out"
+}
+
+net_remove_at() {
+  local svc="$1" index="$2" list name
+  list="$(net_svc_get "$svc")"
+  name="$(net_at "$list" "$index")" || return 1
+  [[ "$name" == "skt-internal" ]] && return 1
+  net_svc_set "$svc" "$(net_normalize "$(net_without "$list" "$name")")"
+  SETUP_NET_CUSTOM=1
+}
+
+# Names other than skt-internal, once each, in container order.
+net_extra_names() {
+  local svc item seen=","
+  for svc in postgres api web; do
+    while IFS= read -r item; do
+      [[ -n "$item" ]] || continue
+      [[ "$item" == "skt-internal" ]] && continue
+      [[ "$seen" == *",${item},"* ]] && continue
+      seen="${seen}${item},"
+      printf '%s\n' "$item"
+    done < <(net_items "$(net_effective "$svc")")
+  done
 }
 
 # Replace every KEY= line, or append one. Duplicate keys collapse to the first.
@@ -385,13 +654,35 @@ write_setup() {
   else
     unset_key SKT_DATA_DIR .env
   fi
+  write_network_keys
   set_key DATABASE_URL "postgres://${SETUP_PGUSER}:${SETUP_PASSWORD}@127.0.0.1:${SETUP_PGPORT}/${SETUP_PGDB}" .env
   setup_blank
 }
 
-setup_row() {
-  local index="$1" text="$2"
-  if (( index == SETUP_PICK )); then
+# A list that matches the mode default is removed, so the next start still follows
+# the reach mode. A custom list is written as a comma-separated value.
+write_network_keys() {
+  local svc key value default
+  for svc in postgres api web; do
+    case "$svc" in
+      postgres) key=SKT_NETWORKS_POSTGRES ;;
+      api) key=SKT_NETWORKS_API ;;
+      web) key=SKT_NETWORKS_WEB ;;
+    esac
+    value="$(net_normalize "$(net_svc_get "$svc")")"
+    net_svc_set "$svc" "$value"
+    default="$(net_default "$svc" "$SETUP_MODE")"
+    if [[ "$value" == "$default" ]]; then
+      unset_key "$key" .env
+    else
+      set_key "$key" "$value" .env
+    fi
+  done
+}
+
+tui_row() {
+  local selected="$1" text="$2"
+  if [[ "$selected" == "1" ]]; then
     if [[ -n "$REV" ]]; then
       printf '  %s %s %s\n' "$REV" "$text" "$REV_OFF"
     else
@@ -400,6 +691,14 @@ setup_row() {
   else
     printf '    %s\n' "$text"
   fi
+}
+
+setup_row() {
+  local index="$1" text="$2" selected=0
+  if (( index == SETUP_PICK )); then
+    selected=1
+  fi
+  tui_row "$selected" "$text"
 }
 
 # A reach line. * marks the mode that will be saved. The cursor is separate.
@@ -418,7 +717,7 @@ setup_fields() {
   if [[ "$SETUP_MODE" != "npm" ]]; then
     printf '%s\n' web api pg
   fi
-  printf '%s\n' origin cookie password proxies data
+  printf '%s\n' origin cookie password proxies data networks
 }
 
 setup_field_count() {
@@ -488,6 +787,9 @@ setup_draw() {
           setup_row "$i" "Storage               < named volume >"
         fi
         ;;
+      networks)
+        setup_row "$i" "Networks              postgres $(net_count "$SETUP_NET_POSTGRES"), api $(net_count "$SETUP_NET_API"), web $(net_count "$SETUP_NET_WEB")"
+        ;;
     esac
     i=$((i + 1))
   done < <(setup_fields)
@@ -507,6 +809,7 @@ setup_draw() {
   fi
   printf '\n  %s↑↓ move    ←→ storage    enter select    s save and start    r reset answers    q quit%s\n' "$DIM" "$NC"
   printf '  %sOn Storage, left is the named volume and right is the data folder. Enter edits the path.%s\n' "$DIM" "$NC"
+  printf '  %sEnter on Networks adds or removes Docker networks for each container.%s\n' "$DIM" "$NC"
   printf '  %sOn a text line, enter keeps the shown value. Type - to clear the origin or the proxies.%s\n' "$DIM" "$NC"
 }
 
@@ -523,6 +826,7 @@ setup_key() {
       '[B') SETUP_ACTION="down" ;;
       '[C'|'OC') SETUP_ACTION="right" ;;
       '[D'|'OD') SETUP_ACTION="left" ;;
+      "") SETUP_ACTION="back" ;;
       *) SETUP_ACTION="stay" ;;
     esac
     return 0
@@ -536,6 +840,8 @@ setup_key() {
     s|S) SETUP_ACTION="save" ;;
     r|R) SETUP_ACTION="reset" ;;
     q|Q) SETUP_ACTION="quit" ;;
+    a|A) SETUP_ACTION="add" ;;
+    x|X) SETUP_ACTION="remove" ;;
     *) SETUP_ACTION="stay" ;;
   esac
 }
@@ -635,6 +941,8 @@ guard_postgres() {
   prev_db="$(file_value .env POSTGRES_DB)"
   prev_db="${prev_db:-skt}"
   mount="$(postgres_data_mount)"
+  prev_pgnet="$(net_saved postgres "$prev_mode")"
+  new_pgnet="$(net_normalize "$SETUP_NET_POSTGRES")"
   if [[ -n "$mount" ]]; then
     if [[ "$SETUP_PGUSER" == "$prev_user" && "$SETUP_PASSWORD" == "$prev_pass" \
        && "$SETUP_PGDB" == "$prev_db" ]]; then
@@ -648,7 +956,7 @@ guard_postgres() {
   fi
   if [[ "$SETUP_MODE" == "$prev_mode" && "$SETUP_PGPORT" == "$prev_port" \
      && "$SETUP_PGUSER" == "$prev_user" && "$SETUP_PASSWORD" == "$prev_pass" \
-     && "$SETUP_PGDB" == "$prev_db" ]]; then
+     && "$SETUP_PGDB" == "$prev_db" && "$new_pgnet" == "$prev_pgnet" ]]; then
     return 0
   fi
   SETUP_MODE="$prev_mode"
@@ -656,7 +964,11 @@ guard_postgres() {
   SETUP_PGUSER="$prev_user"
   SETUP_PASSWORD="$prev_pass"
   SETUP_PGDB="$prev_db"
-  printf 'skt-postgres keeps the database inside the container. Changing how players reach the tavern, the Postgres port, or the database user, password or name would recreate that container and delete the accounts and games in it. Those answers were put back. Nothing was written.\n' >&2
+  if [[ "$SETUP_NET_CUSTOM" != "1" ]]; then
+    net_apply_mode_defaults
+  fi
+  SETUP_NET_POSTGRES="$prev_pgnet"
+  printf 'skt-postgres keeps the database inside the container. Changing how players reach the tavern, the Postgres port, the Postgres networks, or the database user, password or name would recreate that container and delete the accounts and games in it. Those answers were put back. Nothing was written.\n' >&2
   return 1
 }
 
@@ -668,6 +980,170 @@ apply_optional() {
   else
     printf '%s' "$entered"
   fi
+}
+
+setup_note() {
+  printf '\033[?25h'
+  printf '\n  %s\n' "$1"
+  printf '  Press enter.'
+  IFS= read -r _ || true
+  printf '\033[?25l'
+}
+
+net_clamp_row() {
+  local n
+  n="$(net_count "$(net_svc_get "$(net_svc_name "$SETUP_NET_SVC")")")"
+  if (( SETUP_NET_ROW > n )); then
+    SETUP_NET_ROW=$n
+  fi
+  if (( SETUP_NET_ROW < 0 )); then
+    SETUP_NET_ROW=0
+  fi
+}
+
+setup_net_tabs() {
+  local i=0 name
+  printf '  '
+  for name in postgres api web; do
+    if (( i == SETUP_NET_SVC )); then
+      printf '< %s >' "$name"
+    else
+      printf '  %s  ' "$name"
+    fi
+    if (( i < 2 )); then
+      printf '   '
+    fi
+    i=$((i + 1))
+  done
+  printf '\n'
+}
+
+setup_net_draw() {
+  local svc item i=0 sel current
+  svc="$(net_svc_name "$SETUP_NET_SVC")"
+  net_clamp_row
+  printf '\033[H\033[2J'
+  printf '%sSkull King Tavern — networks%s\n\n' "$BOLD" "$NC"
+  setup_net_tabs
+  printf '\n'
+  while IFS= read -r item; do
+    if (( i == SETUP_NET_ROW )); then sel=1; else sel=0; fi
+    if [[ "$item" == "skt-internal" ]]; then
+      tui_row "$sel" "skt-internal          required"
+    else
+      tui_row "$sel" "$item"
+    fi
+    i=$((i + 1))
+  done < <(net_items "$(net_svc_get "$svc")")
+  if (( i == SETUP_NET_ROW )); then sel=1; else sel=0; fi
+  tui_row "$sel" "Add a network"
+  printf '\n'
+  if (( SETUP_NET_ROW == i )); then
+    printf '  %sEnter shows networks that already exist, or lets you type a name.%s\n' "$DIM" "$NC"
+  else
+    current="$(net_at "$(net_svc_get "$svc")" "$SETUP_NET_ROW" || true)"
+    if [[ "$current" == "skt-internal" ]]; then
+      printf '  %sThis network stays. The containers find each other on it.%s\n' "$DIM" "$NC"
+    else
+      printf '  %sEnter or x removes it from %s. A missing network is created on the next start.%s\n' "$DIM" "$svc" "$NC"
+    fi
+  fi
+  printf '\n  %s↑↓ move    ←→ container    a add    x remove    q back%s\n' "$DIM" "$NC"
+}
+
+# Existing networks, then a row that asks for a name. q returns to the container list.
+setup_net_picker() {
+  local svc="$1" pick=0 line typed i sel
+  local -a names=()
+  while IFS= read -r line; do
+    line="$(trim_space "$line")"
+    [[ -n "$line" ]] || continue
+    net_valid_name "$line" || continue
+    if net_contains "$(net_svc_get "$svc")" "$line"; then
+      continue
+    fi
+    names+=("$line")
+  done < <(docker network ls --format '{{.Name}}' 2>/dev/null || true)
+  local type_at=${#names[@]}
+  names+=("Type a new name")
+  local count=${#names[@]}
+  while true; do
+    printf '\033[H\033[2J'
+    printf '%sSkull King Tavern — add a network%s\n\n' "$BOLD" "$NC"
+    printf '  %s\n\n' "$svc"
+    for (( i = 0; i < count; i++ )); do
+      if (( i == pick )); then sel=1; else sel=0; fi
+      tui_row "$sel" "${names[$i]}"
+    done
+    printf '\n  %s↑↓ move    enter adds    q back%s\n' "$DIM" "$NC"
+    setup_key
+    case "$SETUP_ACTION" in
+      up) pick=$(( (pick + count - 1) % count )) ;;
+      down) pick=$(( (pick + 1) % count )) ;;
+      enter)
+        if (( pick == type_at )); then
+          setup_edit "" "  (empty cancels)"
+          typed="$(trim_space "$SETUP_ENTERED")"
+          [[ -z "$typed" ]] && continue
+          if net_add "$svc" "$typed"; then
+            SETUP_NET_ROW="$(net_index "$(net_svc_get "$svc")" "$typed")"
+            return 0
+          fi
+          setup_note "$SETUP_NET_ERROR"
+        elif net_add "$svc" "${names[$pick]}"; then
+          SETUP_NET_ROW="$(net_index "$(net_svc_get "$svc")" "${names[$pick]}")"
+          return 0
+        else
+          setup_note "$SETUP_NET_ERROR"
+        fi
+        ;;
+      quit|back)
+        return 1
+        ;;
+    esac
+  done
+}
+
+# Left and right pick the container. The list underneath is that container's
+# networks, plus Add a network. q and escape return to the setup screen.
+setup_net_dialog() {
+  local svc n
+  while true; do
+    setup_net_draw
+    setup_key
+    svc="$(net_svc_name "$SETUP_NET_SVC")"
+    n="$(net_count "$(net_svc_get "$svc")")"
+    case "$SETUP_ACTION" in
+      up) SETUP_NET_ROW=$(( (SETUP_NET_ROW + n) % (n + 1) )) ;;
+      down) SETUP_NET_ROW=$(( (SETUP_NET_ROW + 1) % (n + 1) )) ;;
+      left)
+        SETUP_NET_SVC=$(( (SETUP_NET_SVC + 2) % 3 ))
+        net_clamp_row
+        ;;
+      right)
+        SETUP_NET_SVC=$(( (SETUP_NET_SVC + 1) % 3 ))
+        net_clamp_row
+        ;;
+      add)
+        setup_net_picker "$svc" || true
+        ;;
+      enter)
+        if (( SETUP_NET_ROW == n )); then
+          setup_net_picker "$svc" || true
+        else
+          net_remove_at "$svc" "$SETUP_NET_ROW" || true
+        fi
+        ;;
+      remove)
+        if (( SETUP_NET_ROW < n )); then
+          net_remove_at "$svc" "$SETUP_NET_ROW" || true
+        fi
+        ;;
+      quit|back)
+        return 0
+        ;;
+    esac
+  done
 }
 
 run_setup() {
@@ -700,10 +1176,17 @@ run_setup() {
       left|right)
         setup_storage_switch "$SETUP_ACTION"
         ;;
+      add|remove|back) ;;
       enter)
         case "$(setup_field_at)" in
-          reach-local) SETUP_MODE="local" ;;
-          reach-npm) SETUP_MODE="npm" ;;
+          reach-local)
+            SETUP_MODE="local"
+            net_apply_mode_defaults
+            ;;
+          reach-npm)
+            SETUP_MODE="npm"
+            net_apply_mode_defaults
+            ;;
           cookie)
             if [[ "$SETUP_SECURE" == "1" ]]; then SETUP_SECURE=""; else SETUP_SECURE="1"; fi
             ;;
@@ -746,6 +1229,11 @@ run_setup() {
               SETUP_DATA="$SETUP_ENTERED"
               SETUP_DATA_HELD="$SETUP_DATA"
             fi
+            ;;
+          networks)
+            SETUP_NET_SVC=0
+            SETUP_NET_ROW=0
+            setup_net_dialog
             ;;
         esac
         setup_clamp_pick
@@ -1129,16 +1617,60 @@ compose() {
   if [[ -n "${SKT_DATA_DIR:-}" ]]; then
     files+=(-f docker-compose.data-dir.yml)
   fi
+  # Last, so each service's network list replaces the ones in the files above.
+  write_networks_overlay
+  files+=(-f .deploy/networks.yml)
   docker compose "${files[@]}" "$@"
 }
 
-ensure_proxy_network() {
-  [[ "$PROXY_MODE" == "npm" ]] || return 0
-  if docker network inspect proxy-network >/dev/null 2>&1; then
-    return 0
-  fi
-  step "Creating Docker network proxy-network (shared with Nginx Proxy Manager)…"
-  docker network create proxy-network >/dev/null
+# Compose merges a network list by appending. This file is passed last and uses
+# !override, so the saved list is the whole list. skt-internal stays defined in
+# the base file. Every other name is external and is created on start if missing.
+write_networks_overlay() {
+  local tmp svc list item extras="" seen=","
+  mkdir -p .deploy
+  tmp="$(mktemp)"
+  {
+    printf '%s\n' '# Generated by deploy.sh. The next start replaces this file.'
+    printf '%s\n' 'services:'
+    for svc in postgres api web; do
+      list="$(net_effective "$svc")"
+      printf '  %s:\n' "$svc"
+      printf '    networks: !override\n'
+      while IFS= read -r item; do
+        [[ -n "$item" ]] || continue
+        printf '      - "%s"\n' "$item"
+        if [[ "$item" != "skt-internal" && "$seen" != *",${item},"* ]]; then
+          seen="${seen}${item},"
+          extras="${extras}${item}"$'\n'
+        fi
+      done < <(net_items "$list")
+    done
+    if [[ -n "$extras" ]]; then
+      printf '%s\n' 'networks:'
+      while IFS= read -r item; do
+        [[ -n "$item" ]] || continue
+        printf '  "%s":\n' "$item"
+        printf '    name: "%s"\n' "$item"
+        printf '    external: true\n'
+      done <<<"$extras"
+    fi
+  } > "$tmp"
+  mv "$tmp" .deploy/networks.yml
+}
+
+# Create every attached network except skt-internal. Compose owns that one.
+# A network the dialog named is created the same way as proxy-network.
+ensure_stack_networks() {
+  local name
+  while IFS= read -r name; do
+    [[ -n "$name" ]] || continue
+    if docker network inspect "$name" >/dev/null 2>&1; then
+      continue
+    fi
+    step "Creating Docker network ${name}…"
+    docker network create "$name" >/dev/null
+  done < <(net_extra_names)
 }
 
 show_status() {
@@ -1160,11 +1692,19 @@ show_status() {
   fi
   load_data_dir
   echo "  Storage: $(data_where)"
+  echo "  Networks: postgres $(net_effective postgres | tr ',' ' ')"
+  echo "            api $(net_effective api | tr ',' ' ')"
+  echo "            web $(net_effective web | tr ',' ' ')"
   echo "  Web:   ${web_url}"
   echo "  API:   ${api_url}"
   echo ""
   compose ps
 }
+
+# Sourcing this file defines the functions above and does not start the stack.
+if [[ "${BASH_SOURCE[0]}" != "$0" ]]; then
+  return 0
+fi
 
 CMD=""
 PASSTHRU=()
@@ -1307,7 +1847,7 @@ echo "  ${BOLD}Skull King Tavern — API + web client${NC}"
 echo "===================================================="
 echo ""
 
-ensure_proxy_network
+ensure_stack_networks
 CURRENT_STAGE="database storage"
 # A refusal already explained itself. exit keeps the error trap from adding a second report.
 ensure_data_ready || exit 1

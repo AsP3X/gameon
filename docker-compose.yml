@@ -16,6 +16,9 @@
 # NPM targets (npm overlay, container DNS on proxy-network):
 #   http://skt-web:80      the page, which also proxies /api/v1 and the socket
 #   http://skt-api:8080    the API, for a client that does not go through the page
+#
+# The setup screen can attach more Docker networks. ./deploy.sh writes
+# .deploy/networks.yml and passes it last, so those lists replace the ones here.
 
 name: skt
 
