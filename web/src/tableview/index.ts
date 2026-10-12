@@ -30,7 +30,7 @@ export interface TavernHooks {
 
 /**
  * Tell the renderer that the page shows something else in its place (the online screens), or that
- * it is back. What it drew stays as it was; the theme stops while the home screen cannot be seen.
+ * it is back. What it drew stays as it was. The theme stops while a game is on screen.
  */
 export function coverTavern(covered: boolean): void {
   stage.covered = covered;

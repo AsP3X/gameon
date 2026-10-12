@@ -289,7 +289,7 @@ describe('mountTavern', () => {
     expect(app.querySelector('img')).toBeNull();
   });
 
-  it('starts the menu music when Welcome back is closed, and only on the home screen', () => {
+  it('plays the menu music from Welcome back until a game starts, then again on the home screen', () => {
     const music = vi.spyOn(Sound, 'music');
     const wanted = (): boolean | undefined => music.mock.calls.at(-1)?.[0];
     mount();
@@ -301,11 +301,15 @@ describe('mountTavern', () => {
     expect(wanted()).toBe(true);
     expect(app.querySelector('[aria-label="Welcome back"]')).toBeNull();
     click('[data-act="setup"]');
+    expect(wanted()).toBe(true);
+    click('[data-act="start"]');
+    expect(wanted()).toBe(false);
+    go('end');
     expect(wanted()).toBe(false);
     go('home');
     expect(wanted()).toBe(true);
     coverTavern(true);
-    expect(wanted()).toBe(false);
+    expect(wanted()).toBe(true);
     coverTavern(false);
     expect(wanted()).toBe(true);
     const hidden = vi.spyOn(document, 'hidden', 'get').mockReturnValue(true);

@@ -44,7 +44,7 @@ const SHEETS: Record<Sheet, () => string> = {
   welcome: welcomeSheet,
 };
 
-/** Set once the welcome has been closed. The theme then belongs to the home screen. */
+/** Set once the welcome has been closed. */
 let menuArmed = false;
 
 /** A fresh page open has not closed the welcome yet. */
@@ -52,17 +52,26 @@ export function resetMenuMusic(): void {
   menuArmed = false;
 }
 
+/**
+ * The theme plays after the welcome, through the menus, and stops when a game
+ * is on screen. The end screen stays quiet. The home screen brings it back.
+ * A background tab pauses it.
+ */
+function menuOn(): boolean {
+  if (!stage.app || !menuArmed || document.hidden) return false;
+  return ui.screen !== 'game' && ui.screen !== 'end';
+}
+
 /** The welcome's close is the tap that starts the theme. Call it inside that click. */
 export function armMenuMusic(): void {
   menuArmed = true;
   Sound.unlock();
-  Sound.music(!!stage.app && ui.screen === 'home' && !stage.covered && !document.hidden);
+  Sound.music(menuOn());
 }
 
-/** The theme plays on the home screen after the welcome, and nowhere else. A background tab pauses it. */
+/** Start or stop the theme for whatever is on screen now. */
 export function tuneMenu(): void {
-  const home = !!stage.app && ui.screen === 'home' && !stage.covered && !document.hidden;
-  Sound.music(home && menuArmed);
+  Sound.music(menuOn());
 }
 
 /** The dialogs a redraw may put over the page: a sheet, or the pass-and-play curtain. */

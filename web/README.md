@@ -181,8 +181,9 @@ them with the place of each one's loop (`TUNES`), fetches them at startup and ha
 came to the mixer together (`Sound.tunes()`). The renderer asks for the music with `Sound.music()`
 on every redraw (`tuneMenu` in `tableview/render.ts`). On a real browser the home
 screen opens under a "Welcome back" sheet. Come in closes it and starts the
-theme, and the theme plays on the home screen only. Setup, a table, the online
-screens, and a background tab pause it. It comes back with the home screen. "Sound effects" off silences it; the volume slider moves it with
+theme. It keeps playing through setup and the online screens, and stops when a
+game is on screen. The end screen stays quiet. Back on the home screen it
+starts again. A background tab pauses it. "Sound effects" off silences it; the volume slider moves it with
 everything else. The synthesiser has no recipe for it: a tune that cannot be fetched or decoded is
 left out, and with none the menu is quiet. `sound.test.ts`, `music.test.ts`, `tavern.test.ts` and
 `OnlineScreens.test.tsx` cover it.
