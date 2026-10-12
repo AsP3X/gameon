@@ -150,8 +150,8 @@ skill shows.
 - Server deadlines for bidding, playing and abilities, shown as a ring on the acting seat.
 - A missed deadline plays a bot move for that turn. Two in a row marks the seat away and the bot
   keeps playing instantly until the player acts again.
-- A dropped connection keeps the seat for a grace period, then a bot takes over. The player can
-  return to the same seat and hand at any time before the game ends.
+- A dropped connection keeps the seat. The player can return to the same seat and hand until they
+  are kicked for inactivity. The kick does not put a bot in the seat.
 - Emotes instead of chat in v1: nothing to moderate.
 - After the game: standings, rating change in ranked, rematch or back to the lobby.
 

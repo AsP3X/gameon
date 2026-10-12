@@ -398,6 +398,109 @@ async fn four_accounts_open_a_ranked_table_and_a_waiter_is_not_filled(pool: sqlx
     }
 }
 
+#[sqlx::test(migrations = "../../migrations/postgres")]
+async fn a_casual_kick_sets_no_cooldown(pool: sqlx::PgPool) {
+    let state = AppState::for_tests(pool, Duration::ZERO, budgets());
+    let port = serve(state.clone()).await;
+    let (cookie, _) = guest(port).await;
+    let mut socket = open_socket(port, &cookie).await;
+    greet(&mut socket).await;
+    send(&mut socket, r#"{"t":"queue.join","id":2,"mode":"casual"}"#).await;
+    let _ = read_text(&mut socket).await;
+    state.tick().await;
+    let started = read_text(&mut socket).await;
+    assert!(started.contains("\"t\":\"game.start\""), "{started}");
+    assert!(started.contains("\"mode\":\"casual\""), "{started}");
+    drop(socket);
+    for _ in 0..40 {
+        state.advance(Duration::from_secs(2)).await;
+        state.advance(Duration::from_secs(46)).await;
+    }
+    let mut back = open_socket(port, &cookie).await;
+    send(
+        &mut back,
+        r#"{"t":"hello","id":1,"protocol":1,"build":"test"}"#,
+    )
+    .await;
+    let welcome = read_text(&mut back).await;
+    assert!(welcome.contains("\"t\":\"ok\""), "{welcome}");
+    let snapshot = read_text(&mut back).await;
+    assert!(snapshot.contains("\"game\":null"), "{snapshot}");
+    let lost = read_text(&mut back).await;
+    assert!(lost.contains("\"t\":\"seat.lost\""), "{lost}");
+    assert!(lost.contains("\"mode\":\"casual\""), "{lost}");
+    let (status, _, me) = http(port, "GET", "/api/v1/me", &cookie, "").await;
+    assert_eq!(status, 200, "{me}");
+    assert!(me.contains("\"cooldownUntil\":null"), "{me}");
+}
+
+#[sqlx::test(migrations = "../../migrations/postgres")]
+async fn a_ranked_kick_forfeits_and_starts_the_cooldown(pool: sqlx::PgPool) {
+    let state = AppState::for_tests(pool, Duration::ZERO, budgets());
+    let port = serve(state.clone()).await;
+    let (cookie, mut first) = account(port, "Kick").await;
+    let mut second = account(port, "Stay").await.1;
+    let mut third = account(port, "Also").await.1;
+    let mut fourth = account(port, "Last").await.1;
+    send(&mut first, r#"{"t":"queue.join","id":2,"mode":"ranked"}"#).await;
+    assert!(read_text(&mut first).await.contains("\"found\":1"));
+    send(&mut second, r#"{"t":"queue.join","id":2,"mode":"ranked"}"#).await;
+    assert!(read_text(&mut second).await.contains("\"found\":2"));
+    assert!(read_text(&mut first).await.contains("\"found\":2"));
+    send(&mut third, r#"{"t":"queue.join","id":2,"mode":"ranked"}"#).await;
+    assert!(read_text(&mut third).await.contains("\"found\":3"));
+    let _ = read_text(&mut first).await;
+    let _ = read_text(&mut second).await;
+    send(&mut fourth, r#"{"t":"queue.join","id":2,"mode":"ranked"}"#).await;
+    assert!(read_text(&mut fourth).await.contains("\"found\":4"));
+    for socket in [&mut first, &mut second, &mut third] {
+        assert!(read_text(socket).await.contains("\"found\":4"));
+    }
+    for socket in [&mut first, &mut second, &mut third, &mut fourth] {
+        assert_ranked_start(&read_text(socket).await);
+    }
+    drop(first);
+    for _ in 0..40 {
+        state.advance(Duration::from_secs(2)).await;
+        state.advance(Duration::from_secs(46)).await;
+    }
+    let mut back = open_socket(port, &cookie).await;
+    send(
+        &mut back,
+        r#"{"t":"hello","id":1,"protocol":1,"build":"test"}"#,
+    )
+    .await;
+    let _ = read_text(&mut back).await;
+    let welcome = read_text(&mut back).await;
+    assert!(welcome.contains("\"game\":null"), "{welcome}");
+    assert!(welcome.contains("\"cooldownUntil\":"), "{welcome}");
+    assert!(!welcome.contains("\"cooldownUntil\":null"), "{welcome}");
+    let lost = read_text(&mut back).await;
+    assert!(lost.contains("\"mode\":\"ranked\""), "{lost}");
+    let mut saw_out = false;
+    let mut saw_over = false;
+    for _ in 0..250 {
+        state.advance(Duration::from_secs(46)).await;
+        while let Ok(frame) =
+            tokio::time::timeout(Duration::from_millis(20), read_text(&mut second)).await
+        {
+            if frame.contains("\"status\":\"out\"") {
+                saw_out = true;
+            }
+            if frame.contains("\"t\":\"game.over\"") && frame.contains("\"forfeited\":[") {
+                assert!(!frame.contains("\"forfeited\":[]"), "{frame}");
+                saw_over = true;
+                break;
+            }
+        }
+        if saw_over {
+            break;
+        }
+    }
+    assert!(saw_out, "the table shows out");
+    assert!(saw_over, "ranked game.over lists the kick in forfeited");
+}
+
 fn assert_ranked_start(frame: &str) {
     assert!(frame.contains("\"t\":\"game.start\""), "{frame}");
     assert!(frame.contains("\"mode\":\"ranked\""), "{frame}");

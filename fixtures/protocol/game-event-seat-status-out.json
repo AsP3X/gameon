@@ -1,0 +1,5 @@
+{
+  "type": "seatStatus",
+  "seat": 1,
+  "status": "out"
+}

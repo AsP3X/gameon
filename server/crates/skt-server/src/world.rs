@@ -384,9 +384,18 @@ impl World {
     fn step(&mut self) -> Vec<GameReport> {
         self.fill_queue();
         self.form_ranked();
-        let (finished, reports) = self.tables.tick(self.now, &self.live, &mut self.lobbies);
+        let (finished, reports, kicked) = self.tables.tick(self.now, &self.live, &mut self.lobbies);
         for user in finished {
             self.identity.set_game(&user, None);
+        }
+        for kick in kicked {
+            self.identity.set_game(&kick.user, None);
+            if kick.ranked {
+                self.penalise(&kick.user);
+            }
+            if let Some(lobby_id) = self.identity.lobby_of(&kick.user) {
+                self.remove_member(&lobby_id, &kick.user);
+            }
         }
         reports
     }
@@ -436,6 +445,9 @@ impl World {
         }
         self.ok(user, id, None, true);
         self.push_welcome(user);
+        if let Some(lost) = self.tables.take_lost(user) {
+            self.send(user, &lost);
+        }
         self.tables.flush_owed(user, &self.live);
         self.mark_connected(user, true);
         self.tables.on_socket(user, true, self.now, &self.live);

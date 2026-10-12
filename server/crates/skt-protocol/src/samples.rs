@@ -20,7 +20,8 @@ use crate::output::{ExportError, put};
 use crate::pushes::{
     CloseReason, ErrMessage, ErrTag, GameEmotePush, GameEmoteTag, GameOver, GameOverTag,
     LobbyClosed, LobbyClosedTag, LobbyStatePush, LobbyStateTag, OkReply, OkTag, QueueStatusPush,
-    QueueStatusTag, Superseded, SupersededTag, Welcome, WelcomeGame, WelcomeTag,
+    QueueStatusTag, SeatLost, SeatLostReason, SeatLostTag, Superseded, SupersededTag, Welcome,
+    WelcomeGame, WelcomeTag,
 };
 use crate::rest::{
     ActionLog, ActionLogEntry, Active, Credentials, Health, LadderEntry, LadderPage, Me, Profile,
@@ -262,6 +263,15 @@ fn game(dir: &Path, write: bool) -> Result<(), ExportError> {
         &GameEvent::Online(OnlineEvent::SeatStatus {
             seat: Seat::from_index(1),
             status: SeatStatus::Away,
+        }),
+    )?;
+    put(
+        dir,
+        write,
+        "game-event-seat-status-out",
+        &GameEvent::Online(OnlineEvent::SeatStatus {
+            seat: Seat::from_index(1),
+            status: SeatStatus::Out,
         }),
     )?;
     put(
@@ -522,6 +532,17 @@ fn pushes(dir: &Path, write: bool) -> Result<(), ExportError> {
             tag: GameEmoteTag::Value,
             seat: Seat::from_index(0),
             emote: "example".to_owned(),
+        },
+    )?;
+    put(
+        dir,
+        write,
+        "seat.lost",
+        &SeatLost {
+            tag: SeatLostTag::Value,
+            game_id: GameId::new(GAME),
+            mode: TableMode::Ranked,
+            reason: SeatLostReason::Inactivity,
         },
     )?;
     put(

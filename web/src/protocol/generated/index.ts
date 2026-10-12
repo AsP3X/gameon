@@ -67,6 +67,8 @@ export type { Scoring } from "./Scoring";
 export type { Season } from "./Season";
 export type { Seat } from "./Seat";
 export type { SeatInfo } from "./SeatInfo";
+export type { SeatLost } from "./SeatLost";
+export type { SeatLostReason } from "./SeatLostReason";
 export type { SeatOrNone } from "./SeatOrNone";
 export type { SeatStatus } from "./SeatStatus";
 export type { ServerConfig } from "./ServerConfig";

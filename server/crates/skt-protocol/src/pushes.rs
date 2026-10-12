@@ -6,7 +6,7 @@ use ts_rs::TS;
 
 use crate::error_code::ErrorCode;
 use crate::ids::{GameId, MessageId, UnixMs};
-use crate::lobby::{Lobby, QueueStatus};
+use crate::lobby::{Lobby, QueueStatus, TableMode};
 use crate::rest::Me;
 use crate::table::{GameResult, GameStart, GameUpdate};
 
@@ -107,6 +107,40 @@ pub struct WelcomeGame {
     pub start: GameStart,
     /// Current view. `events` is empty.
     pub update: GameUpdate,
+}
+
+/// Told once, on the first `welcome` after an inactivity kick.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(rename_all = "camelCase", export_to = "SeatLost.ts")]
+pub struct SeatLost {
+    /// Literal `seat.lost`.
+    #[serde(rename = "t")]
+    #[ts(rename = "t", type = "\"seat.lost\"")]
+    pub tag: SeatLostTag,
+    /// The game the account was removed from.
+    pub game_id: GameId,
+    /// The mode from `game.start`. Friends and public are `custom`.
+    pub mode: TableMode,
+    /// Why the seat was closed. Only inactivity for now.
+    pub reason: SeatLostReason,
+}
+
+/// Literal tag for [`SeatLost`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum SeatLostTag {
+    /// The wire string `seat.lost`.
+    #[serde(rename = "seat.lost")]
+    Value,
+}
+
+/// Why [`SeatLost`] was sent.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[ts(export_to = "SeatLostReason.ts")]
+pub enum SeatLostReason {
+    /// Two missed deadlines in a row while `offline`.
+    #[serde(rename = "inactivity")]
+    Inactivity,
 }
 
 /// Sent on the socket that a newer login replaces. The socket then closes with code 4001.

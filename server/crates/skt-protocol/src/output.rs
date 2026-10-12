@@ -17,7 +17,7 @@ use crate::lobby::{
 };
 use crate::pushes::{
     CloseReason, ErrMessage, GameEmotePush, GameOver, LobbyClosed, LobbyStatePush, OkReply,
-    QueueStatusPush, Superseded, Welcome, WelcomeGame,
+    QueueStatusPush, SeatLost, SeatLostReason, Superseded, Welcome, WelcomeGame,
 };
 use crate::rest::{
     ActionLog, ActionLogEntry, Active, Credentials, Health, LadderEntry, LadderPage, Me, Metrics,
@@ -243,6 +243,8 @@ fn export_messages(cfg: &ts_rs::Config) -> Result<(), ExportError> {
     QueueStatusPush::export_all(cfg)?;
     GameEmotePush::export_all(cfg)?;
     GameOver::export_all(cfg)?;
+    SeatLost::export_all(cfg)?;
+    SeatLostReason::export_all(cfg)?;
     Ok(())
 }
 

@@ -3,4 +3,4 @@
 /**
  * Connection or takeover state of one seat.
  */
-export type SeatStatus = "online" | "offline" | "away" | "bot";
+export type SeatStatus = "online" | "offline" | "away" | "bot" | "out";

@@ -44,12 +44,14 @@ pub struct Deadline {
 pub enum SeatStatus {
     /// The player's socket is up.
     Online,
-    /// The socket is down and the grace period has not expired.
+    /// The socket is down. The seat is still this player's until two misses kick them.
     Offline,
-    /// Two deadlines were missed. The bot plays quickly until the player acts.
+    /// Two deadlines were missed while the socket was up. The server plays until the player acts.
     Away,
-    /// A bot seat, or a seat a bot has taken over.
+    /// A bot seat, or a seat a player left on purpose.
     Bot,
+    /// Kicked for inactivity. The seat is not a bot, and the player cannot return.
+    Out,
 }
 
 /// Events the server appends. They are not produced by the engine.

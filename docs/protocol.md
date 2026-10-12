@@ -381,7 +381,7 @@ legacy engine's `view()` without `seats`, `cfg` and `deck`, and its event list, 
 Two events exist only online and are appended by the server:
 
 ```ts
-| { type: 'seatStatus'; seat: Seat; status: 'online' | 'offline' | 'away' | 'bot' }
+| { type: 'seatStatus'; seat: Seat; status: 'online' | 'offline' | 'away' | 'bot' | 'out' }
 | { type: 'timedOut'; seat: Seat }      // the server played for this seat
 ```
 
@@ -430,10 +430,13 @@ cannot be resumed. In ranked the leave is a forfeit, recorded then and scored la
 and `rating` travel on `game.over`, sent to the leaver when the game ends. If the leaver has no
 socket at that moment, that `game.over` is written immediately after the next `welcome`, which
 still has `game: null`. It does not put the table back. The same delivery is owed to any seated
-player who had no socket when the game ended, leaver or not. `forfeited` is empty unless the game
-is ranked. In ranked it lists every seat that sent `game.leave`, in the order they left. A seat a
-bot took after the disconnect grace is not in that list. `totals` are the points as played. A
-forfeited seat's place is the number of seats, so two forfeits in a four-player game are both 4.
+player who had no socket when the game ended, leaver or not, and to a player kicked for inactivity.
+`forfeited` is empty unless the game is ranked. In ranked it lists three groups, in this order,
+with no seat repeated: every seat that sent `game.leave`, in the order they left; then every seat
+kicked for inactivity, in the order they were kicked; then every seat that was `away` for most of
+the rounds and is not already listed. A disconnect that has not become a kick is not in that list.
+`totals` are the points as played. A forfeited seat's place is the number of seats, so two
+forfeits in a four-player game are both 4.
 Every other seat is 1 plus the number of non-forfeited seats with a strictly higher total. Ties
 among those seats share a place. `rating` is that receiver's own `{ before, after, delta }` in a
 ranked game, and null in every other mode. `before` is the rating at the deal. For an account that
@@ -448,10 +451,10 @@ is the opening view. The client draws the table from it and does not present its
 accepted step is `rev` 1.
 
 `game.ready` during `roundEnd` is `ok` and then a `game.update` whose `events` are empty and whose
-`table.ready` shows the new flags. `table.ready` is false for every bot seat and for a human who
-has not sent `game.ready`. `advance` to the next round is a later step of its own, when every human
-seat whose status is `online` or `away` is ready, or when the round-end deadline fires. `offline`
-and `bot` are not waited for.
+`table.ready` shows the new flags. `advance` to the next round is a later step of its own, when
+every human seat whose status is `online` or `away` is ready, or when the round-end deadline fires.
+`offline`, `bot` and `out` are not waited for. `table.ready` is false for every bot seat, every
+`out` seat, and every human who has not sent `game.ready`.
 
 A missed deadline's `timedOut` event is in the same `game.update` as the move the server played
 for that seat, after the engine's events.
@@ -460,9 +463,17 @@ A socket that arrives or drops during a game is a step of its own. `rev` increas
 `events` is one `seatStatus`, and every seated socket is sent that `game.update`. The returning
 socket is sent it after `welcome`. `welcome.game.update`, when `welcome.game` is present, is a
 snapshot at the current `rev` with `events: []`. It is not a new step. A drop sets the status to
-`offline` at once. During the 60s grace the seat is still that player's and the status stays
-`offline`. The change to `bot` when the grace runs out is a later step. Two missed deadlines in a
-row set `away` as their own step. `away` still has a socket. `offline` does not.
+`offline` at once. The seat stays that player's. A later `welcome` puts them back in the same game
+until they are kicked. Coming back sets `online` and the miss count returns to zero. There is no
+change to `bot` after 60 seconds. While `offline` the seat is on the bid, play and ability clock
+and is listed in `deadline.seats`. A missed deadline plays the bot's move for that turn and the
+`game.update` carries `timedOut`. The status stays `offline`. The second missed deadline in a row
+while `offline` is the kick. That one `game.update` carries the move, `timedOut`, and
+`seatStatus` `out`, in that order. Later turns of an `out` seat are the bot's move 1.5 seconds
+after the turn reaches them. Those updates carry the engine events only: no `timedOut`, and the
+seat is not in `deadline.seats`. `welcome.game` is null for a kicked account. Two missed deadlines
+while the player still has a socket set `away` as their own step. `away` still has a socket.
+`offline` does not. `out` does not.
 
 At `game.start`, a seat whose colour is already taken by an earlier seat gets the next free
 `TableColor`.
@@ -470,6 +481,11 @@ At `game.start`, a seat whose colour is already taken by an earlier seat gets th
 Other pushes:
 
 - `{ t: 'game.emote', seat, emote }`
+- `{ t: 'seat.lost', gameId, mode, reason: 'inactivity' }`. Pushed once, on the first `welcome`
+  after an inactivity kick, after that `welcome` and before an owed `game.over`. `mode` is the
+  mode from `game.start`. Friends and public are `custom`. A `welcome` that already had the frame
+  queued does not send it again. One that never had it queued still owes it. It carries no place
+  and no rating.
 - `{ t: 'game.over', gameId, seat, result: GameResult }`, sent after the final `game.update`.
   `seat` is the receiver's seat. The server always sends it. A message that omits it is still
   readable.
@@ -501,7 +517,8 @@ The server drives every transition the legacy `LocalTable` drove with timers.
 | Trick end | 2.5 s | Then the server advances; nobody can skip it |
 | Round end | 20 s | Or as soon as every connected human sent `game.ready` |
 | Bot seats | 0.8–1.5 s per move | So people can follow |
-| Disconnect grace | 60 s | Then the seat's status becomes `bot` |
+| Disconnect | — | The seat stays `offline`. It is not given to a bot. |
+| Out seat | 1.5 s | After the kick. Not a deadline. No `timedOut`. |
 
 `pace` scales bid, play and ability: relaxed ×2, fast ×0.5. Those lengths, scaled by the game's
 `pace`, are the whole of every deadline clock. `Deadline` has no length of its own. A client that
@@ -509,6 +526,10 @@ meets a clock while it is already running uses that scaled length, or the time r
 is longer. A missed deadline plays the bot's move for that turn and emits `timedOut`. Two in a row
 set the seat to `away`; an away seat is played after 1.5 seconds and returns to `online` on the
 player's next accepted intent. Round end waits for `online` and `away` humans, as §5.5 says.
+
+In a ranked game, a seat kicked for inactivity is a forfeit at the kick. The place is last, the
+seat is listed in `forfeited`, and `Me.cooldownUntil` is set then, by the same steps as
+`game.leave`. Casual, friends and public do not start a cooldown and do not fill `forfeited`.
 
 In a ranked game, a seat that is `away` when more than half of the rounds end is a forfeit. A
 round counts at the moment it ends. Coming back to `online` before that moment keeps the round

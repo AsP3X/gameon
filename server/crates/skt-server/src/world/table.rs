@@ -8,7 +8,8 @@ use skt_protocol::{
     ClientMessage, Deadline, DeadlineKind, EngineView, ErrMessage, ErrTag, ErrorCode,
     GameEmotePush, GameEmoteTag, GameEvent, GameId, GameOver, GameOverTag, GameResult, GameStart,
     GameStartTag, GameUpdate, GameUpdateTag, Lobby, LobbyId, Member, MessageId, OkReply, OkTag,
-    OnlineEvent, RatingChange, SeatInfo, SeatStatus, TableInfo, TableMode, UserId, WelcomeGame,
+    OnlineEvent, RatingChange, SeatInfo, SeatLost, SeatLostReason, SeatLostTag, SeatStatus,
+    TableInfo, TableMode, UserId, WelcomeGame,
 };
 
 use crate::rating::{self, PlayerSkill};
@@ -23,7 +24,6 @@ struct SeatPlay {
     color: skt_protocol::TableColor,
     started_bot: bool,
     misses: u8,
-    offline_since: Option<Instant>,
     /// When this seat last sent an accepted emote.
     last_emote: Option<Instant>,
     prior_mu: f64,
@@ -187,12 +187,24 @@ struct Running {
     log: Vec<LogEntry>,
     /// How many log lines are already in `open_log`.
     stored: usize,
+    /// Inactivity kicks this step. Drained by `Tables::tick`.
+    kicks: Vec<UserId>,
+}
+
+/// A player removed for inactivity. Ranked starts the cooldown here, not at `game.over`.
+pub struct InactivityKick {
+    /// The account.
+    pub user: UserId,
+    /// Ranked games forfeit and cool down. Other modes do not.
+    pub ranked: bool,
 }
 
 /// Every game in the process.
 pub struct Tables {
     games: HashMap<GameId, Running>,
     seat_of: HashMap<UserId, (GameId, Seat)>,
+    /// `seat.lost` still owed. Removed once a `welcome` has had it queued.
+    lost: HashMap<UserId, SeatLost>,
 }
 
 impl Tables {
@@ -204,6 +216,7 @@ impl Tables {
         Self {
             games: HashMap::new(),
             seat_of: HashMap::new(),
+            lost: HashMap::new(),
         }
     }
 
@@ -233,32 +246,9 @@ impl Tables {
         for (seat, info) in seats.iter_mut().zip(&infos) {
             seat.color = info.color;
         }
-        let rules = Ruleset::new(
-            lobby.settings.scoring,
-            lobby.settings.format,
-            Expansions {
-                loot: lobby.settings.expansions.loot,
-                kraken: lobby.settings.expansions.kraken,
-                whale: lobby.settings.expansions.whale,
-            },
-            lobby.settings.abilities,
-        );
-        let Ok(deck) = skt_engine::build_deck(rules.expansions) else {
+        let Some((state, log)) = opening_deal(&lobby.settings, seats.len()) else {
             return Vec::new();
         };
-        let mut deals = Recall::new(deck.len());
-        let Ok(state) = GameState::create(
-            rules,
-            u8::try_from(seats.len()).unwrap_or(0),
-            Seat::from_index(0),
-            &mut deals,
-        ) else {
-            return Vec::new();
-        };
-        let mut log = Vec::new();
-        for (round, cards) in deals.orders {
-            log.push(deal_entry(round, &cards));
-        }
         let mode = if matchmade {
             lobby.mode
         } else {
@@ -288,6 +278,7 @@ impl Tables {
             away_rounds: vec![0; players],
             log,
             stored: 0,
+            kicks: Vec::new(),
         };
         running.ready.resize(running.seats.len(), false);
         running.arm(now);
@@ -415,7 +406,6 @@ impl Tables {
                 color: seat.color,
                 started_bot: seat.bot,
                 misses: 0,
-                offline_since: None,
                 last_emote: None,
                 prior_mu: 25.0,
                 prior_sigma: 25.0 / 3.0,
@@ -459,6 +449,7 @@ impl Tables {
             away_rounds: vec![0; count],
             log,
             stored,
+            kicks: Vec::new(),
         };
         running.arm(now);
         for (index, seat) in running.seats.iter().enumerate() {
@@ -480,7 +471,7 @@ impl Tables {
     pub fn welcome_game(&self, user: &UserId) -> Option<WelcomeGame> {
         let (id, seat) = self.seat_of.get(user)?;
         let running = self.games.get(id)?;
-        if running.over {
+        if running.over || running.status.get(seat.index()) == Some(&SeatStatus::Out) {
             return None;
         }
         let index = seat.index();
@@ -513,7 +504,7 @@ impl Tables {
         let Some(running) = self.games.get_mut(&id) else {
             return;
         };
-        if running.over {
+        if running.over || running.status.get(seat.index()) == Some(&SeatStatus::Out) {
             return;
         }
         let index = seat.index();
@@ -525,8 +516,12 @@ impl Tables {
         if running.status.get(index) == Some(&next) || running.seats[index].started_bot {
             return;
         }
+        // Human: Sitting back down before the kick forgives the misses. A kick cannot be undone.
+        // Agent: WRITES status and misses. Out is left closed.
+        if up {
+            running.seats[index].misses = 0;
+        }
         running.status[index] = next;
-        running.seats[index].offline_since = if up { None } else { Some(now) };
         let events = vec![GameEvent::Online(OnlineEvent::SeatStatus {
             seat,
             status: next,
@@ -715,7 +710,6 @@ impl Tables {
         let ranked = running.mode == TableMode::Ranked;
         ok(live, user, msg);
         running.status[seat.index()] = SeatStatus::Bot;
-        running.seats[seat.index()].offline_since = None;
         let events = vec![GameEvent::Online(OnlineEvent::SeatStatus {
             seat,
             status: SeatStatus::Bot,
@@ -732,10 +726,11 @@ impl Tables {
         now: Instant,
         live: &HashMap<UserId, super::Live>,
         lobbies: &mut HashMap<LobbyId, Lobby>,
-    ) -> (Vec<UserId>, Vec<GameReport>) {
+    ) -> (Vec<UserId>, Vec<GameReport>, Vec<InactivityKick>) {
         let ids: Vec<GameId> = self.games.keys().cloned().collect();
         let mut finished = Vec::new();
         let mut reports = Vec::new();
+        let mut kicked = Vec::new();
         for id in ids {
             let ended = {
                 let Some(running) = self.games.get_mut(&id) else {
@@ -757,7 +752,6 @@ impl Tables {
                         Some((running.matchmade, running.lobby_id.clone(), users))
                     }
                 } else {
-                    running.expire_grace(now, live);
                     if running.step_at.is_some_and(|at| at <= now) {
                         running.step_at = None;
                         running.fire_clock(now, live);
@@ -768,6 +762,22 @@ impl Tables {
                     None
                 }
             };
+            if let Some(running) = self.games.get_mut(&id) {
+                let pending = std::mem::take(&mut running.kicks);
+                let mode = running.mode;
+                let game_id = running.id.clone();
+                let ranked = mode == TableMode::Ranked;
+                for user in pending {
+                    self.seat_of.remove(&user);
+                    self.lost.entry(user.clone()).or_insert(SeatLost {
+                        tag: SeatLostTag::Value,
+                        game_id: game_id.clone(),
+                        mode,
+                        reason: SeatLostReason::Inactivity,
+                    });
+                    kicked.push(InactivityKick { user, ranked });
+                }
+            }
             if let Some((matchmade, lobby_id, users)) = ended {
                 // A quick-play table has no lobby. A custom lobby opens with nobody ready.
                 if !matchmade {
@@ -779,7 +789,12 @@ impl Tables {
                 }
             }
         }
-        (finished, reports)
+        (finished, reports, kicked)
+    }
+
+    /// `seat.lost` for this account, if a welcome has not queued it yet.
+    pub fn take_lost(&mut self, user: &UserId) -> Option<SeatLost> {
+        self.lost.remove(user)
     }
 
     pub fn deliver(&mut self, report: &GameReport, live: &HashMap<UserId, super::Live>) {
@@ -904,9 +919,10 @@ impl Running {
             // for, and the round-end deadline has to include them or the table never moves on.
             let away_from_round =
                 self.status[index] == SeatStatus::Away && kind != DeadlineKind::NextRound;
+            // Human: An offline seat stays on the clock so two misses can kick it. Out is not.
             if self.seats[index].started_bot
                 || self.status[index] == SeatStatus::Bot
-                || self.status[index] == SeatStatus::Offline
+                || self.status[index] == SeatStatus::Out
                 || away_from_round
             {
                 continue;
@@ -964,18 +980,20 @@ impl Running {
         self.seats.get(index).is_some_and(|seat| seat.started_bot)
             || matches!(
                 self.status.get(index),
-                Some(SeatStatus::Bot | SeatStatus::Away)
+                Some(SeatStatus::Bot | SeatStatus::Away | SeatStatus::Out)
             )
     }
 
-    /// Bots take 0.8–1.5s. An away human is played after 1.5s.
+    /// Bots take 0.8–1.5s. An away human, and a kicked seat, are played after 1.5s.
     fn auto_delay_ms(&self) -> u64 {
         let away = self.next_auto().is_some_and(|seat| {
-            self.status.get(seat.index()) == Some(&SeatStatus::Away)
-                && !self
-                    .seats
-                    .get(seat.index())
-                    .is_some_and(|seat| seat.started_bot)
+            matches!(
+                self.status.get(seat.index()),
+                Some(SeatStatus::Away | SeatStatus::Out)
+            ) && !self
+                .seats
+                .get(seat.index())
+                .is_some_and(|seat| seat.started_bot)
         });
         if away {
             1_500
@@ -998,35 +1016,9 @@ impl Running {
             seat.started_bot
                 || self.status[index] == SeatStatus::Bot
                 || self.status[index] == SeatStatus::Offline
+                || self.status[index] == SeatStatus::Out
                 || self.ready[index]
         })
-    }
-
-    fn expire_grace(&mut self, now: Instant, live: &HashMap<UserId, super::Live>) {
-        let grace = Duration::from_millis(u64::from(
-            skt_protocol::Timers::standard().disconnect_grace_ms,
-        ));
-        let expired: Vec<usize> = self
-            .seats
-            .iter()
-            .enumerate()
-            .filter_map(|(index, seat)| {
-                seat.offline_since
-                    .filter(|since| now.saturating_duration_since(*since) >= grace)
-                    .map(|_| index)
-            })
-            .collect();
-        for index in expired {
-            self.seats[index].offline_since = None;
-            self.status[index] = SeatStatus::Bot;
-            let seat = Seat::from_index(u8::try_from(index).unwrap_or(0));
-            let events = vec![GameEvent::Online(OnlineEvent::SeatStatus {
-                seat,
-                status: SeatStatus::Bot,
-            })];
-            self.publish(&events, None, live);
-        }
-        self.schedule_bot_if_idle(now);
     }
 
     fn advance(&mut self, now: Instant, live: &HashMap<UserId, super::Live>) -> bool {
@@ -1076,7 +1068,11 @@ impl Running {
             {
                 break;
             }
-            if self.status.get(seat.index()) != Some(&SeatStatus::Online) || !self.waiting(seat) {
+            let on_clock = matches!(
+                self.status.get(seat.index()),
+                Some(SeatStatus::Online | SeatStatus::Offline)
+            );
+            if !on_clock || !self.waiting(seat) {
                 continue;
             }
             let _ = self.apply_auto(seat, live, true, &mut mark_away);
@@ -1183,6 +1179,21 @@ impl Running {
             self.seats[seat.index()].misses = misses;
             if misses >= 2 && self.status[seat.index()] == SeatStatus::Online {
                 mark_away.push(seat);
+            }
+            // Human: The second miss while the socket is down closes the seat in this same update.
+            // Agent: WRITES status out and, in ranked, forfeited. Later turns are not timedOut.
+            if misses >= 2 && self.status[seat.index()] == SeatStatus::Offline {
+                self.status[seat.index()] = SeatStatus::Out;
+                wire.push(GameEvent::Online(OnlineEvent::SeatStatus {
+                    seat,
+                    status: SeatStatus::Out,
+                }));
+                if self.mode == TableMode::Ranked && !self.forfeited.contains(&seat) {
+                    self.forfeited.push(seat);
+                }
+                if let Some(user) = self.seats[seat.index()].user.clone() {
+                    self.kicks.push(user);
+                }
             }
         }
         self.publish(&wire, None, live);
@@ -1559,6 +1570,39 @@ fn finished_tricks(view: &EngineView) -> u32 {
     won.saturating_add(destroyed)
 }
 
+// Human: The opening deal and its log lines. `None` when the deck cannot be built.
+// Agent: CALLS GameState::create. RETURNS the state and one log line per round.
+fn opening_deal(
+    settings: &skt_protocol::GameSettings,
+    players: usize,
+) -> Option<(GameState, Vec<LogEntry>)> {
+    let rules = Ruleset::new(
+        settings.scoring,
+        settings.format,
+        Expansions {
+            loot: settings.expansions.loot,
+            kraken: settings.expansions.kraken,
+            whale: settings.expansions.whale,
+        },
+        settings.abilities,
+    );
+    let deck = skt_engine::build_deck(rules.expansions).ok()?;
+    let mut deals = Recall::new(deck.len());
+    let state = GameState::create(
+        rules,
+        u8::try_from(players).unwrap_or(0),
+        Seat::from_index(0),
+        &mut deals,
+    )
+    .ok()?;
+    let log = deals
+        .orders
+        .into_iter()
+        .map(|(round, cards)| deal_entry(round, &cards))
+        .collect();
+    Some((state, log))
+}
+
 fn seats_from(
     lobby: &Lobby,
     live: &HashMap<UserId, super::Live>,
@@ -1575,7 +1619,6 @@ fn seats_from(
                     color: user.color,
                     started_bot: false,
                     misses: 0,
-                    offline_since: None,
                     last_emote: None,
                     prior_mu: 25.0,
                     prior_sigma: 25.0 / 3.0,
@@ -1602,7 +1645,6 @@ fn seats_from(
                     color: *color,
                     started_bot: true,
                     misses: 0,
-                    offline_since: None,
                     last_emote: None,
                     prior_mu: 25.0,
                     prior_sigma: 25.0 / 3.0,

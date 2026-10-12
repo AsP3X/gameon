@@ -316,7 +316,7 @@ async fn a_lobby_does_not_start_until_two_humans_are_seated() {
 }
 
 #[tokio::test]
-async fn a_reload_returns_the_same_hand_and_a_long_drop_becomes_a_bot() {
+async fn a_drop_stays_offline_and_one_miss_can_return() {
     let state = AppState::for_socket_tests(Duration::from_secs(5), Duration::from_secs(45));
     let port = serve(state.clone()).await;
     let host_cookie = guest(port).await;
@@ -340,9 +340,15 @@ async fn a_reload_returns_the_same_hand_and_a_long_drop_becomes_a_bot() {
     send(&mut host, r#"{"t":"lobby.start","id":4}"#).await;
     let update = read_until(&mut host, "\"t\":\"game.update\"").await;
     let hand = hand_of(&update);
+    let _ = read_until(&mut mate, "\"t\":\"game.update\"").await;
     host.close(None).await.expect("close");
     let dropped = read_until(&mut mate, "\"status\":\"offline\"").await;
     assert!(dropped.contains("seatStatus"), "{dropped}");
+    state.advance(Duration::from_secs(61)).await;
+    let still = read_until(&mut mate, "timedOut").await;
+    assert!(!still.contains("\"status\":\"bot\""), "{still}");
+    assert!(!still.contains("\"status\":\"out\""), "{still}");
+    assert!(!still.contains("seat.lost"), "{still}");
     let mut back = open_socket(port, &host_cookie).await;
     send(
         &mut back,
@@ -352,11 +358,109 @@ async fn a_reload_returns_the_same_hand_and_a_long_drop_becomes_a_bot() {
     let welcome = read_until(&mut back, "\"t\":\"welcome\"").await;
     assert!(welcome.contains(&hand), "{welcome}");
     assert!(welcome.contains("\"events\":[]"), "{welcome}");
-    back.close(None).await.expect("close");
+    assert!(!welcome.contains("seat.lost"), "{welcome}");
+}
+
+#[tokio::test]
+async fn two_misses_while_offline_close_the_seat_and_tell_only_that_player() {
+    let state = AppState::for_socket_tests(Duration::from_secs(5), Duration::from_secs(45));
+    let port = serve(state.clone()).await;
+    let host_cookie = guest(port).await;
+    let mate_cookie = guest(port).await;
+    let mut host = open_socket(port, &host_cookie).await;
+    let mut mate = open_socket(port, &mate_cookie).await;
+    hello(&mut host).await;
+    hello(&mut mate).await;
+    send(&mut host, &create(2)).await;
+    let code = quoted(&read_text(&mut host).await, "code");
+    send(&mut mate, &join(2, &code)).await;
+    let _ = read_text(&mut mate).await;
+    let _ = read_text(&mut mate).await;
+    let _ = read_text(&mut host).await;
+    send(&mut host, r#"{"t":"lobby.ready","id":3,"ready":true}"#).await;
+    let _ = read_until(&mut host, "\"t\":\"ok\"").await;
+    let _ = read_until(&mut mate, "lobby.state").await;
+    send(&mut mate, r#"{"t":"lobby.ready","id":3,"ready":true}"#).await;
+    let _ = read_until(&mut mate, "\"t\":\"ok\"").await;
+    let _ = read_until(&mut host, "lobby.state").await;
+    send(&mut host, r#"{"t":"lobby.start","id":4}"#).await;
+    let _ = read_until(&mut host, "\"t\":\"game.update\"").await;
+    let mate_open = read_until(&mut mate, "\"t\":\"game.update\"").await;
+    send(
+        &mut mate,
+        r#"{"t":"game.bid","id":5,"at":{"round":0,"trick":0},"bid":0}"#,
+    )
+    .await;
+    let _ = read_until(&mut mate, "\"t\":\"ok\"").await;
+    host.close(None).await.expect("close");
     let _ = read_until(&mut mate, "\"status\":\"offline\"").await;
-    state.advance(Duration::from_secs(61)).await;
-    let taken = read_until(&mut mate, "\"status\":\"bot\"").await;
-    assert!(taken.contains("seatStatus"), "{taken}");
+    state.advance(Duration::from_secs(46)).await;
+    let first = read_until(&mut mate, "timedOut").await;
+    assert!(!first.contains("\"status\":\"out\""), "{first}");
+    let card = first_card(&mate_open);
+    send(
+        &mut mate,
+        &format!(r#"{{"t":"game.play","id":6,"at":{{"round":0,"trick":0}},"card":{card}}}"#),
+    )
+    .await;
+    let played = read_until(&mut mate, "\"t\":\"ok\"").await;
+    assert!(played.contains("\"t\":\"ok\""), "{played}");
+    state.advance(Duration::from_secs(31)).await;
+    let kicked = read_until(&mut mate, "\"status\":\"out\"").await;
+    assert!(kicked.contains("timedOut"), "{kicked}");
+    assert!(!kicked.contains("seat.lost"), "{kicked}");
+    assert!(!kicked.contains("\"status\":\"bot\""), "{kicked}");
+    let mut back = open_socket(port, &host_cookie).await;
+    send(
+        &mut back,
+        r#"{"t":"hello","id":1,"protocol":1,"build":"test"}"#,
+    )
+    .await;
+    let welcome = read_until(&mut back, "\"t\":\"welcome\"").await;
+    assert!(welcome.contains("\"game\":null"), "{welcome}");
+    let lost = read_text(&mut back).await;
+    assert!(lost.contains("\"t\":\"seat.lost\""), "{lost}");
+    assert!(lost.contains("\"reason\":\"inactivity\""), "{lost}");
+    assert!(lost.contains("\"mode\":\"custom\""), "{lost}");
+    back.close(None).await.expect("close");
+    let mut again = open_socket(port, &host_cookie).await;
+    send(
+        &mut again,
+        r#"{"t":"hello","id":1,"protocol":1,"build":"test"}"#,
+    )
+    .await;
+    let second = read_until(&mut again, "\"t\":\"welcome\"").await;
+    assert!(second.contains("\"game\":null"), "{second}");
+    let extra = tokio::time::timeout(Duration::from_millis(200), read_text(&mut again)).await;
+    assert!(extra.is_err(), "seat.lost is sent once");
+    let mut round_end = String::new();
+    for _ in 0..40 {
+        state.advance(Duration::from_secs(4)).await;
+        if let Ok(frame) =
+            tokio::time::timeout(Duration::from_millis(80), read_text(&mut mate)).await
+            && frame.contains("roundEnd")
+        {
+            round_end = frame;
+            break;
+        }
+    }
+    assert!(round_end.contains("roundEnd"), "{round_end}");
+    send(&mut mate, r#"{"t":"game.ready","id":7}"#).await;
+    let advanced = read_until(&mut mate, "\"phase\":\"bidding\"").await;
+    assert!(advanced.contains("\"round\":1"), "{advanced}");
+}
+
+fn first_card(frame: &str) -> String {
+    let hand = hand_of(frame);
+    hand.split('[')
+        .nth(1)
+        .unwrap()
+        .split(',')
+        .next()
+        .unwrap()
+        .trim()
+        .trim_end_matches(']')
+        .to_owned()
 }
 
 fn close_frame(code: u16) -> tokio_tungstenite::tungstenite::protocol::CloseFrame {
