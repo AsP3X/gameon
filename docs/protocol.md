@@ -147,7 +147,8 @@ type Credentials = { username: string; password: string };   // register and log
 type ProfilePatch = { name?: string; color?: TableColor };   // omitted fields are left unchanged
 ```
 
-`standard` is the quick-play and ranked ruleset: 4 players, classic scoring, format `brawl`, loot,
+`standard` is the quick-play and ranked ruleset: 4 players, classic scoring, format `classic`
+(round 1 deals 1 card, then one more card each round, through 10 rounds of 10 cards), loot,
 kraken, whale and abilities off, `botLevel` `normal`, `pace` `standard`.
 
 `emotes` is the list the running server accepts, in this order: `yoho`, `arr`, `nice`, `oops`,

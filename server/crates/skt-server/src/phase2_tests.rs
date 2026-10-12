@@ -507,7 +507,8 @@ async fn a_ranked_kick_forfeits_and_starts_the_cooldown(pool: sqlx::PgPool) {
     assert!(lost.contains("\"mode\":\"ranked\""), "{lost}");
     let mut saw_out = false;
     let mut saw_over = false;
-    for _ in 0..250 {
+    // Classic is ten rounds, 1 through 10 cards. Each bid, play, and trick end is one tick.
+    for _ in 0..600 {
         state.advance(Duration::from_secs(46)).await;
         while let Ok(frame) =
             tokio::time::timeout(Duration::from_millis(20), read_text(&mut second)).await
@@ -584,7 +585,8 @@ async fn a_leave_is_listed_before_a_kick(pool: sqlx::PgPool) {
     }
     assert!(left.contains("\"t\":\"ok\""), "{left}");
     let mut over = String::new();
-    for _ in 0..250 {
+    // Classic is ten rounds, 1 through 10 cards. Each bid, play, and trick end is one tick.
+    for _ in 0..600 {
         state.advance(Duration::from_secs(46)).await;
         while let Ok(frame) =
             tokio::time::timeout(Duration::from_millis(20), read_text(&mut first)).await
@@ -623,7 +625,11 @@ fn assert_ranked_start(frame: &str) {
     assert!(frame.contains("\"t\":\"game.start\""), "{frame}");
     assert!(frame.contains("\"mode\":\"ranked\""), "{frame}");
     assert!(frame.contains("\"lobbyId\":null"), "{frame}");
-    assert!(frame.contains("\"format\":\"brawl\""), "{frame}");
+    assert!(frame.contains("\"format\":\"classic\""), "{frame}");
+    assert!(
+        frame.contains("\"schedule\":[1,2,3,4,5,6,7,8,9,10]"),
+        "{frame}"
+    );
     assert!(!frame.contains("\"bot\":true"), "{frame}");
     assert!(!frame.contains("\"t\":\"queue.status\""), "{frame}");
 }

@@ -56,14 +56,14 @@ pub struct GameSettings {
 impl GameSettings {
     /// Quick play and ranked.
     ///
-    /// Four players, classic scoring, Skip to the Brawl, the 70-card deck, no pirate abilities,
-    /// normal bots, standard pace.
+    /// Four players, classic scoring, ten rounds of 1 through 10 cards, the 70-card deck,
+    /// no pirate abilities, normal bots, standard pace.
     #[must_use]
     pub const fn standard() -> Self {
         Self {
             max_players: 4,
             scoring: Scoring::Classic,
-            format: Format::Brawl,
+            format: Format::Classic,
             expansions: ExpansionFlags {
                 loot: false,
                 kraken: false,

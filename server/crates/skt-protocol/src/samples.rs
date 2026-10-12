@@ -213,7 +213,7 @@ fn lobbies(dir: &Path, write: bool) -> Result<(), ExportError> {
     let summary = LobbySummary {
         id: LobbyId::new(LOBBY),
         host_name: "Anne".to_owned(),
-        settings: GameSettings::standard(),
+        settings: sample_game(),
         players: 2,
         allow_bots: None,
     };
@@ -317,7 +317,7 @@ fn client_new_tables(dir: &Path, write: bool, id: MessageId) -> Result<(), Expor
         &ClientMessage::LobbyCreate {
             id,
             visibility: Visibility::Public,
-            settings: GameSettings::standard(),
+            settings: sample_game(),
             allow_bots: Some(false),
         },
     )?;
@@ -327,7 +327,7 @@ fn client_new_tables(dir: &Path, write: bool, id: MessageId) -> Result<(), Expor
         "solo.start",
         &ClientMessage::SoloStart {
             id,
-            settings: GameSettings::standard(),
+            settings: sample_game(),
         },
     )?;
     Ok(())
@@ -353,7 +353,7 @@ fn client_lobby(dir: &Path, write: bool) -> Result<(), ExportError> {
         &ClientMessage::LobbyCreate {
             id,
             visibility: Visibility::Private,
-            settings: GameSettings::standard(),
+            settings: sample_game(),
             allow_bots: None,
         },
     )?;
@@ -391,7 +391,7 @@ fn client_lobby(dir: &Path, write: bool) -> Result<(), ExportError> {
         "lobby.settings",
         &ClientMessage::LobbySettings {
             id,
-            settings: GameSettings::standard(),
+            settings: sample_game(),
         },
     )?;
     put(
@@ -674,7 +674,7 @@ fn game_page() -> GamePage {
         games: vec![FinishedGame {
             id: GameId::new(GAME),
             table: TableKind::Solo,
-            settings: GameSettings::standard(),
+            settings: sample_game(),
             started_at: UnixMs::new(WHEN),
             ended_at: UnixMs::new(WHEN + 60_000),
             season_id: None,
@@ -745,7 +745,7 @@ fn lobby() -> Lobby {
         mode: TableMode::Custom,
         visibility: Visibility::Private,
         host_id: Some(UserId::new(USER)),
-        settings: GameSettings::standard(),
+        settings: sample_game(),
         members: vec![human(), bot()],
         allow_bots: None,
         state: LobbyPhase::Open,
@@ -823,6 +823,23 @@ fn table_info() -> TableInfo {
     }
 }
 
+/// A dealt sample. Quick play and ranked use [`GameSettings::standard`], which is classic.
+fn sample_game() -> GameSettings {
+    GameSettings {
+        max_players: 4,
+        scoring: skt_engine::Scoring::Classic,
+        format: skt_engine::Format::Brawl,
+        expansions: crate::ExpansionFlags {
+            loot: false,
+            kraken: false,
+            whale: false,
+        },
+        abilities: false,
+        bot_level: skt_engine::BotLevel::Normal,
+        pace: crate::Pace::Standard,
+    }
+}
+
 fn game_start() -> GameStart {
     GameStart {
         tag: GameStartTag::Value,
@@ -830,7 +847,7 @@ fn game_start() -> GameStart {
         mode: TableMode::Custom,
         table: None,
         lobby_id: Some(LobbyId::new(LOBBY)),
-        settings: GameSettings::standard(),
+        settings: sample_game(),
         deck: deck(),
         schedule: vec![6, 7, 8, 9, 10],
         seats: vec![

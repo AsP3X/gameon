@@ -141,9 +141,8 @@ engine is deleted (Phase 4). The fixtures stay as regression tests.
 | **Ranked** | Queue, account required, solo only | The standard ruleset | Never at the start | Yes |
 
 The **standard ruleset** (quick play and ranked): 4 players, classic scoring, the 70-card deck with
-no expansions and no pirate abilities, "Skip to the Brawl" (five rounds of 6 to 10 cards, about 20
-minutes). Low-card rounds are mostly luck and long games get abandoned; the big rounds are where
-skill shows.
+no expansions and no pirate abilities, classic format (round 1 deals 1 card, through 10 rounds of
+10 cards).
 
 ### At the table
 
@@ -288,7 +287,7 @@ after Phase 1.
 | D2 | Accounts | Guests for casual, username + password for ranked, no email | Lowest friction for "send a link to friends"; nothing to verify | Email or passkeys from day one |
 | D3 | Session | HttpOnly cookie, same origin | A script injected into the page cannot read it; the socket upgrade carries it | Bearer token in `localStorage` (needed only if native apps follow) |
 | D4 | Wire format | JSON text frames, full per-seat view on every update | Tiny payloads, trivial resume, readable in dev tools | Deltas or a binary format (no need at this size) |
-| D5 | Standard ruleset | 4 players, classic scoring, base deck, Skip to the Brawl | About 20 minutes; the skilful rounds | Full 10-round classic (about 35 minutes, more leavers) |
+| D5 | Standard ruleset | 4 players, classic scoring, base deck, classic format (1 through 10 cards) | The owner set the default deal to round 1 with 1 card, through 10 rounds of 10 | Skip to the Brawl (five rounds of 6 to 10) |
 | D6 | Chat | Emotes only | Nothing to moderate at launch | Free text with reporting and filters |
 | D7 | Rating | Weng-Lin via the `skillratings` crate | Built for more than two players | Pairwise Elo (simpler, slower to converge) |
 | D8 | Engine in the client | JS reference engine now, WebAssembly later | Unblocks both agents today | WebAssembly first (one engine sooner, blocks the web port on Grok) |

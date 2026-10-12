@@ -12,7 +12,7 @@
   "standard": {
     "maxPlayers": 4,
     "scoring": "classic",
-    "format": "brawl",
+    "format": "classic",
     "loot": false,
     "kraken": false,
     "whale": false,
