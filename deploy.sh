@@ -8,8 +8,12 @@
 #   ./deploy.sh --logs [svc...]  follow logs
 #   ./deploy.sh --restart [svc]  restart
 #   ./deploy.sh --rebuild        rebuild images, then start
-#   ./deploy.sh --down           stop the stack
+#   ./deploy.sh --down           stop the stack. The database stays.
+#   ./deploy.sh --reset          delete the database after you type reset
+#   ./deploy.sh --down --volumes same factory reset
 #   ./deploy.sh --backup         dump Postgres to backups/
+#   ./deploy.sh --data-dir [p]   optional folder. Default storage is the named volume.
+#   ./deploy.sh --named-volumes  the named volume skt_pg_data (the default)
 #   ./deploy.sh --setup          change the saved answers, or reset them
 #   ./deploy.sh --help
 
@@ -68,8 +72,13 @@ show_help() {
     ./deploy.sh --logs [svc...]  Follow logs (all, or named services)
     ./deploy.sh --restart [svc]  Restart all services, or the named ones
     ./deploy.sh --rebuild        Rebuild images, then start
-    ./deploy.sh --down           Stop and remove the containers
+    ./deploy.sh --down           Stop and remove the containers. The database stays.
+    ./deploy.sh --reset          Factory reset: delete every account, rating and game
+    ./deploy.sh --down --volumes Same factory reset
     ./deploy.sh --backup         Write a Postgres dump to backups/
+    ./deploy.sh --data-dir [path] Store Postgres in a folder (default ./data). Optional.
+    ./deploy.sh --named-volumes  Store Postgres in the named volume again (the default)
+    ./deploy.sh --migrate        Copy the database when changing where it is stored
     ./deploy.sh --setup          Change the saved answers, then start
     ./deploy.sh --help           This help
 
@@ -82,17 +91,24 @@ show_help() {
 
   The page proxies /api, including the socket, so the browser talks to one origin.
   Running games are written to Postgres as they are played and replayed after a restart.
-  ./deploy.sh --backup writes a dump. --down removes containers and does not delete that dump.
+  The database is the named volume skt_pg_data. A data folder is optional: --data-dir ./data
+  stores it in that folder instead, and --named-volumes goes back. --down removes containers
+  and keeps the database. --reset deletes it after you type reset. --backup writes a dump.
   Docker stop sends SIGTERM. The API finishes writing open games, then exits.
 
   ${BOLD}First start${NC} opens a setup screen when .env does not exist yet.
   ${BOLD}./deploy.sh --setup${NC} opens it again. The fields start as they are now.
   Arrows move. Enter on This machine or NPM selects how players reach the tavern.
   Enter on a setting changes it. s saves and starts. r puts the answers back to
-  the shipped defaults, and s writes them. q quits and writes nothing. Reset does
-  not touch the database. While skt-postgres exists, the reach mode, the Postgres
-  port and the database user, password and name cannot be changed: that would
-  recreate the container and delete what it stores.
+  the shipped defaults, and s writes them. q quits and writes nothing. The r key
+  does not touch the database. The data folder line is optional: leave it empty for
+  the named volume, or set a path such as ./data.
+  While the database is only inside the skt-postgres container, the reach mode, the
+  Postgres port and the database user, password and name cannot be changed: that
+  would recreate the container and delete what it stores. On the named volume or in
+  a data folder, reach mode and host ports can change and the data stays. The user,
+  password and database name still stay, because Postgres applies them only when the
+  data directory is first created.
   A start without a terminal copies .env.example and does not ask.
 
   ${BOLD}Environment${NC} (.env, or the defaults in .env.example):
@@ -103,6 +119,7 @@ show_help() {
     SKT_SECURE_COOKIE   1 when that origin is https
     POSTGRES_PASSWORD   database password
     SKT_TRUSTED_PROXIES extra proxy addresses, comma-separated
+    SKT_DATA_DIR        optional data folder. Unset means the named volume.
     RUST_LOG            API log level
     NO_COLOR            disable coloured output
 
@@ -143,6 +160,7 @@ require_files() {
     docker-compose.yml \
     docker-compose.local.yml \
     docker-compose.npm.yml \
+    docker-compose.data-dir.yml \
     .env.example \
     server/Dockerfile \
     deploy/web/Dockerfile \
@@ -194,6 +212,7 @@ SETUP_ORIGIN=""
 SETUP_SECURE=""
 SETUP_PASSWORD="skt"
 SETUP_PROXIES=""
+SETUP_DATA=""
 SETUP_PGUSER="skt"
 SETUP_PGDB="skt"
 SETUP_PICK=0
@@ -214,6 +233,7 @@ load_setup_from() {
   SETUP_PASSWORD="$(file_value "$file" POSTGRES_PASSWORD)"
   SETUP_PASSWORD="${SETUP_PASSWORD:-skt}"
   SETUP_PROXIES="$(file_value "$file" SKT_TRUSTED_PROXIES)"
+  SETUP_DATA="$(file_value "$file" SKT_DATA_DIR)"
   SETUP_PGUSER="$(file_value "$file" POSTGRES_USER)"
   SETUP_PGUSER="${SETUP_PGUSER:-skt}"
   SETUP_PGDB="$(file_value "$file" POSTGRES_DB)"
@@ -291,7 +311,20 @@ setup_check() {
     printf 'The secure cookie is on or off.\n' >&2
     return 1
   }
+  valid_data_dir "$SETUP_DATA" || {
+    printf 'The data folder is optional. Leave it empty for the named volume. A path cannot contain $ " '\'' \\ # or be / itself.\n' >&2
+    return 1
+  }
   setup_blank
+}
+
+# Empty is the named volume. A set path is optional folder storage.
+valid_data_dir() {
+  local dir="$1"
+  [[ -z "$dir" ]] && return 0
+  case "$dir" in
+    *[\$\"\'\\\#]*|*$'\n'*|/) return 1 ;;
+  esac
 }
 
 # Replace every KEY= line, or append one. Duplicate keys collapse to the first.
@@ -317,6 +350,17 @@ set_key() {
   mv "$tmp" "$file"
 }
 
+# Drop every KEY= line. Used when the data folder is cleared back to the named volume.
+unset_key() {
+  local key="$1" file="$2" tmp line
+  [[ -f "$file" ]] || return 0
+  tmp="$(mktemp)"
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    [[ "$line" == "${key}="* ]] || printf '%s\n' "$line"
+  done < "$file" > "$tmp"
+  mv "$tmp" "$file"
+}
+
 write_setup() {
   setup_real
   [[ -f .env ]] || cp .env.example .env
@@ -330,6 +374,11 @@ write_setup() {
   set_key POSTGRES_USER "$SETUP_PGUSER" .env
   set_key POSTGRES_DB "$SETUP_PGDB" .env
   set_key SKT_TRUSTED_PROXIES "$SETUP_PROXIES" .env
+  if [[ -n "$SETUP_DATA" ]]; then
+    set_key SKT_DATA_DIR "$SETUP_DATA" .env
+  else
+    unset_key SKT_DATA_DIR .env
+  fi
   set_key DATABASE_URL "postgres://${SETUP_PGUSER}:${SETUP_PASSWORD}@127.0.0.1:${SETUP_PGPORT}/${SETUP_PGDB}" .env
   setup_blank
 }
@@ -363,7 +412,7 @@ setup_fields() {
   if [[ "$SETUP_MODE" != "npm" ]]; then
     printf '%s\n' web api pg
   fi
-  printf '%s\n' origin cookie password proxies
+  printf '%s\n' origin cookie password proxies data
 }
 
 setup_field_count() {
@@ -426,6 +475,13 @@ setup_draw() {
       cookie) setup_row "$i" "Secure cookie         ${cookie}" ;;
       password) setup_row "$i" "Database password     ${SETUP_PASSWORD}" ;;
       proxies) setup_row "$i" "Trusted proxies       ${proxies}" ;;
+      data)
+        if [[ -n "$SETUP_DATA" ]]; then
+          setup_row "$i" "Data folder           ${SETUP_DATA}"
+        else
+          setup_row "$i" "Data folder           (named volumes)"
+        fi
+        ;;
     esac
     i=$((i + 1))
   done < <(setup_fields)
@@ -436,11 +492,12 @@ setup_draw() {
   else
     printf '  %sThe page is the only address the browser needs.%s\n' "$DIM" "$NC"
   fi
+  printf '  %sThe data folder is optional. Empty keeps the named volume skt_pg_data.%s\n' "$DIM" "$NC"
   if [[ "$SETUP_ORIGIN" == https:* && "$SETUP_SECURE" != "1" ]]; then
     printf '  %sThis origin is https. Turn the secure cookie on.%s\n' "$YELLOW" "$NC"
   fi
   if [[ "$SETUP_PG_LOCKED" == "1" ]]; then
-    printf '  %sThe database is already in skt-postgres. Reach mode, its port and its password stay.%s\n' "$DIM" "$NC"
+    printf '  %sThe database already exists. Its user, password and name stay.%s\n' "$DIM" "$NC"
   fi
   printf '\n  %s↑↓ move    enter select    s save and start    r reset answers    q quit%s\n' "$DIM" "$NC"
   printf '  %sOn a text line, enter keeps the shown value. Type - to clear the origin or the proxies.%s\n' "$DIM" "$NC"
@@ -496,24 +553,31 @@ setup_reset() {
   [[ "$answer" == "y" || "$answer" == "Y" ]]
 }
 
-# skt-postgres has no volume. Recreating it deletes accounts and games.
+# skt-postgres keeps accounts and games. A database that lives only inside the container
+# is deleted when the container is recreated. A volume or a data folder is not.
 postgres_container_exists() {
   local names
   names="$(docker ps -a --format '{{.Names}}' 2>/dev/null || true)"
   printf '%s\n' "$names" | grep -qx 'skt-postgres'
 }
 
-# Put reach mode and the database answers back when changing them would recreate
-# skt-postgres. Returns 1 when it had to put something back.
+# "volume <name>" or "bind <path>". Empty when the container is absent, or when the
+# database lives only in the container's own filesystem.
+postgres_data_mount() {
+  postgres_container_exists || return 0
+  docker inspect --format '{{range .Mounts}}{{if eq .Destination "/var/lib/postgresql/data"}}{{.Type}} {{if eq .Type "volume"}}{{.Name}}{{else}}{{.Source}}{{end}}{{end}}{{end}}' skt-postgres 2>/dev/null || true
+}
+
+# Put answers back when writing them would destroy the database or change a password
+# Postgres will ignore. Returns 1 when it had to put something back.
 guard_postgres() {
-  local prev_mode prev_port prev_user prev_pass prev_db
+  local prev_mode prev_port prev_user prev_pass prev_db mount
   postgres_container_exists || return 0
   if [[ ! -f .env ]]; then
     printf 'skt-postgres already exists, and there is no .env to compare with. Nothing was written.\n' >&2
     return 1
   fi
-  prev_mode="$(file_value .env PROXY_MODE)"
-  prev_mode="${prev_mode:-local}"
+  prev_mode="$(canon_proxy_mode "$(file_value .env PROXY_MODE)")"
   prev_port="$(file_value .env POSTGRES_PORT)"
   prev_port="${prev_port:-5432}"
   prev_user="$(file_value .env POSTGRES_USER)"
@@ -522,6 +586,18 @@ guard_postgres() {
   prev_pass="${prev_pass:-skt}"
   prev_db="$(file_value .env POSTGRES_DB)"
   prev_db="${prev_db:-skt}"
+  mount="$(postgres_data_mount)"
+  if [[ -n "$mount" ]]; then
+    if [[ "$SETUP_PGUSER" == "$prev_user" && "$SETUP_PASSWORD" == "$prev_pass" \
+       && "$SETUP_PGDB" == "$prev_db" ]]; then
+      return 0
+    fi
+    SETUP_PGUSER="$prev_user"
+    SETUP_PASSWORD="$prev_pass"
+    SETUP_PGDB="$prev_db"
+    printf 'skt-postgres already has a database. The user, password and database name were put back: Postgres applies them only when that data directory is first created. Nothing was written.\n' >&2
+    return 1
+  fi
   if [[ "$SETUP_MODE" == "$prev_mode" && "$SETUP_PGPORT" == "$prev_port" \
      && "$SETUP_PGUSER" == "$prev_user" && "$SETUP_PASSWORD" == "$prev_pass" \
      && "$SETUP_PGDB" == "$prev_db" ]]; then
@@ -532,7 +608,7 @@ guard_postgres() {
   SETUP_PGUSER="$prev_user"
   SETUP_PASSWORD="$prev_pass"
   SETUP_PGDB="$prev_db"
-  printf 'skt-postgres already exists. Changing how players reach the tavern, the Postgres port, or the database user, password or name would recreate that container and delete the accounts and games in it. Those answers were put back. Nothing was written.\n' >&2
+  printf 'skt-postgres keeps the database inside the container. Changing how players reach the tavern, the Postgres port, or the database user, password or name would recreate that container and delete the accounts and games in it. Those answers were put back. Nothing was written.\n' >&2
   return 1
 }
 
@@ -604,11 +680,23 @@ run_setup() {
             setup_edit "$SETUP_PROXIES" "  (- clears)"
             SETUP_PROXIES="$(apply_optional "$SETUP_ENTERED" "(Docker bridge)")"
             ;;
+          data)
+            if [[ -n "$SETUP_DATA" ]]; then
+              setup_edit "$SETUP_DATA" "  (- named volumes)"
+            else
+              setup_edit "(named volumes)" "  (- named volumes)"
+            fi
+            if [[ "$SETUP_ENTERED" == "-" || "$SETUP_ENTERED" == "(named volumes)" ]]; then
+              SETUP_DATA=""
+            else
+              SETUP_DATA="$SETUP_ENTERED"
+            fi
+            ;;
         esac
         setup_clamp_pick
         ;;
       save)
-        if setup_check && guard_postgres; then
+        if setup_check && guard_postgres && prepare_storage_change "$SETUP_DATA"; then
           write_setup
           restore_screen
           ok "Saved .env"
@@ -658,14 +746,310 @@ load_env() {
     local|npm) ;;
     *) die "PROXY_MODE must be local or npm (got '$PROXY_MODE')." ;;
   esac
+  load_data_dir
+}
+
+# Empty stays empty: the named volume skt_pg_data. A relative path is from the
+# repository root, not the caller's directory. ~ is the home directory.
+resolve_data_dir() {
+  local dir="$1"
+  [[ -n "$dir" ]] || return 0
+  case "$dir" in
+    "~") dir="$HOME" ;;
+    "~/"*) dir="${HOME}/${dir:2}" ;;
+    /*) ;;
+    *) dir="${REPO_ROOT}/${dir#./}" ;;
+  esac
+  while [[ "$dir" == */ && "$dir" != / ]]; do
+    dir="${dir%/}"
+  done
+  printf '%s' "$dir"
+}
+
+# Reads SKT_DATA_DIR from .env. Exports the absolute folder, or unsets it.
+load_data_dir() {
+  SKT_DATA_DIR="$(resolve_data_dir "$(env_value SKT_DATA_DIR)")"
+  if [[ -n "$SKT_DATA_DIR" ]]; then
+    export SKT_DATA_DIR
+  else
+    unset SKT_DATA_DIR
+  fi
+}
+
+PG_VOLUME="skt_pg_data"
+
+desired_data_mount() {
+  if [[ -n "${SKT_DATA_DIR:-}" ]]; then
+    printf 'bind %s/database' "$SKT_DATA_DIR"
+  else
+    printf 'volume %s' "$PG_VOLUME"
+  fi
+}
+
+norm_mount() {
+  local spec="$1" kind path
+  kind="${spec%% *}"
+  path="${spec#* }"
+  if [[ "$kind" == "bind" ]]; then
+    path="${path#/private}"
+    printf 'bind %s' "$path"
+  else
+    printf '%s' "$spec"
+  fi
+}
+
+mounts_match() {
+  local current
+  current="$(postgres_data_mount)"
+  [[ -n "$current" ]] || return 1
+  [[ "$(norm_mount "$current")" == "$(norm_mount "$(desired_data_mount)")" ]]
+}
+
+dir_has_data() {
+  [[ -d "$1" ]] || return 1
+  [[ -r "$1" && -x "$1" ]] || return 0
+  [[ -n "$(ls -A "$1" 2>/dev/null)" ]]
+}
+
+desired_has_data() {
+  if [[ -n "${SKT_DATA_DIR:-}" ]]; then
+    dir_has_data "${SKT_DATA_DIR}/database"
+  else
+    docker volume inspect "$PG_VOLUME" >/dev/null 2>&1
+  fi
+}
+
+make_data_dir() {
+  [[ -n "${SKT_DATA_DIR:-}" ]] || return 0
+  (umask 022 && mkdir -p "${SKT_DATA_DIR}/database") || {
+    printf 'Cannot create %s/database.\n' "$SKT_DATA_DIR" >&2
+    return 1
+  }
+}
+
+data_where() {
+  local mount
+  mount="$(postgres_data_mount)"
+  if postgres_container_exists && [[ -z "$mount" ]]; then
+    printf 'inside the skt-postgres container'
+    return 0
+  fi
+  if [[ -n "${SKT_DATA_DIR:-}" ]]; then
+    printf 'the folder %s/database' "$SKT_DATA_DIR"
+  else
+    printf 'the Docker volume %s' "$PG_VOLUME"
+  fi
+}
+
+switch_hint() {
+  if [[ -n "${SKT_DATA_DIR:-}" ]]; then
+    printf './deploy.sh --data-dir %s' "$SKT_DATA_DIR"
+  else
+    printf './deploy.sh --named-volumes'
+  fi
+}
+
+confirm_yes() {
+  local answer=""
+  if [[ "${ASSUME_YES:-0}" -eq 1 ]]; then
+    printf '%s [y/N]: y (--yes)\n' "$1"
+    return 0
+  fi
+  if [[ ! -t 0 ]]; then
+    printf '%s\n' "$1" >&2
+    printf 'There is no terminal to answer. Run it from one, or add --yes.\n' >&2
+    return 1
+  fi
+  printf '%s [y/N]: ' "$1"
+  IFS= read -r answer || true
+  case "$(printf '%s' "$answer" | tr '[:upper:]' '[:lower:]')" in
+    y|yes) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+# 0 when moving to the desired storage will not destroy a database.
+# The caller has already pointed SKT_DATA_DIR at the destination.
+storage_change_is_safe() {
+  local current
+  postgres_container_exists || return 0
+  current="$(postgres_data_mount)"
+  if [[ -z "$current" ]]; then
+    if [[ "${MIGRATE:-0}" -eq 1 ]] && ! desired_has_data; then
+      return 0
+    fi
+    if desired_has_data; then
+      printf 'The container holds a database, and %s already has one. --migrate never overwrites data. Nothing was changed.\n' "$(desired_data_mount)" >&2
+    else
+      printf 'skt-postgres keeps the database inside the container. Starting on %s would delete it.\n' "$(desired_data_mount)" >&2
+      printf 'Copy it, then start: %s --migrate\n' "$(switch_hint)" >&2
+      printf 'Or delete it: ./deploy.sh --reset\n' >&2
+      printf 'Nothing was changed.\n' >&2
+    fi
+    return 1
+  fi
+  mounts_match && return 0
+  if desired_has_data; then
+    printf 'The database in %s is left as it is. The next start uses %s, which already has data.\n' "$(norm_mount "$current")" "$(desired_data_mount)"
+    return 0
+  fi
+  if [[ "${MIGRATE:-0}" -eq 1 ]]; then
+    return 0
+  fi
+  printf 'The database is in %s, and %s is empty.\n' "$(norm_mount "$current")" "$(desired_data_mount)" >&2
+  printf 'Switching now would start on an empty database. Nothing was changed.\n' >&2
+  printf 'Copy it, then start: %s --migrate\n' "$(switch_hint)" >&2
+  return 1
+}
+
+# $1 is the new SKT_DATA_DIR value as written in .env. Empty means the named volume.
+# Does not write .env. Returns 1 when the switch is refused.
+prepare_storage_change() {
+  local new_raw="$1" old_raw new_resolved old_resolved rc
+  old_raw="$(env_value SKT_DATA_DIR)"
+  new_resolved="$(resolve_data_dir "$new_raw")"
+  old_resolved="$(resolve_data_dir "$old_raw")"
+  [[ "$new_resolved" != "$old_resolved" ]] || return 0
+  if [[ "$new_resolved" == "/" ]]; then
+    printf 'The data folder cannot be / itself.\n' >&2
+    return 1
+  fi
+  if [[ -n "$new_resolved" ]]; then
+    SKT_DATA_DIR="$new_resolved"
+    export SKT_DATA_DIR
+  else
+    unset SKT_DATA_DIR
+  fi
+  rc=0
+  storage_change_is_safe || rc=1
+  load_data_dir
+  return "$rc"
+}
+
+migrate_database() {
+  local current src
+  if desired_has_data; then
+    printf 'The destination already has data. --migrate never overwrites it. Nothing was changed.\n' >&2
+    return 1
+  fi
+  confirm_yes "Copy the database to $(desired_data_mount)?" || {
+    printf 'Nothing was changed.\n' >&2
+    return 1
+  }
+  make_data_dir || return 1
+  current="$(postgres_data_mount)"
+  step "Stopping Postgres so the files can be copied…"
+  if [[ -z "$current" ]]; then
+    docker stop skt-postgres >/dev/null
+    if [[ -n "${SKT_DATA_DIR:-}" ]]; then
+      docker run --rm --volumes-from skt-postgres -v "${SKT_DATA_DIR}/database:/to" postgres:16-alpine cp -a /var/lib/postgresql/data/. /to/
+    else
+      docker volume create --label com.docker.compose.project=skt --label com.docker.compose.volume=skt_pg_data "$PG_VOLUME" >/dev/null
+      docker run --rm --volumes-from skt-postgres -v "${PG_VOLUME}:/to" postgres:16-alpine cp -a /var/lib/postgresql/data/. /to/
+    fi
+    echo "Copied. The next start uses the copy. The files inside the old container are removed when it is recreated."
+  else
+    src="${current#* }"
+    compose stop postgres >/dev/null
+    if [[ -n "${SKT_DATA_DIR:-}" ]]; then
+      docker run --rm -v "${src}:/from:ro" -v "${SKT_DATA_DIR}/database:/to" postgres:16-alpine cp -a /from/. /to/
+    else
+      docker volume create --label com.docker.compose.project=skt --label com.docker.compose.volume=skt_pg_data "$PG_VOLUME" >/dev/null
+      docker run --rm -v "${src}:/from:ro" -v "${PG_VOLUME}:/to" postgres:16-alpine cp -a /from/. /to/
+    fi
+    echo "Copied. The old copy is left where it was. Remove it once the tavern works from the new place."
+  fi
+}
+
+# Before a start: refuse a move that would drop the database, or copy it when --migrate was given.
+ensure_data_ready() {
+  load_data_dir
+  if postgres_container_exists && ! mounts_match; then
+    if [[ "${MIGRATE:-0}" -eq 1 ]]; then
+      migrate_database || return 1
+    else
+      storage_change_is_safe || return 1
+    fi
+  fi
+  make_data_dir
+}
+
+confirm_reset() {
+  local answer=""
+  echo "This deletes every account, rating and game."
+  echo "  Where: $(data_where)"
+  echo "  .env is kept. The stack stays stopped."
+  if [[ "${ASSUME_YES:-0}" -eq 1 ]]; then
+    echo "Confirmed with --yes."
+    return 0
+  fi
+  if [[ ! -t 0 ]]; then
+    echo "A factory reset needs a terminal, or --yes. Nothing was deleted." >&2
+    return 1
+  fi
+  printf 'Type reset to continue: '
+  IFS= read -r answer || true
+  if [[ "$answer" != "reset" ]]; then
+    echo "Nothing was deleted."
+    return 1
+  fi
+}
+
+factory_reset() {
+  load_data_dir
+  confirm_reset || exit 1
+  step "Stopping the stack and deleting the database…"
+  compose down --volumes --remove-orphans
+  if [[ -n "${SKT_DATA_DIR:-}" && -d "$SKT_DATA_DIR" ]]; then
+    docker run --rm -v "${SKT_DATA_DIR}:/data" postgres:16-alpine rm -rf /data/database
+    make_data_dir
+  fi
+  ok "Factory reset done. The database is empty. .env was kept."
+  echo "  Start again with ./deploy.sh"
+}
+
+safe_down() {
+  local where
+  if postgres_container_exists && [[ -z "$(postgres_data_mount)" ]]; then
+    die "skt-postgres keeps the database inside the container. ./deploy.sh --down would delete it.
+  Copy it: ./deploy.sh --migrate
+  Or delete it: ./deploy.sh --reset
+  Nothing was changed."
+  fi
+  where="$(data_where)"
+  step "Stopping the stack…"
+  compose down --remove-orphans
+  ok "Stopped. Accounts and games stay in ${where}."
+}
+
+apply_storage_cli() {
+  local new_raw=""
+  if [[ "$STORAGE" == "dir" ]]; then
+    new_raw="$DATA_DIR_VALUE"
+  fi
+  valid_data_dir "$new_raw" ||
+    die "the data folder is optional. Leave it unset for the named volume. A path cannot contain \$ \" ' \\ # or be / itself."
+  prepare_storage_change "$new_raw" || die "Nothing was changed."
+  [[ -f .env ]] || cp .env.example .env
+  if [[ -n "$new_raw" ]]; then
+    set_key SKT_DATA_DIR "$new_raw" .env
+  else
+    unset_key SKT_DATA_DIR .env
+  fi
+  load_data_dir
+  ok "Storage: $(data_where) (saved in .env)"
 }
 
 compose() {
   local files=(-f docker-compose.yml)
+  load_data_dir
   if [[ "$PROXY_MODE" == "npm" ]]; then
     files+=(-f docker-compose.npm.yml)
   else
     files+=(-f docker-compose.local.yml)
+  fi
+  if [[ -n "${SKT_DATA_DIR:-}" ]]; then
+    files+=(-f docker-compose.data-dir.yml)
   fi
   docker compose "${files[@]}" "$@"
 }
@@ -696,6 +1080,8 @@ show_status() {
   if [[ -n "$origin" ]]; then
     echo "  Origin: ${origin}"
   fi
+  load_data_dir
+  echo "  Storage: $(data_where)"
   echo "  Web:   ${web_url}"
   echo "  API:   ${api_url}"
   echo ""
@@ -704,10 +1090,20 @@ show_status() {
 
 CMD=""
 PASSTHRU=()
+DOWN_VOLUMES=0
+STORAGE=""
+DATA_DIR_VALUE=""
+MIGRATE=0
+ASSUME_YES=0
 set_cmd() {
   [[ -z "$CMD" || "$CMD" == "$1" ]] ||
     die "only one command at a time (got '$CMD' and '$1'). See ./deploy.sh --help"
   CMD="$1"
+}
+set_storage() {
+  [[ -z "$STORAGE" || "$STORAGE" == "$1" ]] ||
+    die "--data-dir and --named-volumes can't be used together. See ./deploy.sh --help"
+  STORAGE="$1"
 }
 
 while (( $# )); do
@@ -719,17 +1115,50 @@ while (( $# )); do
     --restart|restart)       set_cmd restart ;;
     --rebuild|rebuild)       set_cmd rebuild ;;
     --down|down|--stop|stop) set_cmd down ;;
+    --volumes)               DOWN_VOLUMES=1 ;;
+    --reset|reset)           set_cmd reset ;;
     --backup|backup)         set_cmd backup ;;
     --setup|setup)           set_cmd setup ;;
     --up|up)                 set_cmd up ;;
+    --yes|-y)                ASSUME_YES=1 ;;
+    --migrate)               MIGRATE=1 ;;
+    --data-dir=*)            set_storage dir; DATA_DIR_VALUE="${1#--data-dir=}" ;;
+    --data-dir)
+      set_storage dir
+      DATA_DIR_VALUE="./data"
+      if (( $# > 1 )) && [[ "$2" != -* ]]; then
+        DATA_DIR_VALUE="$2"
+        shift
+      fi
+      ;;
+    --named-volumes)         set_storage volumes ;;
     --)                      shift; PASSTHRU+=("$@"); break ;;
     -*)                      die "unknown option: $1
-  Valid: --status --ps --logs --restart --rebuild --down --backup --setup --help" ;;
+  Valid: --status --ps --logs --restart --rebuild --down --volumes --reset --backup
+         --data-dir [path] --named-volumes --migrate --yes --setup --help" ;;
     *)                       PASSTHRU+=("$1") ;;
   esac
   shift
 done
 CMD="${CMD:-up}"
+
+if [[ "$DOWN_VOLUMES" -eq 1 && "$CMD" != "down" && "$CMD" != "reset" ]]; then
+  die "--volumes is only valid with --down. Example: ./deploy.sh --down --volumes"
+fi
+if [[ "$MIGRATE" -eq 1 && "$CMD" != "up" && "$CMD" != "rebuild" && "$CMD" != "setup" ]]; then
+  die "--migrate copies the database while changing where it is stored.
+  Example: ./deploy.sh --data-dir ./data --migrate"
+fi
+if [[ -n "$STORAGE" ]]; then
+  case "$CMD" in
+    up|rebuild|setup) ;;
+    *) die "--data-dir and --named-volumes change where the database is stored. They don't go with --${CMD}.
+  Example: ./deploy.sh --data-dir ./data" ;;
+  esac
+  if [[ "$STORAGE" == "dir" && -z "$DATA_DIR_VALUE" ]]; then
+    die "--data-dir needs a folder, or nothing for ./data."
+  fi
+fi
 
 case "$CMD" in
   logs|restart) ;;
@@ -752,6 +1181,10 @@ if [[ "$CMD" == "setup" ]]; then
   CMD="up"
 fi
 load_env
+if [[ -n "$STORAGE" ]]; then
+  CURRENT_STAGE="storage"
+  apply_storage_cli
+fi
 
 CURRENT_STAGE="$CMD"
 case "$CMD" in
@@ -770,10 +1203,13 @@ case "$CMD" in
     show_status
     exit 0
     ;;
+  reset) factory_reset; exit 0 ;;
   down)
-    step "Stopping the stack…"
-    compose down
-    ok "Stopped. Running games stay in Postgres and are replayed on the next start."
+    if [[ "$DOWN_VOLUMES" -eq 1 ]]; then
+      factory_reset
+    else
+      safe_down
+    fi
     exit 0
     ;;
   backup)
@@ -794,6 +1230,9 @@ echo "===================================================="
 echo ""
 
 ensure_proxy_network
+CURRENT_STAGE="database storage"
+# A refusal already explained itself. exit keeps the error trap from adding a second report.
+ensure_data_ready || exit 1
 
 STARTED_AT=$SECONDS
 CURRENT_STAGE="stack build/start"

@@ -17,3 +17,6 @@ server/target/
 
 # Database dumps from ./deploy.sh --backup
 /backups/
+
+# Optional Postgres folder from ./deploy.sh --data-dir. Named volumes are the default.
+/data/

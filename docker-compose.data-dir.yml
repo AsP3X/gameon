@@ -1,0 +1,15 @@
+# Optional data-folder overlay. Used only when SKT_DATA_DIR is set in .env.
+# Named volume skt_pg_data is the default; leave this file out to keep it.
+#
+#   SKT_DATA_DIR=/absolute/path ./deploy.sh
+#   ./deploy.sh --data-dir ./data
+#
+# Nginx Proxy Manager is unrelated. This folder is where Postgres keeps its files.
+# The mount replaces skt_pg_data. Postgres chowns database/ to its own user.
+
+services:
+  postgres:
+    volumes:
+      - type: bind
+        source: ${SKT_DATA_DIR:?set SKT_DATA_DIR in .env, or leave out docker-compose.data-dir.yml}/database
+        target: /var/lib/postgresql/data

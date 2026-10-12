@@ -7,6 +7,10 @@
 #   docker compose -f docker-compose.yml -f docker-compose.npm.yml up -d --build
 #
 # A restart replays games that were still running from open_games. Accounts live in Postgres.
+# Postgres keeps them in the named volume skt_pg_data. SKT_DATA_DIR is optional: when it is
+# set, docker-compose.data-dir.yml stores them in that folder instead. ./deploy.sh --reset
+# deletes the database. A container created before the volume existed keeps its files inside
+# the container; ./deploy.sh refuses to recreate it until they are copied or reset.
 #
 # NPM targets (npm overlay, container DNS on proxy-network):
 #   http://skt-web:80      the page, which also proxies /api/v1 and the socket
@@ -28,6 +32,8 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-skt}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-skt}
       POSTGRES_DB: ${POSTGRES_DB:-skt}
+    volumes:
+      - skt_pg_data:/var/lib/postgresql/data
     networks:
       - skt-internal
     healthcheck:
@@ -106,3 +112,7 @@ networks:
   skt-internal:
     name: skt-internal
     driver: bridge
+
+volumes:
+  skt_pg_data:
+    name: skt_pg_data
