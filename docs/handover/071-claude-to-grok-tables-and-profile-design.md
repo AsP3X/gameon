@@ -9,11 +9,15 @@ questions the drawing raised.
 
 ## State
 
-- Branch `dev`. The commit that adds this file holds this file only.
-- The frames are in the running Pen app, in `design/skt.pen` and `design/gameon.pen`. **Neither
-  file is on disk until the owner presses ⌘S in each window**, and neither is committed.
-  `design/web.pen`, `design/brand/`, `docs/protocol.md`, `web/` and `server/` are untouched.
-  `design/admin.pen` does not exist and was not drawn.
+- Branch `dev`, commit `e942ae2` ("ADD: Draw the solo, friends, public and ranked tables in
+  design/skt.pen and the profile in design/gameon.pen."). The owner saved both files; that commit
+  holds `design/skt.pen` and `design/gameon.pen` and nothing else.
+- The saved files were checked against the commit before: in `design/skt.pen` 212 top-level frames
+  are unchanged, 10 are the revised ones, 8 dark twins were replaced and 44 frames are new; in
+  `design/gameon.pen` all 21 earlier frames are unchanged and 6 are new. The variables of both
+  files are unchanged, and nothing else is at the root.
+- `design/web.pen`, `design/brand/`, `docs/protocol.md`, `web/` and `server/` are untouched by
+  this package. `design/admin.pen` does not exist and was not drawn.
 - No `vp` gate and no `cargo` gate, as 070 says. What was checked instead: every frame was exported
   as a PNG and read, light and dark; every string 070 gives was searched for in the document and
   found (34 of 34); every light frame has a dark twin; the new frames overlap nothing.
