@@ -4,8 +4,8 @@
 
    Every sound is synthesised with Web Audio: no files to load, nothing blocked by the page sandbox.
    A sound that was given recorded takes (Sound.samples) plays one of those instead, and keeps its
-   recipe for as long as it has none. The menu music (Sound.tune, Sound.music) is a recording too:
-   the one sound that has no recipe, so without its file the menu is quiet.
+   recipe for as long as it has none. The menu music (Sound.tunes, Sound.music) is recorded too:
+   the one sound that has no recipe, so without its files the menu is quiet.
    Graph: voices -> master gain -> soft limiter -> speakers, with a small send to a room reverb.
    Sounds are named recipes; call Sound.play(name, arg). */
 
@@ -32,10 +32,16 @@ interface Ambience {
   g: GainNode;
 }
 
-/** Where the menu tune sits in its file, in seconds: it begins at `starts` and comes round again every `repeats`. */
+/** Where a menu tune sits in its file, in seconds: it begins at `starts` and comes round again every `repeats`. */
 export interface TuneLoop {
   starts: number;
   repeats: number;
+}
+
+/** A menu tune: an encoded audio file, as fetched, and where the tune sits in it. */
+export interface Tune {
+  file: ArrayBuffer;
+  loop: TuneLoop;
 }
 
 interface Music {
@@ -53,10 +59,12 @@ const waiting: Partial<Record<SoundName, ArrayBuffer[]>> = {};
 /** The decoded takes of a sound, and which one it played last. */
 const takes: Partial<Record<SoundName, AudioBuffer[]>> = {};
 const lastTake: Partial<Record<SoundName, number>> = {};
-/** The menu tune as it was handed in, still encoded: it is decoded when the music is first wanted. */
-let tuneFile: ArrayBuffer | null = null;
-let tune: AudioBuffer | null = null;
-let tuneLoop: TuneLoop = { starts: 0, repeats: 0 };
+/** The menu tunes as they were handed in, still encoded, and which of them plays next: -1 until one is drawn. */
+let tunes: Tune[] = [];
+let turn = -1;
+/** The one tune that is decoded, and the one that is being decoded. */
+let tune: { of: Tune; buffer: AudioBuffer } | null = null;
+let decoding: Tune | null = null;
 /** Whether the page asks for the menu music, and the music that plays. */
 let musicWanted = false;
 let mus: Music | null = null;
@@ -571,54 +579,80 @@ function ambience(on: boolean): void {
   }
 }
 
-/* --- menu music: one recorded tune, round and round for as long as the page asks for it --- */
-/* The tune is stored at -16 LUFS. At 0.3 it plays about as loud as a button tap, under the game's sounds. */
+/* --- menu music: recorded tunes, one at a time, round and round for as long as the page asks for it --- */
+/* The tunes are stored at -16 LUFS. At 0.3 they play about as loud as a button tap, under the game's sounds. */
 const MUSIC_V = 0.3;
 
-/** Decode the tune. Decoded it takes some 30 MB, so this waits until the music is wanted. */
-function decodeTune(): void {
-  const file = tuneFile,
-    ctx = decoder();
-  if (!file || !ctx) return;
-  tuneFile = null;
+/** The tune to start next. The first is drawn at random; after that they take turns. */
+function upNext(): Tune | null {
+  if (!tunes.length) return null;
+  if (turn < 0) turn = Math.floor(Math.random() * tunes.length);
+  return tunes[turn] ?? null;
+}
+
+/** Leave out a tune that cannot be read. The turn stays with the tune it was on, or passes to the one after. */
+function leaveOut(one: Tune): void {
+  const at = tunes.indexOf(one);
+  if (at < 0) return;
+  tunes.splice(at, 1);
+  if (turn > at) turn--;
+  if (turn >= tunes.length) turn = 0;
+}
+
+/**
+ * Decode a tune. Decoded it takes some 30 MB, so this waits until the tune is about to play, and
+ * only one tune is kept decoded: the next one takes its place.
+ */
+function decodeTune(next: Tune): void {
+  const ctx = decoder();
+  if (!ctx || decoding === next) return;
+  decoding = next;
+  const done = (buffer: AudioBuffer | null): void => {
+    if (decoding === next) decoding = null;
+    // Not audio this browser can read: the tune is left out. If it was the only one, the menu stays quiet.
+    if (buffer) tune = { of: next, buffer };
+    else leaveOut(next);
+    syncMusic();
+  };
   try {
-    void ctx.decodeAudioData(file).then(
-      (buffer) => {
-        tune = buffer;
-        syncMusic();
-      },
-      () => {
-        // Not audio this browser can read: the menu stays quiet.
-      },
-    );
+    // Decoding empties the buffer it is given, and the tune will be decoded again when its turn comes round.
+    void ctx.decodeAudioData(next.file.slice(0)).then(done, () => done(null));
   } catch {
     // The same, for a browser whose decodeAudioData does not return a promise.
+    done(null);
   }
 }
 
-/** Start or stop the tune, so that it plays exactly while it is wanted and sound is on. */
+/** Start or stop the music, so that a tune plays exactly while it is wanted and sound is on. */
 function syncMusic(): void {
   const on = musicWanted && !prefs.muted;
-  if (on && !tune) decodeTune();
+  const next = on && !mus ? upNext() : null;
+  if (next && tune?.of !== next) {
+    decodeTune(next); // which comes back here
+    return;
+  }
   // Without an audio graph nothing plays: it is built on the first tap, and unlock() comes back here.
   const r = rig;
   if (!r) return;
   const t = r.ctx.currentTime;
-  if (on && tune && !mus) {
+  if (next && tune) {
     const s = r.ctx.createBufferSource(),
-      g = r.ctx.createGain();
-    s.buffer = tune;
+      g = r.ctx.createGain(),
+      loop = next.loop;
+    s.buffer = tune.buffer;
     // Any stretch of the file that is `repeats` long joins up with itself (web README, "Menu
     // music"). This one begins half-way into the lead-in, clear of the silence a decoder may leave
     // at the front of an MP3.
     s.loop = true;
-    s.loopStart = tuneLoop.starts / 2;
-    s.loopEnd = tuneLoop.starts / 2 + tuneLoop.repeats;
+    s.loopStart = loop.starts / 2;
+    s.loopEnd = loop.starts / 2 + loop.repeats;
     g.gain.value = 0;
     s.connect(g).connect(r.master);
-    s.start(t, tuneLoop.starts);
+    s.start(t, loop.starts);
     g.gain.setTargetAtTime(MUSIC_V, t, 0.4);
     mus = { s, g };
+    // The next time the music starts, it is the next tune's turn.
+    turn = (turn + 1) % tunes.length;
   } else if (!on && mus) {
     const m = mus;
     mus = null;
@@ -691,16 +725,16 @@ export const Sound = {
     if (ctx) decode(ctx, name);
   },
   /**
-   * Give the mixer the menu tune: an encoded audio file, as fetched, and where the tune sits in it.
-   * It is decoded when the music is first wanted.
+   * Give the mixer the menu tunes. The first one to play is drawn at random; every time the music
+   * starts again it is the next one's turn. Each is decoded when it is about to play.
    */
-  tune(file: ArrayBuffer, loop: TuneLoop): void {
-    tuneFile = file;
-    tuneLoop = loop;
+  tunes(list: readonly Tune[]): void {
+    tunes = [...list];
+    turn = -1;
     syncMusic();
   },
   /**
-   * Say whether the menu music is wanted. It plays once the tune is in and audio is unlocked, and
+   * Say whether the menu music is wanted. It plays once the tunes are in and audio is unlocked, and
    * not while sound is off. Asking again for what already is changes nothing.
    */
   music(on: boolean): void {

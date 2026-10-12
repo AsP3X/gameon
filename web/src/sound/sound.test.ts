@@ -1,7 +1,7 @@
 /* Recorded takes in the mixer: a sound that has them plays one of them, varied, and a sound that has
    none (yet, or because they could not be read) plays its synthesised recipe. The recipes themselves
    are held against the legacy build in tableview/parity/sound.test.ts.
-   And the menu music: one recorded tune that goes round while it is wanted and sound is on. */
+   And the menu music: recorded tunes, one of which goes round while it is wanted and sound is on. */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 
 /** What the mixer built, in order: just enough of Web Audio to see which voices a sound used. */
@@ -286,13 +286,23 @@ describe('menu music', () => {
   const file = (): ArrayBuffer => new Uint8Array([9]).buffer;
   /** The sources that play the tune, in the order they were started. */
   const tunes = (): FakeNode[] => made.filter((v) => v.kind === 'source' && v.buffer === 'take 9');
+  /** Three tunes, each with a loop of its own length, and which of them the mixer started, in order. */
+  const three = () =>
+    [7, 8, 9].map((k) => ({ file: new Uint8Array([k]).buffer, loop: { starts: 0.5, repeats: k * 10 } }));
+  const started = (): unknown[] => made.filter((v) => v.kind === 'source').map((v) => v.buffer);
+  /** Leave the menu and come back to it. */
+  async function again(Sound: Awaited<ReturnType<typeof mixer>>): Promise<void> {
+    Sound.music(false);
+    Sound.music(true);
+    await settle();
+  }
   /** The gain the tune was last sent to. Its own gain node is the one made right after its source. */
   const sentTo = (tune: FakeNode | undefined): number | null | undefined =>
     tune && made[made.indexOf(tune) + 1]?.gain.target;
 
   it('waits for the first tap, then plays the tune round its loop, fading in', async () => {
     const Sound = await mixer();
-    Sound.tune(file(), LOOP);
+    Sound.tunes([{ file: file(), loop: LOOP }]);
     Sound.music(true);
     await settle();
     expect(made).toEqual([]); // no audio graph before the first tap
@@ -317,7 +327,7 @@ describe('menu music', () => {
       },
     );
     const Sound = await mixer();
-    Sound.tune(file(), LOOP);
+    Sound.tunes([{ file: file(), loop: LOOP }]);
     await settle();
     expect(decoded).toBe(0);
     Sound.music(true);
@@ -333,14 +343,14 @@ describe('menu music', () => {
     Sound.unlock();
     Sound.music(true);
     expect(tunes()).toEqual([]);
-    Sound.tune(file(), LOOP);
+    Sound.tunes([{ file: file(), loop: LOOP }]);
     await settle();
     expect(tunes()).toHaveLength(1);
   });
 
-  it('plays one tune however often it is asked for, and fades it out when it is no longer wanted', async () => {
+  it('plays the tune once however often it is asked for, and fades it out when it is no longer wanted', async () => {
     const Sound = await mixer();
-    Sound.tune(file(), LOOP);
+    Sound.tunes([{ file: file(), loop: LOOP }]);
     Sound.unlock();
     Sound.music(true);
     await settle();
@@ -360,7 +370,7 @@ describe('menu music', () => {
     const prefs = { muted: true, volume: 0.8, ambience: false, haptics: true };
     const Sound = await mixer();
     Sound.use(prefs);
-    Sound.tune(file(), LOOP);
+    Sound.tunes([{ file: file(), loop: LOOP }]);
     Sound.unlock();
     Sound.music(true);
     await settle();
@@ -376,7 +386,7 @@ describe('menu music', () => {
 
   it('stops when the table leaves the page, without building an audio graph for it', async () => {
     const Sound = await mixer();
-    Sound.tune(file(), LOOP);
+    Sound.tunes([{ file: file(), loop: LOOP }]);
     Sound.music(true);
     Sound.hush();
     expect(made).toEqual([]);
@@ -389,10 +399,89 @@ describe('menu music', () => {
     expect(tunes().map((v) => v.stoppedAt)).toEqual([6]);
   });
 
+  it('draws the first tune at random and then gives each its turn', async () => {
+    vi.spyOn(Math, 'random').mockReturnValue(0.5);
+    const Sound = await mixer();
+    Sound.tunes(three());
+    Sound.unlock();
+    Sound.music(true);
+    await settle();
+    expect(started()).toEqual(['take 8']);
+    for (let k = 0; k < 4; k++) await again(Sound);
+    expect(started()).toEqual(['take 8', 'take 9', 'take 7', 'take 8', 'take 9']);
+    // Each plays round its own loop, and only the last one started is still playing.
+    const sources = made.filter((v) => v.kind === 'source');
+    expect(sources.map((v) => v.loopEnd)).toEqual([80.25, 90.25, 70.25, 80.25, 90.25]);
+    expect(sources.map((v) => v.stoppedAt)).toEqual([6, 6, 6, 6, null]);
+  });
+
+  it('can start with any of the tunes', async () => {
+    for (const [drawn, first] of [
+      [0, 'take 7'],
+      [0.34, 'take 8'],
+      [0.999, 'take 9'],
+    ] as const) {
+      made = [];
+      vi.spyOn(Math, 'random').mockReturnValue(drawn);
+      const Sound = await mixer();
+      Sound.tunes(three());
+      Sound.unlock();
+      Sound.music(true);
+      await settle();
+      expect(started()).toEqual([first]);
+    }
+  });
+
+  it('decodes each tune when its turn comes, and again the next time round', async () => {
+    const decoded: string[] = [];
+    const real = decodeFile;
+    decodeFile = (f) => {
+      decoded.push(takeOf(f));
+      return real(f);
+    };
+    vi.spyOn(Math, 'random').mockReturnValue(0);
+    const Sound = await mixer();
+    Sound.tunes(three());
+    Sound.unlock();
+    Sound.music(true);
+    await settle();
+    expect(decoded).toEqual(['take 7']);
+    for (let k = 0; k < 3; k++) await again(Sound);
+    // The file is still whole after it was decoded: decoding was given a copy.
+    expect(decoded).toEqual(['take 7', 'take 8', 'take 9', 'take 7']);
+    expect(started()).toEqual(['take 7', 'take 8', 'take 9', 'take 7']);
+  });
+
+  it('does not move on when the music is asked for and dropped before it could start', async () => {
+    vi.spyOn(Math, 'random').mockReturnValue(0);
+    const Sound = await mixer();
+    Sound.tunes(three());
+    Sound.music(true); // no tap yet: the first tune is decoded and waits
+    await settle();
+    Sound.music(false);
+    Sound.music(true);
+    Sound.unlock();
+    await settle();
+    expect(started()).toEqual(['take 7']);
+  });
+
+  it('leaves out a tune that cannot be decoded and plays the others in turn', async () => {
+    decodeFile = (f) => (takeOf(f) === 'take 8' ? Promise.reject(new Error('not audio')) : Promise.resolve(takeOf(f)));
+    vi.spyOn(Math, 'random').mockReturnValue(0.5); // the broken one is drawn first
+    const Sound = await mixer();
+    Sound.tunes(three());
+    Sound.unlock();
+    Sound.music(true);
+    await settle();
+    expect(started()).toEqual(['take 9']);
+    for (let k = 0; k < 3; k++) await again(Sound);
+    expect(started()).toEqual(['take 9', 'take 7', 'take 9', 'take 7']);
+  });
+
   it('leaves the menu quiet when the tune cannot be decoded', async () => {
     decodeFile = () => Promise.reject(new Error('not audio'));
     const Sound = await mixer();
-    Sound.tune(file(), LOOP);
+    Sound.tunes([{ file: file(), loop: LOOP }]);
     Sound.unlock();
     Sound.music(true);
     await settle();
@@ -400,7 +489,7 @@ describe('menu music', () => {
     decodeFile = () => {
       throw new TypeError('decodeAudioData wants callbacks here');
     };
-    Sound.tune(file(), LOOP);
+    Sound.tunes([{ file: file(), loop: LOOP }]);
     await settle();
     expect(made.filter((v) => v.kind === 'source')).toEqual([]);
   });

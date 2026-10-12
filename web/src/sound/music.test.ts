@@ -1,8 +1,8 @@
-/* Loading the menu music: the fetched file goes to the mixer with the place of its loop, and a file
-   that cannot be had leaves the mixer without one. */
+/* Loading the menu music: the fetched files go to the mixer, each with the place of its loop, and a
+   file that cannot be had is left out. */
 import { readFileSync } from 'node:fs';
 import { afterEach, describe, expect, it, vi } from 'vite-plus/test';
-import { loadMusic, TAVERN_LOOP } from './music';
+import { loadMusic, TUNES } from './music';
 import { Sound } from './sound';
 
 afterEach(() => {
@@ -10,24 +10,43 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+/** The bytes a tune's address answers with: its place in TUNES, so a test can tell the files apart. */
+const serve = (url: string): Response => new Response(new Uint8Array([TUNES.findIndex((tune) => tune.url === url)]));
+/** What the mixer was handed: for each tune its file's bytes and its loop. */
+const handed = (given: { mock: { calls: Parameters<typeof Sound.tunes>[] } }) =>
+  given.mock.calls.map(([tunes]) => tunes.map(({ file, loop }) => [Array.from(new Uint8Array(file)), loop]));
+
 describe('loadMusic', () => {
-  it('fetches the tune from this origin and hands it over with its loop', async () => {
-    const given = vi.spyOn(Sound, 'tune').mockImplementation(() => {});
+  it('fetches the tunes from this origin and hands them over together, each with its loop', async () => {
+    const given = vi.spyOn(Sound, 'tunes').mockImplementation(() => {});
     const asked: string[] = [];
     vi.stubGlobal('fetch', (url: string) => {
       asked.push(url);
-      return Promise.resolve(new Response(new Uint8Array([4, 2])));
+      return Promise.resolve(serve(url));
     });
     await loadMusic();
-    expect(asked).toHaveLength(1);
-    expect(asked[0]).toMatch(/^\/[^:]*tavern[^/]*\.mp3$/);
-    expect(given).toHaveBeenCalledTimes(1);
-    expect(Array.from(new Uint8Array(given.mock.calls[0]?.[0] ?? new ArrayBuffer(0)))).toEqual([4, 2]);
-    expect(given.mock.calls[0]?.[1]).toBe(TAVERN_LOOP);
+    expect(asked).toHaveLength(2);
+    expect(new Set(asked).size).toBe(2);
+    for (const url of asked) expect(url).toMatch(/^\/[^:]*tavern[^/]*\.mp3$/);
+    expect(handed(given)).toEqual([TUNES.map((tune, k) => [[k], tune.loop])]);
   });
 
-  it('hands over nothing when the tune is missing or cannot be reached', async () => {
-    const given = vi.spyOn(Sound, 'tune').mockImplementation(() => {});
+  it('hands over the tunes that came when one is missing or cannot be reached', async () => {
+    const given = vi.spyOn(Sound, 'tunes').mockImplementation(() => {});
+    const [first, second] = TUNES;
+    vi.stubGlobal('fetch', (url: string) =>
+      Promise.resolve(url === first?.url ? new Response('gone', { status: 404 }) : serve(url)),
+    );
+    await loadMusic();
+    vi.stubGlobal('fetch', (url: string) =>
+      url === second?.url ? Promise.reject(new TypeError('offline')) : Promise.resolve(serve(url)),
+    );
+    await loadMusic();
+    expect(handed(given)).toEqual([[[[1], second?.loop]], [[[0], first?.loop]]]);
+  });
+
+  it('hands over nothing when no tune is to be had', async () => {
+    const given = vi.spyOn(Sound, 'tunes').mockImplementation(() => {});
     vi.stubGlobal('fetch', () => Promise.resolve(new Response('gone', { status: 404 })));
     await expect(loadMusic()).resolves.toBeUndefined();
     vi.stubGlobal('fetch', () => Promise.reject(new TypeError('offline')));
@@ -36,7 +55,7 @@ describe('loadMusic', () => {
   });
 });
 
-describe('tavern.mp3', () => {
+describe('the tune files', () => {
   /** The length of an MPEG-1 Layer III file, read from its frame headers. */
   function seconds(bytes: Uint8Array): number {
     const RATES = [44100, 48000, 32000],
@@ -55,10 +74,13 @@ describe('tavern.mp3', () => {
     return total;
   }
 
-  it('holds the loop the mixer is told about, with the lead-in on either side of it', () => {
-    const length = seconds(readFileSync(new URL('./music/tavern.mp3', import.meta.url)));
-    // The encoder adds a frame or two of its own; the file must not be shorter than lead-in, loop, lead-in.
-    expect(length).toBeGreaterThanOrEqual(TAVERN_LOOP.repeats + 2 * TAVERN_LOOP.starts);
-    expect(length).toBeLessThan(TAVERN_LOOP.repeats + 2 * TAVERN_LOOP.starts + 0.1);
-  });
+  it.each(TUNES)(
+    '$url holds the loop the mixer is told about, with the lead-in on either side of it',
+    ({ url, loop }) => {
+      const length = seconds(readFileSync(new URL(`./music/${url.slice(url.lastIndexOf('/') + 1)}`, import.meta.url)));
+      // The encoder adds a frame or two of its own; the file must not be shorter than lead-in, loop, lead-in.
+      expect(length).toBeGreaterThanOrEqual(loop.repeats + 2 * loop.starts);
+      expect(length).toBeLessThan(loop.repeats + 2 * loop.starts + 0.1);
+    },
+  );
 });
