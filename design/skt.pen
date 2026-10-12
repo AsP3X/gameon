@@ -125546,6 +125546,157 @@
             },
             {
               "type": "frame",
+              "id": "lCWcn",
+              "name": "Lost the seat",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 6,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "oDCuK",
+                  "name": "Seat · Lost the seat",
+                  "context": "div",
+                  "width": 118,
+                  "height": 114.39,
+                  "cornerRadius": 14,
+                  "layout": "vertical",
+                  "gap": 2,
+                  "padding": [
+                    8,
+                    6
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "dzTnh",
+                      "name": "A",
+                      "context": "span",
+                      "opacity": 0.5,
+                      "width": 42,
+                      "height": 42,
+                      "fill": "$orange",
+                      "cornerRadius": 50,
+                      "stroke": "#0000002e",
+                      "strokeWidth": {
+                        "bottom": 4
+                      },
+                      "strokeAlignment": "inner",
+                      "layout": "vertical",
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "KBhDw",
+                          "fill": "$white",
+                          "content": "A",
+                          "lineHeight": 1.4,
+                          "fontFamily": "$f-ui",
+                          "fontSize": 18,
+                          "fontWeight": "900"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "hAWY6",
+                      "name": "Anne",
+                      "context": "span",
+                      "fill": "$fg",
+                      "content": "Anne",
+                      "lineHeight": 1.4,
+                      "fontFamily": "$f-ui",
+                      "fontSize": 12,
+                      "fontWeight": "900"
+                    },
+                    {
+                      "type": "text",
+                      "id": "utmlt",
+                      "name": "Ready",
+                      "context": "span",
+                      "fill": "$green-ink",
+                      "content": "Ready",
+                      "lineHeight": 1.4,
+                      "fontFamily": "$f-ui",
+                      "fontSize": 12,
+                      "fontWeight": "900"
+                    },
+                    {
+                      "type": "text",
+                      "id": "EOoqj",
+                      "name": "0 pts",
+                      "context": "span",
+                      "fill": "$muted",
+                      "content": "0 pts",
+                      "lineHeight": 1.4,
+                      "fontFamily": "$f-ui",
+                      "fontSize": 12,
+                      "fontWeight": "800"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "W0b8X0",
+                      "layoutPosition": "absolute",
+                      "x": 0,
+                      "y": 40,
+                      "name": "Presence · Out",
+                      "width": 118,
+                      "justifyContent": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "Xi57K",
+                          "name": "Tag",
+                          "fill": "$soft",
+                          "cornerRadius": 99,
+                          "stroke": "$bg",
+                          "strokeWidth": 2,
+                          "strokeAlignment": "outer",
+                          "padding": [
+                            1,
+                            6
+                          ],
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "eJhkt",
+                              "name": "OUT",
+                              "fill": "$muted",
+                              "content": "OUT",
+                              "lineHeight": 1.3,
+                              "fontFamily": "$f-ui",
+                              "fontSize": 10,
+                              "fontWeight": "900",
+                              "letterSpacing": 0.4
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "gFjl6",
+                  "name": "LOST THE SEAT",
+                  "fill": "$faint",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "LOST THE SEAT",
+                  "lineHeight": 1.4,
+                  "textAlign": "center",
+                  "fontFamily": "$f-ui",
+                  "fontSize": 11,
+                  "fontWeight": "800",
+                  "letterSpacing": 0.88
+                }
+              ]
+            },
+            {
+              "type": "frame",
               "id": "DzEJE",
               "name": "A bot took the seat",
               "width": "fill_container",
@@ -125694,7 +125845,16 @@
                   "letterSpacing": 0.88
                 }
               ]
-            },
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "BeHeP",
+          "name": "Row",
+          "width": "fill_container",
+          "gap": 6,
+          "children": [
             {
               "type": "frame",
               "id": "O7ACA8",
@@ -125804,6 +125964,20 @@
                   "letterSpacing": 0.88
                 }
               ]
+            },
+            {
+              "type": "frame",
+              "id": "nwEca",
+              "name": "Empty cell",
+              "width": "fill_container",
+              "height": 1
+            },
+            {
+              "type": "frame",
+              "id": "HVxzj",
+              "name": "Empty cell",
+              "width": "fill_container",
+              "height": 1
             }
           ]
         },
@@ -125814,7 +125988,7 @@
           "fill": "$muted",
           "textGrowth": "fixed-width",
           "width": "fill_container",
-          "content": "The ring empties as the deadline comes. When it is empty the table plays for that seat. A tag says where a player is: offline, away, or replaced by a bot.",
+          "content": "The ring empties as the deadline comes. When it is empty the table plays for that seat. A tag says where a player is: offline, away, out, or replaced by a bot. Out is a player who was offline for two turns in a row. The table plays for that seat from then on, with no ring, and the player can't come back to it. A bot only takes the seat of a player who left.",
           "lineHeight": 1.4,
           "fontFamily": "$f-ui",
           "fontSize": 13,
@@ -126034,6 +126208,42 @@
               "textGrowth": "fixed-width",
               "width": "fill_container",
               "content": "Remy is away…",
+              "lineHeight": 1.4,
+              "textAlign": "center",
+              "fontFamily": "$f-ui",
+              "fontSize": 16,
+              "fontWeight": "800"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "Q6YdW",
+          "name": "State · The turn of a seat that is out",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 8,
+          "children": [
+            {
+              "type": "text",
+              "id": "eyUJF",
+              "name": "THE TURN OF A SEAT THAT IS OUT",
+              "fill": "$faint",
+              "content": "THE TURN OF A SEAT THAT IS OUT",
+              "lineHeight": 1.4,
+              "fontFamily": "$f-ui",
+              "fontSize": 11,
+              "fontWeight": "800",
+              "letterSpacing": 0.88
+            },
+            {
+              "type": "text",
+              "id": "xeOMi",
+              "name": "The table plays for Remy…",
+              "fill": "$fg",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "The table plays for Remy…",
               "lineHeight": 1.4,
               "textAlign": "center",
               "fontFamily": "$f-ui",
@@ -128611,7 +128821,7 @@
                   "fill": "$fg",
                   "textGrowth": "fixed-width",
                   "width": "fill_container",
-                  "content": "Getting you back to the table. Your seat is kept while you are away, and the table plays for you when your time runs out.",
+                  "content": "Getting you back to the table. The table plays for you when your time runs out. Miss two turns in a row and you lose your seat.",
                   "lineHeight": 1.4,
                   "fontFamily": "$f-ui",
                   "fontSize": 16,
@@ -128724,7 +128934,7 @@
                   "fill": "$fg",
                   "textGrowth": "fixed-width",
                   "width": "fill_container",
-                  "content": "Getting you back to the table. Your seat is kept while you are away, and the table plays for you when your time runs out.",
+                  "content": "Getting you back to the table. The table plays for you when your time runs out. Miss two turns in a row and you lose your seat.",
                   "lineHeight": 1.4,
                   "fontFamily": "$f-ui",
                   "fontSize": 16,
@@ -132834,6 +133044,157 @@
             },
             {
               "type": "frame",
+              "id": "GgmJf",
+              "name": "Lost the seat",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 6,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "aScuv",
+                  "name": "Seat · Lost the seat",
+                  "context": "div",
+                  "width": 118,
+                  "height": 114.39,
+                  "cornerRadius": 14,
+                  "layout": "vertical",
+                  "gap": 2,
+                  "padding": [
+                    8,
+                    6
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "K5T5F2",
+                      "name": "A",
+                      "context": "span",
+                      "opacity": 0.5,
+                      "width": 42,
+                      "height": 42,
+                      "fill": "$orange",
+                      "cornerRadius": 50,
+                      "stroke": "#0000002e",
+                      "strokeWidth": {
+                        "bottom": 4
+                      },
+                      "strokeAlignment": "inner",
+                      "layout": "vertical",
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "mnIBL",
+                          "fill": "$white",
+                          "content": "A",
+                          "lineHeight": 1.4,
+                          "fontFamily": "$f-ui",
+                          "fontSize": 18,
+                          "fontWeight": "900"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "pzflN",
+                      "name": "Anne",
+                      "context": "span",
+                      "fill": "$fg",
+                      "content": "Anne",
+                      "lineHeight": 1.4,
+                      "fontFamily": "$f-ui",
+                      "fontSize": 12,
+                      "fontWeight": "900"
+                    },
+                    {
+                      "type": "text",
+                      "id": "ZJd0m",
+                      "name": "Ready",
+                      "context": "span",
+                      "fill": "$green-ink",
+                      "content": "Ready",
+                      "lineHeight": 1.4,
+                      "fontFamily": "$f-ui",
+                      "fontSize": 12,
+                      "fontWeight": "900"
+                    },
+                    {
+                      "type": "text",
+                      "id": "grd0W",
+                      "name": "0 pts",
+                      "context": "span",
+                      "fill": "$muted",
+                      "content": "0 pts",
+                      "lineHeight": 1.4,
+                      "fontFamily": "$f-ui",
+                      "fontSize": 12,
+                      "fontWeight": "800"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "xAg9P",
+                      "layoutPosition": "absolute",
+                      "x": 0,
+                      "y": 40,
+                      "name": "Presence · Out",
+                      "width": 118,
+                      "justifyContent": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "WCZs2",
+                          "name": "Tag",
+                          "fill": "$soft",
+                          "cornerRadius": 99,
+                          "stroke": "$bg",
+                          "strokeWidth": 2,
+                          "strokeAlignment": "outer",
+                          "padding": [
+                            1,
+                            6
+                          ],
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "GD7ck",
+                              "name": "OUT",
+                              "fill": "$muted",
+                              "content": "OUT",
+                              "lineHeight": 1.3,
+                              "fontFamily": "$f-ui",
+                              "fontSize": 10,
+                              "fontWeight": "900",
+                              "letterSpacing": 0.4
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "xYPNe",
+                  "name": "LOST THE SEAT",
+                  "fill": "$faint",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "LOST THE SEAT",
+                  "lineHeight": 1.4,
+                  "textAlign": "center",
+                  "fontFamily": "$f-ui",
+                  "fontSize": 11,
+                  "fontWeight": "800",
+                  "letterSpacing": 0.88
+                }
+              ]
+            },
+            {
+              "type": "frame",
               "id": "Lh7Wf",
               "name": "A bot took the seat",
               "width": "fill_container",
@@ -132982,7 +133343,16 @@
                   "letterSpacing": 0.88
                 }
               ]
-            },
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "tV6mh",
+          "name": "Row",
+          "width": "fill_container",
+          "gap": 6,
+          "children": [
             {
               "type": "frame",
               "id": "Z2M11",
@@ -133092,6 +133462,20 @@
                   "letterSpacing": 0.88
                 }
               ]
+            },
+            {
+              "type": "frame",
+              "id": "bDJnx",
+              "name": "Empty cell",
+              "width": "fill_container",
+              "height": 1
+            },
+            {
+              "type": "frame",
+              "id": "VtuSO",
+              "name": "Empty cell",
+              "width": "fill_container",
+              "height": 1
             }
           ]
         },
@@ -133102,7 +133486,7 @@
           "fill": "$muted",
           "textGrowth": "fixed-width",
           "width": "fill_container",
-          "content": "The ring empties as the deadline comes. When it is empty the table plays for that seat. A tag says where a player is: offline, away, or replaced by a bot.",
+          "content": "The ring empties as the deadline comes. When it is empty the table plays for that seat. A tag says where a player is: offline, away, out, or replaced by a bot. Out is a player who was offline for two turns in a row. The table plays for that seat from then on, with no ring, and the player can't come back to it. A bot only takes the seat of a player who left.",
           "lineHeight": 1.4,
           "fontFamily": "$f-ui",
           "fontSize": 13,
@@ -133325,6 +133709,42 @@
               "textGrowth": "fixed-width",
               "width": "fill_container",
               "content": "Remy is away…",
+              "lineHeight": 1.4,
+              "textAlign": "center",
+              "fontFamily": "$f-ui",
+              "fontSize": 16,
+              "fontWeight": "800"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "x72Rk0",
+          "name": "State · The turn of a seat that is out",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 8,
+          "children": [
+            {
+              "type": "text",
+              "id": "u9M5K",
+              "name": "THE TURN OF A SEAT THAT IS OUT",
+              "fill": "$faint",
+              "content": "THE TURN OF A SEAT THAT IS OUT",
+              "lineHeight": 1.4,
+              "fontFamily": "$f-ui",
+              "fontSize": 11,
+              "fontWeight": "800",
+              "letterSpacing": 0.88
+            },
+            {
+              "type": "text",
+              "id": "p3DACg",
+              "name": "The table plays for Remy…",
+              "fill": "$fg",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "The table plays for Remy…",
               "lineHeight": 1.4,
               "textAlign": "center",
               "fontFamily": "$f-ui",
@@ -135905,7 +136325,7 @@
                   "fill": "$fg",
                   "textGrowth": "fixed-width",
                   "width": "fill_container",
-                  "content": "Getting you back to the table. Your seat is kept while you are away, and the table plays for you when your time runs out.",
+                  "content": "Getting you back to the table. The table plays for you when your time runs out. Miss two turns in a row and you lose your seat.",
                   "lineHeight": 1.4,
                   "fontFamily": "$f-ui",
                   "fontSize": 16,
@@ -136021,7 +136441,7 @@
                   "fill": "$fg",
                   "textGrowth": "fixed-width",
                   "width": "fill_container",
-                  "content": "Getting you back to the table. Your seat is kept while you are away, and the table plays for you when your time runs out.",
+                  "content": "Getting you back to the table. The table plays for you when your time runs out. Miss two turns in a row and you lose your seat.",
                   "lineHeight": 1.4,
                   "fontFamily": "$f-ui",
                   "fontSize": 16,
@@ -147717,7 +148137,7 @@
                   "fill": "$muted",
                   "textGrowth": "fixed-width",
                   "width": "fill_container",
-                  "content": "The game starts by itself when the table is full. A ranked table has no bots. Leaving a ranked game, or staying away for most of it, scores last place and starts a cooldown.",
+                  "content": "The game starts by itself when the table is full. A ranked table has no bots. Leaving a ranked game, losing your seat, or staying away for most of it scores last place and starts a cooldown.",
                   "lineHeight": 1.4,
                   "fontFamily": "$f-ui",
                   "fontSize": 14,
@@ -148091,7 +148511,7 @@
                   "fill": "$muted",
                   "textGrowth": "fixed-width",
                   "width": "fill_container",
-                  "content": "The game starts by itself when the table is full. A ranked table has no bots. Leaving a ranked game, or staying away for most of it, scores last place and starts a cooldown.",
+                  "content": "The game starts by itself when the table is full. A ranked table has no bots. Leaving a ranked game, losing your seat, or staying away for most of it scores last place and starts a cooldown.",
                   "lineHeight": 1.4,
                   "fontFamily": "$f-ui",
                   "fontSize": 14,
@@ -152635,7 +153055,7 @@
               "fill": "$faint",
               "textGrowth": "fixed-width",
               "width": "fill_container",
-              "content": "END · A SEAT FORFEITED (LEFT, OR AWAY FOR MOST OF THE GAME)",
+              "content": "END · A SEAT FORFEITED (LEFT, LOST THE SEAT, OR AWAY FOR MOST OF THE GAME)",
               "lineHeight": 1.4,
               "fontFamily": "$f-ui",
               "fontSize": 11,
@@ -153808,7 +154228,7 @@
               "fill": "$faint",
               "textGrowth": "fixed-width",
               "width": "fill_container",
-              "content": "END · A SEAT FORFEITED (LEFT, OR AWAY FOR MOST OF THE GAME)",
+              "content": "END · A SEAT FORFEITED (LEFT, LOST THE SEAT, OR AWAY FOR MOST OF THE GAME)",
               "lineHeight": 1.4,
               "fontFamily": "$f-ui",
               "fontSize": 11,
@@ -402986,7 +403406,7 @@
                   "fill": "$fg",
                   "textGrowth": "fixed-width",
                   "width": "fill_container",
-                  "content": "Getting you back to the table. Your seat is kept while you are away, and the table plays for you when your time runs out.",
+                  "content": "Getting you back to the table. The table plays for you when your time runs out. Miss two turns in a row and you lose your seat.",
                   "lineHeight": 1.4,
                   "fontFamily": "$f-ui",
                   "fontSize": 16,
@@ -406822,7 +407242,7 @@
                   "fill": "$fg",
                   "textGrowth": "fixed-width",
                   "width": "fill_container",
-                  "content": "Getting you back to the table. Your seat is kept while you are away, and the table plays for you when your time runs out.",
+                  "content": "Getting you back to the table. The table plays for you when your time runs out. Miss two turns in a row and you lose your seat.",
                   "lineHeight": 1.4,
                   "fontFamily": "$f-ui",
                   "fontSize": 16,
@@ -426535,7 +426955,7 @@
                   "fill": "$muted",
                   "textGrowth": "fixed-width",
                   "width": "fill_container",
-                  "content": "The game starts by itself when the table is full. A ranked table has no bots. Leaving a ranked game, or staying away for most of it, scores last place and starts a cooldown.",
+                  "content": "The game starts by itself when the table is full. A ranked table has no bots. Leaving a ranked game, losing your seat, or staying away for most of it scores last place and starts a cooldown.",
                   "lineHeight": 1.4,
                   "fontFamily": "$f-ui",
                   "fontSize": 14,
@@ -426920,7 +427340,7 @@
                   "fill": "$muted",
                   "textGrowth": "fixed-width",
                   "width": "fill_container",
-                  "content": "The game starts by itself when the table is full. A ranked table has no bots. Leaving a ranked game, or staying away for most of it, scores last place and starts a cooldown.",
+                  "content": "The game starts by itself when the table is full. A ranked table has no bots. Leaving a ranked game, losing your seat, or staying away for most of it scores last place and starts a cooldown.",
                   "lineHeight": 1.4,
                   "fontFamily": "$f-ui",
                   "fontSize": 14,
@@ -437351,7 +437771,7 @@
                       "fill": "$muted",
                       "textGrowth": "fixed-width",
                       "width": "fill_container",
-                      "content": "Leaving a ranked game, or staying away for most of it, scores last place and starts a cooldown.",
+                      "content": "Leaving a ranked game, losing your seat, or staying away for most of it scores last place and starts a cooldown.",
                       "lineHeight": 1.4,
                       "fontFamily": "$f-ui",
                       "fontSize": 14,
@@ -476183,7 +476603,7 @@
                 },
                 {
                   "type": "text",
-                  "id": "abv3Q",
+                  "id": "tGWQY",
                   "name": "Morgan",
                   "context": "span",
                   "fill": "$fg",
@@ -518456,7 +518876,7 @@
                       "fill": "$muted",
                       "textGrowth": "fixed-width",
                       "width": "fill_container",
-                      "content": "Leaving a ranked game, or staying away for most of it, scores last place and starts a cooldown.",
+                      "content": "Leaving a ranked game, losing your seat, or staying away for most of it scores last place and starts a cooldown.",
                       "lineHeight": 1.4,
                       "fontFamily": "$f-ui",
                       "fontSize": 14,
@@ -541506,6 +541926,669 @@
               ]
             }
           ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "mp6B5",
+      "x": 6000,
+      "y": 11600,
+      "name": "Online · lost seat states",
+      "clip": true,
+      "width": 390,
+      "fill": "$bg",
+      "layout": "vertical",
+      "gap": 18,
+      "padding": [
+        16,
+        16,
+        24,
+        16
+      ],
+      "children": [
+        {
+          "type": "frame",
+          "id": "M16CWh",
+          "name": "State · Lost the seat",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 8,
+          "children": [
+            {
+              "type": "frame",
+              "id": "Q7hBT",
+              "name": "Caption row",
+              "width": "fill_container",
+              "justifyContent": "space_between",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "MzFNk",
+                  "name": "LOST THE SEAT · CASUAL, FRIENDS AND PUBLIC",
+                  "fill": "$faint",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "LOST THE SEAT · CASUAL, FRIENDS AND PUBLIC",
+                  "lineHeight": 1.4,
+                  "fontFamily": "$f-ui",
+                  "fontSize": 11,
+                  "fontWeight": "800",
+                  "letterSpacing": 0.88
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "kgi6t",
+              "name": "Notice",
+              "width": "fill_container",
+              "fill": "$gold-bg",
+              "cornerRadius": 16,
+              "layout": "vertical",
+              "gap": 6,
+              "padding": 16,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "mYymz",
+                  "name": "You lost your seat",
+                  "fill": "$fg",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "You lost your seat",
+                  "lineHeight": 1.4,
+                  "fontFamily": "$f-ui",
+                  "fontSize": 16,
+                  "fontWeight": "900"
+                },
+                {
+                  "type": "text",
+                  "id": "y2Ope",
+                  "name": "You were away for two turns in a row. Th",
+                  "fill": "$muted",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "You were away for two turns in a row. The game goes on without you.",
+                  "lineHeight": 1.4,
+                  "fontFamily": "$f-ui",
+                  "fontSize": 14,
+                  "fontWeight": "700"
+                },
+                {
+                  "type": "frame",
+                  "id": "Or9rv",
+                  "name": "Action",
+                  "width": "fill_container",
+                  "padding": [
+                    6,
+                    0,
+                    4,
+                    0
+                  ],
+                  "children": [
+                    {
+                      "id": "xGvul",
+                      "type": "ref",
+                      "ref": "h9ic3",
+                      "name": "OK",
+                      "width": "fill_container",
+                      "descendants": {
+                        "s5ytI": {
+                          "content": "OK"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "hFOS1",
+          "name": "State · Lost the seat (ranked)",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 8,
+          "children": [
+            {
+              "type": "frame",
+              "id": "a8TOt",
+              "name": "Caption row",
+              "width": "fill_container",
+              "justifyContent": "space_between",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "w7aIx",
+                  "name": "LOST THE SEAT · RANKED",
+                  "fill": "$faint",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "LOST THE SEAT · RANKED",
+                  "lineHeight": 1.4,
+                  "fontFamily": "$f-ui",
+                  "fontSize": 11,
+                  "fontWeight": "800",
+                  "letterSpacing": 0.88
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "w7EAff",
+              "name": "Notice",
+              "width": "fill_container",
+              "fill": "$gold-bg",
+              "cornerRadius": 16,
+              "layout": "vertical",
+              "gap": 6,
+              "padding": 16,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "bouOe",
+                  "name": "You lost your seat",
+                  "fill": "$fg",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "You lost your seat",
+                  "lineHeight": 1.4,
+                  "fontFamily": "$f-ui",
+                  "fontSize": 16,
+                  "fontWeight": "900"
+                },
+                {
+                  "type": "text",
+                  "id": "e9oCpr",
+                  "name": "You were away for two turns in a row. Th",
+                  "fill": "$muted",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "You were away for two turns in a row. The game goes on without you. It counts as a forfeit.",
+                  "lineHeight": 1.4,
+                  "fontFamily": "$f-ui",
+                  "fontSize": 14,
+                  "fontWeight": "700"
+                },
+                {
+                  "type": "frame",
+                  "id": "c4nukZ",
+                  "name": "Action",
+                  "width": "fill_container",
+                  "padding": [
+                    6,
+                    0,
+                    4,
+                    0
+                  ],
+                  "children": [
+                    {
+                      "id": "S5Xojz",
+                      "type": "ref",
+                      "ref": "h9ic3",
+                      "name": "OK",
+                      "width": "fill_container",
+                      "descendants": {
+                        "s5ytI": {
+                          "content": "OK"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "JM7PF",
+          "name": "State · A game you lost your seat in has ended",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 8,
+          "children": [
+            {
+              "type": "frame",
+              "id": "GCwo5",
+              "name": "Caption row",
+              "width": "fill_container",
+              "justifyContent": "space_between",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "aJ20n",
+                  "name": "A GAME YOU LOST YOUR SEAT IN HAS ENDED",
+                  "fill": "$faint",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "A GAME YOU LOST YOUR SEAT IN HAS ENDED",
+                  "lineHeight": 1.4,
+                  "fontFamily": "$f-ui",
+                  "fontSize": 11,
+                  "fontWeight": "800",
+                  "letterSpacing": 0.88
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "GubCb",
+              "name": "Notice",
+              "width": "fill_container",
+              "fill": "$gold-bg",
+              "cornerRadius": 16,
+              "layout": "vertical",
+              "gap": 6,
+              "padding": 16,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "ZgTom",
+                  "name": "Your last game is over",
+                  "fill": "$fg",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "Your last game is over",
+                  "lineHeight": 1.4,
+                  "fontFamily": "$f-ui",
+                  "fontSize": 16,
+                  "fontWeight": "900"
+                },
+                {
+                  "type": "text",
+                  "id": "xtjma",
+                  "name": "You lost your seat before the end. Final",
+                  "fill": "$muted",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "You lost your seat before the end. Final place: 4th of 4.",
+                  "lineHeight": 1.4,
+                  "fontFamily": "$f-ui",
+                  "fontSize": 14,
+                  "fontWeight": "700"
+                },
+                {
+                  "type": "frame",
+                  "id": "OiPNu",
+                  "name": "Action",
+                  "width": "fill_container",
+                  "padding": [
+                    6,
+                    0,
+                    4,
+                    0
+                  ],
+                  "children": [
+                    {
+                      "id": "z2cj8",
+                      "type": "ref",
+                      "ref": "h9ic3",
+                      "name": "OK",
+                      "width": "fill_container",
+                      "descendants": {
+                        "s5ytI": {
+                          "content": "OK"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "id": "P12eZ",
+          "name": "Note",
+          "fill": "$muted",
+          "textGrowth": "fixed-width",
+          "width": "fill_container",
+          "content": "The server says once that the seat is lost, on the first connection after it happened. If that game is already over, its result follows and takes the notice's place.",
+          "lineHeight": 1.4,
+          "fontFamily": "$f-ui",
+          "fontSize": 13,
+          "fontWeight": "700"
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "Cuvu1",
+      "x": 6450,
+      "y": 11600,
+      "name": "Online · lost seat states · dark",
+      "theme": {
+        "mode": "dark"
+      },
+      "clip": true,
+      "width": 390,
+      "fill": "$bg",
+      "layout": "vertical",
+      "gap": 18,
+      "padding": [
+        16,
+        16,
+        24,
+        16
+      ],
+      "children": [
+        {
+          "type": "frame",
+          "id": "TIPox",
+          "name": "State · Lost the seat",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 8,
+          "children": [
+            {
+              "type": "frame",
+              "id": "H4m3hh",
+              "name": "Caption row",
+              "width": "fill_container",
+              "justifyContent": "space_between",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "vpjoC",
+                  "name": "LOST THE SEAT · CASUAL, FRIENDS AND PUBLIC",
+                  "fill": "$faint",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "LOST THE SEAT · CASUAL, FRIENDS AND PUBLIC",
+                  "lineHeight": 1.4,
+                  "fontFamily": "$f-ui",
+                  "fontSize": 11,
+                  "fontWeight": "800",
+                  "letterSpacing": 0.88
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "DTHDd",
+              "name": "Notice",
+              "width": "fill_container",
+              "fill": "$gold-bg",
+              "cornerRadius": 16,
+              "layout": "vertical",
+              "gap": 6,
+              "padding": 16,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "o6Fnbw",
+                  "name": "You lost your seat",
+                  "fill": "$fg",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "You lost your seat",
+                  "lineHeight": 1.4,
+                  "fontFamily": "$f-ui",
+                  "fontSize": 16,
+                  "fontWeight": "900"
+                },
+                {
+                  "type": "text",
+                  "id": "m5vw4",
+                  "name": "You were away for two turns in a row. Th",
+                  "fill": "$muted",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "You were away for two turns in a row. The game goes on without you.",
+                  "lineHeight": 1.4,
+                  "fontFamily": "$f-ui",
+                  "fontSize": 14,
+                  "fontWeight": "700"
+                },
+                {
+                  "type": "frame",
+                  "id": "aOgNC",
+                  "name": "Action",
+                  "width": "fill_container",
+                  "padding": [
+                    6,
+                    0,
+                    4,
+                    0
+                  ],
+                  "children": [
+                    {
+                      "id": "xJFHD",
+                      "type": "ref",
+                      "ref": "h9ic3",
+                      "name": "OK",
+                      "width": "fill_container",
+                      "descendants": {
+                        "s5ytI": {
+                          "content": "OK"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "VgugJ",
+          "name": "State · Lost the seat (ranked)",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 8,
+          "children": [
+            {
+              "type": "frame",
+              "id": "w6DU4D",
+              "name": "Caption row",
+              "width": "fill_container",
+              "justifyContent": "space_between",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "nu6Ft",
+                  "name": "LOST THE SEAT · RANKED",
+                  "fill": "$faint",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "LOST THE SEAT · RANKED",
+                  "lineHeight": 1.4,
+                  "fontFamily": "$f-ui",
+                  "fontSize": 11,
+                  "fontWeight": "800",
+                  "letterSpacing": 0.88
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "n2586j",
+              "name": "Notice",
+              "width": "fill_container",
+              "fill": "$gold-bg",
+              "cornerRadius": 16,
+              "layout": "vertical",
+              "gap": 6,
+              "padding": 16,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "uptIE",
+                  "name": "You lost your seat",
+                  "fill": "$fg",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "You lost your seat",
+                  "lineHeight": 1.4,
+                  "fontFamily": "$f-ui",
+                  "fontSize": 16,
+                  "fontWeight": "900"
+                },
+                {
+                  "type": "text",
+                  "id": "G5ZMlL",
+                  "name": "You were away for two turns in a row. Th",
+                  "fill": "$muted",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "You were away for two turns in a row. The game goes on without you. It counts as a forfeit.",
+                  "lineHeight": 1.4,
+                  "fontFamily": "$f-ui",
+                  "fontSize": 14,
+                  "fontWeight": "700"
+                },
+                {
+                  "type": "frame",
+                  "id": "SoVRH",
+                  "name": "Action",
+                  "width": "fill_container",
+                  "padding": [
+                    6,
+                    0,
+                    4,
+                    0
+                  ],
+                  "children": [
+                    {
+                      "id": "MpCLr",
+                      "type": "ref",
+                      "ref": "h9ic3",
+                      "name": "OK",
+                      "width": "fill_container",
+                      "descendants": {
+                        "s5ytI": {
+                          "content": "OK"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "w7AzQd",
+          "name": "State · A game you lost your seat in has ended",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 8,
+          "children": [
+            {
+              "type": "frame",
+              "id": "q2AbF6",
+              "name": "Caption row",
+              "width": "fill_container",
+              "justifyContent": "space_between",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "rL9Ib",
+                  "name": "A GAME YOU LOST YOUR SEAT IN HAS ENDED",
+                  "fill": "$faint",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "A GAME YOU LOST YOUR SEAT IN HAS ENDED",
+                  "lineHeight": 1.4,
+                  "fontFamily": "$f-ui",
+                  "fontSize": 11,
+                  "fontWeight": "800",
+                  "letterSpacing": 0.88
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "Ku5Cj",
+              "name": "Notice",
+              "width": "fill_container",
+              "fill": "$gold-bg",
+              "cornerRadius": 16,
+              "layout": "vertical",
+              "gap": 6,
+              "padding": 16,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "pLC6b",
+                  "name": "Your last game is over",
+                  "fill": "$fg",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "Your last game is over",
+                  "lineHeight": 1.4,
+                  "fontFamily": "$f-ui",
+                  "fontSize": 16,
+                  "fontWeight": "900"
+                },
+                {
+                  "type": "text",
+                  "id": "B1eWey",
+                  "name": "You lost your seat before the end. Final",
+                  "fill": "$muted",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "You lost your seat before the end. Final place: 4th of 4.",
+                  "lineHeight": 1.4,
+                  "fontFamily": "$f-ui",
+                  "fontSize": 14,
+                  "fontWeight": "700"
+                },
+                {
+                  "type": "frame",
+                  "id": "Y1oRE",
+                  "name": "Action",
+                  "width": "fill_container",
+                  "padding": [
+                    6,
+                    0,
+                    4,
+                    0
+                  ],
+                  "children": [
+                    {
+                      "id": "G0ywdZ",
+                      "type": "ref",
+                      "ref": "h9ic3",
+                      "name": "OK",
+                      "width": "fill_container",
+                      "descendants": {
+                        "s5ytI": {
+                          "content": "OK"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "id": "ZIc2R",
+          "name": "Note",
+          "fill": "$muted",
+          "textGrowth": "fixed-width",
+          "width": "fill_container",
+          "content": "The server says once that the seat is lost, on the first connection after it happened. If that game is already over, its result follows and takes the notice's place.",
+          "lineHeight": 1.4,
+          "fontFamily": "$f-ui",
+          "fontSize": 13,
+          "fontWeight": "700"
         }
       ]
     }
