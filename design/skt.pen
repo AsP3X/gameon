@@ -437018,6 +437018,377 @@
         },
         {
           "type": "frame",
+          "id": "bKued",
+          "name": "State · Jump back in · server game and device game",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 14,
+          "children": [
+            {
+              "type": "text",
+              "id": "vrjTY",
+              "fill": "$faint",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "STATE · JUMP BACK IN · A SERVER GAME AND A GAME ON THIS DEVICE",
+              "lineHeight": 1.4,
+              "fontFamily": "$f-ui",
+              "fontSize": 12,
+              "fontWeight": "900",
+              "letterSpacing": 1
+            },
+            {
+              "type": "frame",
+              "id": "Lxgd4",
+              "name": "Jump back in",
+              "width": "fill_container",
+              "fill": "$green-bg",
+              "cornerRadius": 16,
+              "layout": "vertical",
+              "gap": 12,
+              "padding": 14,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "H3Kci",
+                  "name": "Text",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 1,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "nCcnu",
+                      "fill": "$green-ink",
+                      "content": "JUMP BACK IN",
+                      "lineHeight": 1.4,
+                      "fontFamily": "$f-ui",
+                      "fontSize": 12,
+                      "fontWeight": "900",
+                      "letterSpacing": 1.2
+                    },
+                    {
+                      "type": "text",
+                      "id": "GukoP",
+                      "fill": "$fg",
+                      "content": "Solo against 3 bots",
+                      "lineHeight": 1.25,
+                      "fontFamily": "$f-ui",
+                      "fontSize": 17,
+                      "fontWeight": "900"
+                    },
+                    {
+                      "type": "text",
+                      "id": "DIBLe",
+                      "fill": "$green-ink",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Round 4 of 10 · saved to your account",
+                      "lineHeight": 1.35,
+                      "fontFamily": "$f-ui",
+                      "fontSize": 14,
+                      "fontWeight": "700"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "pFpES",
+                      "name": "Device game link",
+                      "height": 44,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "eJ6wG",
+                          "name": "Device game",
+                          "fill": "$green-ink",
+                          "content": "Round 2 of 10 · offline, on this device only",
+                          "lineHeight": 1.35,
+                          "fontFamily": "$f-ui",
+                          "fontSize": 14,
+                          "fontWeight": "800"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "P2HLkL",
+                  "name": "Action",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "padding": [
+                    0,
+                    0,
+                    4,
+                    0
+                  ],
+                  "children": [
+                    {
+                      "id": "ZKBuq",
+                      "type": "ref",
+                      "ref": "kMpaU",
+                      "descendants": {
+                        "K2spjd": {
+                          "content": "CONTINUE"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "BvBxF",
+          "name": "State · Jump back in · one screen on this device",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 14,
+          "children": [
+            {
+              "type": "text",
+              "id": "PyVoY",
+              "fill": "$faint",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "STATE · JUMP BACK IN · ONE SCREEN, ON THIS DEVICE",
+              "lineHeight": 1.4,
+              "fontFamily": "$f-ui",
+              "fontSize": 12,
+              "fontWeight": "900",
+              "letterSpacing": 1
+            },
+            {
+              "type": "frame",
+              "id": "janAW",
+              "name": "Jump back in",
+              "width": "fill_container",
+              "fill": "$green-bg",
+              "cornerRadius": 16,
+              "layout": "vertical",
+              "gap": 12,
+              "padding": 14,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "fNYSA",
+                  "name": "Text",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 1,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "hXqJP",
+                      "fill": "$green-ink",
+                      "content": "JUMP BACK IN",
+                      "lineHeight": 1.4,
+                      "fontFamily": "$f-ui",
+                      "fontSize": 12,
+                      "fontWeight": "900",
+                      "letterSpacing": 1.2
+                    },
+                    {
+                      "type": "text",
+                      "id": "iRfUD",
+                      "fill": "$fg",
+                      "content": "One screen with 4 pirates",
+                      "lineHeight": 1.25,
+                      "fontFamily": "$f-ui",
+                      "fontSize": 17,
+                      "fontWeight": "900"
+                    },
+                    {
+                      "type": "text",
+                      "id": "S2h4He",
+                      "fill": "$green-ink",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Round 2 of 10 · offline, on this device only",
+                      "lineHeight": 1.35,
+                      "fontFamily": "$f-ui",
+                      "fontSize": 14,
+                      "fontWeight": "700"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "ufsHv",
+                  "name": "Action",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "padding": [
+                    0,
+                    0,
+                    4,
+                    0
+                  ],
+                  "children": [
+                    {
+                      "id": "Ugv4M",
+                      "type": "ref",
+                      "ref": "kMpaU",
+                      "descendants": {
+                        "K2spjd": {
+                          "content": "CONTINUE"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "R6TZ6",
+          "name": "State · Bar · no session",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 14,
+          "children": [
+            {
+              "type": "text",
+              "id": "azWiO",
+              "name": "Label",
+              "fill": "$faint",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "STATE · BAR · NO SESSION: NO PLAYER, AND RANKED IS THE GUEST'S CARD",
+              "lineHeight": 1.4,
+              "fontFamily": "$f-ui",
+              "fontSize": 12,
+              "fontWeight": "900",
+              "letterSpacing": 1
+            },
+            {
+              "type": "frame",
+              "id": "RXH9D",
+              "name": "GameOn bar",
+              "width": "fill_container",
+              "height": 48,
+              "justifyContent": "space_between",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "W0DKP",
+                  "name": "Back to GameOn",
+                  "gap": 2,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "id": "sqszr",
+                      "type": "ref",
+                      "ref": "UM7OU",
+                      "name": "Back"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "g1ToAL",
+                      "name": "GameOn key",
+                      "clip": true,
+                      "width": 30,
+                      "height": 30,
+                      "fill": "$green-d",
+                      "cornerRadius": 6.5625,
+                      "layout": "none",
+                      "children": [
+                        {
+                          "type": "rectangle",
+                          "cornerRadius": 6.5625,
+                          "id": "GyBxo",
+                          "x": 0,
+                          "y": 0,
+                          "fill": "$green",
+                          "width": 30,
+                          "height": 28.2421875
+                        },
+                        {
+                          "type": "path",
+                          "id": "x3DMuI",
+                          "x": 0,
+                          "y": 0,
+                          "geometry": "M382.39 353.43a168 168 0 1 1 0-206.86 30 30 0 0 1-47.28 36.94 108 108 0 1 0 0 132.98 30 30 0 0 1 47.28 36.94z m-126.39-133.43h144a30 30 0 0 1 0 60h-144a30 30 0 0 1 0-60z",
+                          "viewBox": [
+                            0,
+                            0,
+                            512,
+                            512
+                          ],
+                          "fill": "$green-d",
+                          "width": 30,
+                          "height": 30
+                        },
+                        {
+                          "type": "path",
+                          "id": "R3yBY",
+                          "x": 0,
+                          "y": 0,
+                          "geometry": "M382.39 341.43a168 168 0 1 1 0-206.86 30 30 0 0 1-47.28 36.94 108 108 0 1 0 0 132.98 30 30 0 0 1 47.28 36.94z m-126.39-133.43h144a30 30 0 0 1 0 60h-144a30 30 0 0 1 0-60z",
+                          "viewBox": [
+                            0,
+                            0,
+                            512,
+                            512
+                          ],
+                          "fill": "$white",
+                          "width": 30,
+                          "height": 30
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "nBOKI",
+                      "name": "Games",
+                      "padding": [
+                        0,
+                        0,
+                        0,
+                        8
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "OK61p",
+                          "fill": "$muted",
+                          "content": "Games",
+                          "lineHeight": 1.4,
+                          "fontFamily": "$f-ui",
+                          "fontSize": 14,
+                          "fontWeight": "800"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "ixTX4",
+                  "name": "Right",
+                  "gap": 2,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "id": "WjgK6",
+                      "type": "ref",
+                      "ref": "EX0N8",
+                      "name": "Sound"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
           "id": "UE6fa",
           "name": "State · Nothing to continue",
           "width": "fill_container",
@@ -459287,6 +459658,35 @@
                       ]
                     }
                   ]
+                },
+                {
+                  "type": "frame",
+                  "id": "okXbU",
+                  "name": "How to play",
+                  "height": 44,
+                  "gap": 6,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "Bz2qI",
+                      "width": 18,
+                      "height": 18,
+                      "icon": "info",
+                      "library": "lucide",
+                      "fill": "$blue-ink"
+                    },
+                    {
+                      "type": "text",
+                      "id": "CVwKr",
+                      "fill": "$blue-ink",
+                      "content": "How to play",
+                      "lineHeight": 1.4,
+                      "fontFamily": "$f-ui",
+                      "fontSize": 15,
+                      "fontWeight": "900"
+                    }
+                  ]
                 }
               ]
             },
@@ -473678,6 +474078,35 @@
                           "fontWeight": "900"
                         }
                       ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "n2xgAp",
+                  "name": "How to play",
+                  "height": 44,
+                  "gap": 6,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "MpBkp",
+                      "width": 18,
+                      "height": 18,
+                      "icon": "info",
+                      "library": "lucide",
+                      "fill": "$blue-ink"
+                    },
+                    {
+                      "type": "text",
+                      "id": "xPPDR",
+                      "fill": "$blue-ink",
+                      "content": "How to play",
+                      "lineHeight": 1.4,
+                      "fontFamily": "$f-ui",
+                      "fontSize": 15,
+                      "fontWeight": "900"
                     }
                   ]
                 }
@@ -526807,6 +527236,377 @@
                           "content": "CONTINUE"
                         }
                       }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "hZ6Nx",
+          "name": "State · Jump back in · server game and device game",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 14,
+          "children": [
+            {
+              "type": "text",
+              "id": "A77MYF",
+              "fill": "$faint",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "STATE · JUMP BACK IN · A SERVER GAME AND A GAME ON THIS DEVICE",
+              "lineHeight": 1.4,
+              "fontFamily": "$f-ui",
+              "fontSize": 12,
+              "fontWeight": "900",
+              "letterSpacing": 1
+            },
+            {
+              "type": "frame",
+              "id": "oGcq4",
+              "name": "Jump back in",
+              "width": "fill_container",
+              "fill": "$green-bg",
+              "cornerRadius": 16,
+              "layout": "vertical",
+              "gap": 12,
+              "padding": 14,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "Yl6VB",
+                  "name": "Text",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 1,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "PR4ck",
+                      "fill": "$green-ink",
+                      "content": "JUMP BACK IN",
+                      "lineHeight": 1.4,
+                      "fontFamily": "$f-ui",
+                      "fontSize": 12,
+                      "fontWeight": "900",
+                      "letterSpacing": 1.2
+                    },
+                    {
+                      "type": "text",
+                      "id": "eRPkk",
+                      "fill": "$fg",
+                      "content": "Solo against 3 bots",
+                      "lineHeight": 1.25,
+                      "fontFamily": "$f-ui",
+                      "fontSize": 17,
+                      "fontWeight": "900"
+                    },
+                    {
+                      "type": "text",
+                      "id": "zJEYI",
+                      "fill": "$green-ink",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Round 4 of 10 · saved to your account",
+                      "lineHeight": 1.35,
+                      "fontFamily": "$f-ui",
+                      "fontSize": 14,
+                      "fontWeight": "700"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "lS7cQ",
+                      "name": "Device game link",
+                      "height": 44,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "MZ3Od",
+                          "name": "Device game",
+                          "fill": "$green-ink",
+                          "content": "Round 2 of 10 · offline, on this device only",
+                          "lineHeight": 1.35,
+                          "fontFamily": "$f-ui",
+                          "fontSize": 14,
+                          "fontWeight": "800"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "AbTOo",
+                  "name": "Action",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "padding": [
+                    0,
+                    0,
+                    4,
+                    0
+                  ],
+                  "children": [
+                    {
+                      "id": "Ett9k",
+                      "type": "ref",
+                      "ref": "kMpaU",
+                      "descendants": {
+                        "K2spjd": {
+                          "content": "CONTINUE"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "Cf2Qw",
+          "name": "State · Jump back in · one screen on this device",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 14,
+          "children": [
+            {
+              "type": "text",
+              "id": "aGuUl",
+              "fill": "$faint",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "STATE · JUMP BACK IN · ONE SCREEN, ON THIS DEVICE",
+              "lineHeight": 1.4,
+              "fontFamily": "$f-ui",
+              "fontSize": 12,
+              "fontWeight": "900",
+              "letterSpacing": 1
+            },
+            {
+              "type": "frame",
+              "id": "vNlLz",
+              "name": "Jump back in",
+              "width": "fill_container",
+              "fill": "$green-bg",
+              "cornerRadius": 16,
+              "layout": "vertical",
+              "gap": 12,
+              "padding": 14,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "OwY8V",
+                  "name": "Text",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 1,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "Szjno",
+                      "fill": "$green-ink",
+                      "content": "JUMP BACK IN",
+                      "lineHeight": 1.4,
+                      "fontFamily": "$f-ui",
+                      "fontSize": 12,
+                      "fontWeight": "900",
+                      "letterSpacing": 1.2
+                    },
+                    {
+                      "type": "text",
+                      "id": "x5Ml3r",
+                      "fill": "$fg",
+                      "content": "One screen with 4 pirates",
+                      "lineHeight": 1.25,
+                      "fontFamily": "$f-ui",
+                      "fontSize": 17,
+                      "fontWeight": "900"
+                    },
+                    {
+                      "type": "text",
+                      "id": "AJQIN",
+                      "fill": "$green-ink",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Round 2 of 10 · offline, on this device only",
+                      "lineHeight": 1.35,
+                      "fontFamily": "$f-ui",
+                      "fontSize": 14,
+                      "fontWeight": "700"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "dd8S6",
+                  "name": "Action",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "padding": [
+                    0,
+                    0,
+                    4,
+                    0
+                  ],
+                  "children": [
+                    {
+                      "id": "L1WSc",
+                      "type": "ref",
+                      "ref": "kMpaU",
+                      "descendants": {
+                        "K2spjd": {
+                          "content": "CONTINUE"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "j7m2e",
+          "name": "State · Bar · no session",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 14,
+          "children": [
+            {
+              "type": "text",
+              "id": "Y0t5G",
+              "name": "Label",
+              "fill": "$faint",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "STATE · BAR · NO SESSION: NO PLAYER, AND RANKED IS THE GUEST'S CARD",
+              "lineHeight": 1.4,
+              "fontFamily": "$f-ui",
+              "fontSize": 12,
+              "fontWeight": "900",
+              "letterSpacing": 1
+            },
+            {
+              "type": "frame",
+              "id": "RLSmD",
+              "name": "GameOn bar",
+              "width": "fill_container",
+              "height": 48,
+              "justifyContent": "space_between",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "EF1OD",
+                  "name": "Back to GameOn",
+                  "gap": 2,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "id": "pJLCC",
+                      "type": "ref",
+                      "ref": "UM7OU",
+                      "name": "Back"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "RGanv",
+                      "name": "GameOn key",
+                      "clip": true,
+                      "width": 30,
+                      "height": 30,
+                      "fill": "$green-d",
+                      "cornerRadius": 6.5625,
+                      "layout": "none",
+                      "children": [
+                        {
+                          "type": "rectangle",
+                          "cornerRadius": 6.5625,
+                          "id": "NPqBy",
+                          "x": 0,
+                          "y": 0,
+                          "fill": "$green",
+                          "width": 30,
+                          "height": 28.2421875
+                        },
+                        {
+                          "type": "path",
+                          "id": "Yc7Vb",
+                          "x": 0,
+                          "y": 0,
+                          "geometry": "M382.39 353.43a168 168 0 1 1 0-206.86 30 30 0 0 1-47.28 36.94 108 108 0 1 0 0 132.98 30 30 0 0 1 47.28 36.94z m-126.39-133.43h144a30 30 0 0 1 0 60h-144a30 30 0 0 1 0-60z",
+                          "viewBox": [
+                            0,
+                            0,
+                            512,
+                            512
+                          ],
+                          "fill": "$green-d",
+                          "width": 30,
+                          "height": 30
+                        },
+                        {
+                          "type": "path",
+                          "id": "T6ITCC",
+                          "x": 0,
+                          "y": 0,
+                          "geometry": "M382.39 341.43a168 168 0 1 1 0-206.86 30 30 0 0 1-47.28 36.94 108 108 0 1 0 0 132.98 30 30 0 0 1 47.28 36.94z m-126.39-133.43h144a30 30 0 0 1 0 60h-144a30 30 0 0 1 0-60z",
+                          "viewBox": [
+                            0,
+                            0,
+                            512,
+                            512
+                          ],
+                          "fill": "$white",
+                          "width": 30,
+                          "height": 30
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "O8YJcR",
+                      "name": "Games",
+                      "padding": [
+                        0,
+                        0,
+                        0,
+                        8
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "U8MkvT",
+                          "fill": "$muted",
+                          "content": "Games",
+                          "lineHeight": 1.4,
+                          "fontFamily": "$f-ui",
+                          "fontSize": 14,
+                          "fontWeight": "800"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "SpAaR",
+                  "name": "Right",
+                  "gap": 2,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "id": "J96nL",
+                      "type": "ref",
+                      "ref": "EX0N8",
+                      "name": "Sound"
                     }
                   ]
                 }
