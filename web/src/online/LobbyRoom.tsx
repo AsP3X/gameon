@@ -18,6 +18,9 @@ function hint(lobby: Lobby, me: Me, host: boolean): string {
   const humans = lobby.members.flatMap((m) => (m.kind === 'human' ? [m] : []));
   const mine = humans.find((m) => m.user.id === me.user.id);
   const waiting = humans.find((m) => !m.ready && m.user.id !== me.user.id);
+  // A bot fills a seat at a public table, but it is not one of the two the table waits for.
+  if (lobby.visibility === 'public' && humans.length < 2)
+    return host ? 'A public table can start once a second pirate sits down.' : 'Waiting for more pirates.';
   if (lobby.members.length < 2)
     return host ? 'A game needs two pirates. Add a bot or share the code.' : 'Waiting for more pirates.';
   if (!mine?.ready) return host ? 'Say you are ready, then start the game.' : 'Say you are ready when you are set.';
@@ -54,7 +57,9 @@ export function LobbyRoom({ online, lobby, me, status, notice, onRules, onPlayer
     max = lobby.settings.maxPlayers;
   const mine = lobby.members.find((m) => m.kind === 'human' && m.user.id === me.user.id);
   const ready = mine?.kind === 'human' && mine.ready;
-  const canStart = n >= 2 && lobby.members.every((m) => m.kind === 'bot' || m.ready);
+  // For feedback only: the server decides. A public table waits for two people, a private one for two seats.
+  const seated = lobby.visibility === 'public' ? lobby.members.filter((m) => m.kind === 'human').length : n;
+  const canStart = seated >= 2 && lobby.members.every((m) => m.kind === 'bot' || m.ready);
   const rules = describeSettings(lobby.settings);
 
   const ask = (what: Promise<Outcome>): void => {

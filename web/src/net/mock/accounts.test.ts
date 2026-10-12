@@ -373,16 +373,21 @@ describe('public lobbies', () => {
 
   it('takes a lobby off the list while its game runs and puts it back when the lobby is open again', async () => {
     const host = await guest(),
-      socket = await host.connect();
-    await ask(socket, { t: 'lobby.create', visibility: 'public', settings: SETTINGS });
-    await ask(socket, { t: 'lobby.addBot' });
+      socket = await host.connect(),
+      second = await (await guest()).connect();
+    const made = await ask(socket, { t: 'lobby.create', visibility: 'public', settings: SETTINGS });
+    if (made.t !== 'ok' || !made.lobby) throw new Error('No lobby');
+    // A public table starts with two people at it: a bot would not do.
+    await ask(second, { t: 'lobby.join', lobbyId: made.lobby.id });
     await ask(socket, { t: 'lobby.ready', ready: true });
+    await ask(second, { t: 'lobby.ready', ready: true });
     expect(await list(host)).toHaveLength(1);
-    await ask(socket, { t: 'lobby.start' });
+    expect(await ask(socket, { t: 'lobby.start' })).toMatchObject({ t: 'ok' });
     expect(await list(host)).toEqual([]);
     await until(() => framesOf(socket, 'game.over').length > 0, 'the game ends');
     expect(await list(host)).toHaveLength(1);
     await ask(socket, { t: 'lobby.leave' });
+    await ask(second, { t: 'lobby.leave' });
     expect(await list(host)).toEqual([]);
   });
 });

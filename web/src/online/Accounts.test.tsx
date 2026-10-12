@@ -408,6 +408,33 @@ describe('public tables', () => {
     expect(await list()).toHaveLength(1);
   });
 
+  it('offers Start at a public table only once a second pirate sat down and is ready', async () => {
+    await openHub();
+    await press('Browse tables');
+    await press('Create a public table');
+    await press('Create table');
+    const waiting = 'A public table can start once a second pirate sits down.';
+    expect($('#online .foot-hint')?.textContent).toBe(waiting);
+    // A bot takes a seat, but it is not the second pirate: ready or not, the host cannot start.
+    await press('Add a bot');
+    await press("I'm ready");
+    expect(texts('#online .member small')).toEqual(['Host · you', 'Bot · Normal']);
+    expect($('#online .foot-hint')?.textContent).toBe(waiting);
+    expect(button('Start game').disabled).toBe(true);
+
+    const friend = await someone();
+    friend.socket.send({ t: 'lobby.join', lobbyId: (await list())[0].id });
+    await settle();
+    expect($('#online .foot-hint')?.textContent).toMatch(/^Waiting for Guest \d{4} to be ready\.$/);
+    expect(button('Start game').disabled).toBe(true);
+    friend.socket.send({ t: 'lobby.ready', ready: true });
+    await settle();
+    expect($('#online .foot-hint')?.textContent).toBe('Everyone is ready. Start when you like.');
+    expect(button('Start game').disabled).toBe(false);
+    await press('Start game');
+    expect(ui.screen).toBe('game');
+  });
+
   it('keeps a table private unless asked: the form starts on Private from the hub', async () => {
     await openHub();
     await press('Create a table');
