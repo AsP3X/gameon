@@ -928,6 +928,10 @@ impl World {
                     || "Sailor".to_owned(),
                     |id| self.identity.public_user(id).name,
                 ),
+                host_color: lobby
+                    .host_id
+                    .as_ref()
+                    .map(|id| self.identity.public_user(id).color),
                 settings: lobby.settings,
                 players: u32::try_from(lobby.members.len()).unwrap_or(0),
                 allow_bots: lobby.allow_bots,

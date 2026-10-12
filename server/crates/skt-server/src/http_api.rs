@@ -487,13 +487,12 @@ pub async fn game_log(
     }))
 }
 
+// Human: The landing shows this list to a visitor, and a visit must not create a guest.
+// Agent: HTTP GET /api/v1/ladder; no session; DB store.ladder for the current season only.
 pub async fn ladder(
     State(state): State<AppState>,
-    headers: HeaderMap,
     request: Request,
 ) -> Result<Json<skt_protocol::LadderPage>, AppError> {
-    let token = session_cookie(&headers).ok_or(AppError::new(ErrorCode::Unauthenticated))?;
-    remember(&state, &token).await?;
     let asked = parse_ladder(request.uri().query().unwrap_or(""))?;
     let season = crate::rating::season_at(crate::world::identity::unix_now().get());
     if let Some(id) = asked.season

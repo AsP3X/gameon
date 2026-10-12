@@ -213,6 +213,7 @@ fn lobbies(dir: &Path, write: bool) -> Result<(), ExportError> {
     let summary = LobbySummary {
         id: LobbyId::new(LOBBY),
         host_name: "Anne".to_owned(),
+        host_color: Some(TableColor::Orange),
         settings: sample_game(),
         players: 2,
         allow_bots: None,

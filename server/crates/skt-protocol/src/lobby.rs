@@ -138,6 +138,10 @@ pub struct LobbySummary {
     pub id: LobbyId,
     /// The host's display name.
     pub host_name: String,
+    /// The host's table colour. Omitted when this row has no host.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub host_color: Option<TableColor>,
     /// Rules shown in the list.
     pub settings: GameSettings,
     /// How many members are seated. Humans and bots both count.

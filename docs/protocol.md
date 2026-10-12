@@ -89,7 +89,7 @@ All bodies are JSON. Unless marked *public*, a session is required.
 | `PATCH /me` | `ProfilePatch` | `Me` | Omitted fields are left unchanged. A bad field refuses the whole patch. If the user sits in a lobby, every member is sent `lobby.state`. A running game keeps the names it started with. |
 | `GET /users/{id}` | | `Profile` | No username and no session data. Unknown id is `404`. |
 | `GET /lobbies` | | `{ lobbies: LobbySummary[] }` | Open public lobbies, full ones included, oldest first, no limit. A lobby leaves the list while its game runs and returns when it is `open` again. |
-| `GET /ladder?season=&limit=&after=` | | `{ season: Season, entries: LadderEntry[], next?: string }` | Session required. See below. |
+| `GET /ladder?season=&limit=&after=` | | `{ season: Season, entries: LadderEntry[], next?: string }` | *public*. The current season. No session is not `401`. See below. |
 | `GET /games/{id}/log` | | `ActionLog` | Session required. The caller must have sat in that finished game. Unknown game, or a caller who did not sit it, is `404`. |
 | `GET /me/games?limit=&after=` | | `{ games: FinishedGame[], next?: GameId }` | Session required. The caller's own finished games, newest first. `limit` omitted is 25, and the maximum is 100. `after` is the `next` of the previous page, the id of that page's last row. `next` is omitted on the last page. No session is `401`. |
 
@@ -279,7 +279,9 @@ type Lobby = {
 type Member =
   | { kind: 'human'; user: User; ready: boolean; connected: boolean }
   | { kind: 'bot'; name: string; color: TableColor; level: 'easy' | 'normal' | 'hard' };
-type LobbySummary = { id: LobbyId; hostName: string; settings: GameSettings; players: number; allowBots?: boolean };
+type LobbySummary = {
+  id: LobbyId; hostName: string; hostColor?: TableColor; settings: GameSettings; players: number; allowBots?: boolean
+};
 ```
 
 | Client message | Payload | Who | Result |
@@ -355,7 +357,8 @@ join order. Casual then adds bots. There is no accept step and no `lobby.state`.
 the client returns to the hub. `game.over` has no `mode` field; the mode is the one from
 `game.start`.
 
-`GET /ladder` needs a session. No session is `401`. `season` omitted, or equal to `config.season.id`,
+`GET /ladder` is public. A missing session is not `401`, and the call does not create a guest.
+`season` omitted, or equal to `config.season.id`,
 is the current season. Any other value, including a non-integer, is `404`. `limit` omitted is 25.
 An integer from 1 to 100 is kept. Anything else is `400`. `after` omitted starts at rank 1. It is
 otherwise the `next` of the previous page, which is the user id of that page's last row, and the
@@ -586,7 +589,8 @@ keeps that game on the same id. `game.leave` on `table: 'solo'` answers `ok` and
 Friends is `lobby.create` with `visibility: 'private'`. Public is `visibility: 'public'`. Casual
 is `queue.join` with `casual`, and ranked is `queue.join` with `ranked`. A named ruleset is a
 `GameSettings` object. It is not a new enum. `LobbySummary.players` counts humans and bots.
-`LobbySummary.allowBots` omitted means the table seats bots.
+`LobbySummary.hostColor` is the host's table colour. It is omitted when the row has no host, and an
+older list omits it: the avatar stays plain. `LobbySummary.allowBots` omitted means the table seats bots.
 
 `GET /me/games` is one stored row per finished game: the id, `table`, the settings, when it
 started, when it ended, the season id when `table` is `ranked`, and one seat line each. Another

@@ -27,8 +27,8 @@ async fn ladder_pages_hide_usernames_and_reject_a_bad_query(pool: sqlx::PgPool) 
     let state = AppState::for_tests(pool, Duration::from_mins(1), budgets());
     let port = serve(state.clone()).await;
     let (status, _, body) = http(port, "GET", "/api/v1/ladder", "", "").await;
-    assert_eq!(status, 401, "{body}");
-    assert!(body.contains("UNAUTHENTICATED"));
+    assert_eq!(status, 200, "{body}");
+    assert!(body.contains("\"entries\":[]"), "{body}");
     let (cookie, _) = account(port, "Zara").await;
     let (status, _, body) = http(port, "GET", "/api/v1/ladder?limit=0", &cookie, "").await;
     assert_eq!(status, 400, "{body}");
