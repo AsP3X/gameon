@@ -445,11 +445,45 @@ describe('Games', () => {
     broken = false;
     await press('Try again');
     await settle();
-    expect(texts('.go-table-text b')).toEqual(['Teo’s table']);
+    // This row came without a host's colour, as a table nobody hosts does: the name the server gave
+    // it is the whole title, the avatar is plain, and no colour is made up for it.
+    expect(texts('.go-table-text b')).toEqual(['Teo']);
     expect(texts('.go-table-text small')).toEqual(['2 of 3 seats · Swift-n-Salty']);
-    // This row came without its host's colour: the avatar is plain, and no colour is made up for it.
     expect($('.go-tables li .avatar')?.className).toBe('avatar plain');
     expect($('.go-tables li .avatar')?.getAttribute('style')).toBeNull();
+  });
+
+  it("lists the server's own open tables, which nobody hosts yet, next to a player's", async () => {
+    const guest = await aGuest();
+    const house = { id: 'house-1', hostName: 'Open table', settings: { ...SETTINGS, maxPlayers: 4 }, players: 0 };
+    await openFrame(
+      {
+        'POST /auth/guest': () => ok(guest),
+        'GET /lobbies': () =>
+          ok({
+            lobbies: [
+              house,
+              { ...house, id: 'house-2' },
+              { id: 'lobby-1', hostName: 'Mira', hostColor: '#ce82ff', settings: SETTINGS, players: 1 },
+            ],
+          }),
+      },
+      '/games',
+    );
+    expect($('.go-tables-head .pill')?.textContent).toBe('3');
+    expect(texts('.go-table-text b')).toEqual(['Open table', 'Open table', 'Mira’s table']);
+    expect(texts('.go-table-text small')).toEqual([
+      '0 of 4 seats · Swift-n-Salty',
+      '0 of 4 seats · Swift-n-Salty',
+      '1 of 3 seats · Swift-n-Salty',
+    ]);
+    expect(Array.from(document.querySelectorAll('.go-tables li .avatar'), (a) => a.className)).toEqual([
+      'avatar plain',
+      'avatar plain',
+      'avatar',
+    ]);
+    // Each can be sat down at.
+    expect(document.querySelectorAll('.go-tables li button')).toHaveLength(3);
   });
 
   it('filters the shelf, and counts what is coming', async () => {

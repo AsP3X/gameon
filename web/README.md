@@ -109,8 +109,9 @@ a phone and one from 1000 px up.
   **Signing in** makes a connection again only when there was one.
 - **Not built, because nothing is drawn or decided behind them:** "How to play", "Privacy" and
   "Imprint" in the footer, and "Suggest a game". The frames show them; the pages do not.
-- A table in the public list is drawn in its host's colour (`LobbySummary.hostColor`). A row that
-  came without one has a plain avatar.
+- A table in the public list is drawn in its host's colour (`LobbySummary.hostColor`) and called
+  "{host}'s table". A row that came without the colour has no host: the server's own open tables
+  are such rows. It has a plain avatar, and the name the server gave it is the whole title.
 - The installed app opens at `/skull-king` (`start_url` in `public/manifest.json`), as it did when
   `/` led there.
 

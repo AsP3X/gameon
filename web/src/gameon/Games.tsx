@@ -212,7 +212,8 @@ function OpenTables({
                   {initialOf(lobby.hostName)}
                 </span>
                 <span className="go-table-text">
-                  <b id={`go-table-${i}`}>{lobby.hostName}’s table</b>
+                  {/* A row without its host's colour has no host: the server's name for it is the whole title. */}
+                  <b id={`go-table-${i}`}>{lobby.hostColor ? `${lobby.hostName}’s table` : lobby.hostName}</b>
                   <small>
                     {lobby.players} of {lobby.settings.maxPlayers} seats · {Rules.FORMATS[lobby.settings.format].name}
                   </small>
