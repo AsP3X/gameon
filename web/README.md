@@ -179,20 +179,18 @@ fallback to the recipe.
 `src/sound/music/` holds the tunes, `tavern.mp3` and `tavern-b.mp3`. `src/sound/music.ts` lists
 them with the place of each one's loop (`TUNES`), fetches them at startup and hands the ones that
 came to the mixer together (`Sound.tunes()`). The renderer asks for the music with `Sound.music()`
-on every redraw (`tuneMenu` in `tableview/render.ts`): it plays while the home screen is what the
-player looks at, and stops under a setup screen, a table, the online screens (`coverTavern`, called
-by `App.tsx`) and a tab in the background. It starts on its own when the home
-screen is showing. A browser that refuses sound before a tap holds it until
-the next tap anywhere, which is as early as that browser allows; the sound
-button is not required. "Sound effects" off silences it; the volume slider moves it with
+on every redraw (`tuneMenu` in `tableview/render.ts`). The home screen stays quiet. Play,
+Play online, and Continue start the theme, and it keeps going through setup, a
+table, and the online screens until the player is back on the home screen. A
+background tab pauses it. "Sound effects" off silences it; the volume slider moves it with
 everything else. The synthesiser has no recipe for it: a tune that cannot be fetched or decoded is
 left out, and with none the menu is quiet. `sound.test.ts`, `music.test.ts`, `tavern.test.ts` and
 `OnlineScreens.test.tsx` cover it.
 
 One tune plays at a time, round its own loop and from the top. The first is drawn at random each
-time the page loads. Every time the music starts again (back on the home screen, back in the tab,
-sound back on) it is the next tune's turn, so a player who stays on the home screen hears one tune
-go round. A third tune is a file in `music/` and a line in `TUNES`.
+time the page loads. Every time the music starts again (another Play press, back in the tab,
+sound back on) it is the next tune's turn, so a player who stays in one game hears one tune go
+round. A third tune is a file in `music/` and a line in `TUNES`.
 
 `tavern.mp3`:
 

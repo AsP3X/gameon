@@ -334,17 +334,6 @@ export function listen(): () => void {
   window.addEventListener('pointermove', onSwipeMove, { signal });
   window.addEventListener('pointerup', (e) => endSwipe(e, false), { signal });
   window.addEventListener('pointercancel', (e) => endSwipe(e, true), { signal });
-  // Every tap starts the tune in the gesture itself. A start that waits until
-  // resume() finishes is outside the tap, and phones throw it away. These
-  // listeners stay for as long as listen() does: the sound button is not special.
-  const unlockAudio = (): void => {
-    Sound.unlock();
-  };
-  window.addEventListener('pointerdown', unlockAudio, { capture: true, signal });
-  window.addEventListener('pointerup', unlockAudio, { capture: true, signal });
-  window.addEventListener('touchend', unlockAudio, { capture: true, signal });
-  window.addEventListener('click', unlockAudio, { capture: true, signal });
-  window.addEventListener('keydown', unlockAudio, { capture: true, signal });
   document.addEventListener('visibilitychange', tuneMenu, { signal });
   document.addEventListener('input', onVolumeInput, { signal });
   document.addEventListener('change', onVolumeChange, { signal });

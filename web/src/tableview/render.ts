@@ -42,12 +42,24 @@ const SHEETS: Record<Sheet, () => string> = {
   trkBoard: () => boardSheet(trkView(), true),
 };
 
+/** Set once a Play, Play online, or Continue press has started the theme. */
+let menuArmed = false;
+
 /**
- * The menu music belongs to the home screen: it plays while that is what the player looks at, and
- * not under a table, a setup screen, the online screens or a tab that is in the background.
+ * The home screen stays quiet. Play, Play online, and Continue are the tap that
+ * starts the theme, and it keeps going until the player is back on that screen.
  */
+export function armMenuMusic(): void {
+  menuArmed = true;
+  Sound.unlock();
+  Sound.music(true);
+}
+
+/** Start or stop the theme for whatever is on screen now. */
 export function tuneMenu(): void {
-  Sound.music(!!stage.app && ui.screen === 'home' && !stage.covered && !document.hidden);
+  const idleHome = ui.screen === 'home' && !stage.covered;
+  if (idleHome) menuArmed = false;
+  Sound.music(!!stage.app && menuArmed && !document.hidden && !idleHome);
 }
 
 /** The dialogs a redraw may put over the page: a sheet, or the pass-and-play curtain. */

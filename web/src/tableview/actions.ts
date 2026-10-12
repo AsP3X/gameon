@@ -13,7 +13,7 @@ import { $, reduced } from './dom';
 import type { ActionFn } from './dom';
 import { layout } from './layout';
 import { banner, collectTrick, finale, finishFinale, playFinale } from './motion';
-import { go, render } from './render';
+import { armMenuMusic, go, render } from './render';
 import {
   BOT_NAMES,
   clearTimer,
@@ -326,6 +326,7 @@ export const ACTIONS: Record<string, ActionFn | undefined> = {
     go('home');
   },
   online() {
+    armMenuMusic();
     stage.online?.();
   },
   record() {
@@ -344,9 +345,11 @@ export const ACTIONS: Record<string, ActionFn | undefined> = {
     });
   },
   setup() {
+    armMenuMusic();
     go('setup');
   },
   resume() {
+    armMenuMusic();
     const s = Store.loadGame();
     if (!s) return go('home');
     openTable(s);
