@@ -100,11 +100,12 @@ show_help() {
   ${BOLD}First start${NC} opens a setup screen when .env does not exist yet.
   ${BOLD}./deploy.sh --reset${NC} removes .env, so the next start opens that screen again.
   ${BOLD}./deploy.sh --setup${NC} opens it again. The fields start as they are now.
-  Arrows move. Enter on This machine or NPM selects how players reach the tavern.
+  Up and down move. Left and right switch Storage between the named volume and a
+  data folder. Enter on This machine or NPM selects how players reach the tavern.
   Enter on a setting changes it. s saves and starts. r puts the answers back to
   the shipped defaults, and s writes them. q quits and writes nothing. The r key
-  does not touch the database. The data folder line is optional: leave it empty for
-  the named volume, or set a path such as ./data.
+  does not touch the database. Storage is optional: left keeps the named volume
+  skt_pg_data, right uses ./data, and enter on that line edits the path.
   While the database is only inside the skt-postgres container, the reach mode, the
   Postgres port and the database user, password and name cannot be changed: that
   would recreate the container and delete what it stores. On the named volume or in
@@ -215,6 +216,8 @@ SETUP_SECURE=""
 SETUP_PASSWORD="skt"
 SETUP_PROXIES=""
 SETUP_DATA=""
+# Last folder path chosen on the setup screen, so left/right can return to it.
+SETUP_DATA_HELD=""
 SETUP_PGUSER="skt"
 SETUP_PGDB="skt"
 SETUP_PICK=0
@@ -236,6 +239,7 @@ load_setup_from() {
   SETUP_PASSWORD="${SETUP_PASSWORD:-skt}"
   SETUP_PROXIES="$(file_value "$file" SKT_TRUSTED_PROXIES)"
   SETUP_DATA="$(file_value "$file" SKT_DATA_DIR)"
+  SETUP_DATA_HELD="$SETUP_DATA"
   SETUP_PGUSER="$(file_value "$file" POSTGRES_USER)"
   SETUP_PGUSER="${SETUP_PGUSER:-skt}"
   SETUP_PGDB="$(file_value "$file" POSTGRES_DB)"
@@ -479,9 +483,9 @@ setup_draw() {
       proxies) setup_row "$i" "Trusted proxies       ${proxies}" ;;
       data)
         if [[ -n "$SETUP_DATA" ]]; then
-          setup_row "$i" "Data folder           ${SETUP_DATA}"
+          setup_row "$i" "Storage               < ${SETUP_DATA} >"
         else
-          setup_row "$i" "Data folder           (named volumes)"
+          setup_row "$i" "Storage               < named volume >"
         fi
         ;;
     esac
@@ -494,18 +498,19 @@ setup_draw() {
   else
     printf '  %sThe page is the only address the browser needs.%s\n' "$DIM" "$NC"
   fi
-  printf '  %sThe data folder is optional. Empty keeps the named volume skt_pg_data.%s\n' "$DIM" "$NC"
+  printf '  %sLeft and right switch Storage between the named volume and a data folder.%s\n' "$DIM" "$NC"
   if [[ "$SETUP_ORIGIN" == https:* && "$SETUP_SECURE" != "1" ]]; then
     printf '  %sThis origin is https. Turn the secure cookie on.%s\n' "$YELLOW" "$NC"
   fi
   if [[ "$SETUP_PG_LOCKED" == "1" ]]; then
     printf '  %sThe database already exists. Its user, password and name stay.%s\n' "$DIM" "$NC"
   fi
-  printf '\n  %s↑↓ move    enter select    s save and start    r reset answers    q quit%s\n' "$DIM" "$NC"
+  printf '\n  %s↑↓ move    ←→ storage    enter select    s save and start    r reset answers    q quit%s\n' "$DIM" "$NC"
+  printf '  %sOn Storage, left is the named volume and right is the data folder. Enter edits the path.%s\n' "$DIM" "$NC"
   printf '  %sOn a text line, enter keeps the shown value. Type - to clear the origin or the proxies.%s\n' "$DIM" "$NC"
 }
 
-# Sets SETUP_ACTION from one key. Arrow keys are escape, then [A or [B.
+# Sets SETUP_ACTION from one key. Arrow keys are escape, then [A [B [C or [D.
 setup_key() {
   local key rest
   IFS= read -rsn1 key || key="q"
@@ -516,6 +521,8 @@ setup_key() {
     case "$rest" in
       '[A') SETUP_ACTION="up" ;;
       '[B') SETUP_ACTION="down" ;;
+      '[C'|'OC') SETUP_ACTION="right" ;;
+      '[D'|'OD') SETUP_ACTION="left" ;;
       *) SETUP_ACTION="stay" ;;
     esac
     return 0
@@ -523,12 +530,31 @@ setup_key() {
   case "$key" in
     k|K) SETUP_ACTION="up" ;;
     j|J) SETUP_ACTION="down" ;;
+    l|L) SETUP_ACTION="right" ;;
+    h|H) SETUP_ACTION="left" ;;
     ''|$'\r') SETUP_ACTION="enter" ;;
     s|S) SETUP_ACTION="save" ;;
     r|R) SETUP_ACTION="reset" ;;
     q|Q) SETUP_ACTION="quit" ;;
     *) SETUP_ACTION="stay" ;;
   esac
+}
+
+# Left selects the named volume. Right selects a data folder. A path typed
+# earlier is kept, so switching back does not replace it with ./data.
+setup_storage_switch() {
+  local way="$1"
+  if [[ "$way" == "left" ]]; then
+    if [[ -n "$SETUP_DATA" ]]; then
+      SETUP_DATA_HELD="$SETUP_DATA"
+    fi
+    SETUP_DATA=""
+    return 0
+  fi
+  if [[ -z "$SETUP_DATA" ]]; then
+    SETUP_DATA="${SETUP_DATA_HELD:-./data}"
+    SETUP_DATA_HELD="$SETUP_DATA"
+  fi
 }
 
 # Sets SETUP_ENTERED. An empty enter keeps the value the form is showing.
@@ -651,6 +677,9 @@ run_setup() {
         n="$(setup_field_count)"
         SETUP_PICK=$(( (SETUP_PICK + 1) % n ))
         ;;
+      left|right)
+        setup_storage_switch "$SETUP_ACTION"
+        ;;
       enter)
         case "$(setup_field_at)" in
           reach-local) SETUP_MODE="local" ;;
@@ -684,14 +713,18 @@ run_setup() {
             ;;
           data)
             if [[ -n "$SETUP_DATA" ]]; then
-              setup_edit "$SETUP_DATA" "  (- named volumes)"
+              setup_edit "$SETUP_DATA" "  (- named volume)"
             else
-              setup_edit "(named volumes)" "  (- named volumes)"
+              setup_edit "(named volume)" "  (path, or -)"
             fi
-            if [[ "$SETUP_ENTERED" == "-" || "$SETUP_ENTERED" == "(named volumes)" ]]; then
+            if [[ "$SETUP_ENTERED" == "-" || "$SETUP_ENTERED" == "(named volume)" || "$SETUP_ENTERED" == "(named volumes)" ]]; then
+              if [[ -n "$SETUP_DATA" ]]; then
+                SETUP_DATA_HELD="$SETUP_DATA"
+              fi
               SETUP_DATA=""
             else
               SETUP_DATA="$SETUP_ENTERED"
+              SETUP_DATA_HELD="$SETUP_DATA"
             fi
             ;;
         esac
