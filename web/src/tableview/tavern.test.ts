@@ -289,6 +289,19 @@ describe('mountTavern', () => {
     expect(app.querySelector('img')).toBeNull();
   });
 
+  it('unlocks the theme in the tap that leaves a game for the home screen', () => {
+    const unlock = vi.spyOn(Sound, 'unlock');
+    mount();
+    ui.sheet = 'welcome';
+    render();
+    click('[data-act="welcomeIn"]');
+    unlock.mockClear();
+    startSoloGame();
+    click('.g-top [data-act="home"]');
+    expect(ui.screen).toBe('home');
+    expect(unlock).toHaveBeenCalled();
+  });
+
   it('plays the menu music from Welcome back until a game starts, then again on the home screen', () => {
     const music = vi.spyOn(Sound, 'music');
     const wanted = (): boolean | undefined => music.mock.calls.at(-1)?.[0];

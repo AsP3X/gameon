@@ -216,8 +216,10 @@ go round. A third tune is a file in `music/` and a line in `TUNES`.
   downbeat. `music.test.ts` holds the file to that length.
 - It is stored at -16 LUFS (the take, 3 dB down) and plays at a gain of 0.3 (`MUSIC_V` in
   `sound.ts`): about as loud as a button tap. Decoded a tune takes about 30 MB, so it is decoded
-  when it is about to play, not when it is fetched, and only one is kept decoded: a tune is decoded
-  again when its turn comes round. That is why the music comes in a moment after the home screen.
+  when it is about to play, not when it is fetched. The mixer keeps the next tune decoded while
+  one is playing, so leaving a game starts that next tune in the tap. A tune started later, once
+  the tap is over, is thrown away on a phone. The one that is playing holds its own buffer until
+  it fades out, so two decoded tunes exist only while one is taking over from the other.
 
 `tavern-b.mp3` is the same band in the same key, metre and tempo as the first, with a new melody:
 

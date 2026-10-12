@@ -12,6 +12,7 @@ import { MockServer } from '../net/mock/server';
 import type { MockStore } from '../net/mock/server';
 import type { Transport } from '../net/socket';
 import { Sound } from '../sound/sound';
+import { render } from '../tableview/render';
 import { session, stats, tableView, ui } from '../tableview/state';
 import { noticeText } from './OnlineScreens';
 import { reloadPage } from './reload';
@@ -151,13 +152,17 @@ describe('playing online', () => {
     expect($('#app .home')).not.toBeNull();
   });
 
-  it('stops the menu music while the hub is where the home screen was, and brings it back with it', async () => {
+  it('plays the menu music on the hub, where the home screen was, and keeps it on the way back', async () => {
     const music = vi.spyOn(Sound, 'music');
     const wanted = (): boolean | undefined => music.mock.calls.at(-1)?.[0];
     await renderApp();
+    // jsdom is not a real browser, so the greeting that arms the theme is not opened for us.
+    ui.sheet = 'welcome';
+    render();
+    await click('[data-act="welcomeIn"]');
     expect(wanted()).toBe(true);
     await click('[data-act="online"]');
-    expect(wanted()).toBe(false);
+    expect(wanted()).toBe(true);
     await click('[aria-label="Back"]');
     expect(wanted()).toBe(true);
   });

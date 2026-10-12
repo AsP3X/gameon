@@ -602,8 +602,10 @@ function leaveOut(one: Tune): void {
 }
 
 /**
- * Decode a tune. Decoded it takes some 30 MB, so this waits until the tune is about to play, and
- * only one tune is kept decoded: the next one takes its place.
+ * Decode a tune. Decoded it takes some 30 MB, so the mixer keeps one: the tune that plays next.
+ * The one that is playing holds its own buffer until it stops. Decoding the next one while this
+ * one plays means coming back to the menu can start it in the tap, not a moment later. A start
+ * outside the tap is thrown away on a phone.
  */
 function decodeTune(next: Tune): void {
   const ctx = decoder();
@@ -651,67 +653,107 @@ function poke(ctx: AudioContext): void {
   }
 }
 
+/** Decode the tune after the one that is up next, so the next visit starts inside the tap. */
+function prefetch(): void {
+  const next = upNext();
+  if (next && tune?.of !== next) decodeTune(next);
+}
+
+/**
+ * Ask a suspended context to run, in this call. The silent sample is what lets a tune started
+ * beside it keep playing once the context does run.
+ */
+function wake(r: Rig | null): void {
+  if (!r || r.ctx.state === 'running' || waking) return;
+  waking = true;
+  poke(r.ctx);
+  const ctx = r.ctx;
+  void ctx.resume().then(
+    () => {
+      waking = false;
+      // Only try again once the browser has actually allowed sound.
+      if (ctx.state === 'running') syncMusic();
+    },
+    () => {
+      waking = false;
+    },
+  );
+}
+
+/** Fade the tune that is playing and drop it. */
+function fadeMusic(r: Rig): void {
+  if (!mus) return;
+  const m = mus,
+    t = r.ctx.currentTime;
+  mus = null;
+  m.g.gain.setTargetAtTime(0, t, 0.15);
+  m.s.stop(t + 1);
+}
+
+/** Start the tune that is up next. It is already decoded. Then decode the one after it. */
+function startMusic(r: Rig): void {
+  const next = upNext();
+  if (!next || !tune || tune.of !== next) return;
+  const s = r.ctx.createBufferSource(),
+    g = r.ctx.createGain(),
+    loop = next.loop,
+    t = r.ctx.currentTime;
+  s.buffer = tune.buffer;
+  // Any stretch of the file that is `repeats` long joins up with itself (web README, "Menu
+  // music"). This one begins half-way into the lead-in, clear of the silence a decoder may leave
+  // at the front of an MP3.
+  s.loop = true;
+  s.loopStart = loop.starts / 2;
+  s.loopEnd = loop.starts / 2 + loop.repeats;
+  // Audible immediately. A ramp from silence is lost when the clock is not
+  // running yet, and the tune then stays at zero.
+  g.gain.value = MUSIC_V;
+  s.connect(g).connect(r.master);
+  // Record it before start(), so a state change inside start() does not
+  // begin a second copy.
+  mus = { s, g };
+  const n = tunes.length;
+  if (n) turn = (turn + 1) % n;
+  try {
+    s.start(t, loop.starts);
+  } catch {
+    mus = null;
+    if (n) turn = (turn - 1 + n) % n;
+    return;
+  }
+  g.gain.setTargetAtTime(MUSIC_V, t, 0.4);
+  prefetch();
+}
+
 /** Start or stop the music, so that a tune plays exactly while it is wanted and sound is on. */
 function syncMusic(): void {
   const on = musicWanted && !prefs.muted;
-  const next = on && !mus ? upNext() : null;
-  if (next && tune?.of !== next) {
-    decodeTune(next); // which comes back here
-    return;
-  }
   // Start as soon as the tune is wanted. A browser that blocks autoplay leaves
   // the context suspended; the next tap begins the tune inside that gesture.
   if (on && !rig && browserMayPlayNow()) boot();
   const r = rig;
-  if (!r) return;
-  if (on && r.ctx.state !== 'running' && !waking) {
-    waking = true;
-    void r.ctx.resume().then(
-      () => {
-        waking = false;
-        // Only try again once the browser has actually allowed sound.
-        if (r.ctx.state === 'running') syncMusic();
-      },
-      () => {
-        waking = false;
-      },
-    );
+  if (on) wake(r);
+  if (!on) {
+    if (r) fadeMusic(r);
+    return;
   }
-  const t = r.ctx.currentTime;
-  if (next && tune) {
-    const s = r.ctx.createBufferSource(),
-      g = r.ctx.createGain(),
-      loop = next.loop;
-    s.buffer = tune.buffer;
-    // Any stretch of the file that is `repeats` long joins up with itself (web README, "Menu
-    // music"). This one begins half-way into the lead-in, clear of the silence a decoder may leave
-    // at the front of an MP3.
-    s.loop = true;
-    s.loopStart = loop.starts / 2;
-    s.loopEnd = loop.starts / 2 + loop.repeats;
-    // Audible immediately. A ramp from silence is lost when the clock is not
-    // running yet, and the tune then stays at zero.
-    g.gain.value = MUSIC_V;
-    s.connect(g).connect(r.master);
-    // Record it before start(), so a state change inside start() does not
-    // begin a second copy.
-    mus = { s, g };
-    const n = tunes.length;
-    if (n) turn = (turn + 1) % n;
-    try {
-      s.start(t, loop.starts);
-    } catch {
-      mus = null;
-      if (n) turn = (turn - 1 + n) % n;
-      return;
-    }
-    g.gain.setTargetAtTime(MUSIC_V, t, 0.4);
-  } else if (!on && mus) {
-    const m = mus;
-    mus = null;
-    m.g.gain.setTargetAtTime(0, t, 0.15);
-    m.s.stop(t + 1);
+  if (mus) return;
+  const next = upNext();
+  if (!next) return;
+  if (!r) {
+    if (tune?.of !== next) decodeTune(next);
+    return;
   }
+  if (tune?.of !== next) {
+    decodeTune(next);
+    // The one we want is not decoded yet. Play the one we have, in this call, so the menu is
+    // not silent. The turn stays with it; the one still decoding plays the next time.
+    if (!tune) return;
+    const at = tunes.indexOf(tune.of);
+    if (at < 0) return;
+    turn = at;
+  }
+  startMusic(r);
 }
 
 export const Sound = {

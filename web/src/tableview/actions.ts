@@ -321,6 +321,9 @@ export const ACTIONS: Record<string, ActionFn | undefined> = {
       return render();
     }
     finale.token++;
+    // In this tap. An online leave reaches the home screen from an effect, after the tap, and a
+    // phone drops a tune started out there.
+    Sound.unlock();
     if (session.online) return session.online.exit();
     if (session.table) session.table.stop();
     go('home');
@@ -334,6 +337,8 @@ export const ACTIONS: Record<string, ActionFn | undefined> = {
   leaveTable() {
     const online = session.online;
     if (!online) return;
+    // The seat is given up when the server answers, after this tap. Unlock now, in the tap.
+    Sound.unlock();
     ui.sheet = null;
     ui.waiting = true;
     render();
@@ -474,8 +479,12 @@ export const ACTIONS: Record<string, ActionFn | undefined> = {
   },
   again() {
     finale.token++;
-    // Online, the next game starts where this one did: in the lobby.
-    if (session.online) return session.online.exit();
+    // Online, the next game starts where this one did: in the lobby. That screen arrives after
+    // this tap, so the theme has to be unlocked here.
+    if (session.online) {
+      Sound.unlock();
+      return session.online.exit();
+    }
     if (ui.endFrom === 'track') {
       const trk = trkNow();
       session.trk = trkCreate(

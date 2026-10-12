@@ -466,6 +466,45 @@ describe('menu music', () => {
     expect(tunes().map((v) => v.stoppedAt)).toEqual([6]);
   });
 
+  it('decodes the next tune while one is playing, so coming back starts it in that call', async () => {
+    vi.spyOn(Math, 'random').mockReturnValue(0);
+    const Sound = await mixer();
+    Sound.tunes(three());
+    Sound.unlock();
+    Sound.music(true);
+    await settle();
+    expect(started()).toEqual(['take 7']);
+    Sound.music(false);
+    Sound.music(true); // back from a game: the next tune is already decoded
+    expect(started()).toEqual(['take 7', 'take 8']);
+    const playing = made.filter((v) => v.kind === 'source');
+    expect(playing.at(-1)?.stoppedAt).toBeNull();
+  });
+
+  it('starts that tune in the call that comes back, while the context is still suspended', async () => {
+    class Holding extends FakeAudioContext {
+      static current: Holding | null = null;
+      constructor() {
+        super();
+        Holding.current = this;
+      }
+    }
+    vi.stubGlobal('AudioContext', Holding);
+    vi.spyOn(Math, 'random').mockReturnValue(0);
+    const Sound = await mixer();
+    Sound.tunes(three());
+    Sound.unlock();
+    Sound.music(true);
+    await settle();
+    const audio = Holding.current;
+    if (!audio) throw new Error('the context was not built');
+    audio.state = 'suspended';
+    Sound.music(false);
+    Sound.music(true);
+    // A silent sample is started in the same call so the suspended context may keep the tune.
+    expect(started().filter((v) => typeof v === 'string')).toEqual(['take 7', 'take 8']);
+  });
+
   it('draws the first tune at random and then gives each its turn', async () => {
     vi.spyOn(Math, 'random').mockReturnValue(0.5);
     const Sound = await mixer();
@@ -499,7 +538,7 @@ describe('menu music', () => {
     }
   });
 
-  it('decodes each tune when its turn comes, and again the next time round', async () => {
+  it('decodes the next tune ahead of its turn, and the first again when the round comes back', async () => {
     const decoded: string[] = [];
     const real = decodeFile;
     decodeFile = (f) => {
@@ -512,10 +551,11 @@ describe('menu music', () => {
     Sound.unlock();
     Sound.music(true);
     await settle();
-    expect(decoded).toEqual(['take 7']);
+    expect(decoded).toEqual(['take 7', 'take 8']);
     for (let k = 0; k < 3; k++) await again(Sound);
     // The file is still whole after it was decoded: decoding was given a copy.
-    expect(decoded).toEqual(['take 7', 'take 8', 'take 9', 'take 7']);
+    // The last decode is the tune after the one that just started, ready for the next return.
+    expect(decoded).toEqual(['take 7', 'take 8', 'take 9', 'take 7', 'take 8']);
     expect(started()).toEqual(['take 7', 'take 8', 'take 9', 'take 7']);
   });
 
