@@ -29,8 +29,9 @@ from what §5.5 says, and they are yours.
   files, 12 passed, 1 failed. `four-players`, `ranked-smoke` and `empty-seat` passed. The failure
   is in `pwa.e2e.ts`, "talks to the server itself", which runs on its own mock host and never
   reaches yours. Alone it passed four times out of four. I have not found why it failed once.
-- The frames are drawn in `design/web.pen` and `design/skt.pen` and are not committed yet. They
-  are on disk when the owner has saved both in Pen. `design/gameon.pen` did not change.
+- The frames are in `design/web.pen` and `design/skt.pen`, commit `8197791` ("ADD: Draw the seat
+  that is out, the lost-seat notices and the copy of the two-turn rule."). Every other frame in
+  both files is as it was. `design/gameon.pen` did not change.
 - Not checked in a browser: the OUT tag in dark and at 360 px. It uses the BOT tag's style.
 
 ## Your task
