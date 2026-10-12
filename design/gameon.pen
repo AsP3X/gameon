@@ -146,7 +146,7 @@
                   "type": "text",
                   "id": "oC9IC",
                   "name": "Label",
-                  "fill": "#4b3800",
+                  "fill": "$gold-ink",
                   "content": "GOLD",
                   "lineHeight": 1.4,
                   "textAlign": "center",
@@ -5515,12 +5515,12 @@
                           "height": 16,
                           "icon": "crown",
                           "library": "lucide",
-                          "fill": "#4b3800"
+                          "fill": "$gold-ink"
                         },
                         {
                           "type": "text",
                           "id": "j6J5U8",
-                          "fill": "#4b3800",
+                          "fill": "$gold-ink",
                           "content": "Skull King",
                           "lineHeight": 1.4,
                           "fontFamily": "$f-ui",
@@ -5703,7 +5703,7 @@
                           "height": 32,
                           "icon": "smartphone",
                           "library": "lucide",
-                          "fill": "#4b3800"
+                          "fill": "$gold-ink"
                         }
                       ]
                     },
@@ -7581,7 +7581,7 @@
                               "height": 28,
                               "icon": "dice-5",
                               "library": "lucide",
-                              "fill": "#4b3800"
+                              "fill": "$gold-ink"
                             }
                           ]
                         },
@@ -10881,7 +10881,7 @@
                       "height": 23,
                       "icon": "smartphone",
                       "library": "lucide",
-                      "fill": "#4b3800"
+                      "fill": "$gold-ink"
                     }
                   ]
                 },
@@ -11243,7 +11243,7 @@
                           "height": 19,
                           "icon": "dice-5",
                           "library": "lucide",
-                          "fill": "#4b3800"
+                          "fill": "$gold-ink"
                         }
                       ]
                     },
@@ -14573,12 +14573,12 @@
                           "height": 16,
                           "icon": "crown",
                           "library": "lucide",
-                          "fill": "#4b3800"
+                          "fill": "$gold-ink"
                         },
                         {
                           "type": "text",
                           "id": "ZN0X6",
-                          "fill": "#4b3800",
+                          "fill": "$gold-ink",
                           "content": "Skull King",
                           "lineHeight": 1.4,
                           "fontFamily": "$f-ui",
@@ -14761,7 +14761,7 @@
                           "height": 32,
                           "icon": "smartphone",
                           "library": "lucide",
-                          "fill": "#4b3800"
+                          "fill": "$gold-ink"
                         }
                       ]
                     },
@@ -16639,7 +16639,7 @@
                               "height": 28,
                               "icon": "dice-5",
                               "library": "lucide",
-                              "fill": "#4b3800"
+                              "fill": "$gold-ink"
                             }
                           ]
                         },
@@ -19939,7 +19939,7 @@
                       "height": 23,
                       "icon": "smartphone",
                       "library": "lucide",
-                      "fill": "#4b3800"
+                      "fill": "$gold-ink"
                     }
                   ]
                 },
@@ -20301,7 +20301,7 @@
                           "height": 19,
                           "icon": "dice-5",
                           "library": "lucide",
-                          "fill": "#4b3800"
+                          "fill": "$gold-ink"
                         }
                       ]
                     },
@@ -22754,7 +22754,7 @@
                               "height": 23,
                               "icon": "crown",
                               "library": "lucide",
-                              "fill": "#4b3800"
+                              "fill": "$gold-ink"
                             }
                           ]
                         },
@@ -25960,6 +25960,65 @@
         },
         {
           "type": "frame",
+          "id": "QotFd",
+          "name": "State · Sign in · guest who has played",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 12,
+          "children": [
+            {
+              "type": "text",
+              "id": "msK2z",
+              "fill": "$faint",
+              "content": "STATE · SIGN IN · GUEST WHO HAS PLAYED",
+              "lineHeight": 1.4,
+              "fontFamily": "$f-ui",
+              "fontSize": 12,
+              "fontWeight": "900",
+              "letterSpacing": 1
+            },
+            {
+              "type": "frame",
+              "id": "fak6J",
+              "name": "Action",
+              "width": "fill_container",
+              "layout": "vertical",
+              "padding": [
+                0,
+                0,
+                4,
+                0
+              ],
+              "children": [
+                {
+                  "id": "wCOZn",
+                  "type": "ref",
+                  "ref": "X7dwnl",
+                  "descendants": {
+                    "mi4nJ": {
+                      "content": "SIGN IN"
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "id": "mUm1Z",
+              "name": "Note",
+              "fill": "$muted",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "Signing in switches to that account. This guest and its games are left behind.",
+              "lineHeight": 1.4,
+              "fontFamily": "$f-ui",
+              "fontSize": 14,
+              "fontWeight": "700"
+            }
+          ]
+        },
+        {
+          "type": "frame",
           "id": "QwSMn",
           "name": "State · Any form · too many tries",
           "width": "fill_container",
@@ -28247,7 +28306,7 @@
                               "height": 23,
                               "icon": "crown",
                               "library": "lucide",
-                              "fill": "#4b3800"
+                              "fill": "$gold-ink"
                             }
                           ]
                         },
@@ -31453,6 +31512,65 @@
         },
         {
           "type": "frame",
+          "id": "Q9Zav7",
+          "name": "State · Sign in · guest who has played",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 12,
+          "children": [
+            {
+              "type": "text",
+              "id": "Wv621",
+              "fill": "$faint",
+              "content": "STATE · SIGN IN · GUEST WHO HAS PLAYED",
+              "lineHeight": 1.4,
+              "fontFamily": "$f-ui",
+              "fontSize": 12,
+              "fontWeight": "900",
+              "letterSpacing": 1
+            },
+            {
+              "type": "frame",
+              "id": "ItHY2",
+              "name": "Action",
+              "width": "fill_container",
+              "layout": "vertical",
+              "padding": [
+                0,
+                0,
+                4,
+                0
+              ],
+              "children": [
+                {
+                  "id": "XSEDn",
+                  "type": "ref",
+                  "ref": "X7dwnl",
+                  "descendants": {
+                    "mi4nJ": {
+                      "content": "SIGN IN"
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "id": "HB22x",
+              "name": "Note",
+              "fill": "$muted",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "Signing in switches to that account. This guest and its games are left behind.",
+              "lineHeight": 1.4,
+              "fontFamily": "$f-ui",
+              "fontSize": 14,
+              "fontWeight": "700"
+            }
+          ]
+        },
+        {
+          "type": "frame",
           "id": "uNqbW",
           "name": "State · Any form · too many tries",
           "width": "fill_container",
@@ -34289,7 +34407,7 @@
                                           "height": 20,
                                           "icon": "smartphone",
                                           "library": "lucide",
-                                          "fill": "#4b3800"
+                                          "fill": "$gold-ink"
                                         }
                                       ]
                                     },
@@ -34830,7 +34948,7 @@
                                       "height": 24,
                                       "icon": "dice-5",
                                       "library": "lucide",
-                                      "fill": "#4b3800"
+                                      "fill": "$gold-ink"
                                     }
                                   ]
                                 },
@@ -35616,7 +35734,7 @@
                                   "type": "text",
                                   "id": "V8AGU4",
                                   "fill": "$muted",
-                                  "content": "2 of 4 seats · Swift",
+                                  "content": "2 of 4 seats · Whirlpool",
                                   "lineHeight": 1.3,
                                   "fontFamily": "$f-ui",
                                   "fontSize": 13,
@@ -38437,7 +38555,7 @@
                                   "height": 18,
                                   "icon": "smartphone",
                                   "library": "lucide",
-                                  "fill": "#4b3800"
+                                  "fill": "$gold-ink"
                                 }
                               ]
                             },
@@ -38866,7 +38984,7 @@
                           "type": "text",
                           "id": "LN7IU",
                           "fill": "$muted",
-                          "content": "2 of 4 seats · Swift",
+                          "content": "2 of 4 seats · Whirlpool",
                           "lineHeight": 1.3,
                           "fontFamily": "$f-ui",
                           "fontSize": 13,
@@ -39208,7 +39326,7 @@
                               "height": 19,
                               "icon": "dice-5",
                               "library": "lucide",
-                              "fill": "#4b3800"
+                              "fill": "$gold-ink"
                             }
                           ]
                         },
@@ -39849,6 +39967,568 @@
                       "descendants": {
                         "mi4nJ": {
                           "content": "REJOIN"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "M5dww",
+          "name": "State · Jump back in · table not started",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 12,
+          "children": [
+            {
+              "type": "text",
+              "id": "Y9GCjW",
+              "fill": "$faint",
+              "content": "STATE · JUMP BACK IN · TABLE NOT STARTED",
+              "lineHeight": 1.4,
+              "fontFamily": "$f-ui",
+              "fontSize": 12,
+              "fontWeight": "900",
+              "letterSpacing": 1
+            },
+            {
+              "type": "frame",
+              "id": "zIeT5",
+              "name": "Jump back in",
+              "width": "fill_container",
+              "fill": "$green-bg",
+              "cornerRadius": 20,
+              "layout": "vertical",
+              "gap": 14,
+              "padding": 16,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "BUFfQ",
+                  "name": "Row",
+                  "width": "fill_container",
+                  "gap": 12,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "s4HKt",
+                      "name": "Skull King key",
+                      "clip": true,
+                      "width": 48,
+                      "height": 48,
+                      "fill": "$green",
+                      "cornerRadius": 13.440000000000001,
+                      "stroke": "#0000002e",
+                      "strokeWidth": {
+                        "bottom": 4
+                      },
+                      "strokeAlignment": "inner",
+                      "layout": "none",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "AJELr",
+                          "x": 1.92,
+                          "y": -2.64,
+                          "name": "Mascot / wink",
+                          "clip": true,
+                          "width": 44.160000000000004,
+                          "height": 44.160000000000004,
+                          "layout": "none",
+                          "children": [
+                            {
+                              "type": "ellipse",
+                              "id": "M1ZdlF",
+                              "x": 11.040000000000001,
+                              "y": 40.480000000000004,
+                              "opacity": 0.12,
+                              "fill": "$fg",
+                              "width": 22.080000000000002,
+                              "height": 2.944000000000001
+                            },
+                            {
+                              "type": "path",
+                              "id": "iubZZ",
+                              "x": 10.304000000000002,
+                              "y": 16.928000000000004,
+                              "geometry": "M0 32c0-17.67311 14.32689-32 32-32 17.67311 0 32 14.32689 32 32 0 8-4 12-8 14l0 8c0 2.20914-1.79086 4-4 4l-40 0c-2.20914 0-4-1.79086-4-4l0-8c-4-2-8-6-8-14z",
+                              "fill": "$bone",
+                              "width": 23.552000000000007,
+                              "height": 21.344,
+                              "stroke": "$bone-line",
+                              "strokeWidth": 1.4720000000000004
+                            },
+                            {
+                              "type": "path",
+                              "id": "u4Byo",
+                              "x": 18.400000000000002,
+                              "y": 35.328,
+                              "geometry": "M0 8l0-8m10 8l0-8m10 8l0-8",
+                              "fill": "#000000",
+                              "width": 7.360000000000001,
+                              "height": 2.944000000000001,
+                              "stroke": "$bone-line",
+                              "strokeWidth": 1.104,
+                              "strokeLinecap": "round"
+                            },
+                            {
+                              "type": "ellipse",
+                              "id": "DLib3",
+                              "x": 15.456000000000003,
+                              "y": 21.344,
+                              "fill": "#2B2B2B",
+                              "width": 5.888000000000002,
+                              "height": 5.888000000000002
+                            },
+                            {
+                              "type": "ellipse",
+                              "id": "v2BjgY",
+                              "x": 18.363200000000003,
+                              "y": 22.4112,
+                              "fill": "$white",
+                              "width": 1.9136000000000002,
+                              "height": 1.9136000000000002
+                            },
+                            {
+                              "type": "path",
+                              "id": "MBPt5",
+                              "x": 20.608000000000004,
+                              "y": 27.968000000000004,
+                              "geometry": "M4 0l-4 7 8 0-4-7z",
+                              "fill": "#2B2B2B",
+                              "width": 2.944000000000001,
+                              "height": 2.5760000000000005
+                            },
+                            {
+                              "type": "path",
+                              "id": "iKZwQ",
+                              "x": 17.664,
+                              "y": 33.85600000000001,
+                              "geometry": "M0 0q12 10 24 0",
+                              "width": 8.832,
+                              "height": 1.8400000000000003,
+                              "stroke": "#2B2B2B",
+                              "strokeWidth": 1.4720000000000004,
+                              "strokeLinecap": "round"
+                            },
+                            {
+                              "type": "path",
+                              "id": "i752y",
+                              "x": 11.040000000000001,
+                              "y": 17.664,
+                              "geometry": "M0 8l58-8",
+                              "fill": "#000000",
+                              "width": 21.344,
+                              "height": 2.944000000000001,
+                              "stroke": "#2B2B2B",
+                              "strokeWidth": 1.4720000000000004
+                            },
+                            {
+                              "type": "ellipse",
+                              "id": "JWkpx",
+                              "x": 22.448,
+                              "y": 20.608000000000004,
+                              "fill": "#2B2B2B",
+                              "width": 8.096,
+                              "height": 7.360000000000001
+                            },
+                            {
+                              "type": "path",
+                              "id": "ARnGN",
+                              "x": 5.888000000000002,
+                              "y": 9.641600000000002,
+                              "geometry": "M0 19.80312c10-22 78-28 90-6-8 6-16 2-22-2-10 6-34 8-46 4-6 4-14 8-22 4",
+                              "fill": "#2B2B2B",
+                              "width": 33.120000000000005,
+                              "height": 7.898618181818183
+                            },
+                            {
+                              "type": "path",
+                              "id": "EZRJO",
+                              "x": 8.096,
+                              "y": 13.248000000000003,
+                              "geometry": "M0 8c16 2 58-2 78-8",
+                              "width": 28.704000000000004,
+                              "height": 3.134690909090909,
+                              "stroke": "$gold",
+                              "strokeWidth": 1.4720000000000004,
+                              "strokeLinecap": "round"
+                            },
+                            {
+                              "type": "ellipse",
+                              "id": "vHg1L",
+                              "x": 19.872000000000003,
+                              "y": 8.832,
+                              "fill": "$white",
+                              "width": 4.416,
+                              "height": 4.416
+                            },
+                            {
+                              "type": "path",
+                              "id": "omsPD",
+                              "x": 20.976000000000003,
+                              "y": 10.672,
+                              "geometry": "M0 0l1 0m4 0l1 0",
+                              "fill": "#000000",
+                              "width": 2.208,
+                              "height": 0,
+                              "stroke": "#2B2B2B",
+                              "strokeWidth": 0.7360000000000002
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "Cr62F",
+                      "name": "Text",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 1,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "D5IQxE",
+                          "fill": "$green-ink",
+                          "content": "JUMP BACK IN",
+                          "lineHeight": 1.4,
+                          "fontFamily": "$f-ui",
+                          "fontSize": 12,
+                          "fontWeight": "900",
+                          "letterSpacing": 1.2
+                        },
+                        {
+                          "type": "text",
+                          "id": "Qnkmd",
+                          "fill": "$fg",
+                          "content": "Skull King · your table",
+                          "lineHeight": 1.25,
+                          "fontFamily": "$f-ui",
+                          "fontSize": 17,
+                          "fontWeight": "900"
+                        },
+                        {
+                          "type": "text",
+                          "id": "h3OD1E",
+                          "fill": "$green-ink",
+                          "content": "Waiting to start · your seat is kept",
+                          "lineHeight": 1.35,
+                          "fontFamily": "$f-ui",
+                          "fontSize": 14,
+                          "fontWeight": "700"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "VWsLf",
+                  "name": "Action",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "padding": [
+                    0,
+                    0,
+                    4,
+                    0
+                  ],
+                  "children": [
+                    {
+                      "id": "l2QOI",
+                      "type": "ref",
+                      "ref": "X7dwnl",
+                      "descendants": {
+                        "mi4nJ": {
+                          "content": "REJOIN"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "S9gl5",
+          "name": "State · Jump back in · one screen, saved here",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 12,
+          "children": [
+            {
+              "type": "text",
+              "id": "TRpzn",
+              "fill": "$faint",
+              "content": "STATE · JUMP BACK IN · ONE SCREEN",
+              "lineHeight": 1.4,
+              "fontFamily": "$f-ui",
+              "fontSize": 12,
+              "fontWeight": "900",
+              "letterSpacing": 1
+            },
+            {
+              "type": "frame",
+              "id": "V0keJ5",
+              "name": "Jump back in",
+              "width": "fill_container",
+              "fill": "$green-bg",
+              "cornerRadius": 20,
+              "layout": "vertical",
+              "gap": 14,
+              "padding": 16,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "SuEOJ",
+                  "name": "Row",
+                  "width": "fill_container",
+                  "gap": 12,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "kWeDn",
+                      "name": "Skull King key",
+                      "clip": true,
+                      "width": 48,
+                      "height": 48,
+                      "fill": "$green",
+                      "cornerRadius": 13.440000000000001,
+                      "stroke": "#0000002e",
+                      "strokeWidth": {
+                        "bottom": 4
+                      },
+                      "strokeAlignment": "inner",
+                      "layout": "none",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "Ggm0I",
+                          "x": 1.92,
+                          "y": -2.64,
+                          "name": "Mascot / wink",
+                          "clip": true,
+                          "width": 44.160000000000004,
+                          "height": 44.160000000000004,
+                          "layout": "none",
+                          "children": [
+                            {
+                              "type": "ellipse",
+                              "id": "ZtJlh",
+                              "x": 11.040000000000001,
+                              "y": 40.480000000000004,
+                              "opacity": 0.12,
+                              "fill": "$fg",
+                              "width": 22.080000000000002,
+                              "height": 2.944000000000001
+                            },
+                            {
+                              "type": "path",
+                              "id": "W8vpOe",
+                              "x": 10.304000000000002,
+                              "y": 16.928000000000004,
+                              "geometry": "M0 32c0-17.67311 14.32689-32 32-32 17.67311 0 32 14.32689 32 32 0 8-4 12-8 14l0 8c0 2.20914-1.79086 4-4 4l-40 0c-2.20914 0-4-1.79086-4-4l0-8c-4-2-8-6-8-14z",
+                              "fill": "$bone",
+                              "width": 23.552000000000007,
+                              "height": 21.344,
+                              "stroke": "$bone-line",
+                              "strokeWidth": 1.4720000000000004
+                            },
+                            {
+                              "type": "path",
+                              "id": "rLmPp",
+                              "x": 18.400000000000002,
+                              "y": 35.328,
+                              "geometry": "M0 8l0-8m10 8l0-8m10 8l0-8",
+                              "fill": "#000000",
+                              "width": 7.360000000000001,
+                              "height": 2.944000000000001,
+                              "stroke": "$bone-line",
+                              "strokeWidth": 1.104,
+                              "strokeLinecap": "round"
+                            },
+                            {
+                              "type": "ellipse",
+                              "id": "VFx7C",
+                              "x": 15.456000000000003,
+                              "y": 21.344,
+                              "fill": "#2B2B2B",
+                              "width": 5.888000000000002,
+                              "height": 5.888000000000002
+                            },
+                            {
+                              "type": "ellipse",
+                              "id": "MgLok",
+                              "x": 18.363200000000003,
+                              "y": 22.4112,
+                              "fill": "$white",
+                              "width": 1.9136000000000002,
+                              "height": 1.9136000000000002
+                            },
+                            {
+                              "type": "path",
+                              "id": "nJ9hi",
+                              "x": 20.608000000000004,
+                              "y": 27.968000000000004,
+                              "geometry": "M4 0l-4 7 8 0-4-7z",
+                              "fill": "#2B2B2B",
+                              "width": 2.944000000000001,
+                              "height": 2.5760000000000005
+                            },
+                            {
+                              "type": "path",
+                              "id": "xaqTU",
+                              "x": 17.664,
+                              "y": 33.85600000000001,
+                              "geometry": "M0 0q12 10 24 0",
+                              "width": 8.832,
+                              "height": 1.8400000000000003,
+                              "stroke": "#2B2B2B",
+                              "strokeWidth": 1.4720000000000004,
+                              "strokeLinecap": "round"
+                            },
+                            {
+                              "type": "path",
+                              "id": "qPuqd",
+                              "x": 11.040000000000001,
+                              "y": 17.664,
+                              "geometry": "M0 8l58-8",
+                              "fill": "#000000",
+                              "width": 21.344,
+                              "height": 2.944000000000001,
+                              "stroke": "#2B2B2B",
+                              "strokeWidth": 1.4720000000000004
+                            },
+                            {
+                              "type": "ellipse",
+                              "id": "JNa1c",
+                              "x": 22.448,
+                              "y": 20.608000000000004,
+                              "fill": "#2B2B2B",
+                              "width": 8.096,
+                              "height": 7.360000000000001
+                            },
+                            {
+                              "type": "path",
+                              "id": "cI36F",
+                              "x": 5.888000000000002,
+                              "y": 9.641600000000002,
+                              "geometry": "M0 19.80312c10-22 78-28 90-6-8 6-16 2-22-2-10 6-34 8-46 4-6 4-14 8-22 4",
+                              "fill": "#2B2B2B",
+                              "width": 33.120000000000005,
+                              "height": 7.898618181818183
+                            },
+                            {
+                              "type": "path",
+                              "id": "cuyJx",
+                              "x": 8.096,
+                              "y": 13.248000000000003,
+                              "geometry": "M0 8c16 2 58-2 78-8",
+                              "width": 28.704000000000004,
+                              "height": 3.134690909090909,
+                              "stroke": "$gold",
+                              "strokeWidth": 1.4720000000000004,
+                              "strokeLinecap": "round"
+                            },
+                            {
+                              "type": "ellipse",
+                              "id": "UMyzt",
+                              "x": 19.872000000000003,
+                              "y": 8.832,
+                              "fill": "$white",
+                              "width": 4.416,
+                              "height": 4.416
+                            },
+                            {
+                              "type": "path",
+                              "id": "L3QiO",
+                              "x": 20.976000000000003,
+                              "y": 10.672,
+                              "geometry": "M0 0l1 0m4 0l1 0",
+                              "fill": "#000000",
+                              "width": 2.208,
+                              "height": 0,
+                              "stroke": "#2B2B2B",
+                              "strokeWidth": 0.7360000000000002
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "KN8QZ",
+                      "name": "Text",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 1,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "hWp1L",
+                          "fill": "$green-ink",
+                          "content": "JUMP BACK IN",
+                          "lineHeight": 1.4,
+                          "fontFamily": "$f-ui",
+                          "fontSize": 12,
+                          "fontWeight": "900",
+                          "letterSpacing": 1.2
+                        },
+                        {
+                          "type": "text",
+                          "id": "mbmKk",
+                          "fill": "$fg",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "Skull King · one screen, 4 players",
+                          "lineHeight": 1.25,
+                          "fontFamily": "$f-ui",
+                          "fontSize": 17,
+                          "fontWeight": "900"
+                        },
+                        {
+                          "type": "text",
+                          "id": "Fd8Fa",
+                          "fill": "$green-ink",
+                          "content": "Round 2 of 10 · saved on this device",
+                          "lineHeight": 1.35,
+                          "fontFamily": "$f-ui",
+                          "fontSize": 14,
+                          "fontWeight": "700"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "HvIwX",
+                  "name": "Action",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "padding": [
+                    0,
+                    0,
+                    4,
+                    0
+                  ],
+                  "children": [
+                    {
+                      "id": "uFRR0",
+                      "type": "ref",
+                      "ref": "X7dwnl",
+                      "descendants": {
+                        "mi4nJ": {
+                          "content": "CONTINUE"
                         }
                       }
                     }
@@ -43295,7 +43975,7 @@
                                           "height": 20,
                                           "icon": "smartphone",
                                           "library": "lucide",
-                                          "fill": "#4b3800"
+                                          "fill": "$gold-ink"
                                         }
                                       ]
                                     },
@@ -43836,7 +44516,7 @@
                                       "height": 24,
                                       "icon": "dice-5",
                                       "library": "lucide",
-                                      "fill": "#4b3800"
+                                      "fill": "$gold-ink"
                                     }
                                   ]
                                 },
@@ -44622,7 +45302,7 @@
                                   "type": "text",
                                   "id": "LeUpq",
                                   "fill": "$muted",
-                                  "content": "2 of 4 seats · Swift",
+                                  "content": "2 of 4 seats · Whirlpool",
                                   "lineHeight": 1.3,
                                   "fontFamily": "$f-ui",
                                   "fontSize": 13,
@@ -47443,7 +48123,7 @@
                                   "height": 18,
                                   "icon": "smartphone",
                                   "library": "lucide",
-                                  "fill": "#4b3800"
+                                  "fill": "$gold-ink"
                                 }
                               ]
                             },
@@ -47872,7 +48552,7 @@
                           "type": "text",
                           "id": "F3GV82",
                           "fill": "$muted",
-                          "content": "2 of 4 seats · Swift",
+                          "content": "2 of 4 seats · Whirlpool",
                           "lineHeight": 1.3,
                           "fontFamily": "$f-ui",
                           "fontSize": 13,
@@ -48214,7 +48894,7 @@
                               "height": 19,
                               "icon": "dice-5",
                               "library": "lucide",
-                              "fill": "#4b3800"
+                              "fill": "$gold-ink"
                             }
                           ]
                         },
@@ -48855,6 +49535,568 @@
                       "descendants": {
                         "mi4nJ": {
                           "content": "REJOIN"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "E0ADaG",
+          "name": "State · Jump back in · table not started",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 12,
+          "children": [
+            {
+              "type": "text",
+              "id": "E36Vj",
+              "fill": "$faint",
+              "content": "STATE · JUMP BACK IN · TABLE NOT STARTED",
+              "lineHeight": 1.4,
+              "fontFamily": "$f-ui",
+              "fontSize": 12,
+              "fontWeight": "900",
+              "letterSpacing": 1
+            },
+            {
+              "type": "frame",
+              "id": "i7LsKp",
+              "name": "Jump back in",
+              "width": "fill_container",
+              "fill": "$green-bg",
+              "cornerRadius": 20,
+              "layout": "vertical",
+              "gap": 14,
+              "padding": 16,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "r9fJg",
+                  "name": "Row",
+                  "width": "fill_container",
+                  "gap": 12,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "c4J9v",
+                      "name": "Skull King key",
+                      "clip": true,
+                      "width": 48,
+                      "height": 48,
+                      "fill": "$green",
+                      "cornerRadius": 13.440000000000001,
+                      "stroke": "#0000002e",
+                      "strokeWidth": {
+                        "bottom": 4
+                      },
+                      "strokeAlignment": "inner",
+                      "layout": "none",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "YocIx",
+                          "x": 1.92,
+                          "y": -2.64,
+                          "name": "Mascot / wink",
+                          "clip": true,
+                          "width": 44.160000000000004,
+                          "height": 44.160000000000004,
+                          "layout": "none",
+                          "children": [
+                            {
+                              "type": "ellipse",
+                              "id": "JyrUi",
+                              "x": 11.040000000000001,
+                              "y": 40.480000000000004,
+                              "opacity": 0.12,
+                              "fill": "$fg",
+                              "width": 22.080000000000002,
+                              "height": 2.944000000000001
+                            },
+                            {
+                              "type": "path",
+                              "id": "owsjP",
+                              "x": 10.304000000000002,
+                              "y": 16.928000000000004,
+                              "geometry": "M0 32c0-17.67311 14.32689-32 32-32 17.67311 0 32 14.32689 32 32 0 8-4 12-8 14l0 8c0 2.20914-1.79086 4-4 4l-40 0c-2.20914 0-4-1.79086-4-4l0-8c-4-2-8-6-8-14z",
+                              "fill": "$bone",
+                              "width": 23.552000000000007,
+                              "height": 21.344,
+                              "stroke": "$bone-line",
+                              "strokeWidth": 1.4720000000000004
+                            },
+                            {
+                              "type": "path",
+                              "id": "AECgh",
+                              "x": 18.400000000000002,
+                              "y": 35.328,
+                              "geometry": "M0 8l0-8m10 8l0-8m10 8l0-8",
+                              "fill": "#000000",
+                              "width": 7.360000000000001,
+                              "height": 2.944000000000001,
+                              "stroke": "$bone-line",
+                              "strokeWidth": 1.104,
+                              "strokeLinecap": "round"
+                            },
+                            {
+                              "type": "ellipse",
+                              "id": "XLLoo",
+                              "x": 15.456000000000003,
+                              "y": 21.344,
+                              "fill": "#2B2B2B",
+                              "width": 5.888000000000002,
+                              "height": 5.888000000000002
+                            },
+                            {
+                              "type": "ellipse",
+                              "id": "fbQqY",
+                              "x": 18.363200000000003,
+                              "y": 22.4112,
+                              "fill": "$white",
+                              "width": 1.9136000000000002,
+                              "height": 1.9136000000000002
+                            },
+                            {
+                              "type": "path",
+                              "id": "Wjav6",
+                              "x": 20.608000000000004,
+                              "y": 27.968000000000004,
+                              "geometry": "M4 0l-4 7 8 0-4-7z",
+                              "fill": "#2B2B2B",
+                              "width": 2.944000000000001,
+                              "height": 2.5760000000000005
+                            },
+                            {
+                              "type": "path",
+                              "id": "HF1Gy",
+                              "x": 17.664,
+                              "y": 33.85600000000001,
+                              "geometry": "M0 0q12 10 24 0",
+                              "width": 8.832,
+                              "height": 1.8400000000000003,
+                              "stroke": "#2B2B2B",
+                              "strokeWidth": 1.4720000000000004,
+                              "strokeLinecap": "round"
+                            },
+                            {
+                              "type": "path",
+                              "id": "HXqXm",
+                              "x": 11.040000000000001,
+                              "y": 17.664,
+                              "geometry": "M0 8l58-8",
+                              "fill": "#000000",
+                              "width": 21.344,
+                              "height": 2.944000000000001,
+                              "stroke": "#2B2B2B",
+                              "strokeWidth": 1.4720000000000004
+                            },
+                            {
+                              "type": "ellipse",
+                              "id": "XEGG9",
+                              "x": 22.448,
+                              "y": 20.608000000000004,
+                              "fill": "#2B2B2B",
+                              "width": 8.096,
+                              "height": 7.360000000000001
+                            },
+                            {
+                              "type": "path",
+                              "id": "JZpYg",
+                              "x": 5.888000000000002,
+                              "y": 9.641600000000002,
+                              "geometry": "M0 19.80312c10-22 78-28 90-6-8 6-16 2-22-2-10 6-34 8-46 4-6 4-14 8-22 4",
+                              "fill": "#2B2B2B",
+                              "width": 33.120000000000005,
+                              "height": 7.898618181818183
+                            },
+                            {
+                              "type": "path",
+                              "id": "w0Foy",
+                              "x": 8.096,
+                              "y": 13.248000000000003,
+                              "geometry": "M0 8c16 2 58-2 78-8",
+                              "width": 28.704000000000004,
+                              "height": 3.134690909090909,
+                              "stroke": "$gold",
+                              "strokeWidth": 1.4720000000000004,
+                              "strokeLinecap": "round"
+                            },
+                            {
+                              "type": "ellipse",
+                              "id": "bY84r",
+                              "x": 19.872000000000003,
+                              "y": 8.832,
+                              "fill": "$white",
+                              "width": 4.416,
+                              "height": 4.416
+                            },
+                            {
+                              "type": "path",
+                              "id": "Q3Wyuz",
+                              "x": 20.976000000000003,
+                              "y": 10.672,
+                              "geometry": "M0 0l1 0m4 0l1 0",
+                              "fill": "#000000",
+                              "width": 2.208,
+                              "height": 0,
+                              "stroke": "#2B2B2B",
+                              "strokeWidth": 0.7360000000000002
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "s343Td",
+                      "name": "Text",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 1,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "gh8KR",
+                          "fill": "$green-ink",
+                          "content": "JUMP BACK IN",
+                          "lineHeight": 1.4,
+                          "fontFamily": "$f-ui",
+                          "fontSize": 12,
+                          "fontWeight": "900",
+                          "letterSpacing": 1.2
+                        },
+                        {
+                          "type": "text",
+                          "id": "fMCnW",
+                          "fill": "$fg",
+                          "content": "Skull King · your table",
+                          "lineHeight": 1.25,
+                          "fontFamily": "$f-ui",
+                          "fontSize": 17,
+                          "fontWeight": "900"
+                        },
+                        {
+                          "type": "text",
+                          "id": "esPTR",
+                          "fill": "$green-ink",
+                          "content": "Waiting to start · your seat is kept",
+                          "lineHeight": 1.35,
+                          "fontFamily": "$f-ui",
+                          "fontSize": 14,
+                          "fontWeight": "700"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "ty7wW",
+                  "name": "Action",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "padding": [
+                    0,
+                    0,
+                    4,
+                    0
+                  ],
+                  "children": [
+                    {
+                      "id": "M0cWlD",
+                      "type": "ref",
+                      "ref": "X7dwnl",
+                      "descendants": {
+                        "mi4nJ": {
+                          "content": "REJOIN"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "WnBh2",
+          "name": "State · Jump back in · one screen, saved here",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 12,
+          "children": [
+            {
+              "type": "text",
+              "id": "eumA0",
+              "fill": "$faint",
+              "content": "STATE · JUMP BACK IN · ONE SCREEN",
+              "lineHeight": 1.4,
+              "fontFamily": "$f-ui",
+              "fontSize": 12,
+              "fontWeight": "900",
+              "letterSpacing": 1
+            },
+            {
+              "type": "frame",
+              "id": "RNa3K",
+              "name": "Jump back in",
+              "width": "fill_container",
+              "fill": "$green-bg",
+              "cornerRadius": 20,
+              "layout": "vertical",
+              "gap": 14,
+              "padding": 16,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "pzrrI",
+                  "name": "Row",
+                  "width": "fill_container",
+                  "gap": 12,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "k7c2X",
+                      "name": "Skull King key",
+                      "clip": true,
+                      "width": 48,
+                      "height": 48,
+                      "fill": "$green",
+                      "cornerRadius": 13.440000000000001,
+                      "stroke": "#0000002e",
+                      "strokeWidth": {
+                        "bottom": 4
+                      },
+                      "strokeAlignment": "inner",
+                      "layout": "none",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "AsPFd",
+                          "x": 1.92,
+                          "y": -2.64,
+                          "name": "Mascot / wink",
+                          "clip": true,
+                          "width": 44.160000000000004,
+                          "height": 44.160000000000004,
+                          "layout": "none",
+                          "children": [
+                            {
+                              "type": "ellipse",
+                              "id": "YMcgV",
+                              "x": 11.040000000000001,
+                              "y": 40.480000000000004,
+                              "opacity": 0.12,
+                              "fill": "$fg",
+                              "width": 22.080000000000002,
+                              "height": 2.944000000000001
+                            },
+                            {
+                              "type": "path",
+                              "id": "g2cCk4",
+                              "x": 10.304000000000002,
+                              "y": 16.928000000000004,
+                              "geometry": "M0 32c0-17.67311 14.32689-32 32-32 17.67311 0 32 14.32689 32 32 0 8-4 12-8 14l0 8c0 2.20914-1.79086 4-4 4l-40 0c-2.20914 0-4-1.79086-4-4l0-8c-4-2-8-6-8-14z",
+                              "fill": "$bone",
+                              "width": 23.552000000000007,
+                              "height": 21.344,
+                              "stroke": "$bone-line",
+                              "strokeWidth": 1.4720000000000004
+                            },
+                            {
+                              "type": "path",
+                              "id": "TWIZv",
+                              "x": 18.400000000000002,
+                              "y": 35.328,
+                              "geometry": "M0 8l0-8m10 8l0-8m10 8l0-8",
+                              "fill": "#000000",
+                              "width": 7.360000000000001,
+                              "height": 2.944000000000001,
+                              "stroke": "$bone-line",
+                              "strokeWidth": 1.104,
+                              "strokeLinecap": "round"
+                            },
+                            {
+                              "type": "ellipse",
+                              "id": "ZgJ3Z",
+                              "x": 15.456000000000003,
+                              "y": 21.344,
+                              "fill": "#2B2B2B",
+                              "width": 5.888000000000002,
+                              "height": 5.888000000000002
+                            },
+                            {
+                              "type": "ellipse",
+                              "id": "T8F5p",
+                              "x": 18.363200000000003,
+                              "y": 22.4112,
+                              "fill": "$white",
+                              "width": 1.9136000000000002,
+                              "height": 1.9136000000000002
+                            },
+                            {
+                              "type": "path",
+                              "id": "DC8R7",
+                              "x": 20.608000000000004,
+                              "y": 27.968000000000004,
+                              "geometry": "M4 0l-4 7 8 0-4-7z",
+                              "fill": "#2B2B2B",
+                              "width": 2.944000000000001,
+                              "height": 2.5760000000000005
+                            },
+                            {
+                              "type": "path",
+                              "id": "Bc66M",
+                              "x": 17.664,
+                              "y": 33.85600000000001,
+                              "geometry": "M0 0q12 10 24 0",
+                              "width": 8.832,
+                              "height": 1.8400000000000003,
+                              "stroke": "#2B2B2B",
+                              "strokeWidth": 1.4720000000000004,
+                              "strokeLinecap": "round"
+                            },
+                            {
+                              "type": "path",
+                              "id": "TfWp1",
+                              "x": 11.040000000000001,
+                              "y": 17.664,
+                              "geometry": "M0 8l58-8",
+                              "fill": "#000000",
+                              "width": 21.344,
+                              "height": 2.944000000000001,
+                              "stroke": "#2B2B2B",
+                              "strokeWidth": 1.4720000000000004
+                            },
+                            {
+                              "type": "ellipse",
+                              "id": "Heb8B",
+                              "x": 22.448,
+                              "y": 20.608000000000004,
+                              "fill": "#2B2B2B",
+                              "width": 8.096,
+                              "height": 7.360000000000001
+                            },
+                            {
+                              "type": "path",
+                              "id": "ujkK8",
+                              "x": 5.888000000000002,
+                              "y": 9.641600000000002,
+                              "geometry": "M0 19.80312c10-22 78-28 90-6-8 6-16 2-22-2-10 6-34 8-46 4-6 4-14 8-22 4",
+                              "fill": "#2B2B2B",
+                              "width": 33.120000000000005,
+                              "height": 7.898618181818183
+                            },
+                            {
+                              "type": "path",
+                              "id": "pBEwF",
+                              "x": 8.096,
+                              "y": 13.248000000000003,
+                              "geometry": "M0 8c16 2 58-2 78-8",
+                              "width": 28.704000000000004,
+                              "height": 3.134690909090909,
+                              "stroke": "$gold",
+                              "strokeWidth": 1.4720000000000004,
+                              "strokeLinecap": "round"
+                            },
+                            {
+                              "type": "ellipse",
+                              "id": "nUOPo",
+                              "x": 19.872000000000003,
+                              "y": 8.832,
+                              "fill": "$white",
+                              "width": 4.416,
+                              "height": 4.416
+                            },
+                            {
+                              "type": "path",
+                              "id": "EqYul",
+                              "x": 20.976000000000003,
+                              "y": 10.672,
+                              "geometry": "M0 0l1 0m4 0l1 0",
+                              "fill": "#000000",
+                              "width": 2.208,
+                              "height": 0,
+                              "stroke": "#2B2B2B",
+                              "strokeWidth": 0.7360000000000002
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "tZECN",
+                      "name": "Text",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 1,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "KINYV",
+                          "fill": "$green-ink",
+                          "content": "JUMP BACK IN",
+                          "lineHeight": 1.4,
+                          "fontFamily": "$f-ui",
+                          "fontSize": 12,
+                          "fontWeight": "900",
+                          "letterSpacing": 1.2
+                        },
+                        {
+                          "type": "text",
+                          "id": "E2SO4",
+                          "fill": "$fg",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "Skull King · one screen, 4 players",
+                          "lineHeight": 1.25,
+                          "fontFamily": "$f-ui",
+                          "fontSize": 17,
+                          "fontWeight": "900"
+                        },
+                        {
+                          "type": "text",
+                          "id": "wH5DE",
+                          "fill": "$green-ink",
+                          "content": "Round 2 of 10 · saved on this device",
+                          "lineHeight": 1.35,
+                          "fontFamily": "$f-ui",
+                          "fontSize": 14,
+                          "fontWeight": "700"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "CGOFW",
+                  "name": "Action",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "padding": [
+                    0,
+                    0,
+                    4,
+                    0
+                  ],
+                  "children": [
+                    {
+                      "id": "p99lHY",
+                      "type": "ref",
+                      "ref": "X7dwnl",
+                      "descendants": {
+                        "mi4nJ": {
+                          "content": "CONTINUE"
                         }
                       }
                     }
@@ -49655,7 +50897,7 @@
       "type": "frame",
       "id": "HJGLz",
       "x": 0,
-      "y": 9700,
+      "y": 10000,
       "name": "Profile · desktop",
       "theme": {
         "mode": "light"
@@ -51274,7 +52516,7 @@
       "type": "frame",
       "id": "ayXD4",
       "x": 3080,
-      "y": 9700,
+      "y": 10000,
       "name": "Profile · phone",
       "theme": {
         "mode": "light"
@@ -52615,7 +53857,7 @@
       "type": "frame",
       "id": "nKLoo",
       "x": 3980,
-      "y": 9700,
+      "y": 10000,
       "name": "Profile · states",
       "theme": {
         "mode": "light"
@@ -54584,7 +55826,7 @@
       "type": "frame",
       "id": "D0k5P",
       "x": 1540,
-      "y": 9700,
+      "y": 10000,
       "name": "Profile · desktop · dark",
       "theme": {
         "mode": "dark"
@@ -56203,7 +57445,7 @@
       "type": "frame",
       "id": "J09axv",
       "x": 3530,
-      "y": 9700,
+      "y": 10000,
       "name": "Profile · phone · dark",
       "theme": {
         "mode": "dark"
@@ -57544,7 +58786,7 @@
       "type": "frame",
       "id": "cxJIr",
       "x": 4430,
-      "y": 9700,
+      "y": 10000,
       "name": "Profile · states · dark",
       "theme": {
         "mode": "dark"
@@ -59508,6 +60750,1280 @@
           ]
         }
       ]
+    },
+    {
+      "type": "frame",
+      "id": "QLowP",
+      "x": 3980,
+      "y": 1200,
+      "name": "Landing · states",
+      "theme": {
+        "mode": "light"
+      },
+      "clip": true,
+      "width": 390,
+      "fill": "$bg",
+      "layout": "vertical",
+      "gap": 30,
+      "padding": 20,
+      "children": [
+        {
+          "type": "frame",
+          "id": "Vyipj",
+          "name": "State · Ranked · no podium",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 12,
+          "children": [
+            {
+              "type": "text",
+              "id": "vMtXU",
+              "name": "Label",
+              "fill": "$faint",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "STATE · RANKED · NO SESSION, OR FEWER THAN THREE ON THE LADDER",
+              "lineHeight": 1.4,
+              "fontFamily": "$f-ui",
+              "fontSize": 12,
+              "fontWeight": "900",
+              "letterSpacing": 1
+            },
+            {
+              "type": "frame",
+              "id": "I6TIxh",
+              "name": "Ranked panel",
+              "width": "fill_container",
+              "fill": "$blue-bg",
+              "cornerRadius": 22,
+              "layout": "vertical",
+              "gap": 16,
+              "padding": [
+                20,
+                18,
+                10,
+                18
+              ],
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "s7mkhM",
+                  "name": "Ranked copy",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 8,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "cMdgY",
+                      "name": "Season",
+                      "gap": 8,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "id": "sm0Yw",
+                          "type": "ref",
+                          "ref": "IFNwl",
+                          "descendants": {
+                            "JSAU8": {
+                              "content": "SEASON 2026 Q4"
+                            }
+                          }
+                        },
+                        {
+                          "type": "text",
+                          "id": "GALfs",
+                          "fill": "$blue-ink",
+                          "content": "RANKED",
+                          "lineHeight": 1.4,
+                          "fontFamily": "$f-ui",
+                          "fontSize": 12,
+                          "fontWeight": "900",
+                          "letterSpacing": 1.2
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "a0ZrWw",
+                      "fill": "$fg",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "The ranked season is on",
+                      "lineHeight": 1.2,
+                      "fontFamily": "$f-ui",
+                      "fontSize": 24,
+                      "fontWeight": "900",
+                      "letterSpacing": -0.2
+                    },
+                    {
+                      "type": "text",
+                      "id": "NxvQh",
+                      "fill": "$blue-ink",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Climb from Deckhand to Skull King.",
+                      "lineHeight": 1.4,
+                      "fontFamily": "$f-ui",
+                      "fontSize": 15,
+                      "fontWeight": "700"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "fDwlm",
+                  "name": "Ranked action",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "padding": [
+                    6,
+                    0,
+                    0,
+                    0
+                  ],
+                  "children": [
+                    {
+                      "id": "Zkcbs",
+                      "type": "ref",
+                      "ref": "wyKHb",
+                      "descendants": {
+                        "C6HdgF": {
+                          "content": "FIND A RANKED GAME"
+                        }
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "SW7H8",
+                  "name": "Ranked footer",
+                  "width": "fill_container",
+                  "height": 44,
+                  "justifyContent": "space_between",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "fr2mV",
+                      "fill": "$blue-ink",
+                      "content": "Needs a free account",
+                      "lineHeight": 1.4,
+                      "fontFamily": "$f-ui",
+                      "fontSize": 13,
+                      "fontWeight": "800"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "dgqeN",
+                      "name": "Ladder link",
+                      "height": 44,
+                      "gap": 2,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "cRdKV",
+                          "fill": "$blue-ink",
+                          "content": "See the ladder",
+                          "lineHeight": 1.4,
+                          "fontFamily": "$f-ui",
+                          "fontSize": 14,
+                          "fontWeight": "900"
+                        },
+                        {
+                          "type": "icon",
+                          "id": "QAj2e",
+                          "width": 18,
+                          "height": 18,
+                          "icon": "chevron-right",
+                          "library": "lucide",
+                          "fill": "$blue-ink"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "nyXHG",
+          "name": "State · Ranked · signed in",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 12,
+          "children": [
+            {
+              "type": "text",
+              "id": "oPoCL",
+              "name": "Label",
+              "fill": "$faint",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "STATE · RANKED · SIGNED IN TO AN ACCOUNT",
+              "lineHeight": 1.4,
+              "fontFamily": "$f-ui",
+              "fontSize": 12,
+              "fontWeight": "900",
+              "letterSpacing": 1
+            },
+            {
+              "type": "frame",
+              "id": "WbUEM",
+              "name": "Ranked panel",
+              "width": "fill_container",
+              "fill": "$blue-bg",
+              "cornerRadius": 22,
+              "layout": "vertical",
+              "gap": 16,
+              "padding": [
+                20,
+                18,
+                10,
+                18
+              ],
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "xyKsp",
+                  "name": "Ranked copy",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 8,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "Y0ztMX",
+                      "name": "Season",
+                      "gap": 8,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "id": "K1WET",
+                          "type": "ref",
+                          "ref": "IFNwl",
+                          "descendants": {
+                            "JSAU8": {
+                              "content": "SEASON 2026 Q4"
+                            }
+                          }
+                        },
+                        {
+                          "type": "text",
+                          "id": "k8C3A",
+                          "fill": "$blue-ink",
+                          "content": "RANKED",
+                          "lineHeight": 1.4,
+                          "fontFamily": "$f-ui",
+                          "fontSize": 12,
+                          "fontWeight": "900",
+                          "letterSpacing": 1.2
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "r8NdO",
+                      "fill": "$fg",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "The ranked season is on",
+                      "lineHeight": 1.2,
+                      "fontFamily": "$f-ui",
+                      "fontSize": 24,
+                      "fontWeight": "900",
+                      "letterSpacing": -0.2
+                    },
+                    {
+                      "type": "text",
+                      "id": "d6QXw",
+                      "fill": "$blue-ink",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Climb from Deckhand to Skull King.",
+                      "lineHeight": 1.4,
+                      "fontFamily": "$f-ui",
+                      "fontSize": 15,
+                      "fontWeight": "700"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "UlkD1",
+                  "name": "Podium",
+                  "width": "fill_container",
+                  "gap": 8,
+                  "alignItems": "end",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "ofdbk",
+                      "name": "Place 2 · Jonas",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 5,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "id": "c7Rp78",
+                          "type": "ref",
+                          "ref": "SebZL",
+                          "width": 42,
+                          "height": 42,
+                          "fill": "$blue",
+                          "descendants": {
+                            "peRO2": {
+                              "content": "J",
+                              "fontSize": 17.64
+                            }
+                          }
+                        },
+                        {
+                          "type": "text",
+                          "id": "T06D1M",
+                          "fill": "$fg",
+                          "content": "Jonas",
+                          "lineHeight": 1.2,
+                          "fontFamily": "$f-ui",
+                          "fontSize": 15,
+                          "fontWeight": "900"
+                        },
+                        {
+                          "type": "text",
+                          "id": "x1yUS",
+                          "fill": "$blue-ink",
+                          "content": "RATING 49",
+                          "lineHeight": 1.2,
+                          "fontFamily": "$f-ui",
+                          "fontSize": 11,
+                          "fontWeight": "900",
+                          "letterSpacing": 0.6
+                        },
+                        {
+                          "type": "frame",
+                          "id": "U9SKx",
+                          "name": "Step",
+                          "width": "fill_container",
+                          "height": 48,
+                          "fill": "$card",
+                          "cornerRadius": 12,
+                          "stroke": "$line",
+                          "strokeWidth": 2,
+                          "strokeAlignment": "inner",
+                          "effect": {
+                            "type": "shadow",
+                            "shadowType": "outer",
+                            "color": "$line",
+                            "offset": {
+                              "x": 0,
+                              "y": 3
+                            }
+                          },
+                          "layout": "vertical",
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "eu6ph",
+                              "fill": "$fg",
+                              "content": "2",
+                              "lineHeight": 1.05,
+                              "fontFamily": "$f-ui",
+                              "fontSize": 20,
+                              "fontWeight": "900"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "sx48Z",
+                      "name": "Place 1 · Mira",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 5,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "HI4k7",
+                          "width": 20,
+                          "height": 20,
+                          "icon": "crown",
+                          "library": "lucide",
+                          "fill": "$gold-d"
+                        },
+                        {
+                          "id": "JumxD",
+                          "type": "ref",
+                          "ref": "SebZL",
+                          "width": 50,
+                          "height": 50,
+                          "fill": "$purple",
+                          "descendants": {
+                            "peRO2": {
+                              "content": "M",
+                              "fontSize": 21
+                            }
+                          }
+                        },
+                        {
+                          "type": "text",
+                          "id": "TYx1G",
+                          "fill": "$fg",
+                          "content": "Mira",
+                          "lineHeight": 1.2,
+                          "fontFamily": "$f-ui",
+                          "fontSize": 15,
+                          "fontWeight": "900"
+                        },
+                        {
+                          "type": "text",
+                          "id": "wsUOb",
+                          "fill": "$blue-ink",
+                          "content": "RATING 52",
+                          "lineHeight": 1.2,
+                          "fontFamily": "$f-ui",
+                          "fontSize": 11,
+                          "fontWeight": "900",
+                          "letterSpacing": 0.6
+                        },
+                        {
+                          "type": "frame",
+                          "id": "f2URC9",
+                          "name": "Step",
+                          "width": "fill_container",
+                          "height": 64,
+                          "fill": "$card",
+                          "cornerRadius": 12,
+                          "stroke": "$line",
+                          "strokeWidth": 2,
+                          "strokeAlignment": "inner",
+                          "effect": {
+                            "type": "shadow",
+                            "shadowType": "outer",
+                            "color": "$line",
+                            "offset": {
+                              "x": 0,
+                              "y": 3
+                            }
+                          },
+                          "layout": "vertical",
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "bBYa4",
+                              "fill": "$fg",
+                              "content": "1",
+                              "lineHeight": 1.05,
+                              "fontFamily": "$f-ui",
+                              "fontSize": 26,
+                              "fontWeight": "900"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "z3uWI",
+                      "name": "Place 3 · Teo",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 5,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "id": "BHfNV",
+                          "type": "ref",
+                          "ref": "SebZL",
+                          "width": 42,
+                          "height": 42,
+                          "fill": "$orange",
+                          "descendants": {
+                            "peRO2": {
+                              "content": "T",
+                              "fontSize": 17.64
+                            }
+                          }
+                        },
+                        {
+                          "type": "text",
+                          "id": "b7Xlq",
+                          "fill": "$fg",
+                          "content": "Teo",
+                          "lineHeight": 1.2,
+                          "fontFamily": "$f-ui",
+                          "fontSize": 15,
+                          "fontWeight": "900"
+                        },
+                        {
+                          "type": "text",
+                          "id": "ibg08",
+                          "fill": "$blue-ink",
+                          "content": "RATING 47",
+                          "lineHeight": 1.2,
+                          "fontFamily": "$f-ui",
+                          "fontSize": 11,
+                          "fontWeight": "900",
+                          "letterSpacing": 0.6
+                        },
+                        {
+                          "type": "frame",
+                          "id": "k0rbLj",
+                          "name": "Step",
+                          "width": "fill_container",
+                          "height": 36,
+                          "fill": "$card",
+                          "cornerRadius": 12,
+                          "stroke": "$line",
+                          "strokeWidth": 2,
+                          "strokeAlignment": "inner",
+                          "effect": {
+                            "type": "shadow",
+                            "shadowType": "outer",
+                            "color": "$line",
+                            "offset": {
+                              "x": 0,
+                              "y": 3
+                            }
+                          },
+                          "layout": "vertical",
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "f9DNKk",
+                              "fill": "$fg",
+                              "content": "3",
+                              "lineHeight": 1.05,
+                              "fontFamily": "$f-ui",
+                              "fontSize": 20,
+                              "fontWeight": "900"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "H7Ey9u",
+                  "name": "Ranked action",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "padding": [
+                    6,
+                    0,
+                    0,
+                    0
+                  ],
+                  "children": [
+                    {
+                      "id": "AePiE",
+                      "type": "ref",
+                      "ref": "wyKHb",
+                      "descendants": {
+                        "C6HdgF": {
+                          "content": "FIND A RANKED GAME"
+                        }
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "Q6Nfjg",
+                  "name": "Ranked footer",
+                  "width": "fill_container",
+                  "height": 44,
+                  "justifyContent": "end",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "x3wwdI",
+                      "name": "Ladder link",
+                      "height": 44,
+                      "gap": 2,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "yhr1c",
+                          "fill": "$blue-ink",
+                          "content": "See the ladder",
+                          "lineHeight": 1.4,
+                          "fontFamily": "$f-ui",
+                          "fontSize": 14,
+                          "fontWeight": "900"
+                        },
+                        {
+                          "type": "icon",
+                          "id": "AolbL",
+                          "width": 18,
+                          "height": 18,
+                          "icon": "chevron-right",
+                          "library": "lucide",
+                          "fill": "$blue-ink"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "W85Rm",
+      "x": 4430,
+      "y": 1200,
+      "name": "Landing · states · dark",
+      "theme": {
+        "mode": "dark"
+      },
+      "clip": true,
+      "width": 390,
+      "fill": "$bg",
+      "layout": "vertical",
+      "gap": 30,
+      "padding": 20,
+      "children": [
+        {
+          "type": "frame",
+          "id": "PR7uF",
+          "name": "State · Ranked · no podium",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 12,
+          "children": [
+            {
+              "type": "text",
+              "id": "bm0Km",
+              "name": "Label",
+              "fill": "$faint",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "STATE · RANKED · NO SESSION, OR FEWER THAN THREE ON THE LADDER",
+              "lineHeight": 1.4,
+              "fontFamily": "$f-ui",
+              "fontSize": 12,
+              "fontWeight": "900",
+              "letterSpacing": 1
+            },
+            {
+              "type": "frame",
+              "id": "Y666F",
+              "name": "Ranked panel",
+              "width": "fill_container",
+              "fill": "$blue-bg",
+              "cornerRadius": 22,
+              "layout": "vertical",
+              "gap": 16,
+              "padding": [
+                20,
+                18,
+                10,
+                18
+              ],
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "jgOAX",
+                  "name": "Ranked copy",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 8,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "ida37",
+                      "name": "Season",
+                      "gap": 8,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "id": "W5uK6",
+                          "type": "ref",
+                          "ref": "IFNwl",
+                          "descendants": {
+                            "JSAU8": {
+                              "content": "SEASON 2026 Q4"
+                            }
+                          }
+                        },
+                        {
+                          "type": "text",
+                          "id": "HQBJe",
+                          "fill": "$blue-ink",
+                          "content": "RANKED",
+                          "lineHeight": 1.4,
+                          "fontFamily": "$f-ui",
+                          "fontSize": 12,
+                          "fontWeight": "900",
+                          "letterSpacing": 1.2
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "chRZQ",
+                      "fill": "$fg",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "The ranked season is on",
+                      "lineHeight": 1.2,
+                      "fontFamily": "$f-ui",
+                      "fontSize": 24,
+                      "fontWeight": "900",
+                      "letterSpacing": -0.2
+                    },
+                    {
+                      "type": "text",
+                      "id": "RvnGN",
+                      "fill": "$blue-ink",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Climb from Deckhand to Skull King.",
+                      "lineHeight": 1.4,
+                      "fontFamily": "$f-ui",
+                      "fontSize": 15,
+                      "fontWeight": "700"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "G2exm",
+                  "name": "Ranked action",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "padding": [
+                    6,
+                    0,
+                    0,
+                    0
+                  ],
+                  "children": [
+                    {
+                      "id": "kUc6e",
+                      "type": "ref",
+                      "ref": "wyKHb",
+                      "descendants": {
+                        "C6HdgF": {
+                          "content": "FIND A RANKED GAME"
+                        }
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "T0xZr",
+                  "name": "Ranked footer",
+                  "width": "fill_container",
+                  "height": 44,
+                  "justifyContent": "space_between",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "SXxr3",
+                      "fill": "$blue-ink",
+                      "content": "Needs a free account",
+                      "lineHeight": 1.4,
+                      "fontFamily": "$f-ui",
+                      "fontSize": 13,
+                      "fontWeight": "800"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "QTqSz",
+                      "name": "Ladder link",
+                      "height": 44,
+                      "gap": 2,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "Q5ZDv",
+                          "fill": "$blue-ink",
+                          "content": "See the ladder",
+                          "lineHeight": 1.4,
+                          "fontFamily": "$f-ui",
+                          "fontSize": 14,
+                          "fontWeight": "900"
+                        },
+                        {
+                          "type": "icon",
+                          "id": "naYAS",
+                          "width": 18,
+                          "height": 18,
+                          "icon": "chevron-right",
+                          "library": "lucide",
+                          "fill": "$blue-ink"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "TFh2c",
+          "name": "State · Ranked · signed in",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 12,
+          "children": [
+            {
+              "type": "text",
+              "id": "b5IeXH",
+              "name": "Label",
+              "fill": "$faint",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "STATE · RANKED · SIGNED IN TO AN ACCOUNT",
+              "lineHeight": 1.4,
+              "fontFamily": "$f-ui",
+              "fontSize": 12,
+              "fontWeight": "900",
+              "letterSpacing": 1
+            },
+            {
+              "type": "frame",
+              "id": "zCDQd",
+              "name": "Ranked panel",
+              "width": "fill_container",
+              "fill": "$blue-bg",
+              "cornerRadius": 22,
+              "layout": "vertical",
+              "gap": 16,
+              "padding": [
+                20,
+                18,
+                10,
+                18
+              ],
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "KIUus",
+                  "name": "Ranked copy",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 8,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "WjBqC",
+                      "name": "Season",
+                      "gap": 8,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "id": "I41dx",
+                          "type": "ref",
+                          "ref": "IFNwl",
+                          "descendants": {
+                            "JSAU8": {
+                              "content": "SEASON 2026 Q4"
+                            }
+                          }
+                        },
+                        {
+                          "type": "text",
+                          "id": "N7IRZm",
+                          "fill": "$blue-ink",
+                          "content": "RANKED",
+                          "lineHeight": 1.4,
+                          "fontFamily": "$f-ui",
+                          "fontSize": 12,
+                          "fontWeight": "900",
+                          "letterSpacing": 1.2
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "Rzuiz",
+                      "fill": "$fg",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "The ranked season is on",
+                      "lineHeight": 1.2,
+                      "fontFamily": "$f-ui",
+                      "fontSize": 24,
+                      "fontWeight": "900",
+                      "letterSpacing": -0.2
+                    },
+                    {
+                      "type": "text",
+                      "id": "F9kM2",
+                      "fill": "$blue-ink",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Climb from Deckhand to Skull King.",
+                      "lineHeight": 1.4,
+                      "fontFamily": "$f-ui",
+                      "fontSize": 15,
+                      "fontWeight": "700"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "WmLSh",
+                  "name": "Podium",
+                  "width": "fill_container",
+                  "gap": 8,
+                  "alignItems": "end",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "i0tUa6",
+                      "name": "Place 2 · Jonas",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 5,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "id": "kC8mn",
+                          "type": "ref",
+                          "ref": "SebZL",
+                          "width": 42,
+                          "height": 42,
+                          "fill": "$blue",
+                          "descendants": {
+                            "peRO2": {
+                              "content": "J",
+                              "fontSize": 17.64
+                            }
+                          }
+                        },
+                        {
+                          "type": "text",
+                          "id": "k9M4V",
+                          "fill": "$fg",
+                          "content": "Jonas",
+                          "lineHeight": 1.2,
+                          "fontFamily": "$f-ui",
+                          "fontSize": 15,
+                          "fontWeight": "900"
+                        },
+                        {
+                          "type": "text",
+                          "id": "VKeOi",
+                          "fill": "$blue-ink",
+                          "content": "RATING 49",
+                          "lineHeight": 1.2,
+                          "fontFamily": "$f-ui",
+                          "fontSize": 11,
+                          "fontWeight": "900",
+                          "letterSpacing": 0.6
+                        },
+                        {
+                          "type": "frame",
+                          "id": "hoqiv",
+                          "name": "Step",
+                          "width": "fill_container",
+                          "height": 48,
+                          "fill": "$card",
+                          "cornerRadius": 12,
+                          "stroke": "$line",
+                          "strokeWidth": 2,
+                          "strokeAlignment": "inner",
+                          "effect": {
+                            "type": "shadow",
+                            "shadowType": "outer",
+                            "color": "$line",
+                            "offset": {
+                              "x": 0,
+                              "y": 3
+                            }
+                          },
+                          "layout": "vertical",
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "EF0Ur",
+                              "fill": "$fg",
+                              "content": "2",
+                              "lineHeight": 1.05,
+                              "fontFamily": "$f-ui",
+                              "fontSize": 20,
+                              "fontWeight": "900"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "ZD2KC",
+                      "name": "Place 1 · Mira",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 5,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "h1h4si",
+                          "width": 20,
+                          "height": 20,
+                          "icon": "crown",
+                          "library": "lucide",
+                          "fill": "$gold-d"
+                        },
+                        {
+                          "id": "Kr8vJ",
+                          "type": "ref",
+                          "ref": "SebZL",
+                          "width": 50,
+                          "height": 50,
+                          "fill": "$purple",
+                          "descendants": {
+                            "peRO2": {
+                              "content": "M",
+                              "fontSize": 21
+                            }
+                          }
+                        },
+                        {
+                          "type": "text",
+                          "id": "TVVHI",
+                          "fill": "$fg",
+                          "content": "Mira",
+                          "lineHeight": 1.2,
+                          "fontFamily": "$f-ui",
+                          "fontSize": 15,
+                          "fontWeight": "900"
+                        },
+                        {
+                          "type": "text",
+                          "id": "BG2Qc",
+                          "fill": "$blue-ink",
+                          "content": "RATING 52",
+                          "lineHeight": 1.2,
+                          "fontFamily": "$f-ui",
+                          "fontSize": 11,
+                          "fontWeight": "900",
+                          "letterSpacing": 0.6
+                        },
+                        {
+                          "type": "frame",
+                          "id": "sEE0W",
+                          "name": "Step",
+                          "width": "fill_container",
+                          "height": 64,
+                          "fill": "$card",
+                          "cornerRadius": 12,
+                          "stroke": "$line",
+                          "strokeWidth": 2,
+                          "strokeAlignment": "inner",
+                          "effect": {
+                            "type": "shadow",
+                            "shadowType": "outer",
+                            "color": "$line",
+                            "offset": {
+                              "x": 0,
+                              "y": 3
+                            }
+                          },
+                          "layout": "vertical",
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "c0vVj",
+                              "fill": "$fg",
+                              "content": "1",
+                              "lineHeight": 1.05,
+                              "fontFamily": "$f-ui",
+                              "fontSize": 26,
+                              "fontWeight": "900"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "lUTOe",
+                      "name": "Place 3 · Teo",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 5,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "id": "yX9wN",
+                          "type": "ref",
+                          "ref": "SebZL",
+                          "width": 42,
+                          "height": 42,
+                          "fill": "$orange",
+                          "descendants": {
+                            "peRO2": {
+                              "content": "T",
+                              "fontSize": 17.64
+                            }
+                          }
+                        },
+                        {
+                          "type": "text",
+                          "id": "M0NH41",
+                          "fill": "$fg",
+                          "content": "Teo",
+                          "lineHeight": 1.2,
+                          "fontFamily": "$f-ui",
+                          "fontSize": 15,
+                          "fontWeight": "900"
+                        },
+                        {
+                          "type": "text",
+                          "id": "WDOvJ",
+                          "fill": "$blue-ink",
+                          "content": "RATING 47",
+                          "lineHeight": 1.2,
+                          "fontFamily": "$f-ui",
+                          "fontSize": 11,
+                          "fontWeight": "900",
+                          "letterSpacing": 0.6
+                        },
+                        {
+                          "type": "frame",
+                          "id": "wNvP1",
+                          "name": "Step",
+                          "width": "fill_container",
+                          "height": 36,
+                          "fill": "$card",
+                          "cornerRadius": 12,
+                          "stroke": "$line",
+                          "strokeWidth": 2,
+                          "strokeAlignment": "inner",
+                          "effect": {
+                            "type": "shadow",
+                            "shadowType": "outer",
+                            "color": "$line",
+                            "offset": {
+                              "x": 0,
+                              "y": 3
+                            }
+                          },
+                          "layout": "vertical",
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "ny233",
+                              "fill": "$fg",
+                              "content": "3",
+                              "lineHeight": 1.05,
+                              "fontFamily": "$f-ui",
+                              "fontSize": 20,
+                              "fontWeight": "900"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "H7apL",
+                  "name": "Ranked action",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "padding": [
+                    6,
+                    0,
+                    0,
+                    0
+                  ],
+                  "children": [
+                    {
+                      "id": "Y3Wi0r",
+                      "type": "ref",
+                      "ref": "wyKHb",
+                      "descendants": {
+                        "C6HdgF": {
+                          "content": "FIND A RANKED GAME"
+                        }
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "sUa3V",
+                  "name": "Ranked footer",
+                  "width": "fill_container",
+                  "height": 44,
+                  "justifyContent": "end",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "uuFUP",
+                      "name": "Ladder link",
+                      "height": 44,
+                      "gap": 2,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "i7gqR",
+                          "fill": "$blue-ink",
+                          "content": "See the ladder",
+                          "lineHeight": 1.4,
+                          "fontFamily": "$f-ui",
+                          "fontSize": 14,
+                          "fontWeight": "900"
+                        },
+                        {
+                          "type": "icon",
+                          "id": "dfCWt",
+                          "width": 18,
+                          "height": 18,
+                          "icon": "chevron-right",
+                          "library": "lucide",
+                          "fill": "$blue-ink"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
     }
   ],
   "themes": {
@@ -59913,6 +62429,10 @@
     "rise": {
       "type": "number",
       "value": 14
+    },
+    "gold-ink": {
+      "type": "color",
+      "value": "#4b3800"
     }
   },
   "fileToken": "dd7c80b1-aff7-4f77-860e-70b9212b4e33"
