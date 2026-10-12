@@ -271,6 +271,50 @@ async fn the_host_can_kick_and_leaving_hands_the_table_on() {
 }
 
 #[tokio::test]
+async fn a_public_lobby_waits_for_two_humans_and_a_private_one_may_use_a_bot() {
+    let state = AppState::for_socket_tests(Duration::from_secs(5), Duration::from_secs(45));
+    let port = serve(state).await;
+
+    let mut host = open_socket(port, &guest(port).await).await;
+    hello(&mut host).await;
+    send(&mut host, &create_with(2, "public")).await;
+    let code = quoted(&read_text(&mut host).await, "code");
+    send(&mut host, r#"{"t":"lobby.ready","id":3,"ready":true}"#).await;
+    let _ = read_until(&mut host, "\"t\":\"ok\"").await;
+    send(&mut host, r#"{"t":"lobby.addBot","id":4}"#).await;
+    let _ = read_until(&mut host, "\"t\":\"ok\"").await;
+    send(&mut host, r#"{"t":"lobby.start","id":5}"#).await;
+    let refused = read_text(&mut host).await;
+    assert!(refused.contains("NOT_READY"), "{refused}");
+
+    let mut mate = open_socket(port, &guest(port).await).await;
+    hello(&mut mate).await;
+    send(&mut mate, &join(2, &code)).await;
+    let _ = read_until(&mut mate, "\"t\":\"ok\"").await;
+    let _ = read_until(&mut host, "lobby.state").await;
+    send(&mut host, r#"{"t":"lobby.ready","id":6,"ready":true}"#).await;
+    let _ = read_until(&mut host, "\"t\":\"ok\"").await;
+    send(&mut mate, r#"{"t":"lobby.ready","id":3,"ready":true}"#).await;
+    let _ = read_until(&mut mate, "\"t\":\"ok\"").await;
+    let _ = read_until(&mut host, "lobby.state").await;
+    send(&mut host, r#"{"t":"lobby.start","id":7}"#).await;
+    let _ = read_until(&mut host, "\"t\":\"game.update\"").await;
+    let _ = read_until(&mut mate, "\"t\":\"game.update\"").await;
+
+    let mut alone = open_socket(port, &guest(port).await).await;
+    hello(&mut alone).await;
+    send(&mut alone, &create_with(2, "private")).await;
+    let _ = read_until(&mut alone, "\"t\":\"ok\"").await;
+    send(&mut alone, r#"{"t":"lobby.ready","id":3,"ready":true}"#).await;
+    let _ = read_until(&mut alone, "\"t\":\"ok\"").await;
+    send(&mut alone, r#"{"t":"lobby.addBot","id":4}"#).await;
+    let _ = read_until(&mut alone, "\"t\":\"ok\"").await;
+    send(&mut alone, r#"{"t":"lobby.start","id":5}"#).await;
+    let started = read_until(&mut alone, "\"t\":\"game.update\"").await;
+    assert!(started.contains("\"t\":\"game.update\""), "{started}");
+}
+
+#[tokio::test]
 async fn a_reload_returns_the_same_hand_and_a_long_drop_becomes_a_bot() {
     let state = AppState::for_socket_tests(Duration::from_secs(5), Duration::from_secs(45));
     let port = serve(state.clone()).await;
@@ -412,7 +456,11 @@ async fn read_until(socket: &mut Socket, needle: &str) -> String {
 }
 
 fn create(id: u32) -> String {
-    format!(r#"{{"t":"lobby.create","id":{id},"visibility":"private","settings":{SETTINGS}}}"#)
+    create_with(id, "private")
+}
+
+fn create_with(id: u32, visibility: &str) -> String {
+    format!(r#"{{"t":"lobby.create","id":{id},"visibility":"{visibility}","settings":{SETTINGS}}}"#)
 }
 
 fn join(id: u32, code: &str) -> String {

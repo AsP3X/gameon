@@ -61,7 +61,7 @@ The client branches on `code`. `message` is safe to show but not meant to be par
 | `ALREADY_SEATED` | 409 | The user is in another lobby, queue or game |
 | `NOT_IN_LOBBY` | 409 | |
 | `NOT_HOST` | 403 | |
-| `NOT_READY` | 409 | Start with unready players or fewer than two seats |
+| `NOT_READY` | 409 | Start with unready players, fewer than two seats, or a public lobby with fewer than two humans |
 | `ACCOUNT_REQUIRED` | 403 | Ranked needs a registered account |
 | `QUEUE_COOLDOWN` | 403 | Leaver penalty; `message` carries no time, `GET /me` does |
 | `NOT_IN_GAME` | 409 | |
@@ -261,7 +261,7 @@ type LobbySummary = { id: LobbyId; hostName: string; settings: GameSettings; pla
 | `lobby.addBot` | | host | `ok` |
 | `lobby.removeBot` | `{ index: number }` | host | `ok`. `index` is the index in `members` (join order), not a seat. |
 | `lobby.kick` | `{ userId }` | host | `ok` |
-| `lobby.start` | | host | `ok`; needs ≥ 2 seats and every human ready |
+| `lobby.start` | | host | `ok`; needs ≥ 2 seats and every human ready. A public lobby also needs ≥ 2 humans. A bot fills a seat and does not count as one of those two. |
 
 Pushes: `{ t: 'lobby.state', lobby }` to every member on any change, including the member whose
 message caused it. `ok` for `lobby.ready`, `lobby.settings`, `lobby.addBot` and `lobby.removeBot`
