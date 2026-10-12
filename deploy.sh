@@ -106,9 +106,10 @@ show_help() {
   the shipped defaults, and s writes them. q quits and writes nothing. The r key
   does not touch the database. Storage is optional: left keeps the named volume
   skt_pg_data, right uses ./data, and enter on that line edits the path.
-  Enter on Networks opens a dialog. Left and right there pick postgres, the API
-  or the page. a adds a Docker network and x removes one. skt-internal stays on
-  every container. q in that dialog returns to this screen and writes nothing.
+  Enter on Networks opens a dialog that lists skt-postgres, skt-api and skt-web,
+  each with the networks it joins. Left and right there pick a container.
+  a adds a Docker network and x removes one. skt-internal stays on every
+  container. q in that dialog returns to this screen and writes nothing.
   While the database is only inside the skt-postgres container, the reach mode, the
   Postgres port, the Postgres networks and the database user, password and name
   cannot be changed: that would recreate the container and delete what it stores.
@@ -475,6 +476,29 @@ net_svc_name() {
   esac
 }
 
+# The name Docker shows. The setup screen uses this so a network is tied to a container.
+net_container_name() {
+  case "$1" in
+    postgres) printf 'skt-postgres' ;;
+    api) printf 'skt-api' ;;
+    web) printf 'skt-web' ;;
+  esac
+}
+
+# Comma-separated, with a space after each comma, for a single display line.
+net_join() {
+  local item out=""
+  while IFS= read -r item; do
+    [[ -n "$item" ]] || continue
+    if [[ -z "$out" ]]; then
+      out="$item"
+    else
+      out="${out}, ${item}"
+    fi
+  done < <(net_items "$1")
+  printf '%s' "$out"
+}
+
 net_svc_get() {
   case "$1" in
     postgres) printf '%s' "$SETUP_NET_POSTGRES" ;;
@@ -788,7 +812,10 @@ setup_draw() {
         fi
         ;;
       networks)
-        setup_row "$i" "Networks              postgres $(net_count "$SETUP_NET_POSTGRES"), api $(net_count "$SETUP_NET_API"), web $(net_count "$SETUP_NET_WEB")"
+        setup_row "$i" "Networks"
+        printf '      %-14s %s\n' "skt-postgres" "$(net_join "$SETUP_NET_POSTGRES")"
+        printf '      %-14s %s\n' "skt-api" "$(net_join "$SETUP_NET_API")"
+        printf '      %-14s %s\n' "skt-web" "$(net_join "$SETUP_NET_WEB")"
         ;;
     esac
     i=$((i + 1))
@@ -809,7 +836,7 @@ setup_draw() {
   fi
   printf '\n  %s↑↓ move    ←→ storage    enter select    s save and start    r reset answers    q quit%s\n' "$DIM" "$NC"
   printf '  %sOn Storage, left is the named volume and right is the data folder. Enter edits the path.%s\n' "$DIM" "$NC"
-  printf '  %sEnter on Networks adds or removes Docker networks for each container.%s\n' "$DIM" "$NC"
+  printf '  %sEnter on Networks lists skt-postgres, skt-api and skt-web with the networks each one joins.%s\n' "$DIM" "$NC"
   printf '  %sOn a text line, enter keeps the shown value. Type - to clear the origin or the proxies.%s\n' "$DIM" "$NC"
 }
 
@@ -1001,51 +1028,85 @@ net_clamp_row() {
   fi
 }
 
-setup_net_tabs() {
-  local i=0 name
-  printf '  '
-  for name in postgres api web; do
-    if (( i == SETUP_NET_SVC )); then
-      printf '< %s >' "$name"
+net_line() {
+  local selected="$1" text="$2"
+  if [[ "$selected" == "1" ]]; then
+    if [[ -n "$REV" ]]; then
+      printf '    %s %s %s\n' "$REV" "$text" "$REV_OFF"
     else
-      printf '  %s  ' "$name"
+      printf '    > %s\n' "$text"
     fi
-    if (( i < 2 )); then
-      printf '   '
+  else
+    printf '      %s\n' "$text"
+  fi
+}
+
+setup_net_heading() {
+  local name
+  name="$(net_container_name "$1")"
+  if [[ "$1" == "$2" ]]; then
+    if [[ -n "$BOLD" ]]; then
+      printf '  %s> %s%s\n' "$BOLD" "$name" "$NC"
+    else
+      printf '  > %s\n' "$name"
     fi
-    i=$((i + 1))
-  done
+  else
+    printf '    %s\n' "$name"
+  fi
+}
+
+# One container and every network it joins. Only the container being edited has a cursor.
+setup_net_service() {
+  local svc="$1" active="$2" item i=0 sel text
+  setup_net_heading "$svc" "$active"
+  if [[ "$svc" == "$active" ]]; then
+    while IFS= read -r item; do
+      if (( i == SETUP_NET_ROW )); then sel=1; else sel=0; fi
+      if [[ "$item" == "skt-internal" ]]; then
+        net_line "$sel" "skt-internal          required"
+      else
+        net_line "$sel" "$item"
+      fi
+      i=$((i + 1))
+    done < <(net_items "$(net_svc_get "$svc")")
+    if (( SETUP_NET_ROW == i )); then sel=1; else sel=0; fi
+    net_line "$sel" "Add a network to $(net_container_name "$svc")"
+  else
+    while IFS= read -r item; do
+      if [[ "$item" == "skt-internal" ]]; then
+        text="skt-internal          required"
+      else
+        text="$item"
+      fi
+      if [[ -n "$DIM" ]]; then
+        printf '      %s%s%s\n' "$DIM" "$text" "$NC"
+      else
+        printf '      %s\n' "$text"
+      fi
+    done < <(net_items "$(net_svc_get "$svc")")
+  fi
   printf '\n'
 }
 
 setup_net_draw() {
-  local svc item i=0 sel current
-  svc="$(net_svc_name "$SETUP_NET_SVC")"
+  local active svc current n
+  active="$(net_svc_name "$SETUP_NET_SVC")"
   net_clamp_row
   printf '\033[H\033[2J'
-  printf '%sSkull King Tavern — networks%s\n\n' "$BOLD" "$NC"
-  setup_net_tabs
-  printf '\n'
-  while IFS= read -r item; do
-    if (( i == SETUP_NET_ROW )); then sel=1; else sel=0; fi
-    if [[ "$item" == "skt-internal" ]]; then
-      tui_row "$sel" "skt-internal          required"
-    else
-      tui_row "$sel" "$item"
-    fi
-    i=$((i + 1))
-  done < <(net_items "$(net_svc_get "$svc")")
-  if (( i == SETUP_NET_ROW )); then sel=1; else sel=0; fi
-  tui_row "$sel" "Add a network"
-  printf '\n'
-  if (( SETUP_NET_ROW == i )); then
-    printf '  %sEnter shows networks that already exist, or lets you type a name.%s\n' "$DIM" "$NC"
+  printf '%sSkull King Tavern — networks%s\n' "$BOLD" "$NC"
+  printf '  %sEvery container is listed with the networks it joins. The marked one is being edited.%s\n\n' "$DIM" "$NC"
+  for svc in postgres api web; do
+    setup_net_service "$svc" "$active"
+  done
+  n="$(net_count "$(net_svc_get "$active")")"
+  if (( SETUP_NET_ROW == n )); then
+    printf '  %sEnter adds a network to %s.%s\n' "$DIM" "$(net_container_name "$active")" "$NC"
   else
-    current="$(net_at "$(net_svc_get "$svc")" "$SETUP_NET_ROW" || true)"
+    current="$(net_at "$(net_svc_get "$active")" "$SETUP_NET_ROW" || true)"
     if [[ "$current" == "skt-internal" ]]; then
-      printf '  %sThis network stays. The containers find each other on it.%s\n' "$DIM" "$NC"
+      printf '  %s%s stays on %s. The containers find each other on it.%s\n' "$DIM" "$current" "$(net_container_name "$active")" "$NC"
     else
-      printf '  %sEnter or x removes it from %s. A missing network is created on the next start.%s\n' "$DIM" "$svc" "$NC"
+      printf '  %sEnter or x removes it from %s. A missing network is created on the next start.%s\n' "$DIM" "$(net_container_name "$active")" "$NC"
     fi
   fi
   printf '\n  %s↑↓ move    ←→ container    a add    x remove    q back%s\n' "$DIM" "$NC"
@@ -1070,7 +1131,7 @@ setup_net_picker() {
   while true; do
     printf '\033[H\033[2J'
     printf '%sSkull King Tavern — add a network%s\n\n' "$BOLD" "$NC"
-    printf '  %s\n\n' "$svc"
+    printf '  This network will be added to %s.\n\n' "$(net_container_name "$svc")"
     for (( i = 0; i < count; i++ )); do
       if (( i == pick )); then sel=1; else sel=0; fi
       tui_row "$sel" "${names[$i]}"
@@ -1104,8 +1165,8 @@ setup_net_picker() {
   done
 }
 
-# Left and right pick the container. The list underneath is that container's
-# networks, plus Add a network. q and escape return to the setup screen.
+# All three containers stay on screen. Left and right pick which one is edited.
+# q and escape return to the setup screen.
 setup_net_dialog() {
   local svc n
   while true; do
@@ -1692,9 +1753,9 @@ show_status() {
   fi
   load_data_dir
   echo "  Storage: $(data_where)"
-  echo "  Networks: postgres $(net_effective postgres | tr ',' ' ')"
-  echo "            api $(net_effective api | tr ',' ' ')"
-  echo "            web $(net_effective web | tr ',' ' ')"
+  printf '  Networks: %-14s %s\n' "skt-postgres" "$(net_effective postgres | tr ',' ' ')"
+  printf '            %-14s %s\n' "skt-api" "$(net_effective api | tr ',' ' ')"
+  printf '            %-14s %s\n' "skt-web" "$(net_effective web | tr ',' ' ')"
   echo "  Web:   ${web_url}"
   echo "  API:   ${api_url}"
   echo ""
