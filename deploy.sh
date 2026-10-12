@@ -9,7 +9,7 @@
 #   ./deploy.sh --restart [svc]  restart
 #   ./deploy.sh --rebuild        rebuild images, then start
 #   ./deploy.sh --down           stop the stack. The database stays.
-#   ./deploy.sh --reset          delete the database after you type reset
+#   ./deploy.sh --reset          delete the database and the saved setup
 #   ./deploy.sh --down --volumes same factory reset
 #   ./deploy.sh --backup         dump Postgres to backups/
 #   ./deploy.sh --data-dir [p]   optional folder. Default storage is the named volume.
@@ -73,8 +73,8 @@ show_help() {
     ./deploy.sh --restart [svc]  Restart all services, or the named ones
     ./deploy.sh --rebuild        Rebuild images, then start
     ./deploy.sh --down           Stop and remove the containers. The database stays.
-    ./deploy.sh --reset          Factory reset: delete every account, rating and game
-    ./deploy.sh --down --volumes Same factory reset
+    ./deploy.sh --reset          Factory reset: delete the database and the saved setup
+    ./deploy.sh --down --volumes Same factory reset. The next start opens setup again.
     ./deploy.sh --backup         Write a Postgres dump to backups/
     ./deploy.sh --data-dir [path] Store Postgres in a folder (default ./data). Optional.
     ./deploy.sh --named-volumes  Store Postgres in the named volume again (the default)
@@ -93,10 +93,12 @@ show_help() {
   Running games are written to Postgres as they are played and replayed after a restart.
   The database is the named volume skt_pg_data. A data folder is optional: --data-dir ./data
   stores it in that folder instead, and --named-volumes goes back. --down removes containers
-  and keeps the database. --reset deletes it after you type reset. --backup writes a dump.
+  and keeps the database and the saved setup. --reset deletes the database and .env after you
+  type reset, so the next ./deploy.sh opens setup again. --backup writes a dump.
   Docker stop sends SIGTERM. The API finishes writing open games, then exits.
 
   ${BOLD}First start${NC} opens a setup screen when .env does not exist yet.
+  ${BOLD}./deploy.sh --reset${NC} removes .env, so the next start opens that screen again.
   ${BOLD}./deploy.sh --setup${NC} opens it again. The fields start as they are now.
   Arrows move. Enter on This machine or NPM selects how players reach the tavern.
   Enter on a setting changes it. s saves and starts. r puts the answers back to
@@ -976,9 +978,9 @@ ensure_data_ready() {
 
 confirm_reset() {
   local answer=""
-  echo "This deletes every account, rating and game."
+  echo "This deletes every account, rating and game, and the saved setup."
   echo "  Where: $(data_where)"
-  echo "  .env is kept. The stack stays stopped."
+  echo "  .env is removed. The next ./deploy.sh opens setup. The stack stays stopped."
   if [[ "${ASSUME_YES:-0}" -eq 1 ]]; then
     echo "Confirmed with --yes."
     return 0
@@ -999,13 +1001,14 @@ factory_reset() {
   load_data_dir
   confirm_reset || exit 1
   step "Stopping the stack and deleting the database…"
+  # .env still names the active store here. It is removed only after that store is gone.
   compose down --volumes --remove-orphans
   if [[ -n "${SKT_DATA_DIR:-}" && -d "$SKT_DATA_DIR" ]]; then
     docker run --rm -v "${SKT_DATA_DIR}:/data" postgres:16-alpine rm -rf /data/database
-    make_data_dir
   fi
-  ok "Factory reset done. The database is empty. .env was kept."
-  echo "  Start again with ./deploy.sh"
+  rm -f .env
+  ok "Factory reset done. The database is empty and the saved setup is gone."
+  echo "  Run ./deploy.sh to configure it again."
 }
 
 safe_down() {
