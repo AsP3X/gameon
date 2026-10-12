@@ -271,7 +271,7 @@ async fn the_host_can_kick_and_leaving_hands_the_table_on() {
 }
 
 #[tokio::test]
-async fn a_public_lobby_waits_for_two_humans_and_a_private_one_may_use_a_bot() {
+async fn a_lobby_does_not_start_until_two_humans_are_seated() {
     let state = AppState::for_socket_tests(Duration::from_secs(5), Duration::from_secs(45));
     let port = serve(state).await;
 
@@ -310,8 +310,9 @@ async fn a_public_lobby_waits_for_two_humans_and_a_private_one_may_use_a_bot() {
     send(&mut alone, r#"{"t":"lobby.addBot","id":4}"#).await;
     let _ = read_until(&mut alone, "\"t\":\"ok\"").await;
     send(&mut alone, r#"{"t":"lobby.start","id":5}"#).await;
-    let started = read_until(&mut alone, "\"t\":\"game.update\"").await;
-    assert!(started.contains("\"t\":\"game.update\""), "{started}");
+    let refused_private = read_text(&mut alone).await;
+    assert!(refused_private.contains("NOT_READY"), "{refused_private}");
+    assert!(!refused_private.contains("game.start"), "{refused_private}");
 }
 
 #[tokio::test]

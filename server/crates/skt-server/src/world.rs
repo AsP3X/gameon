@@ -707,11 +707,9 @@ impl World {
             self.fail_live(user, id, code);
             return;
         }
-        // Human: A public table is one anyone can join. It waits for two people.
-        // A private table may fill the other seat with a bot.
-        // Agent: READS lobby.visibility, lobby.members; RETURNS NOT_READY when a
-        // public lobby has fewer than two humans, any lobby has fewer than two
-        // seats, or a human is not ready. Bots do not count as the second person.
+        // Human: No lobby opens until two people are seated. A bot is not a person.
+        // Agent: READS lobby.members; RETURNS NOT_READY when fewer than two humans
+        // are seated or a human is not ready. Ignores visibility and connected.
         if !lobby_can_start(&lobby) {
             self.fail_live(user, id, ErrorCode::NotReady);
             return;
@@ -1362,8 +1360,9 @@ fn send(out: &Outbox, frame: &impl serde::Serialize) {
 
 /// Whether `lobby.start` may open the table.
 ///
-/// A public lobby needs two humans. A private lobby needs two seats, and a bot
-/// may be one of them. Every human has to be ready.
+/// Two humans have to be seated, in a public lobby and in a private one. A bot
+/// fills a seat and does not count as one of those two. Every human has to be
+/// ready. A dropped socket stays a human.
 fn lobby_can_start(lobby: &Lobby) -> bool {
     let humans = lobby
         .members
@@ -1374,11 +1373,7 @@ fn lobby_can_start(lobby: &Lobby) -> bool {
         Member::Bot { .. } => true,
         Member::Human { ready, .. } => *ready,
     });
-    let enough = match lobby.visibility {
-        Visibility::Public => humans >= 2,
-        Visibility::Private => lobby.members.len() >= 2,
-    };
-    enough && ready
+    humans >= 2 && ready
 }
 
 fn fail_out(out: &Outbox, id: MessageId, code: ErrorCode) {
