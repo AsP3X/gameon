@@ -400,7 +400,10 @@ async fn two_misses_while_offline_close_the_seat_and_tell_only_that_player() {
     let card = first_card(&mate_open);
     send(
         &mut mate,
-        &format!(r#"{{"t":"game.play","id":6,"at":{{"round":0,"trick":0}},"card":{card}}}"#),
+        &format!(
+            r#"{{"t":"game.play","id":6,"at":{{"round":0,"trick":0}},{}}}"#,
+            play_fields(&card)
+        ),
     )
     .await;
     let played = read_until(&mut mate, "\"t\":\"ok\"").await;
@@ -491,7 +494,10 @@ async fn a_miss_while_connected_does_not_count_after_the_drop() {
     let card = first_card(&mate_open);
     send(
         &mut mate,
-        &format!(r#"{{"t":"game.play","id":6,"at":{{"round":0,"trick":0}},"card":{card}}}"#),
+        &format!(
+            r#"{{"t":"game.play","id":6,"at":{{"round":0,"trick":0}},{}}}"#,
+            play_fields(&card)
+        ),
     )
     .await;
     let played = read_until(&mut mate, "\"t\":\"ok\"").await;
@@ -502,6 +508,15 @@ async fn a_miss_while_connected_does_not_count_after_the_drop() {
         !first_offline.contains("\"status\":\"out\""),
         "{first_offline}"
     );
+}
+
+/// Card field for `game.play`. The 70-card deck's Tigress is id 66 and needs a declaration.
+fn play_fields(card: &str) -> String {
+    if card == "66" {
+        format!(r#""card":{card},"as":"escape""#)
+    } else {
+        format!(r#""card":{card}"#)
+    }
 }
 
 fn first_card(frame: &str) -> String {
