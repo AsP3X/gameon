@@ -16,6 +16,9 @@
 # NPM targets (npm overlay, container DNS on proxy-network):
 #   http://skt-web:80      the page, which also proxies /api/v1 and the socket
 #   http://skt-api:8080    the API, for a client that does not go through the page
+# The page's upstream is the container name skt-api. The service name api is not
+# unique on a shared proxy-network: another stack's service of that name is
+# returned too, and nginx then sends the game socket to the wrong server.
 #
 # The setup screen can attach more Docker networks. ./deploy.sh writes
 # .deploy/networks.yml and passes it last, so those lists replace the ones here.
@@ -103,7 +106,8 @@ services:
       api:
         condition: service_healthy
     environment:
-      API_UPSTREAM: http://api:8080
+      # Container name. The service name api collides on a shared proxy-network.
+      API_UPSTREAM: http://skt-api:8080
     networks:
       - skt-internal
     healthcheck:

@@ -26,6 +26,7 @@ server {
     gzip_min_length 1024;
     gzip_types text/css application/javascript application/json image/svg+xml font/woff2;
 
+    # API_UPSTREAM must be http://skt-api:8080, not the shared service name api.
     resolver 127.0.0.11 valid=10s ipv6=off;
 
     location /api/ {

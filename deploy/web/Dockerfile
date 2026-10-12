@@ -22,7 +22,8 @@ COPY deploy/nginx/security-headers.conf /etc/nginx/security-headers.conf
 COPY deploy/nginx/api-proxy.conf /etc/nginx/api-proxy.conf
 
 # The nginx image substitutes only environment variables that are set.
-ENV API_UPSTREAM=http://api:8080
+# skt-api, not the service name api: that short name is shared on proxy-network.
+ENV API_UPSTREAM=http://skt-api:8080
 
 EXPOSE 80
 

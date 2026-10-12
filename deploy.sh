@@ -140,6 +140,8 @@ show_help() {
     skt-internal. The Networks dialog can attach more, or take proxy-network off.
     ./deploy.sh creates a listed network when it is missing. Point Nginx Proxy
     Manager at http://skt-web:80, turn websockets on, and set SKT_PUBLIC_ORIGIN.
+    The page reaches the API at http://skt-api:8080. Other stacks on
+    proxy-network also register the short name api.
 
 EOF
 }

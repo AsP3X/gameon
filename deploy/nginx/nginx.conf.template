@@ -1,5 +1,7 @@
 # Rendered by the nginx image envsubst entrypoint.
 # Substitutes ${API_UPSTREAM} only. Other $names are nginx variables.
+# API_UPSTREAM is http://skt-api:8080. Do not use the service name api: on a
+# shared proxy-network Docker DNS returns every service of that name.
 
 server {
     listen 80;
