@@ -5,11 +5,19 @@
 #   ./deploy.sh --data-dir ./data
 #
 # Nginx Proxy Manager is unrelated. This folder is where Postgres keeps its files.
-# The mount replaces skt_pg_data. Postgres chowns database/ to its own user.
+# The mount replaces skt_pg_data.
+#
+# The image declares a volume at /var/lib/postgresql/data, so this mount uses that
+# target and replaces it. PGDATA is a directory inside the mount. On Docker Desktop
+# the mount point is owned by the host user, and Postgres then refuses to start the
+# temporary server that creates POSTGRES_DB. Postgres creates pgdata inside the
+# mount and owns that directory.
 
 services:
   postgres:
-    volumes:
+    environment:
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes: !override
       - type: bind
         source: ${SKT_DATA_DIR:?set SKT_DATA_DIR in .env, or leave out docker-compose.data-dir.yml}/database
         target: /var/lib/postgresql/data

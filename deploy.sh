@@ -591,10 +591,30 @@ postgres_container_exists() {
 
 # "volume <name>" or "bind <path>". Empty when the container is absent, or when the
 # database lives only in the container's own filesystem.
-postgres_data_mount() {
+# A data folder is mounted at /var/lib/postgresql. A named volume is mounted at
+# /var/lib/postgresql/data. $1 "cluster" returns the data-folder cluster directory
+# (the mount path plus /data) so a copy does not include the parent.
+postgres_storage() {
+  local want="${1:-mount}" dest typ ref line
   postgres_container_exists || return 0
-  docker inspect --format '{{range .Mounts}}{{if eq .Destination "/var/lib/postgresql/data"}}{{.Type}} {{if eq .Type "volume"}}{{.Name}}{{else}}{{.Source}}{{end}}{{end}}{{end}}' skt-postgres 2>/dev/null || true
+  line="$(docker inspect --format '{{range .Mounts}}{{.Destination}}|{{.Type}}|{{if eq .Type "volume"}}{{.Name}}{{else}}{{.Source}}{{end}}{{"\n"}}{{end}}' skt-postgres 2>/dev/null || true)"
+  while IFS='|' read -r dest typ ref; do
+    case "$dest" in
+      /var/lib/postgresql/data)
+        if [[ "$typ" == "volume" ]]; then
+          printf 'volume %s' "$ref"
+        elif [[ "$want" == "cluster" && -f "${ref}/pgdata/PG_VERSION" ]]; then
+          printf 'bind %s/pgdata' "$ref"
+        else
+          printf 'bind %s' "$ref"
+        fi
+        return 0
+        ;;
+    esac
+  done <<<"$line"
 }
+
+postgres_data_mount() { postgres_storage mount; }
 
 # Put answers back when writing them would destroy the database or change a password
 # Postgres will ignore. Returns 1 when it had to put something back.
@@ -826,7 +846,10 @@ norm_mount() {
   kind="${spec%% *}"
   path="${spec#* }"
   if [[ "$kind" == "bind" ]]; then
+    # Docker Desktop reports the same folder as /Users or /host_mnt/Users, and
+    # macOS sometimes adds /private. Those are one directory.
     path="${path#/private}"
+    path="${path#/host_mnt}"
     printf 'bind %s' "$path"
   else
     printf '%s' "$spec"
@@ -848,7 +871,9 @@ dir_has_data() {
 
 desired_has_data() {
   if [[ -n "${SKT_DATA_DIR:-}" ]]; then
-    dir_has_data "${SKT_DATA_DIR}/database"
+    # database/pgdata is the cluster. The mount itself can hold a failed init
+    # that never created the application database.
+    dir_has_data "${SKT_DATA_DIR}/database/pgdata"
   else
     docker volume inspect "$PG_VOLUME" >/dev/null 2>&1
   fi
@@ -856,6 +881,8 @@ desired_has_data() {
 
 make_data_dir() {
   [[ -n "${SKT_DATA_DIR:-}" ]] || return 0
+  # Do not create database/pgdata here. Postgres must create that directory so
+  # it owns it. A host-created data directory makes init skip CREATE DATABASE.
   (umask 022 && mkdir -p "${SKT_DATA_DIR}/database") || {
     printf 'Cannot create %s/database.\n' "$SKT_DATA_DIR" >&2
     return 1
@@ -972,12 +999,12 @@ migrate_database() {
     return 1
   }
   make_data_dir || return 1
-  current="$(postgres_data_mount)"
+  current="$(postgres_storage cluster)"
   step "Stopping Postgres so the files can be copied…"
   if [[ -z "$current" ]]; then
     docker stop skt-postgres >/dev/null
     if [[ -n "${SKT_DATA_DIR:-}" ]]; then
-      docker run --rm --volumes-from skt-postgres -v "${SKT_DATA_DIR}/database:/to" postgres:16-alpine cp -a /var/lib/postgresql/data/. /to/
+      copy_into_data_dir /var/lib/postgresql/data volumes
     else
       docker volume create --label com.docker.compose.project=skt --label com.docker.compose.volume=skt_pg_data "$PG_VOLUME" >/dev/null
       docker run --rm --volumes-from skt-postgres -v "${PG_VOLUME}:/to" postgres:16-alpine cp -a /var/lib/postgresql/data/. /to/
@@ -987,12 +1014,27 @@ migrate_database() {
     src="${current#* }"
     compose stop postgres >/dev/null
     if [[ -n "${SKT_DATA_DIR:-}" ]]; then
-      docker run --rm -v "${src}:/from:ro" -v "${SKT_DATA_DIR}/database:/to" postgres:16-alpine cp -a /from/. /to/
+      copy_into_data_dir "$src" mount
     else
       docker volume create --label com.docker.compose.project=skt --label com.docker.compose.volume=skt_pg_data "$PG_VOLUME" >/dev/null
       docker run --rm -v "${src}:/from:ro" -v "${PG_VOLUME}:/to" postgres:16-alpine cp -a /from/. /to/
     fi
     echo "Copied. The old copy is left where it was. Remove it once the tavern works from the new place."
+  fi
+}
+
+# Copy a cluster into <SKT_DATA_DIR>/database/pgdata. Postgres must own that
+# directory, so the postgres user creates it inside the mount.
+# $1 is a host path or, when $2 is volumes, the path inside skt-postgres.
+copy_into_data_dir() {
+  local from="$1" how="$2"
+  make_data_dir || return 1
+  if [[ "$how" == "volumes" ]]; then
+    docker run --rm --user postgres --volumes-from skt-postgres -v "${SKT_DATA_DIR}/database:/pgparent" postgres:16-alpine \
+      sh -c 'mkdir -p /pgparent/pgdata && cp -a /var/lib/postgresql/data/. /pgparent/pgdata/'
+  else
+    docker run --rm --user postgres -v "${from}:/from:ro" -v "${SKT_DATA_DIR}/database:/pgparent" postgres:16-alpine \
+      sh -c 'mkdir -p /pgparent/pgdata && cp -a /from/. /pgparent/pgdata/'
   fi
 }
 

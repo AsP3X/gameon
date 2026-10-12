@@ -38,10 +38,13 @@ services:
     networks:
       - skt-internal
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-skt} -d ${POSTGRES_DB:-skt}"]
+      # pg_isready succeeds when the server is up even if POSTGRES_DB was never
+      # created. The API can connect only after this database accepts a query.
+      test: ["CMD-SHELL", "psql -U ${POSTGRES_USER:-skt} -d ${POSTGRES_DB:-skt} -c 'SELECT 1' >/dev/null"]
       interval: 5s
       timeout: 5s
       retries: 10
+      start_period: 20s
     logging: *log-rotation
     restart: unless-stopped
 
