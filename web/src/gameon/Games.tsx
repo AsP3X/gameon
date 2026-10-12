@@ -1,5 +1,6 @@
 /* Games: the shelf, the way back into a game that is still open, the player's own seat, and the
-   public tables that have room. A player who comes here is on their way in, so a browser without a
+   public tables that have room. Skull King offers the two choices its own home does, Solo and
+   Online, each opening in place on its two ways. A player who comes here is on their way in, so a browser without a
    session gets a guest here, as it does when it connects. Everything about the player and the
    tables is what the server said (`Me`, `GET /lobbies`). The game saved on this device is read from
    where the renderer keeps it. Sitting down at a table is not done here: the online screens do it. */
@@ -10,16 +11,15 @@ import type { LobbyId, LobbySummary, Me, Season } from '../protocol/generated';
 import { initialOf } from '../online/parts';
 import { AT } from '../router/addresses';
 import { cssColor, whole } from '../tableview/dom';
-import { CardFan, IconKey, SkullKingKey } from './art';
-import type { KeyTone } from './art';
+import { CardFan, SkullKingKey } from './art';
 import { showsSkullKing, soonOn } from './catalog';
 import type { Shelf } from './catalog';
 import { Footer, Link, Nav, useTitle } from './Frame';
 import type { Who } from './Frame';
 import { Icon } from './icons';
-import type { IconName } from './icons';
-import { Shelves, SoonTile } from './Landing';
+import { Shelves, SoonTile, SuggestTile } from './Landing';
 import { savedGame, savedTitle } from './saved';
+import { Choice, Option } from '../skullking/parts';
 
 /** How many open tables the card lists. The rest are behind "All public tables". */
 const TABLES_SHOWN = 3;
@@ -55,14 +55,10 @@ function JumpBack({ me, seated }: { me: Me | null; seated: boolean }) {
   );
 }
 
-const MODES: { name: string; wide: string; icon: IconName; tone: KeyTone; to: string }[] = [
-  { name: 'Solo', wide: 'Against bots', icon: 'bot', tone: 'blue', to: AT.solo },
-  { name: 'One screen', wide: 'Pass the phone', icon: 'smartphone', tone: 'gold', to: AT.oneScreen },
-  { name: 'Online', wide: 'Tables and friends', icon: 'globe', tone: 'green', to: AT.online },
-  { name: 'Ranked', wide: '', icon: 'crown', tone: 'purple', to: AT.ranked },
-];
-
 function SkullKing({ season }: { season: Season | null | undefined }) {
+  /** The choice that is open. One at a time: opening the other closes this one. */
+  const [open, setOpen] = useState<'solo' | 'online' | null>(null);
+  const toggle = (card: 'solo' | 'online') => (): void => setOpen((was) => (was === card ? null : card));
   return (
     <section className="go-game" aria-labelledby="go-sk-title">
       <div className="go-game-art">
@@ -81,24 +77,60 @@ function SkullKing({ season }: { season: Season | null | undefined }) {
         <p className="wide-only">
           The pirate trick-taking game. Bid how many tricks you will win, then hit that number exactly.
         </p>
-        <ul className="go-modes" aria-label="Ways to play Skull King">
-          {MODES.map((mode) => (
-            <li key={mode.name}>
-              <Link to={mode.to} className="go-mode">
-                <IconKey icon={mode.icon} tone={mode.tone} />
-                <span>
-                  <b>{mode.name}</b>
-                  <small className="wide-only">
-                    {mode.wide || (season ? `Season ${season.name}` : 'Climb the ladder')}
-                  </small>
-                </span>
-              </Link>
-            </li>
-          ))}
+        {/* The two choices of Skull King's home, with the addresses each way has there. */}
+        <ul className="go-choices" aria-label="Ways to play Skull King">
+          <Choice
+            id="go-solo-ways"
+            name="Solo"
+            icon="bot"
+            tone="blue"
+            line="Against bots, or one screen for the crew."
+            open={open === 'solo'}
+            onToggle={toggle('solo')}
+          >
+            <Option name="Against bots" icon="bot" tone="blue" line="Any time. Saved to your account." to={AT.solo} />
+            <Option
+              name="One screen"
+              icon="smartphone"
+              tone="gold"
+              line="Pass one device around. 2 to 8 pirates."
+              to={AT.oneScreen}
+            />
+          </Choice>
+          <Choice
+            id="go-online-ways"
+            name="Online"
+            icon="globe"
+            tone="green"
+            line="Tables with friends or strangers, and ranked."
+            open={open === 'online'}
+            onToggle={toggle('online')}
+          >
+            <Option
+              name="Tables"
+              icon="globe"
+              tone="green"
+              line="Quick play, public tables, a table of your own, or a code."
+              to={AT.online}
+            />
+            <Option
+              name="Ranked"
+              icon="crown"
+              tone="purple"
+              line={season ? `Season ${season.name}` : 'Climb the ladder'}
+              to={AT.ranked}
+            />
+          </Choice>
         </ul>
         <div className="go-actions">
           <Link to={AT.home} className="btn go-btn" label="Play Skull King">
             Play
+          </Link>
+          <Link to={AT.howToPlay} className="btn ghost go-btn wide-only">
+            How to play
+          </Link>
+          <Link to={AT.howToPlay} className="go-text-link narrow-only">
+            How to play
           </Link>
         </div>
       </div>
@@ -312,6 +344,7 @@ export function Games({ online, who, seated, season, onJoin }: GamesProps) {
                   {soon.map((game) => (
                     <SoonTile key={game.name} game={game} />
                   ))}
+                  <SuggestTile />
                 </ul>
               </section>
             </div>

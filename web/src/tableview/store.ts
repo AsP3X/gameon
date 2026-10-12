@@ -31,4 +31,12 @@ export const Store = {
     const s = Store.get<GameState>(Store.GAME);
     return s && s.version === Engine.VERSION ? s : null;
   },
+  /** Drop the saved game. The key is taken away, which `loadGame` reads as no game. */
+  forgetGame(): void {
+    try {
+      localStorage.removeItem(Store.GAME);
+    } catch {
+      // Storage is blocked: there was no save to drop.
+    }
+  },
 };

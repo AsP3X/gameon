@@ -1,6 +1,7 @@
 /* Skull King's home, as design/skt.pen draws it (plan item W2): the two ways to play, each opening
    its choice of two, the way back into a game that is not over, this device's stats, and the
-   scoresheet for a real table. It is a
+   scoresheet for a real table. A game saved on this device alone can be dropped from here, after
+   the page asked. It is a
    page of the frame (src/gameon) and takes the place of the legacy renderer's home screen. The
    renderer is still "at home" underneath and keeps what it alone can draw there: the greeting, the
    sound settings and the rules, which are its sheets (a control here opens one with `data-act`,
@@ -9,24 +10,23 @@
    Everything about the player is what the server said (`Me`): who they are, the game their seat is
    kept in, and whether ranked is closed for them. The page works no rating, tier or cooldown out.
    It starts no game: every way in is a link to the screen that does. */
-import { useEffect, useState } from 'react';
-import type { ReactNode } from 'react';
-import { IconKey, Mark, Mascot, CardFan } from '../gameon/art';
-import type { KeyTone } from '../gameon/art';
+import { useEffect, useRef, useState } from 'react';
+import type { RefObject } from 'react';
+import { Mark, Mascot, CardFan } from '../gameon/art';
 import { GoContext, Link } from '../gameon/Frame';
 import type { Go, Who } from '../gameon/Frame';
 import { Icon } from '../gameon/icons';
-import type { IconName } from '../gameon/icons';
 import { savedGame } from '../gameon/saved';
 import type { SavedGame } from '../gameon/saved';
 import { useWho } from '../gameon/who';
-import { LegacyIcon, Player } from './parts';
+import { Choice, LegacyIcon, Option, Player } from './parts';
 import type { Online, OnlineState } from '../net/online';
 import { useAhead } from '../online/ahead';
 import { BackIcon } from '../online/icons';
 import type { Me } from '../protocol/generated';
 import { AT } from '../router/addresses';
 import { Sound } from '../sound/sound';
+import { forgetSavedGame } from '../tableview';
 import { prefs, session, stats } from '../tableview/state';
 
 /** "3 bots", "1 bot". */
@@ -50,13 +50,18 @@ interface JumpProps {
   me: Me | null;
   saved: SavedGame | null;
   onRejoin: () => void;
+  /** The player wants the game on this device gone. The page asks before it is. */
+  onForget: () => void;
+  /** The button that says so: the keyboard comes back to it when the game is kept. */
+  forgetButton: RefObject<HTMLButtonElement | null>;
 }
 
 /**
  * The way back into a game that is not over. A seat the server keeps comes first. A game saved on
- * this device alone is then a second line under it, not a replacement.
+ * this device alone is then a second line under it, not a replacement. Only the device game can
+ * be forgotten: a seat the server keeps is not the page's to drop.
  */
-function JumpBack({ me, saved, onRejoin }: JumpProps) {
+function JumpBack({ me, saved, onRejoin, onForget, forgetButton }: JumpProps) {
   const solo = serverSolo(me),
     seat = me?.active?.kind === 'game';
   if (!seat && !saved) return null;
@@ -67,6 +72,19 @@ function JumpBack({ me, saved, onRejoin }: JumpProps) {
   );
   const deviceTitle =
     saved && (saved.humans === 1 ? `Solo against ${bots(saved.bots)}` : `One screen with ${saved.humans} pirates`);
+  const forget = (
+    <button
+      type="button"
+      ref={forgetButton}
+      className="sk-jump-forget"
+      onClick={() => {
+        Sound.play('tap');
+        onForget();
+      }}
+    >
+      Forget this game
+    </button>
+  );
   return (
     <section className="sk-jump" aria-labelledby="sk-jump-title">
       <div className="sk-jump-text">
@@ -80,9 +98,12 @@ function JumpBack({ me, saved, onRejoin }: JumpProps) {
               : device}
         </span>
         {seat && saved && (
-          <Link to={AT.table} className="sk-jump-also">
-            {device}
-          </Link>
+          <div className="sk-jump-device">
+            <Link to={AT.table} className="sk-jump-also">
+              {device}
+            </Link>
+            {forget}
+          </div>
         )}
       </div>
       {seat ? (
@@ -90,114 +111,65 @@ function JumpBack({ me, saved, onRejoin }: JumpProps) {
           {solo ? 'Continue' : 'Rejoin'}
         </Link>
       ) : (
-        <Link to={AT.table} className="btn go-btn full">
-          Continue
-        </Link>
+        <>
+          <Link to={AT.table} className="btn go-btn full">
+            Continue
+          </Link>
+          {forget}
+        </>
       )}
     </section>
   );
 }
 
-interface ChoiceProps {
-  /** The id of the list the card opens. */
-  id: string;
-  name: string;
-  icon: IconName;
-  tone: KeyTone;
-  line: string;
-  open: boolean;
-  onToggle: () => void;
-  /** The way needs a connection there is none of: the card is there and cannot be opened. */
-  dim?: boolean;
-  /** The ways the card holds. */
-  children?: ReactNode;
-}
-
-/** One of the two ways to play, on its card. The card opens in place, and what it holds is under it. */
-function Choice({ id, name, icon, tone, line, open, onToggle, dim, children }: ChoiceProps) {
-  const inside = (
-    <>
-      <IconKey icon={icon} tone={tone} />
-      <span className="sk-way-text">
-        <b>{name}</b>
-        <span>{line}</span>
-      </span>
-      <span className="sk-way-go">
-        <Icon name="chevronDown" />
-      </span>
-    </>
-  );
-  if (dim)
-    return (
-      <li className="sk-choice">
-        <div className="sk-way dim" aria-disabled="true">
-          {inside}
-        </div>
-      </li>
-    );
+/**
+ * The question before a device game is dropped. It takes the keyboard while it is up, on the
+ * answer that loses nothing, and Escape keeps the game.
+ */
+function ForgetAsk({ onKeep, onForget }: { onKeep: () => void; onForget: () => void }) {
+  const keep = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    keep.current?.focus({ preventScroll: true });
+  }, []);
   return (
-    <li className="sk-choice">
-      <button
-        type="button"
-        className="sk-way"
-        aria-expanded={open}
-        aria-controls={id}
-        onClick={() => {
-          Sound.play('tap');
-          onToggle();
-        }}
-      >
-        {inside}
-      </button>
-      <ul id={id} className="sk-opts" aria-label={name} hidden={!open}>
-        {children}
-      </ul>
-    </li>
-  );
-}
-
-interface OptionProps {
-  name: string;
-  icon: IconName;
-  tone: KeyTone;
-  line: ReactNode;
-  /** Where the row leads. Without it the row is there and cannot be followed. */
-  to?: string;
-  onFollow?: () => void;
-  pill?: ReactNode;
-  children?: ReactNode;
-}
-
-/** One way a card holds, on its row. */
-function Option({ name, icon, tone, line, to, onFollow, pill, children }: OptionProps) {
-  const inside = (
-    <>
-      <IconKey icon={icon} tone={tone} />
-      <span className="sk-way-text">
-        <b>{name}</b>
-        <span>{line}</span>
-        {children}
-      </span>
-      {pill}
-      <span className="sk-way-go">
-        <Icon name="chevronRight" />
-      </span>
-    </>
-  );
-  if (to == null)
-    return (
-      <li>
-        <div className="sk-opt" aria-disabled="true">
-          {inside}
+    <div
+      className="table-overlay"
+      role="alertdialog"
+      aria-modal="true"
+      aria-labelledby="sk-forget-title"
+      aria-describedby="sk-forget-text"
+      onKeyDown={(e) => {
+        if (e.key === 'Escape') onKeep();
+      }}
+    >
+      <div className="box">
+        <h2 id="sk-forget-title">Forget this game?</h2>
+        <p id="sk-forget-text">It is only on this device.</p>
+        <div className="sk-forget-actions">
+          <button
+            type="button"
+            ref={keep}
+            className="btn ghost"
+            onClick={() => {
+              Sound.play('tap');
+              onKeep();
+            }}
+          >
+            Keep it
+          </button>
+          <button
+            type="button"
+            className="btn red"
+            onClick={() => {
+              Sound.play('trash');
+              onForget();
+            }}
+          >
+            Forget
+          </button>
         </div>
-      </li>
-    );
-  return (
-    <li onClickCapture={() => Sound.play('tap')}>
-      <Link to={to} className="sk-opt" onFollow={onFollow}>
-        {inside}
-      </Link>
-    </li>
+      </div>
+    </div>
   );
 }
 
@@ -281,7 +253,21 @@ export function SkullKingHome({ online, state, go, onRejoin, behind }: SkullKing
   // Asked with `GET /me`: looking at the home makes nobody. A browser without a session is a
   // visitor here, and gets its guest when it connects, as it always did.
   const who: Who = useWho(online, state.me, false);
-  const [saved] = useState(savedGame);
+  const [saved, setSaved] = useState(savedGame);
+  /** The page is asking whether the game on this device may go. */
+  const [asking, setAsking] = useState(false);
+  const forgetButton = useRef<HTMLButtonElement>(null),
+    asked = useRef(false),
+    page = useRef<HTMLDivElement>(null);
+  // When the question is answered the keyboard goes back to the button that asked. That button is
+  // gone with the game it was about: then it goes to the first way to play.
+  useEffect(() => {
+    if (asked.current && !asking)
+      (forgetButton.current ?? page.current?.querySelector<HTMLElement>('button.sk-way'))?.focus({
+        preventScroll: true,
+      });
+    asked.current = asking;
+  }, [asking]);
   /** The card that is open. One at a time: opening the other closes this one. */
   const [open, setOpen] = useState<'solo' | 'online' | null>(null);
   const toggle = (card: 'solo' | 'online') => (): void => setOpen((was) => (was === card ? null : card));
@@ -302,7 +288,7 @@ export function SkullKingHome({ online, state, go, onRejoin, behind }: SkullKing
   const seasonPill = season && <span className="pill gold narrow-only">{season.name}</span>;
   return (
     <GoContext value={go}>
-      <div id="gameon" className="sk-home" inert={behind}>
+      <div id="gameon" ref={page} className="sk-home" inert={behind || asking}>
         <header className="sk-bar">
           <Link to={AT.games} className="sk-back" label="Back to GameOn's games">
             <span className="sk-back-arrow">
@@ -329,7 +315,13 @@ export function SkullKingHome({ online, state, go, onRejoin, behind }: SkullKing
                 <p>The pirate trick-taking game</p>
               </div>
             </div>
-            <JumpBack me={me} saved={saved} onRejoin={onRejoin} />
+            <JumpBack
+              me={me}
+              saved={saved}
+              onRejoin={onRejoin}
+              onForget={() => setAsking(true)}
+              forgetButton={forgetButton}
+            />
             <Stats />
             <RealTable />
             {/* The rules are one of the renderer's sheets: `data-act` is how it is asked for one. */}
@@ -476,6 +468,17 @@ export function SkullKingHome({ online, state, go, onRejoin, behind }: SkullKing
           </div>
         </main>
       </div>
+      {asking && (
+        <ForgetAsk
+          onKeep={() => setAsking(false)}
+          onForget={() => {
+            // The save is this device's alone: it is dropped here, and the server is told nothing.
+            forgetSavedGame();
+            setSaved(null);
+            setAsking(false);
+          }}
+        />
+      )}
     </GoContext>
   );
 }

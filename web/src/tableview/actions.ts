@@ -356,6 +356,17 @@ function useAbility(choice: AbilityChoice, undo?: () => void): void {
 }
 
 /**
+ * Drop the offline game saved on this device: the page's home asks for it, after the player said
+ * so. Nothing is sent anywhere, and a seat on the server is not this function's to touch.
+ */
+export function forgetSavedGame(): void {
+  Store.forgetGame();
+  if (session.online || !session.table) return;
+  session.table.stop();
+  session.table = null;
+}
+
+/**
  * The page's address changed under the renderer: Back, Forward, a typed address, or a reload. Show
  * what belongs at that place. Returns false when there is nothing to show there: the address is the
  * table's and no game is open or saved.

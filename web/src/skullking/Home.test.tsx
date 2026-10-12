@@ -455,6 +455,126 @@ describe('the way back into a game', () => {
     expect(places.path()).toBe('/skull-king/table');
   });
 
+  it('asks before it forgets a device game, and keeps it when the player says so', async () => {
+    saveOnDevice(1, 2, 2, 7);
+    const before = localStorage.getItem(GAME_KEY);
+    await openHome({ 'GET /me': async () => ok(await anAccount()) });
+    expect($('.sk-jump-forget')?.textContent).toBe('Forget this game');
+    expect($('[role="alertdialog"]')).toBeNull();
+    await click('.sk-jump-forget');
+    const ask = $('[role="alertdialog"]');
+    expect(ask?.querySelector('h2')?.textContent).toBe('Forget this game?');
+    expect(ask?.querySelector('p')?.textContent).toBe('It is only on this device.');
+    expect(Array.from(ask?.querySelectorAll('button') ?? [], (b) => b.textContent)).toEqual(['Keep it', 'Forget']);
+    // The question has the keyboard, on the answer that loses nothing, and the home behind it takes no input.
+    expect(document.activeElement?.textContent).toBe('Keep it');
+    expect($('.sk-home')?.hasAttribute('inert')).toBe(true);
+    // Nothing is gone before the answer.
+    expect(localStorage.getItem(GAME_KEY)).toBe(before);
+
+    await click('[role="alertdialog"] .btn.ghost');
+    expect($('[role="alertdialog"]')).toBeNull();
+    expect($('.sk-home')?.hasAttribute('inert')).toBe(false);
+    expect(localStorage.getItem(GAME_KEY)).toBe(before);
+    expect(jump()?.title).toBe('Solo against 2 bots');
+    expect(document.activeElement).toBe($('.sk-jump-forget'));
+
+    // Escape keeps it too.
+    await click('.sk-jump-forget');
+    await act(async () => {
+      $('[role="alertdialog"]')?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect($('[role="alertdialog"]')).toBeNull();
+    expect(localStorage.getItem(GAME_KEY)).toBe(before);
+  });
+
+  it('forgets a device game: the line is gone, the save is gone, and the server is told nothing', async () => {
+    saveOnDevice(1, 2, 2, 7);
+    const calls: string[] = [];
+    const account = await anAccount();
+    await openHome({
+      'GET /me': () => {
+        calls.push('GET /me');
+        return ok(account);
+      },
+    });
+    const asked = calls.length;
+    await click('.sk-jump-forget');
+    await click('[role="alertdialog"] .btn.red');
+    expect($('[role="alertdialog"]')).toBeNull();
+    expect($('.sk-jump')).toBeNull();
+    expect($('.sk-jump-forget')).toBeNull();
+    expect(localStorage.getItem(GAME_KEY)).toBeNull();
+    // The button that asked is gone with the game: the keyboard is on the first way to play.
+    expect(document.activeElement).toBe($('.sk-way'));
+    // It was the device's alone: no request, no seat asked for, and the home is where the player still is.
+    await settle(RETRY_MS);
+    expect(calls.length).toBe(asked);
+    expect(rejoined).toBe(0);
+    expect(places.path()).toBe('/skull-king');
+    // A page that opens later has nothing to offer either.
+    closePage();
+    await openHome({ 'GET /me': () => ok(account) });
+    expect($('.sk-jump')).toBeNull();
+  });
+
+  it('leaves the server game and its way back in place when the device game under it is forgotten', async () => {
+    saveOnDevice(1, 3, 2, 10);
+    const active: Active = { kind: 'game', id: 'game-1', table: 'solo', bots: 4, round: 6, rounds: 8 };
+    const answers = await seated(active);
+    const calls: string[] = [];
+    await openHome({
+      'GET /me': () => {
+        calls.push('GET /me');
+        return answers['GET /me']();
+      },
+    });
+    const asked = calls.length;
+    expect($('.sk-jump-also')?.textContent).toBe('Round 2 of 10 · offline, on this device only');
+    // One way to forget, and it is the device line's: the server game has none.
+    expect(texts('.sk-jump-forget')).toEqual(['Forget this game']);
+    expect($('.sk-jump-device .sk-jump-forget')).not.toBeNull();
+
+    await click('.sk-jump-forget');
+    await click('[role="alertdialog"] .btn.red');
+    // The device line is gone, and nothing else is.
+    expect($('.sk-jump-also')).toBeNull();
+    expect($('.sk-jump-forget')).toBeNull();
+    expect(localStorage.getItem(GAME_KEY)).toBeNull();
+    expect(jump()).toEqual({
+      title: 'Solo against 4 bots',
+      line: 'Round 6 of 8 · saved to your account',
+      button: 'Continue',
+      to: '/skull-king/table',
+    });
+    await press('Solo');
+    expect(ways()[0].line).toBe('Round 6 of 8 is waiting.');
+    expect(way('Against bots').querySelector('.sk-way-button')?.textContent).toBe('Back to your game');
+    // `Me.active` is the server's: the page asked for nothing and sent nothing.
+    expect(calls.length).toBe(asked);
+    expect(rejoined).toBe(0);
+    // The server game is still the way back.
+    await click('.sk-jump a.btn');
+    expect(rejoined).toBe(1);
+  });
+
+  it('forgets on the whole page too: the table has nothing to open, and no frame goes out', async () => {
+    saveOnDevice(1, 2, 2, 7);
+    await openAt('/skull-king');
+    expect($('.sk-jump-forget')).not.toBeNull();
+    await click('.sk-jump-forget');
+    await click('[role="alertdialog"] .btn.red');
+    expect($('.sk-jump')).toBeNull();
+    expect(sent).toEqual([]);
+    expect((await page.rest('GET', '/me')).status).toBe(401);
+    // The address of the table has no game behind it now: it leads home.
+    closePage();
+    await openAt('/skull-king/table');
+    expect(places.path()).toBe('/skull-king');
+    expect($('.sk-jump')).toBeNull();
+  });
+
   it('brings the seat back at the table through the connection, and starts no game to do it', async () => {
     // A quick-play table the server seated this browser at.
     await openAt('/skull-king/online');

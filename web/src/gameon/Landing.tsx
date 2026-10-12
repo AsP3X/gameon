@@ -48,6 +48,33 @@ export function SoonTile({ game, line = false }: { game: SoonGame; line?: boolea
   );
 }
 
+/** The last tile of a list of announced games: the way to say which one is missing. */
+export function SuggestTile({ line = false }: { line?: boolean }) {
+  return (
+    <li className="go-soon go-suggest">
+      {line && (
+        <div className="go-suggest-ask wide-only">
+          <b>What should we add next?</b>
+          <p>Tell us the game your table always ends up playing.</p>
+          <Link to={AT.suggest} className="btn ghost go-btn">
+            Suggest a game
+          </Link>
+        </div>
+      )}
+      <Link to={AT.suggest} className={line ? 'go-suggest-link narrow-only' : 'go-suggest-link'}>
+        <span className="go-plus">
+          <Icon name="plus" />
+        </span>
+        <span className="go-suggest-text">
+          <b className="wide-only">Suggest a game</b>
+          <b className="narrow-only">Suggest one</b>
+          <small className="wide-only">What should we add?</small>
+        </span>
+      </Link>
+    </li>
+  );
+}
+
 function Podium({ top }: { top: LadderEntry[] }) {
   return (
     <ol className="go-podium" aria-label="The top of the ladder">
@@ -333,6 +360,9 @@ export function Landing({ online, who, season }: LandingProps) {
                     <Link to={AT.home} className="btn go-btn" label="Play Skull King now">
                       Play now
                     </Link>
+                    <Link to={AT.howToPlay} className="btn ghost go-btn">
+                      How to play
+                    </Link>
                   </div>
                 </div>
                 <div className="go-pick-art">
@@ -344,6 +374,7 @@ export function Landing({ online, who, season }: LandingProps) {
               {soon.map((game) => (
                 <SoonTile key={game.name} game={game} line />
               ))}
+              <SuggestTile line />
             </ul>
           </div>
         </section>

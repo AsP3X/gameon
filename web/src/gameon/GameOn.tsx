@@ -1,5 +1,6 @@
 /* GameOn: the frame around the game. The landing, Games, and signing up and in are its pages
-   (plan item W1), and so are the profile, another player and the ladder (W5); Skull King is the
+   (plan item W1), and so are the profile, another player and the ladder (W5), and the four pages
+   the footer leads to: how to play, privacy, the imprint and a game to suggest. Skull King is the
    one game inside it. React draws them next to the legacy renderer's #app and the online screens,
    and the page's address says which is up.
 
@@ -19,7 +20,9 @@ import type { Go } from './Frame';
 import { Games } from './Games';
 import { LadderPage } from './Ladder';
 import { Landing } from './Landing';
+import { HowToPlayPage, ImprintPage, PrivacyPage } from './Pages';
 import { PlayerPage, ProfilePage } from './Profile';
+import { SuggestPage } from './Suggest';
 import { useWho } from './who';
 
 export interface GameOnProps {
@@ -48,6 +51,9 @@ export function GameOn({ online, state, route, go, up, back, onJoin }: GameOnPro
 
   // The form gives way to Games: Back from there does not return to a form that is done.
   const entered = (): void => go(AT.games, { replace: true });
+  // A page the footer led to goes back to where it was reached from, and to the front page when
+  // it was reached by its address.
+  const toFooter = (): void => back(AT.landing);
   return (
     <GoContext value={go}>
       <div id="gameon">
@@ -80,6 +86,14 @@ export function GameOn({ online, state, route, go, up, back, onJoin }: GameOnPro
         ) : route.page === 'ladder' ? (
           // The ladder belongs to Skull King's ranked page, and goes back there.
           <LadderPage online={online} who={who} season={season} onBack={() => up(AT.ranked)} />
+        ) : route.page === 'howToPlay' ? (
+          <HowToPlayPage who={who} onBack={toFooter} />
+        ) : route.page === 'privacy' ? (
+          <PrivacyPage who={who} onBack={toFooter} />
+        ) : route.page === 'imprint' ? (
+          <ImprintPage who={who} onBack={toFooter} />
+        ) : route.page === 'suggest' ? (
+          <SuggestPage who={who} onBack={toFooter} />
         ) : (
           <Landing online={online} who={who} season={season} />
         )}

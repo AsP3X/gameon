@@ -107,8 +107,8 @@ export interface NavProps {
 export function Nav({ page, who, onWays }: NavProps) {
   const account = accountOf(who),
     form = page === 'signIn' || page === 'signUp',
-    // The profile, another player and the ladder are not under Games.
-    aside = page === 'profile' || page === 'player' || page === 'ladder';
+    // Only the landing and Games themselves are under Games.
+    aside = page !== 'landing' && page !== 'games';
   return (
     <header className="go-nav">
       <div className="go-in">
@@ -178,7 +178,15 @@ export function Nav({ page, who, onWays }: NavProps) {
   );
 }
 
-/** The footer of the landing, of Games, of the profile and of the ladder. */
+/** The four pages the footer leads to, beside Games and the ladder. */
+const MORE: { page: FramePage; to: string; name: string }[] = [
+  { page: 'howToPlay', to: AT.howToPlay, name: 'How to play' },
+  { page: 'privacy', to: AT.privacy, name: 'Privacy' },
+  { page: 'imprint', to: AT.imprint, name: 'Imprint' },
+  { page: 'suggest', to: AT.suggest, name: 'Suggest a game' },
+];
+
+/** The footer of the landing, of Games, of the profile, of the ladder, and of the four pages it leads to. */
 export function Footer({ page, who }: { page: FramePage; who: Who }) {
   return (
     <footer className="go-foot">
@@ -198,6 +206,11 @@ export function Footer({ page, who }: { page: FramePage; who: Who }) {
           <Link to={AT.ladder} className="go-foot-link">
             Ladder
           </Link>
+          {MORE.map((more) => (
+            <Link key={more.page} to={more.to} className="go-foot-link" current={page === more.page}>
+              {more.name}
+            </Link>
+          ))}
         </nav>
         <span className="go-copy">© {new Date().getFullYear()} GameOn</span>
       </div>

@@ -69,6 +69,7 @@ const SHAPES = {
     </>
   ),
   minus: <path d="M5 12h14" />,
+  plus: <path d="M5 12h14M12 5v14" />,
   chevronRight: <path d="m9 18 6-6-6-6" />,
   chevronLeft: <path d="m15 18-6-6 6-6" />,
   chevronDown: <path d="m6 9 6 6 6-6" />,

@@ -19,7 +19,14 @@ import { render, resetMenuMusic, tuneMenu } from './render';
 import { clearTimer, loadState, prefs, savePrefs, session, stage, ui } from './state';
 import { Tracker } from './tracker';
 
-export { closeOnlineTable, openOnlineTable, showOnlineResult, showPlace, startSoloOnDevice } from './actions';
+export {
+  closeOnlineTable,
+  forgetSavedGame,
+  openOnlineTable,
+  showOnlineResult,
+  showPlace,
+  startSoloOnDevice,
+} from './actions';
 export type { DeviceSolo } from './actions';
 export type { OnlineHooks, Place } from './state';
 import type { Place } from './state';

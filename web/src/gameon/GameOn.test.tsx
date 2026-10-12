@@ -65,6 +65,28 @@ async function clickOn(el: HTMLElement): Promise<void> {
     await vi.advanceTimersByTimeAsync(0);
   });
 }
+/** Skull King's two choices on Games, as the page has them: the name of each, and whether it is open. */
+const choices = (): { name: string; open: boolean }[] =>
+  Array.from(document.querySelectorAll<HTMLElement>('.go-choices .sk-way'), (card) => ({
+    name: card.querySelector('b')?.textContent ?? '',
+    open: card.getAttribute('aria-expanded') === 'true',
+  }));
+/** The ways of the choice that is open: what each is called and where it leads. */
+const shown = (): [string, string | null][] =>
+  Array.from(document.querySelectorAll<HTMLElement>('.go-choices .sk-opts:not([hidden]) .sk-opt'), (opt) => [
+    opt.querySelector('b')?.textContent ?? '',
+    opt.getAttribute('href'),
+  ]);
+const way = (name: string): HTMLElement => {
+  const el = Array.from(document.querySelectorAll<HTMLElement>('.go-choices .sk-opts:not([hidden]) .sk-opt')).find(
+    (opt) => opt.querySelector('b')?.textContent === name,
+  );
+  if (!el) throw new Error(`No way called "${name}" is open`);
+  return el;
+};
+/** Open the choice of that name, or close it. */
+const choose = (name: string): Promise<void> =>
+  clickOn($(`.go-choices .sk-way[aria-controls="go-${name.toLowerCase()}-ways"]`) ?? host);
 const follow = (label: string): Promise<void> => clickOn(link(label));
 const press = (label: string): Promise<void> => clickOn(button(label));
 async function type(selector: string, value: string): Promise<void> {
@@ -368,21 +390,70 @@ describe('Games', () => {
     expect($('.go-banner')).toBeNull();
   });
 
-  it('leads into every way to play Skull King', async () => {
+  it("offers Skull King's two choices, closed, as its home does, and no four ways beside them", async () => {
     await openAt('/games');
-    expect(texts('.go-mode b')).toEqual(['Solo', 'One screen', 'Online', 'Ranked']);
-    expect(Array.from(document.querySelectorAll('.go-mode'), (a) => a.getAttribute('href'))).toEqual([
-      '/skull-king/solo',
-      '/skull-king/one-screen',
-      '/skull-king/online',
-      '/skull-king/ranked',
+    expect(choices()).toEqual([
+      { name: 'Solo', open: false },
+      { name: 'Online', open: false },
     ]);
+    expect(shown()).toEqual([]);
+    expect($('.go-mode')).toBeNull();
+    // What each choice holds is there for a screen reader to be told of, and not to be seen.
+    expect($('#go-solo-ways')?.hidden).toBe(true);
+    expect($('#go-online-ways')?.hidden).toBe(true);
     expect(link('Play').getAttribute('href')).toBe('/skull-king');
     await follow('Play');
     expect(places.entries()).toEqual({ paths: ['/games', '/skull-king'], at: 1 });
     expect($('.sk-home')).not.toBeNull();
     expect($('#app')?.hidden).toBe(false);
   });
+
+  it('opens one choice at a time, each on its two ways and their addresses', async () => {
+    await openAt('/games');
+    await choose('Solo');
+    expect(choices()).toEqual([
+      { name: 'Solo', open: true },
+      { name: 'Online', open: false },
+    ]);
+    expect(shown()).toEqual([
+      ['Against bots', '/skull-king/solo'],
+      ['One screen', '/skull-king/one-screen'],
+    ]);
+    // Opening the other closes this one.
+    await choose('Online');
+    expect(choices()).toEqual([
+      { name: 'Solo', open: false },
+      { name: 'Online', open: true },
+    ]);
+    expect(shown()).toEqual([
+      ['Tables', '/skull-king/online'],
+      ['Ranked', '/skull-king/ranked'],
+    ]);
+    // Pressing an open choice closes it. The address never moved.
+    await choose('Online');
+    expect(shown()).toEqual([]);
+    expect(places.entries()).toEqual({ paths: ['/games'], at: 0 });
+  });
+
+  for (const [choice, name, at] of [
+    ['Solo', 'Against bots', '/skull-king/solo'],
+    ['Solo', 'One screen', '/skull-king/one-screen'],
+    ['Online', 'Tables', '/skull-king/online'],
+    ['Online', 'Ranked', '/skull-king/ranked'],
+  ])
+    it(`opens ${at} from ${name} under ${choice}, and Back is Games again`, async () => {
+      await openAt('/games');
+      await choose(choice);
+      await clickOn(way(name));
+      expect(places.entries()).toEqual({ paths: ['/games', at], at: 1 });
+      expect($('.go-games')).toBeNull();
+      await act(async () => {
+        places.back();
+        await vi.advanceTimersByTimeAsync(0);
+      });
+      expect(places.path()).toBe('/games');
+      expect($('#gameon h1')?.textContent).toBe('Games');
+    });
 
   it('says so when no table is open, and offers to open one', async () => {
     await openAt('/games');

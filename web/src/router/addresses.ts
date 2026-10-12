@@ -2,7 +2,8 @@
    Forward land where the player was (plan item W0).
 
    Four kinds of page share them: the frame around the game (GameOn: the landing, Games, signing
-   up and in, the profile, another player and the ladder), Skull King's own pages (its home and
+   up and in, the profile, another player, the ladder and the four pages its footer leads to),
+   Skull King's own pages (its home and
    the solo setup), the online screens, and the screens the legacy renderer draws.
 
    Never a page: `/api`, `/assets`, `/sw.js`, `/index.html`, `/manifest.json`. The server and the
@@ -18,6 +19,11 @@ export const AT = {
   signUp: '/sign-up',
   profile: '/profile',
   ladder: '/ladder',
+  /** The four pages the frame's footer leads to. What they say is the page's own: the server is not asked for it. */
+  howToPlay: '/how-to-play',
+  privacy: '/privacy',
+  imprint: '/imprint',
+  suggest: '/suggest',
   home: '/skull-king',
   solo: '/skull-king/solo',
   oneScreen: '/skull-king/one-screen',
@@ -53,6 +59,11 @@ export type Route =
   | { page: 'player'; id: UserId }
   /** The season's ladder. */
   | { page: 'ladder' }
+  /** A short guide to a hand, what the site keeps, who publishes it, and a game to wish for. */
+  | { page: 'howToPlay' }
+  | { page: 'privacy' }
+  | { page: 'imprint' }
+  | { page: 'suggest' }
   /* The legacy renderer's screens. Skull King's home is the page's own, with the renderer under it. */
   | { page: 'home' }
   /** The new-game screen, for a game on one screen. */
@@ -72,7 +83,18 @@ export type Route =
 export type LegacyPage = 'home' | 'setup' | 'table' | 'score';
 export type LegacyRoute = Extract<Route, { page: LegacyPage }>;
 /** The pages of the frame around the game. They need no connection. */
-export type FramePage = 'landing' | 'games' | 'signIn' | 'signUp' | 'profile' | 'player' | 'ladder';
+export type FramePage =
+  | 'landing'
+  | 'games'
+  | 'signIn'
+  | 'signUp'
+  | 'profile'
+  | 'player'
+  | 'ladder'
+  | 'howToPlay'
+  | 'privacy'
+  | 'imprint'
+  | 'suggest';
 export type FrameRoute = Extract<Route, { page: FramePage }>;
 /** The solo setup. It needs a connection only when a game is asked for. */
 export type SoloRoute = Extract<Route, { page: 'solo' }>;
@@ -88,6 +110,10 @@ const FRAME: ReadonlySet<string> = new Set<FramePage>([
   'profile',
   'player',
   'ladder',
+  'howToPlay',
+  'privacy',
+  'imprint',
+  'suggest',
 ]);
 export const isFrame = (route: Route): route is FrameRoute => FRAME.has(route.page);
 export const isOnline = (route: Route): route is OnlineRoute =>
@@ -113,6 +139,10 @@ const PAGES: Record<string, Route> = {
   [AT.profile]: { page: 'profile' },
   [AT.signIn]: { page: 'signIn' },
   [AT.signUp]: { page: 'signUp' },
+  [AT.howToPlay]: { page: 'howToPlay' },
+  [AT.privacy]: { page: 'privacy' },
+  [AT.imprint]: { page: 'imprint' },
+  [AT.suggest]: { page: 'suggest' },
 };
 
 /**

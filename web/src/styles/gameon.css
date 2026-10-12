@@ -479,46 +479,6 @@
   font-weight: 800;
   color: var(--muted);
 }
-.go-modes {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-}
-#gameon .go-mode {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-height: 56px;
-  padding: 6px 8px;
-  border: 2px solid var(--line);
-  border-radius: 16px;
-  background: var(--bg);
-  box-shadow: 0 3px 0 var(--line);
-  color: var(--fg);
-  transition:
-    transform 0.06s,
-    box-shadow 0.06s;
-}
-#gameon .go-mode:active {
-  transform: translateY(3px);
-  box-shadow: 0 0 0 transparent;
-}
-.go-mode .go-key {
-  --k: 36px;
-}
-.go-mode b {
-  display: block;
-  font-size: 15px;
-  font-weight: 900;
-  line-height: 1.2;
-}
-.go-mode small {
-  display: block;
-  font-size: 13px;
-  line-height: 1.3;
-  color: var(--muted);
-}
-
 /* ---------- the landing: the ranked season ---------- */
 .go-ranked {
   padding-bottom: 32px;
@@ -1695,23 +1655,6 @@
   .go-games .go-game-info > p {
     font-size: 17px;
   }
-  .go-modes {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 12px;
-  }
-  #gameon .go-mode {
-    flex-direction: column;
-    align-items: flex-start;
-    min-height: 115px;
-    padding: 14px;
-  }
-  .go-mode .go-key {
-    --k: 40px;
-  }
-  .go-mode b {
-    font-size: 16px;
-    line-height: 1.25;
-  }
   .go-games .go-actions .go-btn {
     min-width: 200px;
   }
@@ -2394,5 +2337,290 @@
 @media (max-width: 999.98px) {
   .go-chip[aria-current='page'] .go-avatar {
     outline: 3px solid var(--green-bg);
+  }
+}
+
+/* ---------- Games: Skull King's two choices ---------- */
+/* The cards are the ones of Skull King's home (skullking.css): a card opens in place, and its two
+   ways are under it. Here they stand in the game's own card. */
+.go-choices {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+/* On a phone the way to the guide is a line under the button. */
+.go-games .go-actions {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+}
+#gameon .go-games .go-actions .go-text-link {
+  justify-content: center;
+}
+
+/* ---------- the tile that asks which game is missing ---------- */
+#gameon .go-suggest {
+  padding: 0;
+  background: none;
+}
+#gameon .go-suggest-link {
+  flex: 1;
+  min-width: 0;
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 14px;
+  color: var(--blue-ink);
+}
+.go-plus {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border: 2px solid var(--line);
+  border-radius: 11px;
+  background: var(--bg);
+  font-size: 18px;
+}
+.go-suggest-text {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* ---------- the footer's own pages: how to play, privacy, the imprint, a game to suggest ---------- */
+#gameon .go-foot-link[aria-current='page'] {
+  color: var(--fg);
+}
+.go-doc {
+  padding-block: 12px 32px;
+}
+.go-doc .go-in,
+.go-doc-cols,
+.go-doc-main {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.go-doc-head {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.go-doc-head h1 {
+  font-size: 28px;
+  font-weight: 900;
+  line-height: 1.1;
+  letter-spacing: -0.4px;
+}
+.go-doc-head p {
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.4;
+  color: var(--muted);
+}
+.go-doc-block,
+.go-doc-ways,
+.go-suggest-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 18px;
+}
+.go-doc-block p,
+.go-doc-block li,
+.go-doc-note {
+  font-size: 16px;
+  line-height: 1.55;
+  color: var(--fg);
+}
+#gameon .go-doc-block ul {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-left: 22px;
+  list-style: disc;
+}
+.go-doc-block li::marker {
+  color: var(--faint);
+}
+.go-doc-note {
+  color: var(--muted);
+}
+/* A link in a sentence: it is underlined, so that it does not lean on its colour alone. */
+#gameon .go-inline-link {
+  font-weight: 800;
+  text-decoration: underline;
+  color: var(--blue-ink);
+}
+.go-doc-ways {
+  gap: 14px;
+}
+.go-doc-ways ul {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+#gameon .go-doc-way {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 60px;
+  padding: 10px 8px 10px 12px;
+  border: 2px solid var(--line);
+  border-radius: 14px;
+  background: var(--bg);
+  box-shadow: 0 2px 0 var(--line);
+  color: var(--fg);
+}
+.go-doc-way .go-key {
+  --k: 36px;
+}
+.go-doc-way > span:not(.go-key) {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.go-doc-way b {
+  font-size: 15px;
+  font-weight: 900;
+  line-height: 1.25;
+}
+.go-doc-way small {
+  font-size: 13px;
+  line-height: 1.35;
+  color: var(--muted);
+}
+.go-doc-way > .go-icon {
+  width: 20px;
+  height: 20px;
+  color: var(--faint);
+}
+.go-suggest-form {
+  gap: 18px;
+}
+#gameon .go-field textarea {
+  width: 100%;
+  min-height: 112px;
+  padding: 10px 12px;
+  border: 2px solid var(--line);
+  border-radius: 12px;
+  outline: none;
+  resize: vertical;
+  background: var(--soft);
+  font: inherit;
+  font-weight: 800;
+  line-height: 1.4;
+  color: var(--fg);
+}
+#gameon .go-field textarea:focus {
+  border-color: var(--blue);
+  background: var(--bg);
+}
+#gameon .go-send .go-saved {
+  font-weight: 800;
+  color: var(--green-ink);
+}
+
+@media (min-width: 1000px) {
+  .go-choices {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+    gap: 12px;
+  }
+  /* Two cards share the game's card here: they are smaller than on the home's felt. */
+  #gameon .go-choices .sk-way {
+    min-height: 76px;
+    padding: 12px 10px 14px 12px;
+  }
+  .go-choices .sk-way .go-key {
+    --k: 44px;
+  }
+  #gameon .go-choices .sk-opts {
+    padding-left: 0;
+  }
+  .go-games .go-actions {
+    flex-direction: row;
+    gap: 14px;
+  }
+  .go-foot-links {
+    justify-content: center;
+  }
+  /* The tile is a card like the announced games beside it. */
+  #gameon .go-suggest-link {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    padding: 18px;
+    border-radius: 16px;
+  }
+  .go-plus {
+    width: 48px;
+    height: 48px;
+    border-radius: 13px;
+    font-size: 22px;
+  }
+  .go-suggest-text b {
+    font-size: 18px;
+  }
+  /* On the landing it asks in a sentence, and has a button. */
+  .go-suggest-ask {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 14px;
+    padding: 24px;
+  }
+  #gameon .go-suggest-ask b {
+    font-size: 21px;
+    color: var(--fg);
+  }
+  .go-doc {
+    padding-block: 28px 80px;
+  }
+  .go-doc .go-in {
+    gap: 28px;
+  }
+  .go-doc-head {
+    gap: 4px;
+  }
+  .go-doc-head h1 {
+    font-size: 44px;
+    letter-spacing: -0.6px;
+  }
+  .go-doc-head p {
+    font-size: 17px;
+  }
+  .go-doc-main,
+  .go-suggest-form {
+    max-width: 748px;
+  }
+  .go-doc-main {
+    gap: 20px;
+  }
+  .go-doc-cols {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 340px;
+    align-items: start;
+    gap: 32px;
+  }
+  .go-doc-block,
+  .go-doc-ways,
+  .go-suggest-form {
+    padding: 24px;
+  }
+  .go-doc-block p,
+  .go-doc-block li,
+  .go-doc-note {
+    font-size: 17px;
   }
 }

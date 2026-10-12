@@ -151,6 +151,39 @@
   text-decoration: underline;
   color: var(--green-ink);
 }
+/* The device game and the way to drop it, under the game the server keeps. */
+.sk-jump-device {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 16px;
+}
+/* "Forget this game" is a line, not a button beside "Continue": it is the rarer wish. */
+.sk-jump-forget {
+  align-self: center;
+  min-height: 44px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 10px;
+  background: none;
+  font-size: 14px;
+  font-weight: 800;
+  text-decoration: underline;
+  color: var(--green-ink);
+}
+.sk-jump-device .sk-jump-forget {
+  padding: 0;
+}
+/* The question before the game is dropped: two answers side by side, the safe one first. */
+.sk-forget-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 6px;
+}
+.sk-forget-actions .btn {
+  margin: 0;
+}
 .sk-play,
 .sk-ways,
 .sk-block {

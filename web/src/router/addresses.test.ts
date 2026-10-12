@@ -25,6 +25,10 @@ describe('the addresses', () => {
     expect(routeOf('/sign-in')).toEqual({ page: 'signIn' });
     expect(routeOf('/sign-up')).toEqual({ page: 'signUp' });
     expect(routeOf(`/players/${ID}`)).toEqual({ page: 'player', id: ID });
+    expect(routeOf('/how-to-play')).toEqual({ page: 'howToPlay' });
+    expect(routeOf('/privacy')).toEqual({ page: 'privacy' });
+    expect(routeOf('/imprint')).toEqual({ page: 'imprint' });
+    expect(routeOf('/suggest')).toEqual({ page: 'suggest' });
   });
 
   it('keeps an address that has a page, and both addresses of the new-game screen', () => {
@@ -71,6 +75,8 @@ describe('the addresses', () => {
     // The profile, another player and the ladder are the frame's: they need no connection.
     for (const path of ['/', '/games', '/sign-in', '/sign-up', '/ladder', '/profile', `/players/${ID}`])
       expect(kind(path)).toBe('frame');
+    // So are the four pages the footer leads to.
+    for (const path of ['/how-to-play', '/privacy', '/imprint', '/suggest']) expect(kind(path)).toBe('frame');
     for (const path of ['/skull-king/online', '/skull-king/online/join', '/skull-king/ranked'])
       expect(kind(path)).toBe('online');
   });
