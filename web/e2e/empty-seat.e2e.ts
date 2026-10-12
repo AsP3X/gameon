@@ -1,6 +1,6 @@
 /* Three browsers, one table, and one of them does not come back in time (docs/protocol.md §5.5).
 
-   Three guests sit at a private table at the fast pace. One closes the page before the first bid.
+   Three guests sit at a private table. One closes the page before the first bid.
    The clock plays that seat's turn twice, and the second time closes the seat: the two who stayed
    see the same name, marked OUT, and play on while the table plays for it. The one who went opens
    the page again and is told, once, that the seat is lost. When the game ends they hear the result.
@@ -33,7 +33,8 @@ async function until(done: () => boolean | Promise<boolean>, what: string, ms = 
   }
   throw new Error(`Never happened within ${ms / 1000} s: ${what}`);
 }
-const button = (p: Player, name: string | RegExp) => p.page.getByRole('button', { name });
+const button = (p: Player, name: string | RegExp, how: { exact?: boolean } = {}) =>
+  p.page.getByRole('button', { name, ...how });
 const picture = async (p: Player, name: string): Promise<void> => {
   if (shots) await p.page.screenshot({ path: `${shots}/${name}.png` });
 };
@@ -63,13 +64,12 @@ describe('a seat nobody comes back to', () => {
       await p.page.locator('.sk-way[href="/skull-king/online"]').click();
       await expect.poll(() => p.page.locator('#online .pill').textContent()).toBe('Connected');
     }
-    goneName = (await gone.page.locator('#online .identity b').textContent()) ?? '';
+    goneName = (await gone.page.locator('#online .go-chip-text b').textContent()) ?? '';
 
-    await button(host, 'Create a table').click();
-    await button(host, /^Swift-n-Salty/).click();
-    // Half the standard clocks: a bid is 22.5 seconds and a card 15.
-    await button(host, /^Fast/).click();
-    await button(host, 'Create table').click();
+    await host.page.locator('#online a[href="/skull-king/online/new"]').click();
+    await button(host, /^Swift/).click();
+    // The standard clocks, which is all a table has: a bid is 45 seconds and a card 30.
+    await button(host, 'Open table').click();
     const code = (await host.page.locator('#online .code').textContent()) ?? '';
     for (const p of [second, third]) {
       await button(p, 'Join with a code').click();
@@ -78,10 +78,10 @@ describe('a seat nobody comes back to', () => {
       await expect.poll(() => p.page.locator('#online .code').textContent()).toBe(code);
     }
     for (const p of players) await button(p, "I'm ready").click();
-    await expect.poll(() => button(host, 'Start game').isEnabled()).toBe(true);
-    await button(host, 'Start game').click();
+    await expect.poll(() => button(host, 'Start', { exact: true }).isEnabled()).toBe(true);
+    await button(host, 'Start', { exact: true }).click();
     for (const p of players) await p.page.locator('#app .game').waitFor();
-    expect(host.start.settings.pace).toBe('fast');
+    expect(host.start.settings.pace).toBe('standard');
     const seat = gone.seat;
 
     // The page is gone: no bid, no card. The other two play as people do.
@@ -132,7 +132,7 @@ describe('a seat nobody comes back to', () => {
     expect(await gone.page.locator('#online .notice.gold p').textContent()).toBe(
       'You were away for two turns in a row. The game goes on without you.',
     );
-    expect(await gone.page.locator('#online h2').textContent()).toBe('Play online');
+    expect(await gone.page.locator('#online h1').textContent()).toBe('Online');
     expect(await gone.page.locator('#app .game').count()).toBe(0);
     const welcome = gone.framesOf('welcome').at(-1);
     expect(gone.framesOf('welcome')).toHaveLength(welcomes + 1);

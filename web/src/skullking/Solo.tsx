@@ -21,6 +21,7 @@ import { cssColor } from '../tableview/dom';
 import { COLORS, prefs } from '../tableview/state';
 import { Store } from '../tableview/store';
 import { LegacyIcon, Player } from './parts';
+import { EXTRAS, FORMATS, isFormat, isScoring, SCORINGS } from './rulesets';
 
 /** The fewest and the most bots a solo table has: the whole table is that many and the player. */
 export const MIN_BOTS = 1;
@@ -31,26 +32,6 @@ const LEVELS: [BotLevel, string, string][] = [
   ['normal', 'Normal', 'Solid play'],
   ['hard', 'Hard', 'Counts cards'],
 ];
-const SCORINGS: [Scoring, string, string][] = [
-  ['classic', 'Classic', 'Classic, high risk'],
-  ['rascal', 'Rascal', '10 per card dealt'],
-];
-/** The five lengths a game can have, by the short names the setup uses. The rounds are the rules' own. */
-const FORMATS: [Format, string][] = [
-  ['classic', 'Classic'],
-  ['brawl', 'Brawl'],
-  ['swift', 'Swift'],
-  ['even', 'Even'],
-  ['whirl', 'Whirl'],
-];
-type Extra = 'loot' | 'kraken' | 'whale' | 'abilities';
-const EXTRAS: [Extra, string, string][] = [
-  ['loot', 'Loot', 'Win a Loot to form an alliance: +20 each if both make their bids.'],
-  ['kraken', 'Kraken', 'Swallows the trick. Nobody wins it.'],
-  ['whale', 'Whale', 'Special cards stop counting; the highest number wins.'],
-  ['abilities', 'Abilities', 'Win a trick with a Pirate to use its power: Helmsman, Smuggler, Gambler, Seer or Giant.'],
-];
-
 /** What the setup is set to. */
 export interface SoloChoice {
   bots: number;
@@ -76,8 +57,6 @@ const DEFAULT: SoloChoice = {
 const KEY = 'skullking-tavern.solo.v1';
 
 const isLevel = (x: unknown): x is BotLevel => LEVELS.some(([level]) => level === x);
-const isScoring = (x: unknown): x is Scoring => SCORINGS.some(([scoring]) => scoring === x);
-const isFormat = (x: unknown): x is Format => FORMATS.some(([format]) => format === x);
 
 /** The last setup of this device, as far as it can still be read. Whatever cannot is the default. */
 export function loadChoice(): SoloChoice {

@@ -1,18 +1,21 @@
+/* A table before its game, as design/skt.pen draws it (`Friends · waiting`, `Public · waiting` and
+   their states): who is at it, who is ready, the rules, and the host's start. Everything on it is
+   the lobby the server sent. */
 import { useEffect, useState } from 'react';
+import type { Go } from '../gameon/Frame';
 import type { Online, Outcome } from '../net/online';
 import type { LinkStatus } from '../net/socket';
 import type { Lobby, Me, Member, UserId } from '../protocol/generated';
 import { Sound } from '../sound/sound';
 import { cssColor } from '../tableview/dom';
 import { failureText } from './copy';
-import { BackIcon, CloseIcon } from './icons';
-import { describeSettings } from './settings';
+import { CloseIcon } from './icons';
+import { Bar, initialOf, Page } from './parts';
+import { describeRules } from './settings';
 
-const LEVEL = { easy: 'Easy', normal: 'Normal', hard: 'Hard' } as const;
-const initialOf = (name: string): string => (name.trim()[0] || '?').toUpperCase();
 const nameOf = (m: Member): string => (m.kind === 'bot' ? m.name : m.user.name);
 
-/** The line above the buttons: what the table is waiting for. */
+/** The line by the buttons: what the table is waiting for. */
 function hint(lobby: Lobby, me: Me, host: boolean): string {
   if (lobby.state !== 'open') return 'The game is starting…';
   const humans = lobby.members.flatMap((m) => (m.kind === 'human' ? [m] : []));
@@ -32,6 +35,7 @@ function hint(lobby: Lobby, me: Me, host: boolean): string {
 
 export interface LobbyRoomProps {
   online: Online;
+  go: Go;
   lobby: Lobby;
   me: Me;
   status: LinkStatus;
@@ -42,8 +46,7 @@ export interface LobbyRoomProps {
   onPlayer: (id: UserId) => void;
 }
 
-/** The table before the game: who is at it, who is ready, the rules, and the host's start. */
-export function LobbyRoom({ online, lobby, me, status, notice, onRules, onPlayer }: LobbyRoomProps) {
+export function LobbyRoom({ online, go, lobby, me, status, notice, onRules, onPlayer }: LobbyRoomProps) {
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   useEffect(() => {
@@ -55,6 +58,9 @@ export function LobbyRoom({ online, lobby, me, status, notice, onRules, onPlayer
   const host = lobby.hostId === me.user.id,
     open = lobby.state === 'open',
     live = status === 'online',
+    listed = lobby.visibility === 'public',
+    // Left out, the table seats bots. On one that does not, nothing here asks for a bot.
+    seatsBots = lobby.allowBots !== false,
     n = lobby.members.length,
     max = lobby.settings.maxPlayers;
   const mine = lobby.members.find((m) => m.kind === 'human' && m.user.id === me.user.id);
@@ -63,7 +69,7 @@ export function LobbyRoom({ online, lobby, me, status, notice, onRules, onPlayer
   const canStart =
     lobby.members.filter((m) => m.kind === 'human').length >= 2 &&
     lobby.members.every((m) => m.kind === 'bot' || m.ready);
-  const rules = describeSettings(lobby.settings);
+  const rules = describeRules(lobby.settings);
 
   const ask = (what: Promise<Outcome>): void => {
     setError(null);
@@ -81,65 +87,60 @@ export function LobbyRoom({ online, lobby, me, status, notice, onRules, onPlayer
   };
 
   return (
-    <>
-      <div className="wrap">
-        <div className="row head">
-          <button
-            type="button"
-            className="icon-btn"
-            aria-label="Leave table"
-            onClick={() => {
-              Sound.play('back');
-              ask(online.leaveLobby());
-            }}
-          >
-            <BackIcon />
-          </button>
-          <h2 className="grow">Table</h2>
-          <span className="pill blue">{lobby.visibility === 'private' ? 'Private' : 'Public'}</span>
-        </div>
-        <div className="stack sections">
-          {!live && (
-            <div className="notice" role="status">
-              <b>Connection lost</b>
-              <p>Trying again. Your seat is kept while you are away.</p>
-            </div>
-          )}
-          {notice && (
-            <div className="notice gold" role="status">
-              <b>{notice.title}</b>
-              <p>{notice.text}</p>
-              <button
-                type="button"
-                className="btn ghost"
-                onClick={() => {
-                  Sound.play('tap');
-                  online.dismissNotice();
-                }}
-              >
-                OK
+    <Page go={go}>
+      <Bar
+        title={listed ? 'Public table' : host ? 'Your table' : 'Table'}
+        back="Leave table"
+        onBack={() => ask(online.leaveLobby())}
+        me={me}
+      >
+        <span className="pill blue">{listed ? 'Public' : 'Private'}</span>
+      </Bar>
+      <main className="on-body wide">
+        {!live && (
+          <div className="notice" role="status">
+            <b>Connection lost</b>
+            <p>Trying again. Your seat is kept while you are away.</p>
+          </div>
+        )}
+        {notice && (
+          <div className="notice gold" role="status">
+            <b>{notice.title}</b>
+            <p>{notice.text}</p>
+            <button
+              type="button"
+              className="btn ghost"
+              onClick={() => {
+                Sound.play('tap');
+                online.dismissNotice();
+              }}
+            >
+              OK
+            </button>
+          </div>
+        )}
+        <div className={listed ? 'on-grid on-waiting' : 'on-grid on-waiting coded'}>
+          {!listed && (
+            <div className="plate on-code">
+              <span className="grow">
+                <span className="label">Table code</span>
+                <b className="code">{lobby.code}</b>
+              </span>
+              <button type="button" className="mini" onClick={copy}>
+                {copied ? 'Copied' : 'Copy'}
               </button>
             </div>
           )}
-          <div className="plate">
-            <span className="grow">
-              <span className="label">Table code</span>
-              <b className="code">{lobby.code}</b>
-            </span>
-            <button type="button" className="mini" onClick={copy}>
-              {copied ? 'Copied' : 'Copy'}
-            </button>
-          </div>
-          <section className="stack" aria-label="Crew">
-            <span className="label">
+          <section className="on-crew" aria-labelledby="on-crew">
+            <h2 className="label" id="on-crew">
               Crew · {n} of {max}
-            </span>
+            </h2>
             {lobby.members.map((m, i) => {
               const isMe = m.kind === 'human' && m.user.id === me.user.id,
                 isHost = m.kind === 'human' && m.user.id === lobby.hostId;
               const role =
                 m.kind === 'bot'
-                  ? `Bot · ${LEVEL[m.level]}`
+                  ? 'Bot'
                   : [isHost ? 'Host' : '', isMe ? 'you' : '', m.connected ? '' : 'away']
                       .filter(Boolean)
                       .join(' · ')
@@ -149,6 +150,7 @@ export function LobbyRoom({ online, lobby, me, status, notice, onRules, onPlayer
                   <span
                     className="avatar sm"
                     style={{ background: cssColor(m.kind === 'bot' ? m.color : m.user.color) }}
+                    aria-hidden="true"
                   >
                     {initialOf(nameOf(m))}
                   </span>
@@ -172,21 +174,23 @@ export function LobbyRoom({ online, lobby, me, status, notice, onRules, onPlayer
                   )}
                   {m.kind === 'human' ? (
                     <span className={`pill ${m.ready ? 'green' : 'soft'}`}>{m.ready ? 'Ready' : 'Not ready'}</span>
-                  ) : host && open ? (
-                    <button
-                      type="button"
-                      className="icon-btn"
-                      aria-label={`Remove ${m.name}`}
-                      disabled={!live}
-                      onClick={() => {
-                        Sound.play('back');
-                        ask(online.removeBot(i));
-                      }}
-                    >
-                      <CloseIcon />
-                    </button>
                   ) : (
-                    <span className="pill soft">Bot</span>
+                    host &&
+                    open &&
+                    seatsBots && (
+                      <button
+                        type="button"
+                        className="icon-btn"
+                        aria-label={`Remove ${m.name}`}
+                        disabled={!live}
+                        onClick={() => {
+                          Sound.play('back');
+                          ask(online.removeBot(i));
+                        }}
+                      >
+                        <CloseIcon />
+                      </button>
+                    )
                   )}
                 </div>
               );
@@ -199,7 +203,7 @@ export function LobbyRoom({ online, lobby, me, status, notice, onRules, onPlayer
                 Open seat
               </div>
             ))}
-            {host && open && n < max && (
+            {host && open && seatsBots && n < max && (
               <button
                 type="button"
                 className="btn ghost"
@@ -213,8 +217,10 @@ export function LobbyRoom({ online, lobby, me, status, notice, onRules, onPlayer
               </button>
             )}
           </section>
-          <section className="stack" aria-label="Rules">
-            <span className="label">Rules</span>
+          <section className="on-rules" aria-labelledby="on-rules">
+            <h2 className="label" id="on-rules">
+              Rules
+            </h2>
             <div className="plate">
               <span className="grow">
                 <b>{rules.title}</b>
@@ -234,47 +240,47 @@ export function LobbyRoom({ online, lobby, me, status, notice, onRules, onPlayer
               )}
             </div>
           </section>
-        </div>
-      </div>
-      <div className="footbar">
-        <div>
-          {error ? (
-            <p className="foot-hint alert" role="alert">
-              {error}
-            </p>
-          ) : (
-            <p className="foot-hint" role="status">
-              {hint(lobby, me, host)}
-            </p>
-          )}
-          <div className="foot-row">
-            <button
-              type="button"
-              className={ready ? 'btn ghost' : 'btn'}
-              disabled={!live || !open}
-              onClick={() => {
-                Sound.play(ready ? 'toggleOff' : 'toggleOn');
-                ask(online.setReady(!ready));
-              }}
-            >
-              {ready ? 'Not ready' : "I'm ready"}
-            </button>
-            {host && (
-              <button
-                type="button"
-                className="btn"
-                disabled={!live || !open || !canStart}
-                onClick={() => {
-                  Sound.play('start');
-                  ask(online.startGame());
-                }}
-              >
-                Start game
-              </button>
-            )}
+          <div className="footbar on-foot">
+            <div>
+              {error ? (
+                <p className="foot-hint alert" role="alert">
+                  {error}
+                </p>
+              ) : (
+                <p className="foot-hint" role="status">
+                  {hint(lobby, me, host)}
+                </p>
+              )}
+              <div className="foot-row">
+                <button
+                  type="button"
+                  className={ready ? 'btn ghost' : 'btn'}
+                  disabled={!live || !open}
+                  onClick={() => {
+                    Sound.play(ready ? 'toggleOff' : 'toggleOn');
+                    ask(online.setReady(!ready));
+                  }}
+                >
+                  {ready ? 'Not ready' : "I'm ready"}
+                </button>
+                {host && (
+                  <button
+                    type="button"
+                    className="btn"
+                    disabled={!live || !open || !canStart}
+                    onClick={() => {
+                      Sound.play('start');
+                      ask(online.startGame());
+                    }}
+                  >
+                    Start
+                  </button>
+                )}
+              </div>
+            </div>
           </div>
         </div>
-      </div>
-    </>
+      </main>
+    </Page>
   );
 }

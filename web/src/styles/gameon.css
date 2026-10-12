@@ -248,6 +248,9 @@
 .go-key.green {
   background: var(--green);
 }
+.go-key.orange {
+  background: var(--orange);
+}
 .go-key.purple {
   background: var(--purple);
 }

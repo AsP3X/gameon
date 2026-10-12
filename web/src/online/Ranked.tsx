@@ -1,63 +1,92 @@
-/* Ranked: the hub's way into the ranked queue, and the ladder. Nothing here works a rating, a tier
-   or a cooldown out. The number, the tier's name, the placement flag and the time the queue opens
-   again are the server's (`Me.rating`, `Me.cooldownUntil`, `GET /ladder`), and are shown as they came. */
+/* Ranked: Skull King's ranked page, as design/skt.pen draws it (`Skull King · ranked` and its
+   states), and the ladder. Nothing here works a rating, a tier or a cooldown out. The number, the
+   tier's name, the placement flag, the season and whether the queue is closed for this player are
+   the server's (`Me.rating`, `Me.cooldownUntil`, `GET /config`, `GET /ladder`), and are shown as
+   they came. The standard rules are the ones the server says it plays (`ServerConfig.standard`). */
 import { useEffect, useState } from 'react';
-import type { Online } from '../net/online';
-import type { LadderEntry, Me, Season, UserId } from '../protocol/generated';
+import type { ReactNode } from 'react';
+import { TIERS } from '../gameon/catalog';
+import type { Go } from '../gameon/Frame';
+import { Icon } from '../gameon/icons';
+import { Rules } from '../game';
+import type { Online, OnlineState } from '../net/online';
+import type { GameSettings, LadderEntry, Season, UserId } from '../protocol/generated';
+import { EXTRAS, formatName, scoringName } from '../skullking/rulesets';
 import { Sound } from '../sound/sound';
 import { whole } from '../tableview/dom';
+import { useAhead } from './ahead';
 import { failureText } from './copy';
-import { Avatar, Head, RatingBadge } from './parts';
+import { Avatar, Bar, Head, Page, RatingBadge } from './parts';
 
-/** How often the hub looks at the clock while the ranked queue is closed for this player. */
-const COOLDOWN_TICK_MS = 1000;
-const MINUTE_MS = 60_000;
+/** Where each tier above the lowest starts, on the rating's number (docs/protocol.md §4). For reading only: a player's tier is the name the server sent. */
+const FLOORS = [8, 16, 24, 32, 40, 48];
+const bandOf = (i: number): string =>
+  i === 0
+    ? `below ${FLOORS[0]}`
+    : i === TIERS.length - 1
+      ? `from ${FLOORS[i - 1]}`
+      : `${FLOORS[i - 1]} to ${FLOORS[i] - 1}`;
 
-/**
- * How long until `until` on the server's clock, or null when that time has passed or there is none.
- * The server decides when the queue opens again; this only counts down to the time it named.
- */
-function useTimeLeft(online: Online, until: number | null): number | null {
-  const [now, setNow] = useState(() => online.serverNow());
-  useEffect(() => {
-    if (until == null) return;
-    const tick = (): void => setNow(online.serverNow());
-    tick();
-    const timer = setInterval(tick, COOLDOWN_TICK_MS);
-    return () => clearInterval(timer);
-  }, [online, until]);
-  return until != null && until > now ? until - now : null;
+const COUNT = ['No', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight'];
+/** A season is a UTC calendar quarter, so its days are named in UTC: the same dates for everyone. */
+const LAST_DAY = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'long', timeZone: 'UTC' });
+
+/** The rules of a ranked table, a line each: what is played, and what is left out of the deck. */
+function StandardRules({ rules }: { rules: GameSettings }) {
+  const rounds = Rules.FORMATS[rules.format].seq.length;
+  const lines: { on: boolean; text: string; note?: string }[] = [
+    { on: true, text: `${COUNT[rules.maxPlayers] ?? rules.maxPlayers} players` },
+    { on: true, text: `${scoringName(rules.scoring)} scoring` },
+    { on: true, text: formatName(rules.format), note: `${rounds} rounds` },
+    ...EXTRAS.map(([key, name]) => ({ on: rules[key], text: rules[key] ? name : `No ${name.toLowerCase()}` })),
+  ];
+  return (
+    <section className="on-block" aria-labelledby="on-standard">
+      <h2 className="label" id="on-standard">
+        The standard rules
+      </h2>
+      <ul className="on-lines">
+        {lines.map((line) => (
+          <li key={line.text} className={line.on ? undefined : 'off'}>
+            <Icon name={line.on ? 'check' : 'minus'} />
+            <b>{line.text}</b>
+            {line.note && <small>{line.note}</small>}
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
 }
 
-/** "14 min", "3 h 45 min", "24 h": a cooldown is minutes the first time and can be a day. Rounded up, so it never says too little. */
-export function waitText(ms: number): string {
-  if (ms < MINUTE_MS) return 'less than a minute';
-  const minutes = Math.ceil(ms / MINUTE_MS),
-    hours = Math.floor(minutes / 60),
-    rest = minutes % 60;
-  return [hours ? `${hours} h` : '', rest ? `${rest} min` : ''].filter(Boolean).join(' ');
-}
-
-export interface RankedSectionProps {
+export interface RankedScreenProps {
   online: Online;
-  me: Me | null;
-  live: boolean;
+  state: OnlineState;
+  go: Go;
+  onBack: () => void;
   onLadder: () => void;
   onSignUp: () => void;
+  /** What stands between the player and the server, if anything. */
+  children?: ReactNode;
 }
 
-/** The hub's ranked block: the player's rating, the way into the queue, and the ladder. */
-export function RankedSection({ online, me, live, onLadder, onSignUp }: RankedSectionProps) {
+/** The one door into the ranked queue: no rules to pick, no bots to seat. */
+export function RankedScreen({ online, state, go, onBack, onLadder, onSignUp, children }: RankedScreenProps) {
+  const me = state.me,
+    live = state.status === 'online',
+    season = state.config?.season ?? null,
+    standard = state.config?.standard ?? null;
   const [finding, setFinding] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const left = useTimeLeft(online, me?.cooldownUntil ?? null);
-  const to = (go: () => void) => () => {
+  // The server closed ranked for this player until a time it named. The page says so, and no more.
+  const closed = useAhead(online, me?.cooldownUntil ?? null);
+  const guest = me?.guest === true;
+  const to = (follow: () => void) => () => {
     Sound.play('tap');
-    go();
+    follow();
   };
   const find = (): void => {
-    // While the server's cooldown runs, nothing is sent: the answer is known.
-    if (left != null || finding) return;
+    // A guest and a closed queue get no question sent: the answer is known.
+    if (!me || guest || closed || finding) return;
     Sound.play('confirm');
     setFinding(true);
     setError(null);
@@ -66,66 +95,102 @@ export function RankedSection({ online, me, live, onLadder, onSignUp }: RankedSe
       if (!r.ok) setError(failureText(r));
     });
   };
+  const rating = me?.rating ?? null;
 
-  // A guest cannot queue for ranked, so the hub does not ask the server to say so.
-  if (!me || me.guest)
-    return (
-      <section className="stack" aria-label="Ranked">
-        <span className="label">Ranked</span>
-        <p className="muted">Ranked needs an account.</p>
-        <button type="button" className="btn ghost" disabled={!me} onClick={to(onSignUp)}>
-          Create an account
-        </button>
-        <button type="button" className="btn ghost" disabled={!live} onClick={to(onLadder)}>
-          Ladder
-        </button>
-      </section>
-    );
-  const rating = me.rating;
   return (
-    <section className="stack" aria-label="Ranked">
-      <span className="label">Ranked</span>
-      <div className="plate">
-        <span className="grow">
-          <small>Rating</small>
-          {rating ? (
-            <RatingBadge rating={rating} />
+    <Page go={go}>
+      <Bar title="Ranked" onBack={onBack} me={me} status={state.status} />
+      <main className="on-body">
+        {children}
+        {season && (
+          <div className="on-season">
+            <span className="pill gold caps">Season {season.name}</span>
+            <b>The season runs until {LAST_DAY.format(season.endsAt - 1)}</b>
+            <p>Five placement games set your tier. Then every ranked game moves your rating.</p>
+          </div>
+        )}
+        <section aria-label="Ranked">
+          {guest ? (
+            <div className="notice">
+              <b>Ranked needs a free account.</b>
+              <button type="button" className="btn" onClick={to(onSignUp)}>
+                Sign up
+              </button>
+            </div>
           ) : (
-            <>
-              <b className="unrated">Unrated</b>
-              <small>Play a ranked game to get a rating.</small>
-            </>
+            me && (
+              <div className="plate">
+                <span className="grow">
+                  <small>Rating</small>
+                  {rating ? (
+                    <RatingBadge rating={rating} />
+                  ) : (
+                    <>
+                      <b className="unrated">Unrated</b>
+                      <small>Play a ranked game to get a rating.</small>
+                    </>
+                  )}
+                </span>
+                <button type="button" className="mini" disabled={!live} onClick={to(onLadder)}>
+                  Ladder
+                </button>
+              </div>
+            )
           )}
-        </span>
-        <button type="button" className="mini" disabled={!live} onClick={to(onLadder)}>
-          Ladder
-        </button>
-      </div>
-      {rating?.provisional && <p className="muted">These are placement games. Your tier is not settled yet.</p>}
-      {left != null && (
-        <div className="notice" role="status">
-          <b>Ranked is closed for you</b>
-          <p>You forfeited a ranked game. It opens again in {waitText(left)}.</p>
-        </div>
-      )}
-      <button type="button" className="btn blue" disabled={!live || finding || left != null} onClick={find}>
-        Find a ranked game
-      </button>
-      {error ? (
-        <p className="alert" role="alert">
-          {error}
-        </p>
-      ) : (
-        <p className="muted">
-          The standard rules against other pirates, no bots. Leaving a ranked game, losing your seat, or staying away
-          for most of it scores last place and starts a cooldown.
-        </p>
-      )}
-    </section>
+          {closed && !guest && (
+            <div className="notice" role="status">
+              <span className="pill red">Cooldown</span>
+              <b>Ranked is closed for you</b>
+              <p>You forfeited a ranked game.</p>
+            </div>
+          )}
+          <button
+            type="button"
+            className="btn blue"
+            disabled={!live || !me || guest || closed || finding}
+            onClick={find}
+          >
+            Find a ranked game
+          </button>
+          <p className="on-lead">This quarter. The standard rules. No bots.</p>
+          {error ? (
+            <p className="alert" role="alert">
+              {error}
+            </p>
+          ) : (
+            <p className="muted">
+              Leaving a ranked game, losing your seat, or staying away for most of it scores last place and starts a
+              cooldown.
+            </p>
+          )}
+        </section>
+        {standard && <StandardRules rules={standard} />}
+        <section className="on-block" aria-labelledby="on-tiers">
+          <h2 className="label" id="on-tiers">
+            Tiers
+          </h2>
+          <ol className="on-lines" reversed>
+            {TIERS.map((tier, i) => ({ tier, band: bandOf(i) }))
+              .reverse()
+              .map(({ tier, band }, i) => {
+                // The player's tier is the name the server sent, found here by that name.
+                const mine = rating != null && rating.tier === tier;
+                return (
+                  <li key={tier} className={mine ? 'you' : undefined}>
+                    {i === 0 && <Icon name="crown" />}
+                    <b>{tier}</b>
+                    {mine && <span className="pill blue">You · {whole(rating.value)}</span>}
+                    <small>{band}</small>
+                  </li>
+                );
+              })}
+          </ol>
+        </section>
+      </main>
+    </Page>
   );
 }
 
-/** A season is a UTC calendar quarter, so its days are named in UTC: the same dates for everyone. */
 const DAY = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
 /** `endsAt` is the first millisecond of the next season: the last day of this one is the day before. */
 const seasonDays = (season: Season): string => `${DAY.format(season.startsAt)} – ${DAY.format(season.endsAt - 1)}`;

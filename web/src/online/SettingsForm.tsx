@@ -1,246 +1,194 @@
+/* The rules of a table, as design/skt.pen draws them (`Friends · new game`, `Public · new game`):
+   the same cards the solo setup has, and for a new table the switch that says whether it seats
+   bots. A table of friends and a public table are the same form with other words.
+
+   There is no control for the seats, the pace or the bots' skill. A new table is sent with the
+   fixed ones (`FIXED`), and a table whose rules are changed keeps the ones it has. */
 import { useState } from 'react';
-import type { ReactNode } from 'react';
+import type { FormEvent } from 'react';
+import type { Go } from '../gameon/Frame';
 import { Rules } from '../game';
 import type { Outcome } from '../net/online';
-import type { BotLevel, Format, GameSettings, Scoring, Visibility } from '../protocol/generated';
+import type { GameSettings, Me, Visibility } from '../protocol/generated';
+import { EXTRAS, FORMATS, SCORINGS } from '../skullking/rulesets';
 import { Sound } from '../sound/sound';
 import { failureText } from './copy';
-import { BackIcon } from './icons';
-import { MAX_SEATS, PACES } from './settings';
+import { Bar, Page } from './parts';
 
-const LEVELS: readonly { value: BotLevel; name: string; desc: string }[] = [
-  { value: 'easy', name: 'Easy', desc: 'Makes mistakes' },
-  { value: 'normal', name: 'Normal', desc: 'Solid play' },
-  { value: 'hard', name: 'Hard', desc: 'Counts cards' },
-];
-const SCORINGS: readonly { value: Scoring; name: string; desc: string }[] = [
-  { value: 'classic', name: "Skull King's", desc: 'Classic, high risk' },
-  { value: 'rascal', name: "Rascal's", desc: '10 per card dealt' },
-];
-const VISIBILITIES: readonly { value: Visibility; name: string; desc: string }[] = [
-  { value: 'private', name: 'Private', desc: 'Code only' },
-  { value: 'public', name: 'Public', desc: 'Listed for everyone' },
-];
-const EXTRAS: readonly { key: 'abilities' | 'loot' | 'kraken' | 'whale'; name: string; desc: string }[] = [
-  {
-    key: 'abilities',
-    name: 'Pirate abilities',
-    desc: 'Win a trick with a Pirate to use its power: Helmsman, Smuggler, Gambler, Seer or Giant.',
+/** What a new table is, in the words of its page. */
+const NEW: Record<Visibility, { title: string; pill: string; intro: string; submit: string; hint: string }> = {
+  private: {
+    title: 'Your table',
+    pill: 'Private',
+    intro: 'Friends only, with a code. You pick the rules.',
+    submit: 'Open table',
+    hint: 'The table starts when two pirates are seated and ready. A bot is not the second.',
   },
-  { key: 'loot', name: 'Loot cards', desc: 'Win a Loot to form an alliance: +20 each if both make their bids.' },
-  { key: 'kraken', name: 'Kraken', desc: 'Swallows the trick. Nobody wins it.' },
-  { key: 'whale', name: 'White Whale', desc: 'Special cards stop counting; the highest number wins.' },
-];
-const FORMATS = Object.entries(Rules.FORMATS) as [Format, (typeof Rules.FORMATS)[Format]][];
-
-function Choice<T extends string>(props: {
-  label: string;
-  value: T;
-  options: readonly { value: T; name: string; desc: string }[];
-  onPick: (value: T) => void;
-}): ReactNode {
-  return (
-    <section className="stack">
-      <span className="label">{props.label}</span>
-      <div className="seg">
-        {props.options.map((o) => (
-          <button
-            key={o.value}
-            type="button"
-            aria-pressed={props.value === o.value}
-            onClick={() => props.onPick(o.value)}
-          >
-            {o.name}
-            <small>{o.desc}</small>
-          </button>
-        ))}
-      </div>
-    </section>
-  );
-}
+  public: {
+    title: 'Public table',
+    pill: 'Public',
+    intro: 'Anyone can see the table. You pick the rules.',
+    submit: 'List table',
+    hint: 'A public table can start once a second pirate sits down.',
+  },
+};
 
 export interface SettingsFormProps {
-  title: string;
-  submit: string;
-  initial: GameSettings;
+  go: Go;
+  me: Me | null;
   /**
-   * Who can join a new table, as the form opens. Without it the form does not ask: a table's
-   * visibility is chosen when it is created and no message changes it afterwards.
+   * The table to open: with a code only, or listed for everyone. Without it the form changes the
+   * rules of a table that is already open, and asks neither who can join nor about bots: no
+   * message changes those afterwards.
    */
   visibility?: Visibility;
-  /** A table that already has this many at it cannot have fewer seats. */
-  minSeats: number;
-  /** Shown under the form: what saving will do besides saving. */
-  note?: string;
+  initial: GameSettings;
   disabled: boolean;
   onBack: () => void;
-  onSubmit: (settings: GameSettings, visibility: Visibility) => Promise<Outcome>;
+  /** `seatBots` is the switch of a new table. It is true where the form does not ask. */
+  onSubmit: (settings: GameSettings, seatBots: boolean) => Promise<Outcome>;
 }
 
-/** The rules of an online table: the "New table" screen, and the host's "Table rules". */
-export function SettingsForm({
-  title,
-  submit,
-  initial,
-  visibility,
-  minSeats,
-  note,
-  disabled,
-  onBack,
-  onSubmit,
-}: SettingsFormProps) {
+export function SettingsForm({ go, me, visibility, initial, disabled, onBack, onSubmit }: SettingsFormProps) {
   const [settings, setSettings] = useState(initial);
-  const [who, setWho] = useState<Visibility>(visibility ?? 'private');
+  const [seatBots, setSeatBots] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const words = visibility ? NEW[visibility] : null;
   const set = (patch: Partial<GameSettings>): void => {
     Sound.play('select');
+    setError(null);
     setSettings((s) => ({ ...s, ...patch }));
   };
-  const seats = settings.maxPlayers;
-  const most = Math.floor(Rules.buildDeck(settings).length / seats);
-  const capped = Rules.FORMATS[settings.format].seq.some((c) => c > most);
-
-  const send = (): void => {
+  const send = (e: FormEvent): void => {
+    e.preventDefault();
+    if (busy || disabled) return;
     Sound.play('confirm');
     setBusy(true);
     setError(null);
-    void onSubmit(settings, who).then((r) => {
+    void onSubmit(settings, seatBots).then((r) => {
       setBusy(false);
       if (!r.ok) setError(failureText(r));
     });
   };
 
   return (
-    <>
-      <div className="wrap">
-        <div className="row head">
-          <button
-            type="button"
-            className="icon-btn"
-            aria-label="Back"
-            onClick={() => {
-              Sound.play('back');
-              onBack();
-            }}
-          >
-            <BackIcon />
-          </button>
-          <h2 className="grow">{title}</h2>
-        </div>
-        <div className="stack sections">
-          {visibility && (
-            <Choice
-              label="Who can join"
-              value={who}
-              options={VISIBILITIES}
-              onPick={(value) => {
-                Sound.play('select');
-                setWho(value);
-              }}
-            />
-          )}
-          <section className="stack">
-            <span className="label">Seats</span>
-            <div className="row seats-row">
-              <span className="grow">
-                Up to {seats} pirates<small>Fill open seats with friends or bots at the table.</small>
-              </span>
-              <span className="stepper">
-                <button
-                  type="button"
-                  className="sbtn"
-                  aria-label="Fewer seats"
-                  disabled={seats <= minSeats}
-                  onClick={() => set({ maxPlayers: seats - 1 })}
-                >
-                  −
-                </button>
-                <output className="num" aria-label="Seats">
-                  {seats}
-                </output>
-                <button
-                  type="button"
-                  className="sbtn"
-                  aria-label="More seats"
-                  disabled={seats >= MAX_SEATS}
-                  onClick={() => set({ maxPlayers: seats + 1 })}
-                >
-                  +
-                </button>
-              </span>
+    <Page go={go}>
+      <Bar title={words?.title ?? 'Table rules'} onBack={onBack} me={me} />
+      <form className={words ? 'on-body wide on-grid on-setup' : 'on-body wide on-grid on-setup rules'} onSubmit={send}>
+        {words && (
+          <>
+            <div className="on-intro">
+              <span className="pill blue">{words.pill}</span>
+              <p>{words.intro}</p>
             </div>
-          </section>
-          <Choice
-            label="Bot skill"
-            value={settings.botLevel}
-            options={LEVELS}
-            onPick={(botLevel) => set({ botLevel })}
-          />
-          <Choice label="Scoring" value={settings.scoring} options={SCORINGS} onPick={(scoring) => set({ scoring })} />
-          <section className="stack">
-            <span className="label">Rounds</span>
-            {FORMATS.map(([key, f]) => (
-              <div className="seg one" key={key}>
-                <button type="button" aria-pressed={settings.format === key} onClick={() => set({ format: key })}>
-                  {f.name}
-                  <small>{f.desc}</small>
-                  <span className="fmt">
-                    {f.seq.map((c, i) => (
-                      <i key={i}>{c}</i>
+            <section className="on-bots" aria-labelledby="on-bots">
+              <h2 className="label" id="on-bots">
+                Bots
+              </h2>
+              <button
+                type="button"
+                className="toggle"
+                aria-pressed={seatBots}
+                onClick={() => {
+                  Sound.play(seatBots ? 'toggleOff' : 'toggleOn');
+                  setSeatBots(!seatBots);
+                }}
+              >
+                <span className="grow">Seat bots</span>
+                <span className="switch"></span>
+              </button>
+            </section>
+          </>
+        )}
+        <section className="sk-rounds" aria-labelledby="on-format">
+          <h2 className="label" id="on-format">
+            Rounds
+          </h2>
+          <div className="seg sk-formats" role="group" aria-labelledby="on-format">
+            {FORMATS.map(([format, name]) => {
+              const rounds = Rules.FORMATS[format].seq;
+              return (
+                <button
+                  key={format}
+                  type="button"
+                  aria-pressed={settings.format === format}
+                  onClick={() => set({ format })}
+                >
+                  {name}
+                  <small>{rounds.length} rounds</small>
+                  <span className="fmt" aria-hidden="true">
+                    {rounds.map((cards, i) => (
+                      <i key={i}>{cards}</i>
                     ))}
                   </span>
                 </button>
-              </div>
-            ))}
-            {capped && (
-              <p className="muted">
-                With {seats} pirates each hand tops out at {most} cards.
-              </p>
-            )}
-          </section>
-          <Choice label="Pace" value={settings.pace} options={PACES} onPick={(pace) => set({ pace })} />
-          <section className="stack">
-            <span className="label">Advanced rules</span>
-            {EXTRAS.map((x) => (
+              );
+            })}
+          </div>
+        </section>
+        <section className="on-scoring" aria-labelledby="on-scoring">
+          <h2 className="label" id="on-scoring">
+            Scoring
+          </h2>
+          <div className="seg" role="group" aria-labelledby="on-scoring">
+            {SCORINGS.map(([scoring, name, note]) => (
               <button
-                key={x.key}
+                key={scoring}
+                type="button"
+                aria-pressed={settings.scoring === scoring}
+                onClick={() => set({ scoring })}
+              >
+                {name}
+                <small>{note}</small>
+              </button>
+            ))}
+          </div>
+        </section>
+        <section className="sk-extras" aria-labelledby="on-extras">
+          <h2 className="label" id="on-extras">
+            Advanced
+          </h2>
+          <div className="sk-extras-list">
+            {EXTRAS.map(([key, name, note]) => (
+              <button
+                key={key}
                 type="button"
                 className="toggle"
-                aria-pressed={settings[x.key]}
+                aria-pressed={settings[key]}
                 onClick={() => {
-                  Sound.play(settings[x.key] ? 'toggleOff' : 'toggleOn');
-                  setSettings((s) => ({ ...s, [x.key]: !s[x.key] }));
+                  Sound.play(settings[key] ? 'toggleOff' : 'toggleOn');
+                  setError(null);
+                  setSettings((s) => ({ ...s, [key]: !s[key] }));
                 }}
               >
                 <span className="grow">
-                  {x.name}
-                  <small>{x.desc}</small>
+                  {name}
+                  <small>{note}</small>
                 </span>
                 <span className="switch"></span>
               </button>
             ))}
-          </section>
-        </div>
-      </div>
-      <div className="footbar">
-        <div>
-          {error ? (
-            <p className="foot-hint alert" role="alert">
+          </div>
+        </section>
+        <div className="sk-start">
+          {error && (
+            <p className="alert" role="alert">
               {error}
             </p>
-          ) : disabled ? (
-            <p className="foot-hint" role="status">
-              Not connected. Trying again…
-            </p>
-          ) : (
-            note && <p className="foot-hint">{note}</p>
           )}
-          <button type="button" className="btn" disabled={disabled || busy} onClick={send}>
-            {submit}
+          <button type="submit" className="btn" disabled={disabled || busy} aria-busy={busy}>
+            {words?.submit ?? 'Save rules'}
           </button>
+          <div className="sk-hints">
+            {disabled ? (
+              <p role="status">Not connected. Trying again…</p>
+            ) : (
+              <p>{words?.hint ?? "Saving new rules clears everyone's ready."}</p>
+            )}
+          </div>
         </div>
-      </div>
-    </>
+      </form>
+    </Page>
   );
 }

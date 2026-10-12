@@ -18,8 +18,9 @@ const COPY: Partial<Record<Failure['code'], string>> = {
   USERNAME_INVALID: "That username can't be used. Use 3 to 16 letters, digits or underscores.",
   INVALID_CREDENTIALS: 'Wrong username or password.',
   ALREADY_REGISTERED: 'This pirate already has an account.',
-  ACCOUNT_REQUIRED: 'Ranked needs an account.',
-  // The server's message for this carries no time either: `Me.cooldownUntil` does, and the hub shows it.
+  ACCOUNT_REQUIRED: 'Ranked needs a free account.',
+  BOTS_DISABLED: 'This table does not seat bots.',
+  // The server's message for this carries no time. `Me.cooldownUntil` does, and the page draws none.
   // A forfeit is a ranked game that was left, one the player lost their seat in by missing two turns
   // while offline, or one they were away from for most of its rounds.
   QUEUE_COOLDOWN: 'You forfeited a ranked game. Ranked is closed for you for a while.',

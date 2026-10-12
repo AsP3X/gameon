@@ -1,7 +1,8 @@
 /* Four browsers, one table: plan item C8.
 
-   Four browser contexts are four guests. One creates a private lobby, three join by its code, a
-   bot takes the fifth seat, and they play a whole game through the page, with clicks and keys. On
+   Four browser contexts are four guests. One opens a table of friends, three join by its code,
+   and they play a whole game through the page, with clicks and keys. A table has four seats, so
+   the four of them fill it. On
    the way one of them reloads in the middle of a trick and has to be back on the same hand, and one
    of them tries to cheat from "the console" and has to be refused without anything changing.
 
@@ -41,10 +42,11 @@ async function until(done: () => boolean | Promise<boolean>, what: string, ms = 
   }
   throw new Error(`Never happened within ${ms / 1000} s: ${what}`);
 }
-const button = (p: Player, name: string | RegExp) => p.page.getByRole('button', { name });
+const button = (p: Player, name: string | RegExp, how: { exact?: boolean } = {}) =>
+  p.page.getByRole('button', { name, ...how });
 
 describe('four players at one table', () => {
-  it('seats four guests and a bot at a private table by its code', async () => {
+  it('seats four guests at a private table by its code', async () => {
     players = await Promise.all(
       ['Host', 'Second', 'Third', 'Fourth'].map((name) => Player.join(stage.browser, name, stage.url)),
     );
@@ -55,13 +57,13 @@ describe('four players at one table', () => {
       await p.page.locator('.sk-way[href="/skull-king/online"]').click();
       await expect.poll(() => p.page.locator('#online .pill').textContent()).toBe('Connected');
     }
-    const names = await Promise.all(players.map((p) => p.page.locator('#online .identity b').textContent()));
+    // The name is at the right of a wide window's bar. On this one it is in the page and not drawn.
+    const names = await Promise.all(players.map((p) => p.page.locator('#online .go-chip-text b').textContent()));
     expect(new Set(players.map((p) => p.framesOf('welcome')[0].me.user.id)).size).toBe(4);
 
-    await button(host, 'Create a table').click();
-    await host.page.getByLabel('More seats').click();
-    await button(host, /^Swift-n-Salty/).click();
-    await button(host, 'Create table').click();
+    await host.page.locator('#online a[href="/skull-king/online/new"]').click();
+    await button(host, /^Swift/).click();
+    await button(host, 'Open table').click();
     const code = (await host.page.locator('#online .code').textContent()) ?? '';
     expect(code).toMatch(/^[ABCDEFGHJKMNPQRSTUVWXYZ23456789]{6}$/);
     // The lobby is at the hub's address: the form that made it is not a page to come back to. The
@@ -74,25 +76,24 @@ describe('four players at one table', () => {
       await button(p, 'Join table').click();
       await expect.poll(() => p.page.locator('#online .code').textContent()).toBe(code);
     }
-    await button(host, 'Add a bot').click();
-    // Everybody sees the same five at the table, in the order they came.
+    // Everybody sees the same four at the table, in the order they came. It is full: no seat is left for a bot.
     for (const p of players)
-      await expect
-        .poll(() => p.page.locator('#online .member:not(.open) b').allTextContents())
-        .toEqual([...names, expect.any(String)]);
+      await expect.poll(() => p.page.locator('#online .member:not(.open) b').allTextContents()).toEqual(names);
+    await expect(button(host, 'Add a bot').count()).resolves.toBe(0);
 
     // Only the host can start, and only when every person is ready.
-    await expect(button(guests[0], 'Start game').count()).resolves.toBe(0);
+    await expect(button(guests[0], 'Start', { exact: true }).count()).resolves.toBe(0);
     for (const p of players) await button(p, "I'm ready").click();
-    await expect.poll(() => button(host, 'Start game').isEnabled()).toBe(true);
-    await button(host, 'Start game').click();
+    await expect.poll(() => button(host, 'Start', { exact: true }).isEnabled()).toBe(true);
+    await button(host, 'Start', { exact: true }).click();
     for (const p of players) await p.page.locator('#app .game').waitFor();
 
-    // Five seats: each context has one of its own, and the bot has the fifth. Which seat goes to
-    // whom is the server's to decide.
+    // Four seats: each context has one of its own. Which seat goes to whom is the server's to decide.
     expect(new Set(players.map((p) => p.seat)).size).toBe(4);
-    expect(host.start.seats).toHaveLength(5);
-    expect(host.start.seats.filter((s) => s.bot)).toHaveLength(1);
+    expect(host.start.seats).toHaveLength(4);
+    expect(host.start.seats.filter((s) => s.bot)).toHaveLength(0);
+    // What the table was opened with: the page has no control for these three.
+    expect(host.start.settings).toMatchObject({ maxPlayers: 4, pace: 'standard', botLevel: 'normal' });
     for (const p of players) expect(host.start.seats[p.seat].bot).toBe(false);
     const hands = players.map((p) => p.view.hand);
     expect(hands.every((h) => h.length === 5)).toBe(true);
@@ -206,7 +207,7 @@ describe('four players at one table', () => {
       const results = p.framesOf('game.over');
       expect(results).toHaveLength(1);
       expect(results[0].result.totals).toEqual(players[0].framesOf('game.over')[0].result.totals);
-      expect(results[0].result.totals).toHaveLength(5);
+      expect(results[0].result.totals).toHaveLength(4);
       // The result names the receiver's seat (§5.5).
       expect(results[0]).toMatchObject({ seat: p.seat });
       // Every step reached this page once and in order: after the last welcome the revisions count up by one.
@@ -232,7 +233,7 @@ describe('four players at one table', () => {
   it('takes everyone back to the lobby for the next game', async () => {
     for (const p of players) {
       await p.page.locator('#app .end [data-act="again"]').click({ timeout: 15_000 });
-      await expect.poll(() => p.page.locator('#online h2').textContent()).toBe('Table');
+      await expect.poll(() => p.page.locator('#online h1').textContent()).toMatch(/^(Your table|Table)$/);
       await expect.poll(() => p.page.locator('#online .member .pill.green').count()).toBe(0);
     }
   });

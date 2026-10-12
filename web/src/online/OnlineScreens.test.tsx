@@ -62,6 +62,16 @@ async function click(selector: string): Promise<void> {
   if (!el) throw new Error(`Nothing to click: ${selector}`);
   await clickOn(el, selector);
 }
+/** A door of the index, by its name: a link, a button, or a card that cannot be followed. */
+const door = (name: string): HTMLElement => {
+  const el = Array.from(document.querySelectorAll<HTMLElement>('#online .sk-way')).find(
+    (way) => way.querySelector('b')?.textContent === name,
+  );
+  if (!el) throw new Error(`No door is called "${name}"`);
+  return el;
+};
+/** Whether that door can be gone through: one that cannot is neither a link nor a button. */
+const isOpen = (name: string): boolean => door(name).getAttribute('aria-disabled') !== 'true';
 /** A click on the button with that label. */
 const press = (label: string): Promise<void> => clickOn(button(label), `"${label}"`);
 /** Type into a field React controls. */
@@ -103,13 +113,12 @@ function closePage(): void {
 const CLOCKS = { bidMs: 3000, playMs: 300, abilityMs: 300, trickEndMs: 100, roundEndMs: 200 };
 const makeServer = (store?: MockStore): MockServer =>
   new MockServer({ random: seeded(4), timers: CLOCKS, bot: { minMs: 40, maxMs: 80 }, store });
-/** From the home screen to the lobby of a new private table with three seats and five short rounds. */
+/** From the home screen to the lobby of a new private table with five short rounds. */
 async function createTable(): Promise<void> {
-  await click('#gameon a[href="/skull-king/online"]');
-  await press('Create a table');
-  await click('[aria-label="Fewer seats"]');
-  await press('Swift-n-Salty');
-  await press('Create table');
+  await click('.sk-home a[href="/skull-king/online"]');
+  await click('#online a[href="/skull-king/online/new"]');
+  await press('Swift');
+  await press('Open table');
 }
 
 beforeEach(() => {
@@ -143,17 +152,17 @@ describe('playing online', () => {
     });
     // The hub is up at once, and says it is still connecting.
     expect($('#app')?.hidden).toBe(true);
-    expect($('#online h2')?.textContent).toBe('Play online');
+    expect($('#online h1, #online h2')?.textContent).toBe('Online');
     expect(texts('#online .pill')).toEqual(['Connecting…']);
     expect($('#online .notice b')?.textContent).toBe('Finding the tavern…');
-    expect(button('Create a table').disabled).toBe(true);
+    expect(['Quick play', 'Public tables', 'Your table'].map(isOpen)).toEqual([false, false, false]);
     expect(button('Join with a code').disabled).toBe(true);
 
     await settle();
     expect(texts('#online .pill')).toEqual(['Connected']);
     expect($('#online .notice')).toBeNull();
-    expect($('#online .identity b')?.textContent).toMatch(/^Guest \d{4}$/);
-    expect(button('Create a table').disabled).toBe(false);
+    expect(['Quick play', 'Public tables', 'Your table'].map(isOpen)).toEqual([true, true, true]);
+    expect(button('Join with a code').disabled).toBe(false);
 
     // Back is back: the home screen, and the connection is given up.
     await click('[aria-label="Back"]');
@@ -181,45 +190,44 @@ describe('playing online', () => {
     await renderApp();
     await createTable();
 
-    // The lobby of the new table: a code to share, the host alone, two open seats.
-    expect($('#online h2')?.textContent).toBe('Table');
+    // The lobby of the new table: a code to share, the host alone, three open seats.
+    expect($('#online h1, #online h2')?.textContent).toBe('Your table');
+    expect(texts('#online .on-bar .pill')).toEqual(['Private']);
     expect($('#online .code')?.textContent).toMatch(/^[ABCDEFGHJKMNPQRSTUVWXYZ23456789]{6}$/);
     expect(texts('#online .member b').map((n) => n.replace(/\d/g, '#'))).toEqual(['Guest ####']);
     expect(texts('#online .member small')).toEqual(['Host · you']);
-    expect(texts('#online .member.open')).toHaveLength(2);
-    expect($('#online [aria-label="Rules"] small')?.textContent).toBe(
-      'Up to 3 pirates · Normal bots · Standard pace · No extra cards',
-    );
-    expect($('#online [aria-label="Rules"] b')?.textContent).toBe("Skull King's scoring · Swift-n-Salty");
+    expect(texts('#online .member.open')).toHaveLength(3);
+    expect($('#online .on-rules b')?.textContent).toBe('Swift · 5 rounds');
+    expect($('#online .on-rules small')?.textContent).toBe('Classic scoring');
     const waiting = 'The table can start once a second pirate sits down. Share the code.';
     expect($('#online .foot-hint')?.textContent).toBe(waiting);
-    expect(button('Start game').disabled).toBe(true);
+    expect(button('Start').disabled).toBe(true);
 
     // A bot takes a seat, but it is not the second pirate: ready or not, the host cannot start.
     await press('Add a bot');
-    expect(texts('#online .member small')).toEqual(['Host · you', 'Bot · Normal']);
-    expect($('#online [aria-label="Crew"] .label')?.textContent).toBe('Crew · 2 of 3');
+    expect(texts('#online .member small')).toEqual(['Host · you', 'Bot']);
+    expect($('#online .on-crew .label')?.textContent).toBe('Crew · 2 of 4');
     expect($('#online .foot-hint')?.textContent).toBe(waiting);
-    expect(button('Start game').disabled).toBe(true);
+    expect(button('Start').disabled).toBe(true);
     await press("I'm ready");
     expect(texts('#online .member .pill')).toEqual(['Ready']);
     expect(button('Not ready')).toBeDefined();
     expect($('#online .foot-hint')?.textContent).toBe(waiting);
-    expect(button('Start game').disabled).toBe(true);
+    expect(button('Start').disabled).toBe(true);
 
     // Somebody sits down: the table waits for them to be ready, and then the host may start.
     const friend = await connectRaw(server.transport());
     await settle();
     friend.send({ t: 'lobby.join', code: $('#online .code')?.textContent ?? '' });
     await settle();
-    expect(texts('#online .member small')).toEqual(['Host · you', 'Bot · Normal', 'Guest']);
+    expect(texts('#online .member small')).toEqual(['Host · you', 'Bot', 'Guest']);
     expect($('#online .foot-hint')?.textContent).toMatch(/^Waiting for Guest \d{4} to be ready\.$/);
-    expect(button('Start game').disabled).toBe(true);
+    expect(button('Start').disabled).toBe(true);
     friend.send({ t: 'lobby.ready', ready: true });
     await settle();
     expect($('#online .foot-hint')?.textContent).toBe('Everyone is ready. Start when you like.');
 
-    await press('Start game');
+    await press('Start');
     // The game is played at the renderer's table: the online screens step aside.
     expect($('#online')).toBeNull();
     expect($('#app')?.hidden).toBe(false);
@@ -254,29 +262,33 @@ describe('playing online', () => {
     await press('Add a bot');
     await press("I'm ready");
     await press('Change');
-    expect($('#online h2')?.textContent).toBe('Table rules');
-    expect($('#online .foot-hint')?.textContent).toBe("Saving new rules clears everyone's ready.");
-    // Two are at the table: it cannot have fewer seats than that.
-    await click('[aria-label="Fewer seats"]');
-    expect($('[aria-label="Fewer seats"]')).toHaveProperty('disabled', true);
-    await press('Hard');
+    expect($('#online h1, #online h2')?.textContent).toBe('Table rules');
+    expect($('#online .sk-hints')?.textContent).toBe("Saving new rules clears everyone's ready.");
+    // The rules are the cards of a new table. Who can join, and whether bots are seated, is not asked again.
+    expect($('#online .on-intro')).toBeNull();
+    expect(texts('#online .toggle .grow').map((t) => t.split(/(?=[A-Z])/)[0])).not.toContain('Seat bots');
+    expect(texts('#online .label')).toEqual(['Rounds', 'Scoring', 'Advanced']);
+    await press('Rascal');
+    await press('Kraken');
     await press('Save rules');
-    expect($('#online h2')?.textContent).toBe('Table');
-    expect($('#online [aria-label="Rules"] small')?.textContent).toBe(
-      'Up to 2 pirates · Hard bots · Standard pace · No extra cards',
-    );
-    expect(texts('#online .member small')).toEqual(['Host · you', 'Bot · Hard']);
+    expect($('#online h1, #online h2')?.textContent).toBe('Your table');
+    expect($('#online .on-rules b')?.textContent).toBe('Swift · 5 rounds');
+    expect($('#online .on-rules small')?.textContent).toBe('Rascal scoring · Kraken');
+    expect(texts('#online .member small')).toEqual(['Host · you', 'Bot']);
     expect(texts('#online .member .pill')).toEqual(['Not ready']);
-    expect($('#online .member.open')).toBeNull();
-    expect(Array.from(document.querySelectorAll('button')).some((b) => b.textContent === 'Add a bot')).toBe(false);
+    // The table is as large as it was: the form has no control for its seats.
+    expect($('#online .on-crew .label')?.textContent).toBe('Crew · 2 of 4');
 
     await click('[aria-label="Remove Anne"]');
     expect(texts('#online .member small')).toEqual(['Host · you']);
     // The rules the table was made with are remembered on this device for the next one.
     expect(JSON.parse(localStorage.getItem('skullking-tavern.lobby.v1') ?? '{}')).toMatchObject({
-      maxPlayers: 2,
+      maxPlayers: 4,
       format: 'swift',
-      botLevel: 'hard',
+      scoring: 'rascal',
+      kraken: true,
+      botLevel: 'normal',
+      pace: 'standard',
     });
   });
 
@@ -322,11 +334,11 @@ describe('playing online', () => {
       await type('#table-code', code.toLowerCase());
       expect($('#online [role="alert"]')).toBeNull();
       await press('Join table');
-      expect($('#online h2')?.textContent).toBe('Table');
+      expect($('#online h1, #online h2')?.textContent).toBe('Table');
       expect($('#online .code')?.textContent).toBe(code);
       expect(texts('#online .member small')).toEqual(['Host', 'You']);
       // A guest readies and waits: the bots, the rules and the start are the host's.
-      expect(texts('#online button').filter((t) => ['Add a bot', 'Change', 'Start game'].includes(t))).toEqual([]);
+      expect(texts('#online button').filter((t) => ['Add a bot', 'Change', 'Start'].includes(t))).toEqual([]);
       expect($('#online .foot-hint')?.textContent).toBe('Say you are ready when you are set.');
       await press("I'm ready");
       expect($('#online .foot-hint')?.textContent).toMatch(/^Waiting for Guest \d{4} to be ready\.$/);
@@ -351,7 +363,7 @@ describe('playing online', () => {
       const me = framesOf(friend, 'lobby.state').at(-1)?.lobby.members[1];
       friend.send({ t: 'lobby.kick', userId: me?.kind === 'human' ? me.user.id : '' });
       await settle();
-      expect($('#online h2')?.textContent).toBe('Play online');
+      expect($('#online h1, #online h2')?.textContent).toBe('Online');
       expect($('#online .notice.gold b')?.textContent).toBe('The host removed you from the table');
       await press('OK');
       expect($('#online .notice')).toBeNull();
@@ -378,7 +390,7 @@ describe('playing online', () => {
       await settle();
       // The table is down and so is the seat in the lobby: this is the hub.
       expect($('#app')?.hidden).toBe(true);
-      expect($('#online h2')?.textContent).toBe('Play online');
+      expect($('#online h1, #online h2')?.textContent).toBe('Online');
       expect(session.table).toBeNull();
       expect($('#online .notice')).toBeNull();
       expect(framesOf(friend, 'lobby.state').at(-1)?.lobby.members).toHaveLength(2);
@@ -390,21 +402,43 @@ describe('playing online', () => {
       expect($('#online .notice.gold p')?.textContent).toMatch(
         /^You left before the end\. Final place: \d(st|nd|rd) of 3\.$/,
       );
-      expect($('#online h2')?.textContent).toBe('Play online');
+      expect($('#online h1, #online h2')?.textContent).toBe('Online');
       expect(session.table).toBeNull();
     });
+  });
+
+  it("opens the renderer's sound settings over an online screen, which takes no input meanwhile", async () => {
+    await renderApp();
+    await click('.sk-home a[href="/skull-king/online"]');
+    await settle();
+    // The renderer is at home under the online screens, and not to be seen.
+    expect($('#app')?.hidden).toBe(true);
+    expect($('#online')?.hasAttribute('inert')).toBe(false);
+    await click('#online .on-bar [data-act="soundSheet"]');
+    // Its sheet is the one thing it draws there. The screen behind it is out of reach.
+    expect($('#app .sheet')?.getAttribute('aria-label')).toBe('Sound settings');
+    expect($('#app')?.hidden).toBe(false);
+    expect($('#app')?.hasAttribute('data-behind')).toBe(true);
+    expect($('#online')?.hasAttribute('inert')).toBe(true);
+    expect($('#online h1')?.textContent).toBe('Online');
+    await click('[data-act="closeSheet"]');
+    expect($('#app .sheet')).toBeNull();
+    expect($('#app')?.hidden).toBe(true);
+    expect($('#online')?.hasAttribute('inert')).toBe(false);
+    // Nothing of this was the connection's business.
+    expect(texts('#online .pill')).toEqual(['Connected']);
   });
 
   it('takes the keyboard to the title of each screen it opens', async () => {
     await renderApp();
     await click('#gameon a[href="/skull-king/online"]');
     await settle();
-    expect(document.activeElement).toBe($('#online h2'));
-    expect(document.activeElement?.textContent).toBe('Play online');
+    expect(document.activeElement).toBe($('#online h1, #online h2'));
+    expect(document.activeElement?.textContent).toBe('Online');
     await press('Join with a code');
     expect(document.activeElement?.textContent).toBe('Join a table');
     await click('#online [aria-label="Back"]');
-    expect(document.activeElement?.textContent).toBe('Play online');
+    expect(document.activeElement?.textContent).toBe('Online');
   });
 
   it('tells the player to reload when the server no longer speaks the protocol of this page', async () => {
@@ -439,7 +473,7 @@ describe('playing online', () => {
     expect($('#online .notice[role="alert"] p')?.textContent).toBe(
       'This page is older than the server. Reload to update.',
     );
-    expect(button('Create a table').disabled).toBe(true);
+    expect(isOpen('Your table')).toBe(false);
     expect(reloadPage).not.toHaveBeenCalled();
     await press('Reload to update');
     expect(reloadPage).toHaveBeenCalledTimes(1);
@@ -470,7 +504,7 @@ describe('playing online', () => {
     expect(texts('#online .pill')).toEqual(['Offline']);
     expect($('#online .notice b')?.textContent).toBe("Can't reach the tavern");
     expect(texts('#online .notice .btn')).toEqual(['Try now', 'Play offline']);
-    expect(button('Create a table').disabled).toBe(true);
+    expect(isOpen('Your table')).toBe(false);
     server.restore();
     await press('Try now');
     await settle();
@@ -505,17 +539,16 @@ describe('playing online', () => {
     async function seated(transport?: Transport): Promise<void> {
       await renderApp(transport);
       await click('#gameon a[href="/skull-king/online"]');
-      await press('Create a table');
-      await click('[aria-label="Fewer seats"]');
-      await press('Swift-n-Salty');
-      await press('Create table');
+      await click('#online a[href="/skull-king/online/new"]');
+      await press('Swift');
+      await press('Open table');
       friend = await connectRaw(server.transport('the-friend'));
       await settle();
       friend.send({ t: 'lobby.join', code: $('#online .code')?.textContent ?? '' });
       friend.send({ t: 'lobby.ready', ready: true });
       await press('Add a bot');
       await press("I'm ready");
-      await press('Start game');
+      await press('Start');
       expect(ui.screen).toBe('game');
     }
     const seatOf = (name: RegExp): HTMLElement => {
@@ -633,7 +666,7 @@ describe('playing online', () => {
       friend.send({ t: 'lobby.join', code: $('#online .code')?.textContent ?? '' });
       friend.send({ t: 'lobby.ready', ready: true });
       await press("I'm ready");
-      await press('Start game');
+      await press('Start');
       $('#bid')?.dispatchEvent(new KeyboardEvent('keydown', { key: '2', bubbles: true, cancelable: true }));
       await click('[data-act="bid"]');
       friend.send({ t: 'game.bid', at: { round: 0, trick: 0 }, bid: 0 });
@@ -668,9 +701,9 @@ describe('playing online', () => {
       await press('Add a bot');
       const code = $('#online .code')?.textContent;
       await reload();
-      expect($('#online h2')?.textContent).toBe('Table');
+      expect($('#online h1, #online h2')?.textContent).toBe('Your table');
       expect($('#online .code')?.textContent).toBe(code);
-      expect(texts('#online .member small')).toEqual(['Host · you', 'Bot · Normal']);
+      expect(texts('#online .member small')).toEqual(['Host · you', 'Bot']);
     });
 
     it('comes back to the hub when that is what the player was looking at: the address is still the hub', async () => {
@@ -680,7 +713,7 @@ describe('playing online', () => {
       expect(places.path()).toBe('/skull-king/online');
       await reload();
       expect(places.path()).toBe('/skull-king/online');
-      expect($('#online h2')?.textContent).toBe('Play online');
+      expect($('#online h1, #online h2')?.textContent).toBe('Online');
       expect(texts('#online .pill')).toEqual(['Connected']);
       // Back is still the way out, to the home screen it was reached from.
       await click('[aria-label="Back"]');
@@ -715,7 +748,7 @@ describe('playing online', () => {
       expect(session.table).toBeNull();
       expect(ui.screen).toBe('home');
       expect($('#app')?.hidden).toBe(true);
-      expect($('#online h2')?.textContent).toBe('Play online');
+      expect($('#online h1, #online h2')?.textContent).toBe('Online');
       expect($('#online .notice.gold b')?.textContent).toBe('You lost your seat');
       expect($('#online .notice.gold p')?.textContent).toBe(
         'You were away for two turns in a row. The game goes on without you.',
@@ -736,7 +769,7 @@ describe('playing online', () => {
       expect(session.table).toBeNull();
       expect(ui.screen).toBe('home');
       expect($('#app')?.hidden).toBe(true);
-      expect($('#online h2')?.textContent).toBe('Play online');
+      expect($('#online h1, #online h2')?.textContent).toBe('Online');
       expect($('#online .notice.gold b')?.textContent).toBe('Your last game is over');
       expect($('#online .notice.gold p')?.textContent).toMatch(
         /^You lost your seat before the end\. Final place: (1st|2nd) of 2\.$/,
@@ -764,7 +797,7 @@ describe('playing online', () => {
       await click('#app .g-top [data-act="home"]');
       await click('[data-act="leaveTable"]');
       await settle();
-      expect($('#online h2')?.textContent).toBe('Play online');
+      expect($('#online h1, #online h2')?.textContent).toBe('Online');
       // The hub takes the table's place: there is no table to go back to.
       expect(places.path()).toBe('/skull-king/online');
       expect(places.entries().paths).not.toContain('/skull-king/table');
@@ -775,7 +808,7 @@ describe('playing online', () => {
       await click('#app .g-top [data-act="home"]');
       await click('[data-act="leaveTable"]');
       await settle();
-      expect($('#online h2')?.textContent).toBe('Play online');
+      expect($('#online h1, #online h2')?.textContent).toBe('Online');
       closePage();
       await settle(120_000);
 
@@ -785,7 +818,7 @@ describe('playing online', () => {
       expect($('#online')).toBeNull();
       await click('#gameon a[href="/skull-king/online"]');
       await settle();
-      expect($('#online h2')?.textContent).toBe('Play online');
+      expect($('#online h1, #online h2')?.textContent).toBe('Online');
       expect(session.table).toBeNull();
       expect($('#online .notice.gold p')?.textContent).toMatch(
         /^You left before the end\. Final place: (1st|2nd) of 2\.$/,
@@ -827,53 +860,50 @@ describe('the addresses of the online screens', () => {
 
   it('connects by itself and opens the page its address names', async () => {
     await openAt('/skull-king/online/join');
-    expect($('#online h2')?.textContent).toBe('Join a table');
+    expect($('#online h1, #online h2')?.textContent).toBe('Join a table');
     expect($('#app')?.hidden).toBe(true);
     closePage();
     await openAt('/skull-king/online/public');
-    expect($('#online h2')?.textContent).toBe('Public tables');
+    expect($('#online h1, #online h2')?.textContent).toBe('Public tables');
     closePage();
     await openAt('/skull-king/online/new');
-    expect($('#online h2')?.textContent).toBe('New table');
-    expect(button('Private').getAttribute('aria-pressed')).toBe('true');
+    expect($('#online h1, #online h2')?.textContent).toBe('Your table');
+    expect(texts('#online .on-intro .pill')).toEqual(['Private']);
     closePage();
     await openAt('/skull-king/online/public/new');
-    expect($('#online h2')?.textContent).toBe('New table');
-    expect(button('Public').getAttribute('aria-pressed')).toBe('true');
+    expect($('#online h1, #online h2')?.textContent).toBe('Public table');
+    expect(texts('#online .on-intro .pill')).toEqual(['Public']);
+    closePage();
+    await openAt('/skull-king/ranked');
+    expect($('#online h1, #online h2')?.textContent).toBe('Ranked');
+    expect(places.entries()).toEqual({ paths: ['/skull-king/ranked'], at: 0 });
     closePage();
     await openAt('/ladder');
-    expect($('#online h2')?.textContent).toBe('Ladder');
+    expect($('#online h1, #online h2')?.textContent).toBe('Ladder');
     closePage();
     await openAt('/profile');
-    expect($('#online h2')?.textContent).toBe('Your profile');
-  });
-
-  it('leads the ranked page, which is not built yet, to the hub that has its section', async () => {
-    await openAt('/skull-king/ranked');
-    expect(places.entries()).toEqual({ paths: ['/skull-king/online'], at: 0 });
-    expect($('#online h2')?.textContent).toBe('Play online');
-    expect(texts('#online .label')).toContain('Ranked');
+    expect($('#online h1, #online h2')?.textContent).toBe('Your profile');
   });
 
   it('moves the address with every page, and Back is the way the player came', async () => {
     await openAt('/skull-king');
     await click('#gameon a[href="/skull-king/online"]');
     await settle();
-    await press('Create a table');
+    await click('#online a[href="/skull-king/online/new"]');
     expect(places.entries()).toEqual({
       paths: ['/skull-king', '/skull-king/online', '/skull-king/online/new'],
       at: 2,
     });
     await click('[aria-label="Back"]');
-    expect($('#online h2')?.textContent).toBe('Play online');
+    expect($('#online h1, #online h2')?.textContent).toBe('Online');
     expect(places.entries().at).toBe(1);
 
-    await press('Browse tables');
+    await click('#online a[href="/skull-king/online/public"]');
     await press('Create a public table');
     expect(places.path()).toBe('/skull-king/online/public/new');
     // Back from a new public table is the list it was reached from, not the hub.
     await click('[aria-label="Back"]');
-    expect($('#online h2')?.textContent).toBe('Public tables');
+    expect($('#online h1, #online h2')?.textContent).toBe('Public tables');
     expect(places.path()).toBe('/skull-king/online/public');
     await click('[aria-label="Back"]');
     expect(places.path()).toBe('/skull-king/online');
@@ -895,23 +925,23 @@ describe('the addresses of the online screens', () => {
       });
     };
     await go(() => places.back());
-    expect($('#online h2')?.textContent).toBe('Play online');
+    expect($('#online h1, #online h2')?.textContent).toBe('Online');
     expect(texts('#online .pill')).toEqual(['Connected']);
     await go(() => places.back());
     expect($('#online')).toBeNull();
     expect($('.sk-home')).not.toBeNull();
     await go(() => places.forward());
     await settle();
-    expect($('#online h2')?.textContent).toBe('Play online');
+    expect($('#online h1, #online h2')?.textContent).toBe('Online');
     expect(texts('#online .pill')).toEqual(['Connected']);
     await go(() => places.forward());
-    expect($('#online h2')?.textContent).toBe('Join a table');
+    expect($('#online h1, #online h2')?.textContent).toBe('Join a table');
   });
 
   it('sits down at a table from a page opened by its address, and the lobby is at the hub', async () => {
     await openAt('/skull-king/online/new');
-    await press('Create table');
-    expect($('#online h2')?.textContent).toBe('Table');
+    await press('Open table');
+    expect($('#online h1, #online h2')?.textContent).toBe('Your table');
     // Opened by its address, the form has no way back: the hub takes its place.
     expect(places.entries()).toEqual({ paths: ['/skull-king/online'], at: 0 });
   });

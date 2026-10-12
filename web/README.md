@@ -26,7 +26,7 @@ Node 22.18+, 24.11+ or 26+. Vite+ warns on other versions.
 | `src/router/`                          | The page's addresses (`addresses.ts`), the router (`router.ts`) and the browser's history behind it (`places.ts`). See [Addresses](#addresses).                                                      |
 | `src/gameon/`                          | GameOn, the frame around the game, in React: the landing, Games, sign-up and sign-in. See [GameOn](#gameon-the-frame-around-the-game).                                                               |
 | `src/skullking/`                       | Skull King's pages inside GameOn, in React: its home and the solo setup. See [Skull King's home](#skull-kings-home) and [Solo](#solo).                                                               |
-| `src/online/`                          | The online screens, in React: hub, profile, public tables, the quick-play and ranked queue, the ladder, new table, join by code, the table's lobby.                                                  |
+| `src/online/`                          | The online screens, in React: the index, ranked, a new table, the table's lobby, the public tables, join by code, the queue, the ladder, the profile. See [The tables](#the-tables).                 |
 | `src/tableview/`                       | The table renderer, lifted from the legacy build. It owns `#app` and rebuilds it from HTML strings; React never renders inside it. `mountTavern()` is its only entry.                                |
 | `src/sound/`                           | Sound. Every effect is synthesised with Web Audio; the played card and the button press also have recorded takes in `samples/`. The home screen's music is the recordings in `music/`.               |
 | `src/styles/`                          | `tokens.css` (the custom properties), `tavern.css` (the renderer's markup), `online.css` (what the online screens add) and `gameon.css` (the frame's pages) and `skullking.css` (Skull King's home). |
@@ -49,19 +49,18 @@ the player was. `src/router/addresses.ts` is the whole list.
 | `/skull-king/one-screen`        | The renderer's new-game screen, for a game on one screen. It asks no server.        |
 | `/skull-king/table`             | The table: an offline game, or a seat on the server. The end of a game is here.     |
 | `/skull-king/score`             | The scoresheet for a game with real cards: its setup, its rounds and its end.       |
-| `/skull-king/online`            | The online hub. A lobby or a queue the server seated the player in is shown here.   |
-| `/skull-king/online/new`        | New table, set to private.                                                          |
+| `/skull-king/online`            | The online index. A lobby or a queue the server seated the player in is shown here. |
+| `/skull-king/ranked`            | The ranked page: the one way into the ranked queue.                                 |
+| `/skull-king/online/new`        | A new table of friends: private, with a code.                                       |
 | `/skull-king/online/join`       | Join by code.                                                                       |
 | `/skull-king/online/public`     | The public tables.                                                                  |
-| `/skull-king/online/public/new` | New table, set to public, reached from the list.                                    |
+| `/skull-king/online/public/new` | A new public table, reached from the list.                                          |
 | `/ladder`                       | The ladder.                                                                         |
 | `/profile`                      | The player's own profile.                                                           |
 | `/players/{id}`                 | Another player's page. `{id}` is a user id of the server's, and nothing else.       |
 
-`/skull-king/ranked` is taken for a page that is not built yet. Until it is, it leads to
-`/skull-king/online`. A path that is nobody's leads to `/skull-king`. In each case the address that
-was asked for is replaced by the one it leads to. `/api`, `/assets`, `/sw.js`, `/index.html` and `/manifest.json`
-are never pages.
+A path that is nobody's leads to `/skull-king`, and the address that was asked for is replaced by
+it. `/api`, `/assets`, `/sw.js`, `/index.html` and `/manifest.json` are never pages.
 
 How it behaves:
 
@@ -174,6 +173,42 @@ rounds and the advanced rules. There is no pace to choose, because a solo table 
   unfinished solo game per player.
 - The last setup is kept on the device (`skullking-tavern.solo.v1`), as a convenience.
 
+## The tables
+
+The index, the ranked page and the tables of friends and the public ones are drawn as
+`design/skt.pen` draws them (plan item W4): one column on a phone, three from 1000 px where a page
+has that much to show. They are pages of the frame (`Page` and `Bar` in `src/online/parts.tsx`),
+with Skull King's bar. A wide window has the sound settings and the player in it. The queue, the
+code, the ladder and the profile are the screens they were.
+
+- **`/skull-king/online`** is three doors. "Quick play" sends `queue.join` with `casual`. "Public
+  tables" and "Your table" are links to their pages. "Join with a code" is under them.
+- **`/skull-king/ranked`** is one door: "Find a ranked game" sends `queue.join` with `ranked`, and
+  nothing else. There are no rules to pick. The page lists the rules the server says it plays
+  (`ServerConfig.standard`), the season (`ServerConfig.season`) and the seven tiers. A guest reads
+  "Ranked needs a free account." and cannot join. An account whose `Me.cooldownUntil` is ahead of
+  the server's clock reads "Ranked is closed for you." and cannot join. No time is drawn: the page
+  only looks again when that time has come (`src/online/ahead.ts`).
+- **A new table** (`SettingsForm.tsx`) is the solo setup's cards: the five lengths, the two
+  scorings and the four extras (`src/skullking/rulesets.ts`). It has no control for the seats, the
+  pace or the bots' skill, and always sends `maxPlayers: 4`, `pace: 'standard'` and
+  `botLevel: 'normal'` (`FIXED` in `settings.ts`), whatever the device remembers. "Seat bots" is on
+  as the page opens. On, `lobby.create` leaves `allowBots` out. Off, it sends `allowBots: false`.
+  The host's "Table rules" is the same form without the pill and the switch: no message changes
+  who can join or whether bots are seated, and the seats, pace and skill stay what the table has.
+- **A waiting table** (`LobbyRoom.tsx`) shows the code of a private table and none of a public one.
+  "Add a bot" and the mark that removes a bot are the host's, and only at a table whose
+  `Lobby.allowBots` is not `false`. Start is enabled when two people are seated and every person
+  is ready. That is for feedback: the server decides.
+- **The public list** (`PublicTables.tsx`) is `GET /lobbies` as it came. A row with `hostColor` is
+  "{hostName}'s table". A row without one is the name the server sent and nothing else. Each row
+  says how many seats are taken, the length of the game, and "Bots" or "No bots" (`allowBots`
+  left out means bots).
+
+Whether a table seats bots is the server's to keep. The page draws what `Lobby` and `LobbySummary`
+say, and remembers nothing of the switch itself. A server that drops `allowBots` therefore gets a
+table that seats bots, and the page says so.
+
 ## Online
 
 `docs/protocol.md` is the contract, and the server is the only authority
@@ -220,7 +255,8 @@ rounds and the advanced rules. There is no pace to choose, because a solo table 
 - **The mock server** (`src/net/mock/server.ts`) speaks the same messages inside the page, for the
   tests and for `?mock` in a development build (it is not in the production bundle). It runs
   accepted play through the reference engine, one step at a time, and sends each seat its own view.
-  It has private and public lobbies, bot seats, the deadlines of §5.6, accounts (register, login,
+  It has private and public lobbies, bot seats, tables that seat no bots (`allowBots: false` is
+  kept, and `lobby.addBot` there is `BOTS_DISABLED`), the deadlines of §5.6, accounts (register, login,
   logout, profile), the public lobby list, the casual queue with bot fill, and stats after a game.
   It has a ranked queue, a rating change after a ranked game, a cooldown after a ranked leave and a
   ladder, following the rules of `docs/protocol.md`: the tier bands, placement until the fifth

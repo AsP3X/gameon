@@ -346,8 +346,12 @@ export class Online {
     return this.ask({ t: 'lobby.join', lobbyId });
   }
 
-  createLobby(visibility: Visibility, settings: GameSettings): Promise<Outcome> {
-    return this.ask({ t: 'lobby.create', visibility, settings });
+  /**
+   * Open a table. `seatBots` false asks for one that seats no bots (`allowBots: false`). Otherwise
+   * the field is left out, which the server reads as a table that seats them.
+   */
+  createLobby(visibility: Visibility, settings: GameSettings, seatBots = true): Promise<Outcome> {
+    return this.ask({ t: 'lobby.create', visibility, settings, ...(seatBots ? {} : { allowBots: false }) });
   }
   joinLobby(code: string): Promise<Outcome> {
     return this.ask({ t: 'lobby.join', code });

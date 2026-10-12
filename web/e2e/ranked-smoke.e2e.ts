@@ -37,15 +37,15 @@ describe('four accounts at a ranked table', () => {
       ['Ann', 'Bea', 'Cal', 'Dee'].map((name) => Player.join(stage.browser, name, stage.url)),
     );
     for (const [i, p] of players.entries()) {
-      await p.page.locator('.sk-way[href="/skull-king/online"]').click();
-      await expect.poll(() => p.page.locator('#online .pill').textContent()).toBe('Connected');
-      await button(p, 'Create an account').click();
+      // A browser nobody knows: the home's Ranked card leads to the sign-up page.
+      await p.page.locator('.sk-way[href="/sign-up"]').click();
       await p.page.locator('#signup-username').fill(`rk_${stamp}_${i}`);
       await p.page.locator('#signup-password').fill('secret');
       await p.page.locator('#signup-repeat').fill('secret');
       await button(p, 'Create account').click();
-      await expect.poll(() => p.page.locator('#online h2').textContent()).toBe('Your profile');
-      await button(p, 'Back').click();
+      // Signed up, the page is at Games, whose ranked link leads to Skull King's ranked page.
+      await p.page.locator('a[href="/skull-king/ranked"]').first().click();
+      await expect.poll(() => p.page.locator('#online .on-bar .pill').textContent()).toBe('Connected');
       await button(p, 'Find a ranked game').click();
     }
     for (const p of players) await p.page.locator('#app .game').waitFor({ timeout: 30_000 });

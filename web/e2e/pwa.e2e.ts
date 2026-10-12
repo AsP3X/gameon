@@ -165,9 +165,9 @@ describe('the built page as an app', () => {
     expect(new URL(page.url()).pathname).toBe('/games');
     await page.goto(url);
     await page.getByRole('heading', { name: 'Game night, switched on.' }).waitFor();
-    // An address that only leads somewhere is replaced by where it leads.
+    // The ranked page has an address of its own, and the kept page opens there.
     await page.goto(`${url}/skull-king/ranked`);
-    await page.getByRole('heading', { name: 'Play online' }).waitFor();
-    expect(new URL(page.url()).pathname).toBe('/skull-king/online');
+    await page.getByRole('heading', { name: 'Ranked', exact: true }).waitFor();
+    expect(new URL(page.url()).pathname).toBe('/skull-king/ranked');
   });
 });

@@ -3,9 +3,7 @@
 
    Four kinds of page share them: the frame around the game (GameOn: the landing, Games, signing
    up and in), Skull King's own pages (its home and the solo setup), the online screens, and the
-   screens the legacy renderer draws. Skull King's ranked
-   page is not built yet (W4). Its address is taken here so nothing else claims it, and until the
-   page exists it leads to the nearest one that does (`settle`).
+   screens the legacy renderer draws.
 
    Never a page: `/api`, `/assets`, `/sw.js`, `/index.html`, `/manifest.json`. The server and the
    build answer those. */
@@ -31,7 +29,7 @@ export const AT = {
   join: '/skull-king/online/join',
   publicTables: '/skull-king/online/public',
   newPublicTable: '/skull-king/online/public/new',
-  /** Skull King's ranked page. Not built: ranked is a section of the online hub. */
+  /** Skull King's ranked page: the one way into the ranked queue. */
   ranked: '/skull-king/ranked',
 } as const;
 
@@ -59,6 +57,7 @@ export type Route =
   | { page: 'score' }
   /* The online screens. */
   | { page: 'online' }
+  | { page: 'ranked' }
   | { page: 'newTable'; visibility: 'private' | 'public' }
   | { page: 'join' }
   | { page: 'publicTables' }
@@ -94,6 +93,7 @@ const PAGES: Record<string, Route> = {
   [AT.table]: { page: 'table' },
   [AT.score]: { page: 'score' },
   [AT.online]: { page: 'online' },
+  [AT.ranked]: { page: 'ranked' },
   [AT.newTable]: { page: 'newTable', visibility: 'private' },
   [AT.newPublicTable]: { page: 'newTable', visibility: 'public' },
   [AT.join]: { page: 'join' },
@@ -103,19 +103,14 @@ const PAGES: Record<string, Route> = {
   [AT.signIn]: { page: 'signIn' },
   [AT.signUp]: { page: 'signUp' },
 };
-/** Addresses whose page is not built yet, and where they lead until it is. */
-const LEADS: Record<string, string> = {
-  [AT.ranked]: AT.online,
-};
 
 /**
- * The address a path stands for: itself when it has a page, the page it leads to when its own is
- * not built yet, and Skull King's home for a path that is nobody's. A slash at the end is dropped.
+ * The address a path stands for: itself when it has a page, and Skull King's home for a path that
+ * is nobody's. A slash at the end is dropped.
  */
 export function settle(path: string): string {
   const bare = path.length > 1 ? path.replace(/\/+$/, '') : path;
   if (Object.hasOwn(PAGES, bare)) return bare;
-  if (Object.hasOwn(LEADS, bare)) return LEADS[bare];
   if (bare.startsWith(PLAYERS)) return playerAt(bare.slice(PLAYERS.length)) ?? AT.home;
   return AT.home;
 }

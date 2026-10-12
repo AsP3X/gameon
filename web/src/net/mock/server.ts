@@ -188,6 +188,7 @@ const MESSAGES: Partial<Record<ErrorCode, string>> = {
   PROTOCOL_UNSUPPORTED: 'This page is too old for the server. Reload to update.',
   LOBBY_NOT_FOUND: 'No table has that code.',
   LOBBY_FULL: 'That table is full.',
+  BOTS_DISABLED: 'This table does not seat bots.',
   LOBBY_STARTED: 'That game has already started.',
   ALREADY_SEATED: 'You are already at a table.',
   NOT_IN_LOBBY: 'You are not at a table.',
@@ -745,6 +746,7 @@ export class MockServer {
             ...(host?.kind === 'human' ? { hostColor: host.user.color } : {}),
             settings: lobby.settings,
             players: lobby.members.length,
+            ...(lobby.allowBots === undefined ? {} : { allowBots: lobby.allowBots }),
           };
         });
       return ok({ lobbies });
@@ -932,6 +934,7 @@ export class MockServer {
       if (room || account.game || account.queued) return this.fail(conn, m.id, 'ALREADY_SEATED');
       if (!isSettings(m.settings) || !oneOf(m.visibility, ['private', 'public']))
         return this.fail(conn, m.id, 'VALIDATION');
+      if (m.allowBots !== undefined && typeof m.allowBots !== 'boolean') return this.fail(conn, m.id, 'VALIDATION');
       const made: Room = {
         lobby: {
           id: this.uuid(),
@@ -940,6 +943,8 @@ export class MockServer {
           visibility: m.visibility,
           hostId: account.me.user.id,
           settings: { ...m.settings },
+          // Kept as it was sent. Left out, the table seats bots.
+          ...(m.allowBots === undefined ? {} : { allowBots: m.allowBots }),
           members: [{ kind: 'human', user: account.me.user, ready: false, connected: true }],
           state: 'open',
           gameId: null,
@@ -1001,6 +1006,8 @@ export class MockServer {
         });
         break;
       case 'lobby.addBot': {
+        // Only a table somebody opened can say so. A matchmade one has no host to ask.
+        if (lobby.allowBots === false) return this.fail(conn, m.id, 'BOTS_DISABLED');
         if (lobby.members.length >= lobby.settings.maxPlayers) return this.fail(conn, m.id, 'LOBBY_FULL');
         lobby.members.push(this.botFor(lobby.members, lobby.settings.botLevel));
         break;

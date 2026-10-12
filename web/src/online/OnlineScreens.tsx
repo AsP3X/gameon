@@ -1,41 +1,41 @@
-/* The online screens: the hub, the profile, the public tables, the quick-play queue,
-   a new table, joining by code, and the table's lobby. Signing up and in are pages of the frame
-   (src/gameon). React draws them
-   next to the legacy renderer's #app; the game itself is still played there, at the same table the
-   offline modes use. Everything shown is what the server said (src/net/online.ts): a tap asks, and
-   the screen changes when the answer or the next state arrives. */
+/* The online screens: the index with its three doors, the ranked page, the public tables, a new
+   table, the table's lobby, joining by code, the queue, the ladder and the profile. Signing up and
+   in are pages of the frame (src/gameon). React draws them next to the legacy renderer's #app; the
+   game itself is still played there, at the same table the offline modes use. Everything shown is
+   what the server said (src/net/online.ts): a tap asks, and the screen changes when the answer or
+   the next state arrives.
+
+   The index, the ranked page and the five tables are drawn as design/skt.pen draws them (plan item
+   W4). The queue, the code, the ladder and the profile are the screens they were. */
 import { useState } from 'react';
-import type { FormEvent } from 'react';
+import type { FormEvent, ReactNode } from 'react';
+import type { KeyTone } from '../gameon/art';
+import { IconKey } from '../gameon/art';
+import { Link } from '../gameon/Frame';
+import type { Go } from '../gameon/Frame';
+import { Icon } from '../gameon/icons';
+import type { IconName } from '../gameon/icons';
 import type { Notice, Online, OnlineState, Outcome } from '../net/online';
 import type { LinkStatus } from '../net/socket';
 import { Sound } from '../sound/sound';
-import { cssColor, whole } from '../tableview/dom';
+import { whole } from '../tableview/dom';
 import type { LobbyId } from '../protocol/generated';
 import { AT, playerAt } from '../router/addresses';
 import type { OnlineRoute } from '../router/addresses';
 import { failureText, ordinal } from './copy';
 import { LobbyRoom } from './LobbyRoom';
-import { Head, initialOf } from './parts';
+import { Bar, Head, Page } from './parts';
 import { PlayerScreen, ProfileScreen } from './Profile';
 import { PublicTables } from './PublicTables';
 import { QueueScreen } from './Queue';
 import { reloadPage } from './reload';
-import { LadderScreen, RankedSection } from './Ranked';
-import { loadSettings, MIN_SEATS, saveSettings } from './settings';
+import { LadderScreen, RankedScreen } from './Ranked';
+import { FIXED, loadTable, saveSettings } from './settings';
 import { SettingsForm } from './SettingsForm';
 
 /** The characters a table code is made of (docs/protocol.md §5.3). Everything else is dropped as it is typed. */
 const NOT_CODE = /[^ABCDEFGHJKMNPQRSTUVWXYZ23456789]/g;
 const CODE_LENGTH = 6;
-
-const STATUS_PILL: Record<LinkStatus, { tone: string; text: string }> = {
-  idle: { tone: 'soft', text: 'Connecting…' },
-  connecting: { tone: 'soft', text: 'Connecting…' },
-  online: { tone: 'green', text: 'Connected' },
-  offline: { tone: 'red', text: 'Offline' },
-  superseded: { tone: 'soft', text: 'Paused' },
-  unsupported: { tone: 'red', text: 'Update needed' },
-};
 
 export function noticeText(notice: Notice): { title: string; text: string } {
   if (notice.kind === 'lobbyClosed')
@@ -123,19 +123,64 @@ function LinkNotice({ status, online, onOffline }: { status: LinkStatus; online:
   }
 }
 
-function Hub(props: { online: Online; state: OnlineState; onExit: () => void; go: (path: string) => void }) {
+/** One way to a table, on its card. A door that leads to a page is a link. Quick play asks at once. */
+function Door(props: {
+  name: string;
+  line: string;
+  icon: IconName;
+  tone: KeyTone;
+  /** The page the door leads to. Without it the door is a button. */
+  to?: string;
+  onPick?: () => void;
+  /** Nothing answers: the door is there and cannot be gone through. */
+  shut: boolean;
+}) {
+  const inside: ReactNode = (
+    <>
+      <IconKey icon={props.icon} tone={props.tone} />
+      <span className="sk-way-text">
+        <b>{props.name}</b>
+        <span>{props.line}</span>
+      </span>
+      <span className="sk-way-go">
+        <Icon name="chevronRight" />
+      </span>
+    </>
+  );
+  if (props.shut)
+    return (
+      <li>
+        <div className="sk-way dim" aria-disabled="true">
+          {inside}
+        </div>
+      </li>
+    );
+  if (props.to != null)
+    return (
+      <li onClickCapture={() => Sound.play('tap')}>
+        <Link to={props.to} className="sk-way">
+          {inside}
+        </Link>
+      </li>
+    );
+  return (
+    <li>
+      <button type="button" className="sk-way" onClick={props.onPick}>
+        {inside}
+      </button>
+    </li>
+  );
+}
+
+/** The index: the three doors to a table, and the code of a friend's. */
+function Hub(props: { online: Online; state: OnlineState; onExit: () => void; go: Go }) {
   const { online, state } = props,
-    me = state.me,
     live = state.status === 'online',
-    pill = STATUS_PILL[state.status],
     notice = state.notice ? noticeText(state.notice) : null;
   const [finding, setFinding] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const to = (path: string) => () => {
-    Sound.play('tap');
-    props.go(path);
-  };
   const find = (): void => {
+    if (finding) return;
     Sound.play('confirm');
     setFinding(true);
     setError(null);
@@ -145,29 +190,9 @@ function Hub(props: { online: Online; state: OnlineState; onExit: () => void; go
     });
   };
   return (
-    <div className="wrap">
-      <Head title="Play online" onBack={props.onExit}>
-        <span className={`pill ${pill.tone}`} role="status">
-          {pill.text}
-        </span>
-      </Head>
-      <div className="stack sections">
-        <div className="plate identity">
-          <span
-            className={me ? 'avatar sm' : 'avatar sm empty'}
-            style={me ? { background: cssColor(me.user.color) } : undefined}
-            aria-hidden="true"
-          >
-            {me ? initialOf(me.user.name) : '?'}
-          </span>
-          <span className="grow">
-            <small>{me?.username ? `Playing as @${me.username}` : me ? 'Playing as a guest' : 'Playing as'}</small>
-            <b>{me ? me.user.name : '…'}</b>
-          </span>
-          <button type="button" className="mini" disabled={!me} onClick={to(AT.profile)}>
-            Profile
-          </button>
-        </div>
+    <Page go={props.go}>
+      <Bar title="Online" onBack={props.onExit} me={state.me} status={state.status} />
+      <main className="on-body">
         <LinkNotice status={state.status} online={online} onOffline={props.onExit} />
         {notice && (
           <div className="notice gold" role="status">
@@ -185,46 +210,50 @@ function Hub(props: { online: Online; state: OnlineState; onExit: () => void; go
             </button>
           </div>
         )}
-        <section className="stack">
-          <span className="label">Quick play</span>
-          <button type="button" className="btn" disabled={!live || finding} onClick={find}>
-            Find a game
-          </button>
-          {error ? (
-            <p className="alert" role="alert">
-              {error}
-            </p>
-          ) : (
-            <p className="muted">Sit down with other pirates at the standard rules. Open seats are filled with bots.</p>
-          )}
-        </section>
-        <RankedSection
-          online={online}
-          me={me}
-          live={live}
-          onLadder={() => props.go(AT.ladder)}
-          onSignUp={() => props.go(AT.signUp)}
-        />
-        <section className="stack">
-          <span className="label">Public tables</span>
-          <button type="button" className="btn ghost" disabled={!live} onClick={to(AT.publicTables)}>
-            Browse tables
-          </button>
-        </section>
-        <section className="stack">
-          <span className="label">Your own table</span>
-          <button type="button" className="btn ghost" disabled={!live} onClick={to(AT.newTable)}>
-            Create a table
-          </button>
-          <button type="button" className="btn ghost" disabled={!live} onClick={to(AT.join)}>
-            Join with a code
-          </button>
-          <p className="muted">
-            Create a table for your crew or open it to everyone, or type in the code a friend gave you.
+        <ul className="sk-ways" aria-label="Ways to a table">
+          <Door
+            name="Quick play"
+            line="A random table. Bots fill the empty seats. The standard rules."
+            icon="shuffle"
+            tone="green"
+            onPick={find}
+            shut={!live || finding}
+          />
+          <Door
+            name="Public tables"
+            line="Anyone can see the table. You pick the rules."
+            icon="globe"
+            tone="blue"
+            to={AT.publicTables}
+            shut={!live}
+          />
+          <Door
+            name="Your table"
+            line="Friends only, with a code. You pick the rules."
+            icon="lock"
+            tone="orange"
+            to={AT.newTable}
+            shut={!live}
+          />
+        </ul>
+        {error && (
+          <p className="alert" role="alert">
+            {error}
           </p>
-        </section>
-      </div>
-    </div>
+        )}
+        <button
+          type="button"
+          className="btn ghost"
+          disabled={!live}
+          onClick={() => {
+            Sound.play('tap');
+            props.go(AT.join);
+          }}
+        >
+          Join with a code
+        </button>
+      </main>
+    </Page>
   );
 }
 
@@ -295,7 +324,7 @@ export interface OnlineScreensProps {
   /** The page the address names. A lobby or a queue the server seated the player in is shown instead. */
   route: OnlineRoute;
   /** To another page, as a link goes. */
-  go: (path: string) => void;
+  go: Go;
   /** Back to the page this one is reached from. */
   up: (parent: string) => void;
   /** Back from the hub: to the home screen. */
@@ -320,11 +349,10 @@ export function OnlineScreens({ online, state, route, go, up, onExit, sit, onSat
     if (rules === lobby.id && lobby.hostId === me.user.id && lobby.state === 'open')
       return (
         <SettingsForm
-          title="Table rules"
-          submit="Save rules"
-          note="Saving new rules clears everyone's ready."
+          go={go}
+          me={me}
+          // The seats, the pace and the bots' skill stay what the table has: the form has no control for them.
           initial={lobby.settings}
-          minSeats={Math.max(MIN_SEATS, lobby.members.length)}
           disabled={!live}
           onBack={back}
           onSubmit={async (settings) => {
@@ -340,6 +368,7 @@ export function OnlineScreens({ online, state, route, go, up, onExit, sit, onSat
     return (
       <LobbyRoom
         online={online}
+        go={go}
         lobby={lobby}
         me={me}
         status={state.status}
@@ -353,20 +382,37 @@ export function OnlineScreens({ online, state, route, go, up, onExit, sit, onSat
     );
   }
   if (queue) return <QueueScreen online={online} queue={queue} live={live} rules={state.config?.standard ?? null} />;
+  if (route.page === 'ranked')
+    return (
+      <RankedScreen
+        online={online}
+        state={state}
+        go={go}
+        onBack={onExit}
+        onLadder={() => go(AT.ladder)}
+        onSignUp={() => go(AT.signUp)}
+      >
+        <LinkNotice status={state.status} online={online} onOffline={onExit} />
+      </RankedScreen>
+    );
   if (route.page === 'newTable') {
-    // "New table" opens set to public when it was reached from the public list, and goes back there.
-    const from = route.visibility === 'public' ? AT.publicTables : AT.online;
+    // A public table is opened from the public list, and goes back there.
+    const { visibility } = route,
+      from = visibility === 'public' ? AT.publicTables : AT.online;
     return (
       <SettingsForm
-        title="New table"
-        submit="Create table"
-        initial={loadSettings()}
-        visibility={route.visibility}
-        minSeats={MIN_SEATS}
+        // The two pages are one form: going from one to the other starts it again.
+        key={visibility}
+        go={go}
+        me={me}
+        visibility={visibility}
+        initial={loadTable()}
         disabled={!live}
         onBack={() => up(from)}
-        onSubmit={async (settings, visibility) => {
-          const r = await online.createLobby(visibility, settings);
+        onSubmit={async (chosen, seatBots) => {
+          // Whatever the device remembers, a new table has the fixed seats, pace and bot skill.
+          const settings = { ...chosen, ...FIXED };
+          const r = await online.createLobby(visibility, settings, seatBots);
           if (r.ok) {
             saveSettings(settings);
             hub();
@@ -392,6 +438,8 @@ export function OnlineScreens({ online, state, route, go, up, onExit, sit, onSat
     return (
       <PublicTables
         online={online}
+        go={go}
+        me={me}
         live={live}
         onBack={hub}
         onCreate={() => go(AT.newPublicTable)}
@@ -400,7 +448,8 @@ export function OnlineScreens({ online, state, route, go, up, onExit, sit, onSat
       />
     );
   if (route.page === 'ladder')
-    return <LadderScreen online={online} me={me?.user.id ?? null} live={live} onBack={hub} />;
+    // The ladder is reached from the ranked page, and goes back there.
+    return <LadderScreen online={online} me={me?.user.id ?? null} live={live} onBack={() => up(AT.ranked)} />;
   if (me && route.page === 'profile')
     return (
       <ProfileScreen

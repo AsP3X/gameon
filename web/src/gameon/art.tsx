@@ -39,7 +39,7 @@ export function Logo() {
   );
 }
 
-export type KeyTone = 'blue' | 'gold' | 'green' | 'purple' | 'red' | 'kraken';
+export type KeyTone = 'blue' | 'gold' | 'green' | 'orange' | 'purple' | 'red' | 'kraken';
 
 /** An icon on its key. */
 export function IconKey({ icon, tone }: { icon: IconName; tone: KeyTone }) {

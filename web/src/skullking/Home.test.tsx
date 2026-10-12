@@ -256,7 +256,7 @@ describe('the four ways to play', () => {
     await click('.sk-way[href="/skull-king/online"]');
     await settle();
     expect(places.path()).toBe('/skull-king/online');
-    expect($('#online h2')?.textContent).toBe('Play online');
+    expect($('#online h1, #online h2')?.textContent).toBe('Online');
     await back();
     expect($('.sk-home')).not.toBeNull();
 
@@ -264,15 +264,19 @@ describe('the four ways to play', () => {
     expect(way('Ranked').getAttribute('href')).toBe('/sign-up');
   });
 
-  it('leads an account from Ranked to the ranked page, which is the hub until it is built', async () => {
+  it('leads an account from Ranked to the ranked page', async () => {
     await page.rest('POST', '/auth/guest');
     await page.rest('POST', '/auth/register', { username: 'calico', password: 'secret' });
     await openAt('/skull-king');
     expect(way('Ranked').getAttribute('href')).toBe('/skull-king/ranked');
     await click('.sk-way[href="/skull-king/ranked"]');
     await settle();
-    expect(places.path()).toBe('/skull-king/online');
-    expect(texts('#online .label')).toContain('Ranked');
+    expect(places.path()).toBe('/skull-king/ranked');
+    expect($('#online h1')?.textContent).toBe('Ranked');
+    expect(texts('#online .on-body .btn')).toEqual(['Find a ranked game']);
+    // Back from ranked is the home it was reached from.
+    await click('#online [aria-label="Back"]');
+    expect(places.path()).toBe('/skull-king');
   });
 
   it('makes nobody and connects nowhere: looking at the home is not playing online', async () => {
@@ -403,8 +407,8 @@ describe('the way back into a game', () => {
   it('brings the seat back at the table through the connection, and starts no game to do it', async () => {
     // A quick-play table the server seated this browser at.
     await openAt('/skull-king/online');
-    await click('#online section .btn');
-    expect($('#online h2')?.textContent).toBe('Quick play');
+    await click('#online button.sk-way');
+    expect($('#online h1, #online h2')?.textContent).toBe('Quick play');
     await settle(QUEUE_FILL_MS + 500);
     expect($('#app .game')).not.toBeNull();
     closePage();

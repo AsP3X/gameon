@@ -1,7 +1,8 @@
 /* The rules of an online table as the player last set them, and how they read in a sentence.
    The last settings are a per-device convenience (localStorage): the server has the real ones. */
 import { Rules } from '../game';
-import type { GameSettings, Pace } from '../protocol/generated';
+import type { GameSettings, LobbySummary, Pace } from '../protocol/generated';
+import { EXTRAS, formatName, scoringName } from '../skullking/rulesets';
 import { isFormat, isLevel, isScoring } from '../tableview/state';
 import { Store } from '../tableview/store';
 
@@ -47,6 +48,39 @@ export function loadSettings(): GameSettings {
 }
 export const saveSettings = (settings: GameSettings): void => Store.set(KEY, settings);
 
+/**
+ * What a table of friends or a public table is always opened with. The page has no control for
+ * the seats, the pace or the bots' skill (docs/handover/075, 071 question 1). The skill is sent
+ * for a table without bots too: the settings have no place to leave it out.
+ */
+export const FIXED = { maxPlayers: 4, pace: 'standard', botLevel: 'normal' } as const;
+/** The rules a new table opens set to: the last ones chosen on this device, at the fixed size and pace. */
+export const loadTable = (): GameSettings => ({ ...loadSettings(), ...FIXED });
+
+/** The two lines of the rules card at a waiting table: how long the game is, then how it is scored and what is in the deck. */
+export function describeRules(s: GameSettings): { title: string; detail: string } {
+  const rounds = Rules.FORMATS[s.format].seq.length;
+  return {
+    title: `${formatName(s.format)} · ${rounds} rounds`,
+    detail: [`${scoringName(s.scoring)} scoring`, ...EXTRAS.filter(([key]) => s[key]).map(([, name]) => name)].join(
+      ' · ',
+    ),
+  };
+}
+
+/**
+ * A row of the public list. A table somebody hosts is theirs by name. One nobody hosts is titled
+ * by the name the server sent, and nothing is added to it. The seat count is humans and bots.
+ */
+export function describeRow(lobby: LobbySummary): { title: string; seats: string; bots: boolean } {
+  return {
+    title: lobby.hostColor ? `${lobby.hostName}’s table` : lobby.hostName,
+    seats: `${lobby.players} of ${lobby.settings.maxPlayers} seats · ${formatName(lobby.settings.format)}`,
+    // Left out, the table seats bots.
+    bots: lobby.allowBots !== false,
+  };
+}
+
 const LEVEL = { easy: 'Easy', normal: 'Normal', hard: 'Hard' } as const;
 
 /**
@@ -71,14 +105,5 @@ export function describeSettings(s: GameSettings, { bots = true } = {}): { title
     ]
       .filter(Boolean)
       .join(' · '),
-  };
-}
-
-/** The two lines under a host's name in the public list: how full the table is, and what is played. */
-export function describeTable(s: GameSettings, players: number): { seats: string; rules: string } {
-  const { title, detail } = describeSettings(s);
-  return {
-    seats: `${players} of ${s.maxPlayers} pirates · ${title}`,
-    rules: detail.split(' · ').slice(1).join(' · '),
   };
 }

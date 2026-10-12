@@ -1,7 +1,7 @@
 # End-to-end: four browsers at one table
 
 `npm run e2e` (from `web/`) runs `four-players.e2e.ts`: four browser contexts, each a guest of its
-own, create and join a private table, play a whole game with a bot in the fifth seat, reload one
+own, open and join a private table of four seats, play a whole game, reload one
 page in the middle of a trick, and try to cheat. It is plan item C8.
 
 It is not part of `npm run test`: it needs a browser and a dev server, and takes a minute or two.
@@ -36,10 +36,11 @@ Playwright's own once: `npx playwright-core install chromium`.
 - `mockHost.ts`: the mock server with a real HTTP and WebSocket door, sessions by cookie.
 - `player.ts`: one context, its page, every frame it exchanged, and the hands that click.
 - `four-players.e2e.ts`: the script.
-- `ranked-smoke.e2e.ts`: four accounts at one ranked table, and the record of the game.
+- `ranked-smoke.e2e.ts`: four accounts at one ranked table, reached over the sign-up page and the
+  ranked page, and the record of the game. The mock host has no accounts: it needs the server.
 - `solo.e2e.ts`: one guest starts a solo game from the setup page, reloads in the middle of a trick
   to the same hand with nothing played in between, and leaves.
-- `empty-seat.e2e.ts`: three guests at a fast table. One stays away for two turns: the others see
+- `empty-seat.e2e.ts`: three guests at a table. One stays away for two turns: the others see
   the seat marked OUT and play on, and the one who went is told once that the seat is lost.
   `SKT_E2E_SHOTS=<folder>` writes a picture of both.
 - `pwa.e2e.ts`: the built page as an installed app. It builds the page, serves it with `vp preview`

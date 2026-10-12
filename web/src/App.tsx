@@ -186,6 +186,9 @@ export function App({ backend = appBackend, memory = appMemory, places }: AppPro
   // They take the renderer's place: its home screen is still there, but not to be seen.
   const covered = screens || framed != null || soloLeft;
   useEffect(() => coverTavern(covered), [covered]);
+  // A sheet of the renderer's own, opened from the bar of an online screen (the sound settings),
+  // shows over that screen: the renderer is at home underneath, and has nothing else to draw.
+  const over = screens && isOnline(route) && sheet;
   // Skull King's home and the solo setup: the page's own, with the renderer under them for its sheets.
   const atHome = !table && !covered && route.page === 'home',
     atSolo = !table && !covered && route.page === 'solo';
@@ -230,15 +233,15 @@ export function App({ backend = appBackend, memory = appMemory, places }: AppPro
       <div
         id="app"
         ref={app}
-        hidden={covered}
-        data-behind={atHome || atSolo ? '' : undefined}
+        hidden={covered && !over}
+        data-behind={atHome || atSolo || over ? '' : undefined}
         inert={cut != null || shown}
       ></div>
       <canvas id="fx" ref={fx} hidden></canvas>
       {cut && <TableOverlay status={cut} online={online} solo={table?.kind === 'solo'} />}
       {table && shown && <GameRecord online={online} gameId={table.gameId} onClose={() => setRecord(false)} />}
       {screens && (
-        <div id="online">
+        <div id="online" inert={sheet}>
           <OnlineScreens
             online={online}
             state={state}

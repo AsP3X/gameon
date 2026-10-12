@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-/* Ranked on the whole page against the mock server: the hub's ranked block, the queue, the leave
+/* Ranked on the whole page against the mock server: the ranked page, the queue, the leave
    warning, the cooldown, the rating line at the end of a game, and the ladder. The mock's numbers
    are stand-ins; what is checked here is that the page shows what it was sent and sends nothing it
    should not. The mock's own frames are in src/net/mock/ranked.test.ts. */
@@ -23,7 +23,6 @@ import type { Wire } from '../net/socket';
 import type { LadderEntry, LadderPage, Me, TableColor } from '../protocol/generated';
 import { session, ui } from '../tableview/state';
 import { OnlineScreens } from './OnlineScreens';
-import { waitText } from './Ranked';
 
 function seeded(seed: number): () => number {
   let a = seed >>> 0;
@@ -104,9 +103,10 @@ async function register(browser: Backend, username: string, name: string): Promi
   return (await browser.rest('POST', '/auth/register', { username, password: 'x' })).body as Me;
 }
 const me = async (): Promise<Me> => (await page.rest('GET', '/me')).body as Me;
-/** From the home screen to the hub, connected. With a username the page is that account. */
-async function openHub(username?: string): Promise<void> {
+/** The page, opened at an address and connected. With a username it is that account. */
+async function openAt(at: string, username?: string): Promise<void> {
   if (username) await register(page, username, 'Anne');
+  places = memoryPlaces(at);
   root = createRoot(host);
   await act(async () => {
     root?.render(
@@ -116,9 +116,25 @@ async function openHub(username?: string): Promise<void> {
     );
     await vi.advanceTimersByTimeAsync(0);
   });
-  await click('#gameon a[href="/skull-king/online"]');
   await settle();
 }
+/** The ranked page, as its address opens it. */
+const openRanked = (username?: string): Promise<void> => openAt('/skull-king/ranked', username);
+/** To another address of the running page, as a link there would lead: a new entry, and the page reads it. */
+async function visit(path: string): Promise<void> {
+  await act(async () => {
+    places.push(path, null);
+    places.back();
+    places.forward();
+    await vi.advanceTimersByTimeAsync(0);
+  });
+  await settle();
+}
+/** The lines of a list of the ranked page: each row's words, in the order they are drawn. */
+const lines = (label: string): string[][] =>
+  Array.from(document.querySelectorAll<HTMLElement>(`#online [aria-labelledby="${label}"] li`), (li) =>
+    Array.from(li.querySelectorAll('b, small, .pill'), (el) => el.textContent ?? ''),
+  );
 /** Three more accounts in the ranked queue: with the page's, that is a table. */
 async function threeMore(): Promise<RawClient[]> {
   const others: RawClient[] = [];
@@ -164,44 +180,90 @@ afterEach(() => {
 });
 
 describe('ranked, for a guest', () => {
-  it('says ranked needs an account and sends nothing; the ladder is open to look at', async () => {
-    await openHub();
+  it('says ranked needs a free account, cannot join, and sends nothing; the ladder is open to look at', async () => {
+    await openRanked();
+    expect($('#online h1')?.textContent).toBe('Ranked');
+    expect(places.path()).toBe('/skull-king/ranked');
     const ranked = $('#online [aria-label="Ranked"]');
-    expect(ranked?.querySelector('p')?.textContent).toBe('Ranked needs an account.');
+    expect(ranked?.querySelector('.notice')?.textContent).toBe('Ranked needs a free account.Sign up');
     expect(Array.from(ranked?.querySelectorAll('button') ?? [], (b) => b.textContent)).toEqual([
-      'Create an account',
-      'Ladder',
+      'Sign up',
+      'Find a ranked game',
     ]);
-    // There is no way to ask from here, so nothing was asked.
+    // The one door is shut for a guest, and a tap on it reaches nobody.
+    expect(button('Find a ranked game').disabled).toBe(true);
+    button('Find a ranked game').click();
+    await settle();
     expect(sentOf('queue.join')).toEqual([]);
-    // The account is made on the frame's page. The browser's Back is the way back to the hub.
-    await press('Create an account');
+    // The account is made on the frame's page. The browser's Back is the way back to ranked.
+    await press('Sign up');
     expect($('#gameon h1')?.textContent).toBe('Create your account');
     await act(async () => {
       places.back();
       await vi.advanceTimersByTimeAsync(0);
     });
-    await press('Ladder');
-    expect($('#online h2')?.textContent).toBe('Ladder');
+    expect($('#online h1')?.textContent).toBe('Ranked');
+
+    await visit('/ladder');
+    expect($('#online h1, #online h2')?.textContent).toBe('Ladder');
     // The season is the server's: its name as sent, and its days, the last one being the day before `endsAt`.
     expect($('#online .season b')?.textContent).toBe('2026 Q4');
     expect($('#online .season small')?.textContent).toBe('1 Oct 2026 – 31 Dec 2026');
     expect($('#online .notice')?.textContent).toBe('Nobody is on the ladder yetPlay a ranked game to be the first.');
     expect(document.querySelector('#online .footbar')).toBeNull();
+    // Back from the ladder is the ranked page.
+    await click('[aria-label="Back"]');
+    expect($('#online h1')?.textContent).toBe('Ranked');
   });
 });
 
 describe('ranked, for an account', () => {
+  it('is one door: the season, the standard rules as the server plays them, the tiers, and nothing to pick', async () => {
+    await openRanked('anne_login');
+    // The season is the server's, and its last day is the day before `endsAt`.
+    expect($('#online .on-season')?.textContent).toBe(
+      'Season 2026 Q4The season runs until 31 DecemberFive placement games set your tier. Then every ranked game moves your rating.',
+    );
+    expect($('#online .on-lead')?.textContent).toBe('This quarter. The standard rules. No bots.');
+    // The rules are `ServerConfig.standard`: four players, classic, ten rounds, nothing extra in the deck.
+    expect(lines('on-standard')).toEqual([
+      ['Four players'],
+      ['Classic scoring'],
+      ['Classic', '10 rounds'],
+      ['No loot'],
+      ['No kraken'],
+      ['No whale'],
+      ['No abilities'],
+    ]);
+    expect($('#online')?.textContent).not.toContain('Brawl');
+    expect(lines('on-tiers')).toEqual([
+      ['Skull King', 'from 48'],
+      ['Pirate Lord', '40 to 47'],
+      ['Captain', '32 to 39'],
+      ['First Mate', '24 to 31'],
+      ['Quartermaster', '16 to 23'],
+      ['Bosun', '8 to 15'],
+      ['Deckhand', 'below 8'],
+    ]);
+    // No format picker, no bot switch, no ruleset cards: the page has one button that asks.
+    expect(
+      document.querySelectorAll('#online .seg, #online .toggle, #online .sk-formats, #online .sk-way'),
+    ).toHaveLength(0);
+    expect(texts('#online .on-body button')).toEqual(['Ladder', 'Find a ranked game']);
+  });
+
   it('shows no rating before the first game, queues, and sits down with three other accounts and no bot', async () => {
-    await openHub('anne_login');
+    await openRanked('anne_login');
     const ranked = $('#online [aria-label="Ranked"]');
     expect(ranked?.querySelector('.plate')?.textContent).toBe('RatingUnratedPlay a ranked game to get a rating.Ladder');
     expect(ranked?.querySelector('p.muted')?.textContent).toBe(
-      'The standard rules against other pirates, no bots. Leaving a ranked game, losing your seat, or staying away for most of it scores last place and starts a cooldown.',
+      'Leaving a ranked game, losing your seat, or staying away for most of it scores last place and starts a cooldown.',
     );
     await press('Find a ranked game');
     expect(sentOf('queue.join')).toEqual([expect.objectContaining({ mode: 'ranked' })]);
-    expect($('#online h2')?.textContent).toBe('Ranked');
+    // The queue is asked for with its name and nothing else: no rules, no bots.
+    expect(Object.keys(sentOf('queue.join')[0]).toSorted()).toEqual(['id', 'mode', 't']);
+    expect($('#online h1, #online h2')?.textContent).toBe('Ranked');
     expect($('#online .searching [role="status"]')?.textContent).toBe('1 of 4 found');
     // The standard rules, without the skill of bots a ranked table does not start with.
     expect(texts('#online .plate small')).toEqual(['Up to 4 pirates · Standard pace · No extra cards']);
@@ -225,8 +287,8 @@ describe('ranked, for an account', () => {
     expect(framesOf(others[0], 'game.start')[0]).toMatchObject({ mode: 'ranked', lobbyId: null });
   });
 
-  it('warns before a ranked leave, sends nothing until it is confirmed, and then keeps the queue closed until the time on Me', async () => {
-    await openHub('anne_login');
+  it('warns before a ranked leave, sends nothing until it is confirmed, and then keeps the queue closed until the time on Me, with no minutes drawn', async () => {
+    await openRanked('anne_login');
     await press('Find a ranked game');
     await threeMore();
     await click('#app .g-top [data-act="home"]');
@@ -247,25 +309,30 @@ describe('ranked, for an account', () => {
     await click('[data-act="leaveTable"]');
     await settle();
     expect(sentOf('game.leave')).toHaveLength(1);
-    // The table is down, and the hub says until when ranked is closed: the time is the server's.
-    expect($('#online h2')?.textContent).toBe('Play online');
+    // The table is down, and the page is at the index. Casual is not closed.
+    expect($('#online h1, #online h2')?.textContent).toBe('Online');
     expect((await me()).cooldownUntil).toBe(NOW + COOLDOWN_MS);
+    expect(button('Quick play').disabled).toBe(false);
+    // The ranked page says that ranked is closed. Until when is the server's to know: no time is drawn.
+    await visit('/skull-king/ranked');
     const ranked = (): HTMLElement | null => $('#online [aria-label="Ranked"]');
-    expect(ranked()?.querySelector('.notice')?.textContent).toBe(
-      'Ranked is closed for youYou forfeited a ranked game. It opens again in 15 min.',
+    expect(ranked()?.querySelector('.notice[role="status"]')?.textContent).toBe(
+      'CooldownRanked is closed for youYou forfeited a ranked game.',
     );
+    const drawn = (): string => ($('#online .on-body')?.textContent ?? '').replace('Five placement games', '');
+    expect(drawn()).not.toMatch(/\d+\s*(s|sec|seconds|min|minutes?|h|hours?)\b|opens again|:\d\d/i);
     expect(button('Find a ranked game').disabled).toBe(true);
     // A tap on the closed button reaches nobody: the page still has sent one ranked join, the first.
     button('Find a ranked game').click();
     await settle();
     expect(sentOf('queue.join')).toHaveLength(1);
-    // Casual is not closed.
-    expect(button('Find a game').disabled).toBe(false);
 
     await settle(COOLDOWN_MS - 30_000);
-    expect(ranked()?.querySelector('.notice p')?.textContent).toBe(
-      'You forfeited a ranked game. It opens again in less than a minute.',
+    // Half a minute before it opens the page says what it said a quarter of an hour before.
+    expect(ranked()?.querySelector('.notice[role="status"]')?.textContent).toBe(
+      'CooldownRanked is closed for youYou forfeited a ranked game.',
     );
+    expect(drawn()).not.toMatch(/\d+\s*(s|sec|seconds|min|minutes?|h|hours?)\b|opens again|:\d\d/i);
     expect(button('Find a ranked game').disabled).toBe(true);
     // The others played on meanwhile: the result reached the leaver as news, with the forfeit and the rating.
     // The numbers are whatever the server made of it: the page shows them and works none out.
@@ -273,23 +340,27 @@ describe('ranked, for an account', () => {
     if (!after) throw new Error('The leave left no rating');
     expect(after).toMatchObject({ games: 1, provisional: true });
     expect(after.value).toBeLessThan(0);
+    expect(ranked()?.querySelector('.rating')?.textContent).toBe(`${shown(after.value)}${after.tier}Placement`);
+    // The tier is the one the server named: its row is marked, with the number as it came.
+    expect(lines('on-tiers').filter((row) => row.length === 3)).toEqual([
+      [after.tier, `You · ${shown(after.value)}`, expect.any(String)],
+    ]);
+    await visit('/skull-king/online');
     expect($('#online .notice.gold p')?.textContent).toBe(
       `You left before the end. Final place: 4th of 4. It counts as a forfeit. Rating ${signed(after.value)}.`,
     );
-    expect(ranked()?.querySelector('.rating')?.textContent).toBe(`${shown(after.value)}${after.tier}Placement`);
-    expect(ranked()?.querySelector('.plate + p')?.textContent).toBe(
-      'These are placement games. Your tier is not settled yet.',
-    );
 
+    await visit('/skull-king/ranked');
     await settle(31_000);
+    // The time the server named has come: the page looked again by itself, and the door is open.
     expect(ranked()?.querySelector('.notice')).toBeNull();
     await press('Find a ranked game');
     expect(sentOf('queue.join')).toHaveLength(2);
-    expect($('#online h2')?.textContent).toBe('Ranked');
+    expect($('#online h1, #online h2')?.textContent).toBe('Ranked');
   });
 
   it('ranks the end screen by the places the server sent: a seat that forfeited is last and marked, whatever it scored', async () => {
-    await openHub('anne_login');
+    await openRanked('anne_login');
     await press('Find a ranked game');
     const [calico, mary] = await threeMore();
     // Calico gives the seat up at the deal: a bot plays it to the end, and the server places it last.
@@ -320,14 +391,14 @@ describe('ranked, for an account', () => {
     expect($('#app .end-rating')?.hidden).toBe(false);
     await click('[data-act="again"]');
     await settle();
-    expect($('#online h2')?.textContent).toBe('Play online');
+    expect($('#online h1, #online h2')?.textContent).toBe('Online');
     expect($('#online .notice.gold')).toBeNull();
     expect((await me()).cooldownUntil).toBeNull();
   });
 
   it('keeps the casual leave sheet as it was', async () => {
-    await openHub('anne_login');
-    await press('Find a game');
+    await openAt('/skull-king/online', 'anne_login');
+    await press('Quick play');
     await settle(4000);
     expect(ui.screen).toBe('game');
     await click('#app .g-top [data-act="home"]');
@@ -336,11 +407,13 @@ describe('ranked, for an account', () => {
     await click('[data-act="leaveTable"]');
     await settle();
     expect((await me()).cooldownUntil).toBeNull();
+    await visit('/skull-king/ranked');
     expect($('#online [aria-label="Ranked"] .notice')).toBeNull();
+    expect(button('Find a ranked game').disabled).toBe(false);
   });
 
-  it('shows what the game did to the rating on the end screen, on the hub, on the profile and on the ladder', async () => {
-    await openHub('anne_login');
+  it('shows what the game did to the rating on the end screen, on the ranked page, on the profile and on the ladder', async () => {
+    await openRanked('anne_login');
     await press('Find a ranked game');
     await threeMore();
     // Nobody touches anything: the deadlines play every seat to the end of the game.
@@ -391,12 +464,12 @@ describe('ranked, for an account', () => {
 
     await click('[data-act="again"]');
     await settle();
-    expect($('#online h2')?.textContent).toBe('Play online');
-    expect($('#online [aria-label="Ranked"] .rating')?.textContent).toBe(badge);
-    await press('Profile');
+    expect($('#online h1, #online h2')?.textContent).toBe('Online');
+    await click('#online a[href="/profile"]');
     expect($('#online [aria-label="Ranked"] .rating')?.textContent).toBe(badge);
     expect(texts('#online .stat')[0]).toBe('0Games');
-    await click('[aria-label="Back"]');
+    await visit('/skull-king/ranked');
+    expect($('#online [aria-label="Ranked"] .rating')?.textContent).toBe(badge);
 
     await press('Ladder');
     const rows = Array.from(document.querySelectorAll<HTMLElement>('#online .ranking li'));
@@ -440,7 +513,7 @@ describe('the ladder, a page at a time', () => {
   /** The online screens alone, with addresses of their own: no page around them. */
   function Screens({ online }: { online: Online }) {
     const state = useSyncExternalStore(online.subscribe, online.getState);
-    const [router] = useState(() => createRouter(memoryPlaces(AT.online)));
+    const [router] = useState(() => createRouter(memoryPlaces(AT.ladder)));
     const route = routeOf(useSyncExternalStore(router.subscribe, router.getPath));
     return (
       <div id="online">
@@ -455,7 +528,7 @@ describe('the ladder, a page at a time', () => {
       </div>
     );
   }
-  /** The hub of a connected guest whose server answers REST from `answers`. */
+  /** The ladder of a connected guest whose server answers REST from `answers`. */
   async function openLadder(): Promise<Online> {
     const frames: { id: number }[] = [];
     const wire: Wire = {
@@ -486,7 +559,6 @@ describe('the ladder, a page at a time', () => {
       );
       await vi.advanceTimersByTimeAsync(0);
     });
-    await press('Ladder');
     return online;
   }
 
@@ -534,21 +606,5 @@ describe('the ladder, a page at a time', () => {
     await press('Show more');
     expect(document.querySelectorAll('#online .ranking li')).toHaveLength(2);
     online.dispose();
-  });
-});
-
-describe('how long a cooldown is said to last', () => {
-  it('counts minutes up, turns to hours when there are any, and never says less than there is', () => {
-    const MIN = 60_000;
-    expect(waitText(1)).toBe('less than a minute');
-    expect(waitText(MIN - 1)).toBe('less than a minute');
-    expect(waitText(MIN)).toBe('1 min');
-    expect(waitText(14 * MIN + 1)).toBe('15 min');
-    expect(waitText(59 * MIN)).toBe('59 min');
-    expect(waitText(60 * MIN)).toBe('1 h');
-    expect(waitText(3 * 60 * MIN + 44 * MIN + 1000)).toBe('3 h 45 min');
-    // The longest cooldown there is: a day.
-    expect(waitText(24 * 60 * MIN)).toBe('24 h');
-    expect(waitText(24 * 60 * MIN - 1)).toBe('24 h');
   });
 });

@@ -21,6 +21,7 @@ import type { SavedGame } from '../gameon/saved';
 import { useWho } from '../gameon/who';
 import { LegacyIcon, Player } from './parts';
 import type { Online, OnlineState } from '../net/online';
+import { useAhead } from '../online/ahead';
 import { BackIcon } from '../online/icons';
 import type { Me } from '../protocol/generated';
 import { AT } from '../router/addresses';
@@ -141,19 +142,6 @@ function Way({ name, icon, tone, line, to, onFollow, dim, pill, children }: WayP
       </Link>
     </li>
   );
-}
-
-/** Whether a time the server named is still ahead, looked at again when it has come. */
-function useAhead(online: Online, until: number | null): boolean {
-  const [, setTick] = useState(0);
-  const left = until == null ? 0 : until - online.serverNow();
-  useEffect(() => {
-    if (left <= 0) return;
-    // A day at most: the browser's timers do not take longer waits.
-    const timer = setTimeout(() => setTick((n) => n + 1), Math.min(left + 50, 86_400_000));
-    return () => clearTimeout(timer);
-  }, [left]);
-  return left > 0;
 }
 
 /** This device's own tally, as the renderer keeps it. Nothing before the first game. */

@@ -14,6 +14,8 @@ describe('the addresses', () => {
     expect(routeOf('/skull-king/score')).toEqual({ page: 'score' });
     expect(routeOf('/skull-king/table')).toEqual({ page: 'table' });
     expect(routeOf('/skull-king/online')).toEqual({ page: 'online' });
+    // Ranked has a page of its own: the address no longer leads to the index.
+    expect(routeOf('/skull-king/ranked')).toEqual({ page: 'ranked' });
     expect(routeOf('/skull-king/online/new')).toEqual({ page: 'newTable', visibility: 'private' });
     expect(routeOf('/skull-king/online/join')).toEqual({ page: 'join' });
     expect(routeOf('/skull-king/online/public')).toEqual({ page: 'publicTables' });
@@ -26,12 +28,8 @@ describe('the addresses', () => {
   });
 
   it('keeps an address that has a page, and both addresses of the new-game screen', () => {
-    for (const at of Object.values(AT).filter((a) => a !== AT.ranked)) expect(settle(at)).toBe(at);
+    for (const at of Object.values(AT)) expect(settle(at)).toBe(at);
     expect(settle(`/players/${ID}`)).toBe(`/players/${ID}`);
-  });
-
-  it('leads an address whose page is not built yet to the nearest one that is', () => {
-    expect(settle('/skull-king/ranked')).toBe('/skull-king/online');
   });
 
   it("takes a path that is nobody's to the home screen, and drops a slash at the end", () => {

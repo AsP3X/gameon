@@ -2,7 +2,7 @@
    which order. These are the rules of docs/protocol.md §5.2 and §5.5 the client is built on, so the
    same checks are the ones the real server has to pass. */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test';
-import type { GameUpdate, Lobby } from '../../protocol/generated';
+import type { GameUpdate, Lobby, LobbyList, LobbySummary } from '../../protocol/generated';
 import type { ServerMessage } from '../messages';
 import { connectRaw, framesOf } from './raw';
 import type { RawClient } from './raw';
@@ -366,6 +366,63 @@ describe('lobbies', () => {
       expect(lobbyOf(guest).state).toBe('inGame');
       expect(last(guest, 'game.update').table.status).toEqual(['online', 'bot', 'online']);
     }
+  });
+
+  it('keeps a table that seats no bots as it was asked for, and refuses a bot at it', async () => {
+    const browser = server.browser();
+    await browser.rest('POST', '/auth/guest');
+    const list = async (): Promise<LobbySummary[]> =>
+      ((await browser.rest('GET', '/lobbies')).body as LobbyList).lobbies;
+    const host = await connect(),
+      guest = await connect();
+    const made = host.send({ t: 'lobby.create', visibility: 'public', settings: SETTINGS, allowBots: false });
+    await flush();
+    // The table says so to its members and on the public list.
+    expect(answer(host, made).reply).toMatchObject({ t: 'ok', lobby: { allowBots: false } });
+    expect(await list()).toMatchObject([{ allowBots: false, players: 1 }]);
+
+    const refused = host.send({ t: 'lobby.addBot' });
+    await flush();
+    expect(answer(host, refused)).toEqual({
+      reply: { t: 'err', re: refused, code: 'BOTS_DISABLED', message: 'This table does not seat bots.' },
+      // A refusal changes nothing, and nobody is told anything.
+      next: undefined,
+    });
+    expect(framesOf(host, 'lobby.state')).toEqual([]);
+
+    // It is a table like any other for two people: they sit down, are ready, and it starts with no bot.
+    expect(await code(guest, { t: 'lobby.join', lobbyId: (await list())[0].id })).toBe('ok');
+    expect(lobbyOf(guest)).toMatchObject({ allowBots: false });
+    expect(await code(host, { t: 'lobby.addBot' })).toBe('BOTS_DISABLED');
+    expect(await code(host, { t: 'lobby.ready', ready: true })).toBe('ok');
+    expect(await code(guest, { t: 'lobby.ready', ready: true })).toBe('ok');
+    expect(await code(host, { t: 'lobby.start' })).toBe('ok');
+    expect(last(guest, 'game.update').table.status).toEqual(['online', 'online']);
+  });
+
+  it('seats bots at a table that did not say, or said yes, and takes no other word for it', async () => {
+    const browser = server.browser();
+    await browser.rest('POST', '/auth/guest');
+    const silent = await connect(),
+      yes = await connect(),
+      odd = await connect();
+    expect(await code(silent, { t: 'lobby.create', visibility: 'public', settings: SETTINGS })).toBe('ok');
+    expect(await code(yes, { t: 'lobby.create', visibility: 'public', settings: SETTINGS, allowBots: true })).toBe(
+      'ok',
+    );
+    expect(await code(odd, { t: 'lobby.create', visibility: 'public', settings: SETTINGS, allowBots: 'no' })).toBe(
+      'VALIDATION',
+    );
+    // Left out, the field stays out: that is a table that seats bots.
+    expect(last(silent, 'ok').lobby).not.toHaveProperty('allowBots');
+    expect(last(yes, 'ok').lobby).toMatchObject({ allowBots: true });
+    expect(await code(silent, { t: 'lobby.addBot' })).toBe('ok');
+    expect(await code(yes, { t: 'lobby.addBot' })).toBe('ok');
+    const rows = ((await browser.rest('GET', '/lobbies')).body as LobbyList).lobbies;
+    expect(rows.map((row) => [row.players, row.allowBots])).toEqual([
+      [2, undefined],
+      [2, true],
+    ]);
   });
 
   it('makes the next human host when the host leaves, and tells a kicked player why', async () => {

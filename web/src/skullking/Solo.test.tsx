@@ -326,7 +326,7 @@ describe('the solo setup', () => {
     await start();
     await settle(500);
     expect(sentOf('solo.start')).toEqual([]);
-    expect($('#online h2')?.textContent).toBe('Table');
+    expect($('#online h1, #online h2')?.textContent).toBe('Your table');
     expect(places.path()).toBe('/skull-king/online');
     expect($('#app .game')).toBeNull();
     expect(localStorage.getItem(GAME_KEY)).toBeNull();

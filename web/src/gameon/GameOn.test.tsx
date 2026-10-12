@@ -407,8 +407,9 @@ describe('Games', () => {
     await press('Join');
     expect(places.entries()).toEqual({ paths: ['/games', '/skull-king/online/public'], at: 1 });
     await settle();
-    expect($('#gameon')).toBeNull();
-    expect($('#online h2')?.textContent).toBe('Table');
+    // The frame's page is gone: what is up is the table, in the online screens.
+    expect($('.go-tables')).toBeNull();
+    expect($('#online h1, #online h2')?.textContent).toBe('Public table');
     const members = framesOf(open.socket, 'lobby.state').at(-1)?.lobby.members ?? [];
     expect(members).toHaveLength(2);
     // Asked once: the page that mounts twice in development did not ask twice.
@@ -424,7 +425,7 @@ describe('Games', () => {
     await settle();
     await press('Join');
     await settle();
-    expect($('#online h2')?.textContent).toBe('Public tables');
+    expect($('#online h1, #online h2')?.textContent).toBe('Public tables');
     expect($('#online [role="alert"]')?.textContent).toBe('That table is full.');
   });
 
