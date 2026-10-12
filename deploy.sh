@@ -97,8 +97,8 @@ show_help() {
 
   ${BOLD}Environment${NC} (.env, or the defaults in .env.example):
     PROXY_MODE          local | npm
-    API_PORT WEB_PORT   host ports when PROXY_MODE=local
-    POSTGRES_PORT       host port for Postgres
+    API_PORT WEB_PORT   host ports when PROXY_MODE=local. NPM does not use them.
+    POSTGRES_PORT       host port for Postgres when PROXY_MODE=local. NPM does not use it.
     SKT_PUBLIC_ORIGIN   site origin, when it is not localhost
     SKT_SECURE_COOKIE   1 when that origin is https
     POSTGRES_PASSWORD   database password
@@ -107,6 +107,8 @@ show_help() {
     NO_COLOR            disable coloured output
 
   ${BOLD}NPM${NC} (PROXY_MODE=npm, no host ports), the same choice as the setup screen:
+    Nginx Proxy Manager talks to the containers on the Docker network, so no
+    published host port is required and the setup does not ask for one.
     The stack joins the external proxy-network. ./deploy.sh creates that network
     when it is missing. Point Nginx Proxy Manager at http://skt-web:80, turn
     websockets on, and set SKT_PUBLIC_ORIGIN.
@@ -265,12 +267,17 @@ setup_check() {
     local|npm) ;;
     *) printf 'Reach it with "local" or "npm".\n' >&2; return 1 ;;
   esac
-  valid_port "$SETUP_WEB" || { printf 'The web port is not a tcp port.\n' >&2; return 1; }
-  valid_port "$SETUP_API" || { printf 'The API port is not a tcp port.\n' >&2; return 1; }
-  valid_port "$SETUP_PGPORT" || { printf 'The Postgres port is not a tcp port.\n' >&2; return 1; }
-  if [[ "$SETUP_WEB" == "$SETUP_API" || "$SETUP_WEB" == "$SETUP_PGPORT" || "$SETUP_API" == "$SETUP_PGPORT" ]]; then
-    printf 'The web, API and Postgres ports have to be different.\n' >&2
-    return 1
+  # NPM reaches skt-web and skt-api by container name. A published host port is
+  # not required, and the setup does not ask for one. The stored ports stay in
+  # .env for a later local start, where they are checked.
+  if [[ "$SETUP_MODE" == "local" ]]; then
+    valid_port "$SETUP_WEB" || { printf 'The web port is not a tcp port.\n' >&2; return 1; }
+    valid_port "$SETUP_API" || { printf 'The API port is not a tcp port.\n' >&2; return 1; }
+    valid_port "$SETUP_PGPORT" || { printf 'The Postgres port is not a tcp port.\n' >&2; return 1; }
+    if [[ "$SETUP_WEB" == "$SETUP_API" || "$SETUP_WEB" == "$SETUP_PGPORT" || "$SETUP_API" == "$SETUP_PGPORT" ]]; then
+      printf 'The web, API and Postgres ports have to be different.\n' >&2
+      return 1
+    fi
   fi
   valid_origin "$SETUP_ORIGIN" || {
     printf 'The public origin looks like https://tavern.example with no path.\n' >&2
@@ -349,8 +356,46 @@ setup_reach() {
   setup_row "$index" "${mark} ${text}"
 }
 
+# Cursor order. Host ports are only for This machine. NPM talks to the
+# containers on the Docker network and publishes nothing, so those rows are absent.
+setup_fields() {
+  printf '%s\n' reach-local reach-npm
+  if [[ "$SETUP_MODE" != "npm" ]]; then
+    printf '%s\n' web api pg
+  fi
+  printf '%s\n' origin cookie password proxies
+}
+
+setup_field_count() {
+  local n=0
+  while IFS= read -r _; do
+    n=$((n + 1))
+  done < <(setup_fields)
+  printf '%s' "$n"
+}
+
+setup_field_at() {
+  local i=0 line
+  while IFS= read -r line; do
+    if (( i == SETUP_PICK )); then
+      printf '%s' "$line"
+      return 0
+    fi
+    i=$((i + 1))
+  done < <(setup_fields)
+}
+
+setup_clamp_pick() {
+  local n
+  n="$(setup_field_count)"
+  if (( SETUP_PICK >= n )); then
+    SETUP_PICK=$((n - 1))
+  fi
+}
+
 setup_draw() {
-  local cookie proxies origin
+  local cookie proxies origin i=0 field settings=0
+  setup_clamp_pick
   printf '\033[H\033[2J'
   printf '%sSkull King Tavern — setup%s\n\n' "$BOLD" "$NC"
   if [[ "$SETUP_SECURE" == "1" ]]; then
@@ -361,19 +406,32 @@ setup_draw() {
   origin="$SETUP_ORIGIN"
   proxies="$SETUP_PROXIES"
   printf '  How players reach the tavern\n'
-  setup_reach 0 local "This machine            http://localhost:${SETUP_WEB}"
-  setup_reach 1 npm "NPM                     http://skt-web:80"
-  printf '\n  Settings\n'
-  setup_row 2 "Web port              ${SETUP_WEB}"
-  setup_row 3 "API port              ${SETUP_API}"
-  setup_row 4 "Postgres port         ${SETUP_PGPORT}"
-  setup_row 5 "Public origin         ${origin}"
-  setup_row 6 "Secure cookie         ${cookie}"
-  setup_row 7 "Database password     ${SETUP_PASSWORD}"
-  setup_row 8 "Trusted proxies       ${proxies}"
+  while IFS= read -r field; do
+    case "$field" in
+      reach-local|reach-npm) ;;
+      *)
+        if (( settings == 0 )); then
+          printf '\n  Settings\n'
+          settings=1
+        fi
+        ;;
+    esac
+    case "$field" in
+      reach-local) setup_reach "$i" local "This machine            http://localhost:${SETUP_WEB}" ;;
+      reach-npm) setup_reach "$i" npm "NPM                     http://skt-web:80" ;;
+      web) setup_row "$i" "Web port              ${SETUP_WEB}" ;;
+      api) setup_row "$i" "API port              ${SETUP_API}" ;;
+      pg) setup_row "$i" "Postgres port         ${SETUP_PGPORT}" ;;
+      origin) setup_row "$i" "Public origin         ${origin}" ;;
+      cookie) setup_row "$i" "Secure cookie         ${cookie}" ;;
+      password) setup_row "$i" "Database password     ${SETUP_PASSWORD}" ;;
+      proxies) setup_row "$i" "Trusted proxies       ${proxies}" ;;
+    esac
+    i=$((i + 1))
+  done < <(setup_fields)
   printf '\n'
   if [[ "$SETUP_MODE" == "npm" ]]; then
-    printf '  %sNPM joins proxy-network and publishes no ports. The ports above stay for a local start.%s\n' "$DIM" "$NC"
+    printf '  %sNPM talks to skt-web and skt-api on the Docker network. No host port is published.%s\n' "$DIM" "$NC"
     printf '  %sPoint Nginx Proxy Manager at skt-web port 80 and turn websockets on.%s\n' "$DIM" "$NC"
   else
     printf '  %sThe page is the only address the browser needs.%s\n' "$DIM" "$NC"
@@ -507,40 +565,47 @@ run_setup() {
     setup_draw
     setup_key
     case "$SETUP_ACTION" in
-      up) SETUP_PICK=$(( (SETUP_PICK + 8) % 9 )) ;;
-      down) SETUP_PICK=$(( (SETUP_PICK + 1) % 9 )) ;;
+      up)
+        n="$(setup_field_count)"
+        SETUP_PICK=$(( (SETUP_PICK + n - 1) % n ))
+        ;;
+      down)
+        n="$(setup_field_count)"
+        SETUP_PICK=$(( (SETUP_PICK + 1) % n ))
+        ;;
       enter)
-        case "$SETUP_PICK" in
-          0) SETUP_MODE="local" ;;
-          1) SETUP_MODE="npm" ;;
-          6)
+        case "$(setup_field_at)" in
+          reach-local) SETUP_MODE="local" ;;
+          reach-npm) SETUP_MODE="npm" ;;
+          cookie)
             if [[ "$SETUP_SECURE" == "1" ]]; then SETUP_SECURE=""; else SETUP_SECURE="1"; fi
             ;;
-          2)
+          web)
             setup_edit "$SETUP_WEB" ""
             SETUP_WEB="$SETUP_ENTERED"
             ;;
-          3)
+          api)
             setup_edit "$SETUP_API" ""
             SETUP_API="$SETUP_ENTERED"
             ;;
-          4)
+          pg)
             setup_edit "$SETUP_PGPORT" ""
             SETUP_PGPORT="$SETUP_ENTERED"
             ;;
-          5)
+          origin)
             setup_edit "$SETUP_ORIGIN" "  (- clears)"
             SETUP_ORIGIN="$(apply_optional "$SETUP_ENTERED" "(this machine)")"
             ;;
-          7)
+          password)
             setup_edit "$SETUP_PASSWORD" ""
             SETUP_PASSWORD="$SETUP_ENTERED"
             ;;
-          8)
+          proxies)
             setup_edit "$SETUP_PROXIES" "  (- clears)"
             SETUP_PROXIES="$(apply_optional "$SETUP_ENTERED" "(Docker bridge)")"
             ;;
         esac
+        setup_clamp_pick
         ;;
       save)
         if setup_check && guard_postgres; then
