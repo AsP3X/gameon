@@ -189,6 +189,8 @@ struct Running {
     stored: usize,
     /// Inactivity kicks this step. Drained by `Tables::tick`.
     kicks: Vec<UserId>,
+    /// Seats closed for inactivity, in the order of the kicks. Not the leave list.
+    kicked_seats: Vec<Seat>,
 }
 
 /// A player removed for inactivity. Ranked starts the cooldown here, not at `game.over`.
@@ -279,6 +281,7 @@ impl Tables {
             log,
             stored: 0,
             kicks: Vec::new(),
+            kicked_seats: Vec::new(),
         };
         running.ready.resize(running.seats.len(), false);
         running.arm(now);
@@ -450,6 +453,7 @@ impl Tables {
             log,
             stored,
             kicks: Vec::new(),
+            kicked_seats: Vec::new(),
         };
         running.arm(now);
         for (index, seat) in running.seats.iter().enumerate() {
@@ -516,11 +520,9 @@ impl Tables {
         if running.status.get(index) == Some(&next) || running.seats[index].started_bot {
             return;
         }
-        // Human: Sitting back down before the kick forgives the misses. A kick cannot be undone.
-        // Agent: WRITES status and misses. Out is left closed.
-        if up {
-            running.seats[index].misses = 0;
-        }
+        // Human: A drop starts the two offline misses at zero. Sitting back down clears them too.
+        // Agent: WRITES misses on every connect and drop. Out is left closed.
+        running.seats[index].misses = 0;
         running.status[index] = next;
         let events = vec![GameEvent::Online(OnlineEvent::SeatStatus {
             seat,
@@ -1181,15 +1183,15 @@ impl Running {
                 mark_away.push(seat);
             }
             // Human: The second miss while the socket is down closes the seat in this same update.
-            // Agent: WRITES status out and, in ranked, forfeited. Later turns are not timedOut.
+            // Agent: WRITES status out and kicked_seats. Ranked lists that seat after leavers. Later turns are not timedOut.
             if misses >= 2 && self.status[seat.index()] == SeatStatus::Offline {
                 self.status[seat.index()] = SeatStatus::Out;
                 wire.push(GameEvent::Online(OnlineEvent::SeatStatus {
                     seat,
                     status: SeatStatus::Out,
                 }));
-                if self.mode == TableMode::Ranked && !self.forfeited.contains(&seat) {
-                    self.forfeited.push(seat);
+                if !self.kicked_seats.contains(&seat) {
+                    self.kicked_seats.push(seat);
                 }
                 if let Some(user) = self.seats[seat.index()].user.clone() {
                     self.kicks.push(user);
@@ -1256,7 +1258,7 @@ impl Running {
         let bids_total = u32::try_from(scores.len()).unwrap_or(0);
         let mut tallies = Vec::new();
         for index in 0..self.players() {
-            if self.forfeited.iter().any(|left| left.index() == index) {
+            if self.closed(index) {
                 continue;
             }
             let Some(user) = self.seats[index].user.clone() else {
@@ -1331,9 +1333,22 @@ impl Running {
         }
     }
 
-    /// `game.leave` seats, plus a ranked seat that was away for most rounds.
+    fn closed(&self, index: usize) -> bool {
+        self.closed_seat(Seat::from_index(u8::try_from(index).unwrap_or(0)))
+    }
+
+    fn closed_seat(&self, seat: Seat) -> bool {
+        self.forfeited.contains(&seat) || self.kicked_seats.contains(&seat)
+    }
+
+    /// Leavers, then inactivity kicks, then a ranked seat that was away for most rounds.
     fn ranked_forfeits(&self) -> Vec<Seat> {
         let mut seats = self.forfeited.clone();
+        for seat in &self.kicked_seats {
+            if !seats.contains(seat) {
+                seats.push(*seat);
+            }
+        }
         if self.mode != TableMode::Ranked {
             return seats;
         }
@@ -1356,7 +1371,7 @@ impl Running {
         }
         forfeits
             .iter()
-            .filter(|seat| !self.forfeited.contains(seat))
+            .filter(|seat| !self.forfeited.contains(seat) && !self.kicked_seats.contains(seat))
             .filter_map(|seat| {
                 self.seats
                     .get(seat.index())
@@ -1428,18 +1443,11 @@ impl Running {
             let Some(user) = self.seats[index].user.clone() else {
                 continue;
             };
-            if self
-                .forfeited
-                .contains(&Seat::from_index(u8::try_from(index).unwrap_or(0)))
-                && actor != Some(&user)
-            {
+            let seat = Seat::from_index(u8::try_from(index).unwrap_or(0));
+            if self.closed_seat(seat) && actor != Some(&user) {
                 continue;
             }
-            if actor == Some(&user)
-                || !self
-                    .forfeited
-                    .contains(&Seat::from_index(u8::try_from(index).unwrap_or(0)))
-            {
+            if actor == Some(&user) || !self.closed_seat(seat) {
                 self.send_update(&user, index, events.to_vec(), live);
             }
         }

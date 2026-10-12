@@ -418,6 +418,7 @@ async fn two_misses_while_offline_close_the_seat_and_tell_only_that_player() {
     .await;
     let welcome = read_until(&mut back, "\"t\":\"welcome\"").await;
     assert!(welcome.contains("\"game\":null"), "{welcome}");
+    assert!(welcome.contains("\"lobby\":null"), "{welcome}");
     let lost = read_text(&mut back).await;
     assert!(lost.contains("\"t\":\"seat.lost\""), "{lost}");
     assert!(lost.contains("\"reason\":\"inactivity\""), "{lost}");
@@ -448,6 +449,59 @@ async fn two_misses_while_offline_close_the_seat_and_tell_only_that_player() {
     send(&mut mate, r#"{"t":"game.ready","id":7}"#).await;
     let advanced = read_until(&mut mate, "\"phase\":\"bidding\"").await;
     assert!(advanced.contains("\"round\":1"), "{advanced}");
+}
+
+#[tokio::test]
+async fn a_miss_while_connected_does_not_count_after_the_drop() {
+    let state = AppState::for_socket_tests(Duration::from_secs(5), Duration::from_secs(45));
+    let port = serve(state.clone()).await;
+    let host_cookie = guest(port).await;
+    let mate_cookie = guest(port).await;
+    let mut host = open_socket(port, &host_cookie).await;
+    let mut mate = open_socket(port, &mate_cookie).await;
+    hello(&mut host).await;
+    hello(&mut mate).await;
+    send(&mut host, &create(2)).await;
+    let code = quoted(&read_text(&mut host).await, "code");
+    send(&mut mate, &join(2, &code)).await;
+    let _ = read_text(&mut mate).await;
+    let _ = read_text(&mut mate).await;
+    let _ = read_text(&mut host).await;
+    send(&mut host, r#"{"t":"lobby.ready","id":3,"ready":true}"#).await;
+    let _ = read_until(&mut host, "\"t\":\"ok\"").await;
+    let _ = read_until(&mut mate, "lobby.state").await;
+    send(&mut mate, r#"{"t":"lobby.ready","id":3,"ready":true}"#).await;
+    let _ = read_until(&mut mate, "\"t\":\"ok\"").await;
+    let _ = read_until(&mut host, "lobby.state").await;
+    send(&mut host, r#"{"t":"lobby.start","id":4}"#).await;
+    let _ = read_until(&mut host, "\"t\":\"game.update\"").await;
+    let mate_open = read_until(&mut mate, "\"t\":\"game.update\"").await;
+    send(
+        &mut mate,
+        r#"{"t":"game.bid","id":5,"at":{"round":0,"trick":0},"bid":0}"#,
+    )
+    .await;
+    let _ = read_until(&mut mate, "\"t\":\"ok\"").await;
+    state.advance(Duration::from_secs(46)).await;
+    let connected = read_until(&mut mate, "timedOut").await;
+    assert!(!connected.contains("\"status\":\"out\""), "{connected}");
+    assert!(!connected.contains("\"status\":\"offline\""), "{connected}");
+    host.close(None).await.expect("close");
+    let _ = read_until(&mut mate, "\"status\":\"offline\"").await;
+    let card = first_card(&mate_open);
+    send(
+        &mut mate,
+        &format!(r#"{{"t":"game.play","id":6,"at":{{"round":0,"trick":0}},"card":{card}}}"#),
+    )
+    .await;
+    let played = read_until(&mut mate, "\"t\":\"ok\"").await;
+    assert!(played.contains("\"t\":\"ok\""), "{played}");
+    state.advance(Duration::from_secs(31)).await;
+    let first_offline = read_until(&mut mate, "timedOut").await;
+    assert!(
+        !first_offline.contains("\"status\":\"out\""),
+        "{first_offline}"
+    );
 }
 
 fn first_card(frame: &str) -> String {

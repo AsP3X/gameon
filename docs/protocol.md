@@ -144,9 +144,10 @@ lower case. A password is `WEAK_PASSWORD` only when it is empty. The message is 
 `Stats` counts every finished custom game and every finished casual game. A finished ranked game
 is stored and does not change these counters, including for a seat that stayed. `rating.games`
 counts that ranked game instead, including a seat that left. A shared first place counts as a win
-for each of those seats. A seat that sent `game.leave` is not counted in `Stats`. `bestScore` is
-set by the first finished custom or casual game even when the total is negative, and is the highest
-total after that. `bidsTotal` is the number of scored rounds. `bidsMade` is the rounds where the
+for each of those seats. A seat that sent `game.leave` is not counted in `Stats`. A seat kicked
+for inactivity is not counted in `Stats` either, in any mode, including a casual, friends or
+public game the table then won. `bestScore` is set by the first finished custom or casual game
+even when the total is negative, and is the highest total after that. `bidsTotal` is the number of scored rounds. `bidsMade` is the rounds where the
 bid was hit.
 
 `config.season` is the calendar quarter that contains the server's clock. It is not null. Quarters
@@ -463,10 +464,12 @@ A socket that arrives or drops during a game is a step of its own. `rev` increas
 `events` is one `seatStatus`, and every seated socket is sent that `game.update`. The returning
 socket is sent it after `welcome`. `welcome.game.update`, when `welcome.game` is present, is a
 snapshot at the current `rev` with `events: []`. It is not a new step. A drop sets the status to
-`offline` at once. The seat stays that player's. A later `welcome` puts them back in the same game
-until they are kicked. Coming back sets `online` and the miss count returns to zero. There is no
-change to `bot` after 60 seconds. While `offline` the seat is on the bid, play and ability clock
-and is listed in `deadline.seats`. A missed deadline plays the bot's move for that turn and the
+`offline` at once and the miss count returns to zero, so both misses of a kick happen while
+`offline`. The seat stays that player's. A later `welcome` puts them back in the same game
+until they are kicked. Coming back sets `online` and the miss count returns to zero. The kicked
+player is removed from the lobby, as a leaver is, so that `welcome` has no lobby for the table.
+There is no change to `bot` after 60 seconds. While `offline` the seat is on the bid, play and
+ability clock and is listed in `deadline.seats`. A missed deadline plays the bot's move for that turn and the
 `game.update` carries `timedOut`. The status stays `offline`. The second missed deadline in a row
 while `offline` is the kick. That one `game.update` carries the move, `timedOut`, and
 `seatStatus` `out`, in that order. Later turns of an `out` seat are the bot's move 1.5 seconds
@@ -528,16 +531,19 @@ set the seat to `away`; an away seat is played after 1.5 seconds and returns to 
 player's next accepted intent. Round end waits for `online` and `away` humans, as §5.5 says.
 
 In a ranked game, a seat kicked for inactivity is a forfeit at the kick. The place is last, the
-seat is listed in `forfeited`, and `Me.cooldownUntil` is set then, by the same steps as
-`game.leave`. Casual, friends and public do not start a cooldown and do not fill `forfeited`.
+seat is listed in `forfeited` after every `game.leave` and before any seat that was only `away`,
+and `Me.cooldownUntil` is set then, by the same steps as `game.leave`. Casual, friends and public
+do not start a cooldown and do not fill `forfeited`. In every mode the kicked seat is left out of
+`Stats`, as a leaver is.
 
 In a ranked game, a seat that is `away` when more than half of the rounds end is a forfeit. A
 round counts at the moment it ends. Coming back to `online` before that moment keeps the round
 off the count. The forfeit is applied when the game ends, not when the seat first goes `away`:
-the place is last, the seat is appended to `forfeited` after any `game.leave` seats, and
-`Me.cooldownUntil` is set then, by the same steps as a leave. A seat that already sent
-`game.leave` is not penalised again. Casual and custom games do not do this. The away player is
-still seated, so `game.over` arrives on the open table, not as a notice after `game.leave`.
+the place is last, the seat is appended to `forfeited` after every `game.leave` and every
+inactivity kick, and `Me.cooldownUntil` is set then, by the same steps as a leave. A seat that
+already sent `game.leave`, or that was already kicked, is not penalised again. Casual and custom
+games do not do this. The away player is still seated, so `game.over` arrives on the open table,
+not as a notice after `game.leave`.
 
 ## 6. What a seat never receives
 

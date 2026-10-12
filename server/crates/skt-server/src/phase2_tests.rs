@@ -432,6 +432,34 @@ async fn a_casual_kick_sets_no_cooldown(pool: sqlx::PgPool) {
     let (status, _, me) = http(port, "GET", "/api/v1/me", &cookie, "").await;
     assert_eq!(status, 200, "{me}");
     assert!(me.contains("\"cooldownUntil\":null"), "{me}");
+    let mut over = String::new();
+    if let Ok(frame) = tokio::time::timeout(Duration::from_millis(300), read_text(&mut back)).await
+        && frame.contains("\"t\":\"game.over\"")
+    {
+        over = frame;
+    }
+    for _ in 0..400 {
+        if !over.is_empty() {
+            break;
+        }
+        state.advance(Duration::from_secs(3)).await;
+        while let Ok(frame) =
+            tokio::time::timeout(Duration::from_millis(20), read_text(&mut back)).await
+        {
+            if frame.contains("\"t\":\"game.over\"") {
+                over = frame;
+                break;
+            }
+        }
+    }
+    assert!(
+        over.contains("\"t\":\"game.over\""),
+        "the casual table finished"
+    );
+    assert!(over.contains("\"forfeited\":[]"), "{over}");
+    let (status, _, me) = http(port, "GET", "/api/v1/me", &cookie, "").await;
+    assert_eq!(status, 200, "{me}");
+    assert!(me.contains("\"stats\":{\"games\":0,\"wins\":0"), "{me}");
 }
 
 #[sqlx::test(migrations = "../../migrations/postgres")]
@@ -499,6 +527,96 @@ async fn a_ranked_kick_forfeits_and_starts_the_cooldown(pool: sqlx::PgPool) {
     }
     assert!(saw_out, "the table shows out");
     assert!(saw_over, "ranked game.over lists the kick in forfeited");
+}
+
+#[sqlx::test(migrations = "../../migrations/postgres")]
+async fn a_leave_is_listed_before_a_kick(pool: sqlx::PgPool) {
+    let state = AppState::for_tests(pool, Duration::ZERO, budgets());
+    let port = serve(state.clone()).await;
+    let mut first = account(port, "Ada").await.1;
+    let mut second = account(port, "Bea").await.1;
+    let mut third = account(port, "Cal").await.1;
+    let mut fourth = account(port, "Dee").await.1;
+    send(&mut first, r#"{"t":"queue.join","id":2,"mode":"ranked"}"#).await;
+    assert!(read_text(&mut first).await.contains("\"found\":1"));
+    send(&mut second, r#"{"t":"queue.join","id":2,"mode":"ranked"}"#).await;
+    assert!(read_text(&mut second).await.contains("\"found\":2"));
+    assert!(read_text(&mut first).await.contains("\"found\":2"));
+    send(&mut third, r#"{"t":"queue.join","id":2,"mode":"ranked"}"#).await;
+    assert!(read_text(&mut third).await.contains("\"found\":3"));
+    let _ = read_text(&mut first).await;
+    let _ = read_text(&mut second).await;
+    send(&mut fourth, r#"{"t":"queue.join","id":2,"mode":"ranked"}"#).await;
+    assert!(read_text(&mut fourth).await.contains("\"found\":4"));
+    for socket in [&mut first, &mut second, &mut third] {
+        assert!(read_text(socket).await.contains("\"found\":4"));
+    }
+    for socket in [&mut first, &mut second, &mut third, &mut fourth] {
+        assert_ranked_start(&read_text(socket).await);
+        let opening = read_text(socket).await;
+        assert!(opening.contains("\"t\":\"game.update\""), "{opening}");
+    }
+    drop(second);
+    let mut saw_out = false;
+    for _ in 0..80 {
+        state.advance(Duration::from_secs(46)).await;
+        while let Ok(frame) =
+            tokio::time::timeout(Duration::from_millis(20), read_text(&mut first)).await
+        {
+            if frame.contains("\"status\":\"out\"") {
+                saw_out = true;
+            }
+        }
+        if saw_out {
+            break;
+        }
+    }
+    assert!(saw_out, "the dropped seat closes");
+    send(&mut fourth, r#"{"t":"game.leave","id":3}"#).await;
+    let mut left = String::new();
+    for _ in 0..400 {
+        left = tokio::time::timeout(Duration::from_secs(2), read_text(&mut fourth))
+            .await
+            .expect("leave reply");
+        if left.contains("\"t\":\"ok\"") || left.contains("\"t\":\"err\"") {
+            break;
+        }
+    }
+    assert!(left.contains("\"t\":\"ok\""), "{left}");
+    let mut over = String::new();
+    for _ in 0..250 {
+        state.advance(Duration::from_secs(46)).await;
+        while let Ok(frame) =
+            tokio::time::timeout(Duration::from_millis(20), read_text(&mut first)).await
+        {
+            if frame.contains("\"t\":\"game.over\"") {
+                over = frame;
+                break;
+            }
+        }
+        if !over.is_empty() {
+            break;
+        }
+    }
+    assert!(over.contains("\"t\":\"game.over\""), "ranked game ended");
+    let seats = forfeited_seats(&over);
+    let leave_at = seats.iter().position(|seat| *seat == 3).expect(&over);
+    let kick_at = seats.iter().position(|seat| *seat == 1).expect(&over);
+    assert!(leave_at < kick_at, "{seats:?} {over}");
+}
+
+fn forfeited_seats(frame: &str) -> Vec<u8> {
+    let marker = "\"forfeited\":[";
+    let start = frame.find(marker).expect("forfeited");
+    let rest = &frame[start + marker.len()..];
+    let end = rest.find(']').expect("forfeited end");
+    let body = &rest[..end];
+    if body.is_empty() {
+        return Vec::new();
+    }
+    body.split(',')
+        .map(|part| part.trim().parse().expect("seat"))
+        .collect()
 }
 
 fn assert_ranked_start(frame: &str) {
