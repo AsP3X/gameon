@@ -213,7 +213,7 @@ describe('the landing', () => {
       'Pirate Lord',
       'Skull King',
     ]);
-    // The ladder needs a session, and a visit is no reason to make one.
+    // Nobody is on the ladder yet, so there is no podium. Reading it made no session.
     expect($('.go-podium')).toBeNull();
     expect((await session()).status).toBe(401);
   });
@@ -294,6 +294,34 @@ describe('the landing', () => {
     expect($('.go-chip')?.getAttribute('href')).toBe('/profile');
   });
 
+  it('shows a visitor the podium too, and makes no guest to read it', async () => {
+    const guest = await aGuest(),
+      season = (await config()).season;
+    let guests = 0;
+    const entries = ['Mira', 'Jonas', 'Teo'].map((name, i): LadderEntry => ({
+      rank: i + 1,
+      user: { ...guest.user, id: `018f6b4a-6a2e-7c3a-8b1d-9e0f1a2b3c4${i}`, name, tier: 'Captain' },
+      rating: { value: 40 - i, tier: 'Captain', provisional: false, games: 9 },
+    }));
+    await openFrame(
+      {
+        'GET /me': () => refused(401, 'UNAUTHENTICATED'),
+        'POST /auth/guest': () => {
+          guests++;
+          return ok(guest);
+        },
+        'GET /config': () => ok({ season }),
+        'GET /ladder': () => ok({ season, entries }),
+      },
+      '/',
+    );
+    expect(texts('.go-podium li > b')).toEqual(['Mira', 'Jonas', 'Teo']);
+    expect(guests).toBe(0);
+    // Still a visitor: ranked is offered with what it takes.
+    expect(link('Sign in').getAttribute('href')).toBe('/sign-in');
+    expect(link('Find a ranked game').getAttribute('href')).toBe('/sign-up');
+  });
+
   it('has no podium while fewer than three are on the ladder, and no ranked block when there is no season', async () => {
     const guest = await aGuest(),
       season = (await config()).season;
@@ -357,7 +385,7 @@ describe('Games', () => {
     const open = await someone(),
       full = await someone(),
       hidden = await someone();
-    await open.browser.rest('PATCH', '/me', { name: '<i>Mary</i>' });
+    await open.browser.rest('PATCH', '/me', { name: '<i>Mary</i>', color: '#ce82ff' });
     open.socket.send({ t: 'lobby.create', visibility: 'public', settings: SETTINGS });
     full.socket.send({ t: 'lobby.create', visibility: 'public', settings: { ...SETTINGS, maxPlayers: 2 } });
     hidden.socket.send({ t: 'lobby.create', visibility: 'private', settings: SETTINGS });
@@ -369,6 +397,9 @@ describe('Games', () => {
     expect($('.go-tables-head .pill')?.textContent).toBe('1');
     expect(texts('.go-table-text b')).toEqual(['<i>Mary</i>’s table']);
     expect(texts('.go-table-text small')).toEqual(['1 of 3 seats · Swift-n-Salty']);
+    // The avatar is the host's own colour, as the server sent it.
+    expect($('.go-tables li .avatar')?.className).toBe('avatar');
+    expect($('.go-tables li .avatar')?.style.background).toBe('rgb(206, 130, 255)');
     expect(link('All public tables').getAttribute('href')).toBe('/skull-king/online/public');
     expect(link('Join with a code').getAttribute('href')).toBe('/skull-king/online/join');
 
@@ -416,6 +447,9 @@ describe('Games', () => {
     await settle();
     expect(texts('.go-table-text b')).toEqual(['Teo’s table']);
     expect(texts('.go-table-text small')).toEqual(['2 of 3 seats · Swift-n-Salty']);
+    // This row came without its host's colour: the avatar is plain, and no colour is made up for it.
+    expect($('.go-tables li .avatar')?.className).toBe('avatar plain');
+    expect($('.go-tables li .avatar')?.getAttribute('style')).toBeNull();
   });
 
   it('filters the shelf, and counts what is coming', async () => {

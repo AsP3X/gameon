@@ -1,7 +1,7 @@
 /* The landing: what GameOn is, the one game that is live, the ranked season, and the games that are
    announced. It is the page a visitor with no session sees, and it gives them none: it asks the
-   server who they are and nothing more. The season is the server's (`GET /config`). The three at
-   the top of the ladder are shown when the ladder can be read, which takes a session. */
+   server who they are and nothing more. The season is the server's (`GET /config`), and so are the
+   three at the top of the ladder (`GET /ladder`, which anybody may read). */
 import { useEffect, useRef, useState } from 'react';
 import type { Online } from '../net/online';
 import type { LadderEntry, Season } from '../protocol/generated';
@@ -90,12 +90,10 @@ export function Landing({ online, who, season }: LandingProps) {
   const [shelf, setShelf] = useState<Shelf>('all');
   const [top, setTop] = useState<LadderEntry[] | null>(null);
   const account = accountOf(who),
-    session = who.is === 'player',
     soon = soonOn(shelf);
 
-  // The ladder needs a session. A visitor has none, and the landing does not make one for this.
+  // The ladder of the season is public: a visitor is shown it, and no session is made for it.
   useEffect(() => {
-    if (!session) return;
     let stale = false;
     void online.ladder().then((r) => {
       if (!stale && r.ok && r.value.entries.length >= PODIUM) setTop(r.value.entries.slice(0, PODIUM));
@@ -103,7 +101,7 @@ export function Landing({ online, who, season }: LandingProps) {
     return () => {
       stale = true;
     };
-  }, [online, session]);
+  }, [online]);
 
   const toWays = (): void => {
     ways.current?.scrollIntoView?.({ behavior: reduced() ? 'auto' : 'smooth', block: 'start' });

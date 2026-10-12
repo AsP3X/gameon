@@ -337,7 +337,7 @@ describe('public lobbies', () => {
   const list = async (b: Browser): Promise<LobbyList['lobbies']> =>
     ((await b.call('GET', '/lobbies')).body as LobbyList).lobbies;
 
-  it('lists the open public lobbies with host, rules and seats taken, and never a private one', async () => {
+  it("lists the open public lobbies with host, the host's colour, rules and seats taken, and never a private one", async () => {
     const host = await guest(),
       hostSocket = await host.connect(),
       hidden = await (await guest()).connect(),
@@ -348,8 +348,9 @@ describe('public lobbies', () => {
     await ask(hostSocket, { t: 'lobby.addBot' });
     const lobby = made.t === 'ok' ? made.lobby : undefined;
     expect(lobby).toMatchObject({ visibility: 'public', mode: 'custom' });
+    const hostUser = (await host.me()).user;
     expect(await list(viewer)).toEqual([
-      { id: lobby?.id, hostName: (await host.me()).user.name, settings: SETTINGS, players: 2 },
+      { id: lobby?.id, hostName: hostUser.name, hostColor: hostUser.color, settings: SETTINGS, players: 2 },
     ]);
     expect((await browser().call('GET', '/lobbies')).status).toBe(401);
   });

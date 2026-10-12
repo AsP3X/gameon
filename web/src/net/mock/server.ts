@@ -674,6 +674,12 @@ export class MockServer {
       return ok(this.profile(found));
     }
 
+    // The ladder of the current season is anybody's to read: no session is asked for, and none is made.
+    if (path === '/ladder') {
+      const page = this.ladder(new URLSearchParams(search));
+      return typeof page === 'string' ? fail(page) : ok(page);
+    }
+
     const account = browser.session;
     if (!account) return fail('UNAUTHENTICATED');
     if (path === '/auth/logout') {
@@ -715,15 +721,13 @@ export class MockServer {
           return {
             id: lobby.id,
             hostName: host?.kind === 'human' ? host.user.name : '',
+            // The host's own colour. A row without a host has none, and no other is put in its place.
+            ...(host?.kind === 'human' ? { hostColor: host.user.color } : {}),
             settings: lobby.settings,
             players: lobby.members.length,
           };
         });
       return ok({ lobbies });
-    }
-    if (path === '/ladder') {
-      const page = this.ladder(new URLSearchParams(search));
-      return typeof page === 'string' ? fail(page) : ok(page);
     }
     if (gameLog) {
       const kept = this.records.get(gameLog[1]);

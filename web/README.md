@@ -95,8 +95,8 @@ a phone and one from 1000 px up.
   what it is told. On the landing and on the two forms that is `GET /me`, and a visitor without a
   session stays one. At Games the player is on their way in, so a browser without a session gets its
   guest there (`POST /auth/guest`), as it does when it connects.
-- **The landing** reads the season from `GET /config`. The three at the top of the ladder are shown
-  when `GET /ladder` can be read, which takes a session, and when there are three.
+- **The landing** reads the season from `GET /config` and the three at the top of the ladder from
+  `GET /ladder`, which is public. With fewer than three on the ladder there is no podium.
 - **Games** shows the player's seat from `Me`, the public tables that have room from
   `GET /lobbies`, and the way back into a game that is not over: a seat the server keeps
   (`Me.active`) first, else the offline game saved on this device. "Join" at a table hands the table
@@ -107,8 +107,8 @@ a phone and one from 1000 px up.
   **Signing in** makes a connection again only when there was one.
 - **Not built, because nothing is drawn or decided behind them:** "How to play", "Privacy" and
   "Imprint" in the footer, and "Suggest a game". The frames show them; the pages do not.
-- A table in the public list has no colour of its host (`LobbySummary` has the name only), so its
-  avatar is plain.
+- A table in the public list is drawn in its host's colour (`LobbySummary.hostColor`). A row that
+  came without one has a plain avatar.
 - The installed app opens at `/skull-king` (`start_url` in `public/manifest.json`), as it did when
   `/` led there.
 

@@ -480,8 +480,10 @@ describe('the ladder', () => {
     (await who.call('GET', `/ladder${query}`)).body as LadderPage;
   const bytes = (a: string, b: string): number => Buffer.compare(Buffer.from(a, 'utf8'), Buffer.from(b, 'utf8'));
 
-  it('needs a session, and is an empty list with the current season before anyone has played', async () => {
-    expect(await server.browser().rest('GET', '/ladder')).toEqual({ status: 401, body: error('UNAUTHENTICATED') });
+  it('needs no session, makes none, and is an empty list with the current season before anyone has played', async () => {
+    const visitor = server.browser();
+    expect(await visitor.rest('GET', '/ladder')).toEqual({ status: 200, body: { season: Q4, entries: [] } });
+    expect(await visitor.rest('GET', '/me')).toEqual({ status: 401, body: error('UNAUTHENTICATED') });
     const guest = await player();
     expect(await ladder(guest)).toEqual({ season: Q4, entries: [] });
     expect((await guest.call('GET', '/config')).body).toMatchObject({ season: Q4 });

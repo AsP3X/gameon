@@ -1159,7 +1159,7 @@
   gap: 12px;
   padding: 12px 14px 14px 16px;
 }
-/* The list says who hosts a table, not which colour they play in. */
+/* A table whose row came without its host's colour. */
 .go-tables .avatar.plain {
   background: var(--soft);
   color: var(--muted);

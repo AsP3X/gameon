@@ -203,7 +203,12 @@ function OpenTables({
           <ul>
             {tables.open.slice(0, TABLES_SHOWN).map((lobby, i) => (
               <li key={lobby.id}>
-                <span className="avatar plain" aria-hidden="true">
+                {/* The host's colour when the server sent one. No other is put in its place. */}
+                <span
+                  className={lobby.hostColor ? 'avatar' : 'avatar plain'}
+                  style={lobby.hostColor ? { background: cssColor(lobby.hostColor) } : undefined}
+                  aria-hidden="true"
+                >
                   {initialOf(lobby.hostName)}
                 </span>
                 <span className="go-table-text">
