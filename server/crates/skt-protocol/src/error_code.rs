@@ -44,6 +44,8 @@ pub enum ErrorCode {
     NotHost,
     /// Start was asked with unready players or fewer than two seats.
     NotReady,
+    /// `lobby.addBot` on a table that does not seat bots.
+    BotsDisabled,
     /// Ranked needs a registered account.
     AccountRequired,
     /// The leaver penalty has not expired. The message carries no time.
@@ -85,6 +87,7 @@ impl ErrorCode {
             Self::NotInLobby,
             Self::NotHost,
             Self::NotReady,
+            Self::BotsDisabled,
             Self::AccountRequired,
             Self::QueueCooldown,
             Self::NotInGame,
@@ -111,6 +114,7 @@ impl ErrorCode {
             | Self::AlreadySeated
             | Self::NotInLobby
             | Self::NotReady
+            | Self::BotsDisabled
             | Self::NotInGame
             | Self::NotYourTurn
             | Self::StaleAction
@@ -144,6 +148,7 @@ impl ErrorCode {
             Self::NotInLobby => "You are not in a lobby.",
             Self::NotHost => "Only the host can do that.",
             Self::NotReady => "Not everyone is ready.",
+            Self::BotsDisabled => "This table does not seat bots.",
             Self::AccountRequired => "Ranked needs an account.",
             Self::QueueCooldown => "You cannot queue yet.",
             Self::NotInGame => "You are not in a game.",

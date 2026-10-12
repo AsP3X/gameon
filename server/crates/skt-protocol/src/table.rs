@@ -5,7 +5,7 @@ use skt_engine::{Card, EngineView, Seat};
 use ts_rs::TS;
 
 use crate::ids::{GameId, LobbyId, UnixMs, UserId};
-use crate::lobby::TableMode;
+use crate::lobby::{TableKind, TableMode};
 use crate::rest::{Rating, TableColor};
 use crate::settings::GameSettings;
 
@@ -114,9 +114,13 @@ pub struct GameStart {
     pub tag: GameStartTag,
     /// Game id.
     pub game_id: GameId,
-    /// Custom, casual, or ranked.
+    /// Custom, casual, or ranked. Solo, friends and public are `custom`.
     pub mode: TableMode,
-    /// The lobby to return to, or `null` for a queue game that has none.
+    /// Which table. Absent on an older deal; the reader then uses `mode`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub table: Option<TableKind>,
+    /// The lobby to return to, or `null` for a queue game and for solo.
     pub lobby_id: Option<LobbyId>,
     /// The rules this game was dealt with.
     pub settings: GameSettings,

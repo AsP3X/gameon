@@ -18,8 +18,8 @@ pub use client::{ActionAt, ClientMessage};
 pub use error_code::{ErrorBody, ErrorCode, ErrorObject};
 pub use ids::{GameId, LobbyId, MessageId, UnixMs, UserId};
 pub use lobby::{
-    Lobby, LobbyList, LobbyPhase, LobbySummary, Member, QueueMode, QueueStatus, TableMode,
-    Visibility,
+    Lobby, LobbyList, LobbyPhase, LobbySummary, Member, QueueMode, QueueStatus, TableKind,
+    TableMode, Visibility,
 };
 pub use output::{
     ExportError, check_fixtures, export, export_typescript, fixture_dir, typescript_dir,
@@ -32,9 +32,9 @@ pub use pushes::{
     WelcomeGame, WelcomeTag,
 };
 pub use rest::{
-    ActionLog, ActionLogEntry, Active, Credentials, EMOTES, Health, LadderEntry, LadderPage, Me,
-    Metrics, Profile, ProfilePatch, Rating, Season, ServerConfig, Stats, TableColor, Timers, User,
-    emote_ids,
+    ActionLog, ActionLogEntry, Active, Credentials, EMOTES, FinishedGame, FinishedSeat, GamePage,
+    Health, LadderEntry, LadderPage, Me, Metrics, ModeLine, Profile, ProfilePatch, Rating, Season,
+    ServerConfig, Stats, StatsByMode, TableColor, Timers, User, emote_ids,
 };
 pub use settings::{ExpansionFlags, GameSettings, Pace};
 pub use table::{

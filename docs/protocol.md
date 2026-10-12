@@ -62,6 +62,7 @@ The client branches on `code`. `message` is safe to show but not meant to be par
 | `NOT_IN_LOBBY` | 409 | |
 | `NOT_HOST` | 403 | |
 | `NOT_READY` | 409 | Start with unready players or fewer than two humans |
+| `BOTS_DISABLED` | 409 | `lobby.addBot` on a table that does not seat bots. The message is `This table does not seat bots.` |
 | `ACCOUNT_REQUIRED` | 403 | Ranked needs a registered account |
 | `QUEUE_COOLDOWN` | 403 | Leaver penalty; `message` carries no time, `GET /me` does |
 | `NOT_IN_GAME` | 409 | |
@@ -90,6 +91,7 @@ All bodies are JSON. Unless marked *public*, a session is required.
 | `GET /lobbies` | | `{ lobbies: LobbySummary[] }` | Open public lobbies, full ones included, oldest first, no limit. A lobby leaves the list while its game runs and returns when it is `open` again. |
 | `GET /ladder?season=&limit=&after=` | | `{ season: Season, entries: LadderEntry[], next?: string }` | Session required. See below. |
 | `GET /games/{id}/log` | | `ActionLog` | Session required. The caller must have sat in that finished game. Unknown game, or a caller who did not sit it, is `404`. |
+| `GET /me/games?limit=&after=` | | `{ games: FinishedGame[], next?: GameId }` | Session required. The caller's own finished games, newest first. `limit` omitted is 25, and the maximum is 100. `after` is the `next` of the previous page, the id of that page's last row. `next` is omitted on the last page. No session is `401`. |
 
 ```ts
 type ServerConfig = {
@@ -105,15 +107,37 @@ type TableColor =
   | '#58cc02' | '#e5a400' | '#2b70c9' | '#ff5fbf';
 type Timers = { bidMs: number; playMs: number; abilityMs: number; trickEndMs: number; roundEndMs: number;
                 disconnectGraceMs: number };
+type TableKind = 'solo' | 'friends' | 'public' | 'casual' | 'ranked';
 type Me = {
   user: User; guest: boolean; username: string | null;
-  active: { kind: 'lobby' | 'queue' | 'game'; id: string } | null;   // where a reconnect lands
+  active: Active | null;   // where a reconnect lands
   cooldownUntil: number | null;
   stats: Stats; rating: Rating | null;
 };
+type Active =
+  | { kind: 'lobby'; id: string }
+  | { kind: 'queue'; id: string }
+  | {
+      kind: 'game';
+      id: string;
+      table?: TableKind;   // absent on an older reply
+      round?: number;      // 1-based deal index. Present when table is 'solo'
+      rounds?: number;     // format length. The deck-size cap does not change it
+      bots?: number;       // seated bots. Present when table is 'solo'
+    };
 type User = { id: UserId; name: string; color: TableColor; tier: string | null };
 type Profile = { user: User; stats: Stats; rating: Rating | null };
-type Stats = { games: number; wins: number; bidsMade: number; bidsTotal: number; bestScore: number | null };
+type ModeLine = { games: number; wins: number; bidsMade: number; bidsTotal: number; bestScore: number | null };
+type Stats = {
+  games: number; wins: number; bidsMade: number; bidsTotal: number; bestScore: number | null;
+  byMode?: { solo: ModeLine; friends: ModeLine; public: ModeLine; casual: ModeLine; ranked: ModeLine };
+};
+type FinishedSeat = { userId: UserId | null; bot: boolean; place: number; score: number; bidsMade: number; forfeited: boolean };
+type FinishedGame = {
+  id: GameId; table: TableKind; settings: GameSettings;
+  startedAt: number; endedAt: number; seasonId?: number;
+  seats: FinishedSeat[];
+};
 type Rating = { value: number; tier: string; provisional: boolean; games: number };
 type Season = { id: number; name: string; startsAt: number; endsAt: number };
 type LadderEntry = { rank: number; user: User; rating: Rating };
@@ -141,14 +165,18 @@ lower case. A password is `WEAK_PASSWORD` only when it is empty. The message is 
 `Active` for a casual queue is `{ kind: 'queue', id: 'casual' }`. There is one casual queue.
 `Active` for a ranked queue is `{ kind: 'queue', id: 'ranked' }`. There is one ranked queue.
 
-`Stats` counts every finished custom game and every finished casual game. A finished ranked game
-is stored and does not change these counters, including for a seat that stayed. `rating.games`
-counts that ranked game instead, including a seat that left. A shared first place counts as a win
-for each of those seats. A seat that sent `game.leave` is not counted in `Stats`. A seat kicked
-for inactivity is not counted in `Stats` either, in any mode, including a casual, friends or
-public game the table then won. `bestScore` is set by the first finished custom or casual game
-even when the total is negative, and is the highest total after that. `bidsTotal` is the number of scored rounds. `bidsMade` is the rounds where the
-bid was hit.
+`Stats` counts every finished custom game, every finished casual game, and every finished server
+solo game, including for a guest. A finished ranked game is stored and does not change these
+headline counters, including for a seat that stayed. `rating.games` counts that ranked game
+instead, including a seat that left. A shared first place counts as a win for each of those seats.
+A seat that sent `game.leave` is not counted in `Stats`. A seat kicked for inactivity is not
+counted in `Stats` either, in any mode, including a casual, friends or public game the table then
+won. An abandoned solo game is not a finish. A solo game played on the device never reaches the
+server. `byMode` is the same five numbers for solo, friends, public, casual and ranked. Ranked
+sits in `byMode.ranked` and in `rating`, and not in the headline `games`. A reply that omits
+`byMode` is readable: every line is empty. `bestScore` is set by the first finished custom, casual
+or server solo game even when the total is negative, and is the highest total after that.
+`bidsTotal` is the number of scored rounds. `bidsMade` is the rounds where the bid was hit.
 
 `config.season` is the calendar quarter that contains the server's clock. It is not null. Quarters
 are UTC: Q1 starts 1 January, Q2 1 April, Q3 1 July, Q4 1 October. `id` 1 is 2026 Q1. `name` is
@@ -242,6 +270,7 @@ type Lobby = {
   visibility: 'private' | 'public';
   hostId: UserId | null;                   // null in matchmade lobbies
   settings: GameSettings;
+  allowBots?: boolean;                     // omitted means true
   members: Member[];                       // join order
   state: 'open' | 'starting' | 'inGame';
   gameId: GameId | null;
@@ -249,17 +278,17 @@ type Lobby = {
 type Member =
   | { kind: 'human'; user: User; ready: boolean; connected: boolean }
   | { kind: 'bot'; name: string; color: TableColor; level: 'easy' | 'normal' | 'hard' };
-type LobbySummary = { id: LobbyId; hostName: string; settings: GameSettings; players: number };
+type LobbySummary = { id: LobbyId; hostName: string; settings: GameSettings; players: number; allowBots?: boolean };
 ```
 
 | Client message | Payload | Who | Result |
 | -------------- | ------- | --- | ------ |
-| `lobby.create` | `{ visibility, settings }` | anyone not seated | `ok { lobby }` |
+| `lobby.create` | `{ visibility, settings, allowBots? }` | anyone not seated | `ok { lobby }`. `allowBots` omitted means true. |
 | `lobby.join` | `{ code?: string, lobbyId?: string }` | anyone not seated | `ok { lobby }`. Send one. If both are present, `code` wins. `lobbyId` may seat a private lobby: the id of a private lobby reaches only its members. |
 | `lobby.leave` | | member of an open lobby | `ok`. While the lobby is `inGame`, `LOBBY_STARTED`; leaving the seat is `game.leave`. |
 | `lobby.ready` | `{ ready: boolean }` | member | `ok` |
 | `lobby.settings` | `{ settings }` | host | `ok`; clears everyone's ready |
-| `lobby.addBot` | | host | `ok` |
+| `lobby.addBot` | | host | `ok`. On a table with `allowBots: false`, `BOTS_DISABLED`. Ranked and casual never read `allowBots`. |
 | `lobby.removeBot` | `{ index: number }` | host | `ok`. `index` is the index in `members` (join order), not a seat. |
 | `lobby.kick` | `{ userId }` | host | `ok` |
 | `lobby.start` | | host | `ok`; needs ≥ 2 humans and every human ready. A bot fills a seat and does not count as one of those two. A public lobby and a private lobby use the same rule. |
@@ -345,6 +374,7 @@ current quarter.
 type GameStart = {
   t: 'game.start';
   gameId: GameId; mode: 'custom' | 'casual' | 'ranked'; lobbyId: LobbyId | null;
+  table?: TableKind;               // absent on an older deal. Solo, friends and public keep mode 'custom'
   settings: GameSettings;
   deck: Card[];                    // CardId = index. Sent once.
   schedule: number[];              // cards per round
@@ -397,7 +427,8 @@ enum as `EngineEvent` so the wire union can be called `GameEvent`.
 | `game.ability` | `{ at, choice }` | `ok`; `choice` per ability, see below |
 | `game.ready` | | `ok`; ready for the next round |
 | `game.emote` | `{ emote }` | `ok`; one per 2 seconds |
-| `game.leave` | | `ok`; a bot takes the seat. In ranked this is a forfeit. |
+| `solo.start` | `{ settings }` | anyone not seated | `ok`, then `game.start` with `table: 'solo'` and `lobbyId: null`. `maxPlayers` outside 2..8 is `VALIDATION`. A second start while that game exists is `ALREADY_SEATED`. |
+| `game.leave` | | `ok`; a bot takes the seat. In ranked this is a forfeit. On `table: 'solo'` the game ends with no result, no stats, no bot and no cooldown. |
 
 `at` is `{ round: number, trick: number }`: the round index and the number of tricks of that round
 already finished, as the sender's view shows them. `trick` is the sum of `won` plus
@@ -544,6 +575,25 @@ inactivity kick, and `Me.cooldownUntil` is set then, by the same steps as a leav
 already sent `game.leave`, or that was already kicked, is not penalised again. Casual and custom
 games do not do this. The away player is still seated, so `game.over` arrives on the open table,
 not as a notice after `game.leave`.
+
+`solo.start` is not a lobby and not a queue. The server seats the player and fills every other seat
+with a bot. `pace` is stored as `standard` and does not arm a deadline on the human's turn. A drop
+leaves the seat with that player. No bot is seated for the drop, and no card is played until the
+same player connects again. One unfinished solo game is kept, with no expiry. Registering a guest
+keeps that game on the same id. `game.leave` on any other table is unchanged.
+
+Friends is `lobby.create` with `visibility: 'private'`. Public is `visibility: 'public'`. Casual
+is `queue.join` with `casual`, and ranked is `queue.join` with `ranked`. A named ruleset is a
+`GameSettings` object. It is not a new enum. `LobbySummary.players` counts humans and bots.
+`LobbySummary.allowBots` omitted means the table seats bots.
+
+`GET /me/games` is one stored row per finished game: the id, `table`, the settings, when it
+started, when it ended, the season id when `table` is `ranked`, and one seat line each. Another
+player's profile gains `stats.byMode` and still has no username and no game list.
+
+Cheat signals are not a player message. The server writes them for ranked and casual only, from
+state it computed. The socket does not accept a report that someone cheated, and it never sends
+another seat's signal. A signal does not void a game and does not ban.
 
 ## 6. What a seat never receives
 

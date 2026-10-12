@@ -1,0 +1,15 @@
+{
+  "t": "solo.start",
+  "id": 1,
+  "settings": {
+    "maxPlayers": 4,
+    "scoring": "classic",
+    "format": "brawl",
+    "loot": false,
+    "kraken": false,
+    "whale": false,
+    "abilities": false,
+    "botLevel": "normal",
+    "pace": "standard"
+  }
+}

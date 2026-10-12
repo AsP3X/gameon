@@ -47,6 +47,10 @@ export type ClientMessage = {
    * Rules.
    */
   settings: GameSettings;
+  /**
+   * When false, the host cannot add a bot. Omitted means true.
+   */
+  allowBots?: boolean;
 } | {
   "t": "lobby.join";
   /**
@@ -135,6 +139,16 @@ export type ClientMessage = {
    * Correlation id.
    */
   id: MessageId;
+} | {
+  "t": "solo.start";
+  /**
+   * Correlation id.
+   */
+  id: MessageId;
+  /**
+   * One human plus bots. `maxPlayers` is 2..8.
+   */
+  settings: GameSettings;
 } | {
   "t": "game.bid";
   /**

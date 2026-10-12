@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
 use crate::ids::{GameId, UnixMs, UserId};
+use crate::lobby::TableKind;
 use crate::settings::GameSettings;
 
 /// `GET /api/v1/metrics`. Public counts. No player, hand, or bid.
@@ -168,6 +169,22 @@ pub enum Active {
     Game {
         /// Game id.
         id: String,
+        /// Which table. Absent on an older reply; the reader then uses `game.start.mode`.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[ts(optional)]
+        table: Option<TableKind>,
+        /// 1-based deal index. Present for a solo game.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[ts(optional)]
+        round: Option<u32>,
+        /// Format length. The deck-size cap does not change it.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[ts(optional)]
+        rounds: Option<u32>,
+        /// Seated bots. Present for a solo game.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[ts(optional)]
+        bots: Option<u32>,
     },
 }
 
@@ -186,12 +203,46 @@ pub struct User {
     pub tier: Option<String>,
 }
 
+/// One mode's counters. The same five numbers as the headline, for that mode only.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS, Default)]
+#[serde(rename_all = "camelCase")]
+#[ts(rename_all = "camelCase", export_to = "ModeLine.ts")]
+pub struct ModeLine {
+    /// Games finished in this mode.
+    pub games: u32,
+    /// Games won in this mode.
+    pub wins: u32,
+    /// Bids that matched the tricks taken.
+    pub bids_made: u32,
+    /// Bids placed.
+    pub bids_total: u32,
+    /// Highest total in this mode, or `null` before the first game.
+    pub best_score: Option<i32>,
+}
+
+/// The five lines under the headline counters.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS, Default)]
+#[serde(rename_all = "camelCase")]
+#[ts(rename_all = "camelCase", export_to = "StatsByMode.ts")]
+pub struct StatsByMode {
+    /// Server solo. An abandoned game and a device game are absent.
+    pub solo: ModeLine,
+    /// A private lobby.
+    pub friends: ModeLine,
+    /// A public lobby.
+    pub public: ModeLine,
+    /// The casual queue.
+    pub casual: ModeLine,
+    /// The ranked queue. Also counted in `rating.games` for the season.
+    pub ranked: ModeLine,
+}
+
 /// Lifetime counters.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(rename_all = "camelCase", export_to = "Stats.ts")]
 pub struct Stats {
-    /// Games finished.
+    /// Games finished. Solo, friends, public and casual. Not ranked.
     pub games: u32,
     /// Games won.
     pub wins: u32,
@@ -201,6 +252,65 @@ pub struct Stats {
     pub bids_total: u32,
     /// Highest game total, or `null` before the first game.
     pub best_score: Option<i32>,
+    /// Per-mode lines. Omitted when empty; the reader treats that as every line empty.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub by_mode: Option<StatsByMode>,
+}
+
+/// One seat on a stored finished game.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(rename_all = "camelCase", export_to = "FinishedSeat.ts")]
+pub struct FinishedSeat {
+    /// The player, or `null` for a bot.
+    pub user_id: Option<UserId>,
+    /// The seat was a bot.
+    pub bot: bool,
+    /// Place. 1 is the winner. Ties share a place.
+    pub place: u32,
+    /// Points scored.
+    pub score: i32,
+    /// Bids that matched the tricks taken.
+    pub bids_made: u32,
+    /// The seat left or was kicked in a ranked game.
+    pub forfeited: bool,
+}
+
+/// One finished game on `GET /api/v1/me/games`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(rename_all = "camelCase", export_to = "FinishedGame.ts")]
+pub struct FinishedGame {
+    /// Game id.
+    pub id: GameId,
+    /// Which table it was.
+    pub table: TableKind,
+    /// The rules it was dealt with.
+    pub settings: GameSettings,
+    /// When it was dealt.
+    pub started_at: UnixMs,
+    /// When it ended.
+    pub ended_at: UnixMs,
+    /// The ranked season, or `null` for every other table.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub season_id: Option<u32>,
+    /// One line per seat, in seat order.
+    pub seats: Vec<FinishedSeat>,
+}
+
+/// `GET /api/v1/me/games`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(rename_all = "camelCase", export_to = "GamePage.ts")]
+pub struct GamePage {
+    /// Newest first.
+    pub games: Vec<FinishedGame>,
+    /// The id of the last row, when another page exists. Omitted on the last page.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub next: Option<GameId>,
 }
 
 /// A ranked rating.

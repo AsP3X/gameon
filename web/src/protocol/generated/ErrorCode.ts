@@ -22,6 +22,7 @@ export type ErrorCode =
   | "NOT_IN_LOBBY"
   | "NOT_HOST"
   | "NOT_READY"
+  | "BOTS_DISABLED"
   | "ACCOUNT_REQUIRED"
   | "QUEUE_COOLDOWN"
   | "NOT_IN_GAME"

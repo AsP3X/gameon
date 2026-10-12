@@ -19,7 +19,11 @@ export type LobbySummary = {
    */
   settings: GameSettings;
   /**
-   * How many members are seated.
+   * How many members are seated. Humans and bots both count.
    */
   players: number;
+  /**
+   * When `Some(false)`, this table does not seat bots. Omitted means true.
+   */
+  allowBots?: boolean;
 };

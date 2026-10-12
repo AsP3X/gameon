@@ -8,6 +8,25 @@ use crate::ids::{GameId, LobbyId, UnixMs, UserId};
 use crate::rest::{TableColor, User};
 use crate::settings::GameSettings;
 
+/// Which table a game is, in the words of the page.
+///
+/// `mode` stays `custom` for solo, friends and public so an older reader still has a mode it knows.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(rename_all = "camelCase", export_to = "TableKind.ts")]
+pub enum TableKind {
+    /// One human and bots, started by `solo.start`.
+    Solo,
+    /// A private lobby.
+    Friends,
+    /// A public lobby.
+    Public,
+    /// The casual queue.
+    Casual,
+    /// The ranked queue.
+    Ranked,
+}
+
 /// Custom, casual, or ranked.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
@@ -98,6 +117,10 @@ pub struct Lobby {
     pub host_id: Option<UserId>,
     /// Rules for the next game.
     pub settings: GameSettings,
+    /// When `Some(false)`, `lobby.addBot` is `BOTS_DISABLED`. Omitted means true.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub allow_bots: Option<bool>,
     /// Join order. `lobby.removeBot` indexes this array.
     pub members: Vec<Member>,
     /// Open, starting, or in a game.
@@ -117,8 +140,12 @@ pub struct LobbySummary {
     pub host_name: String,
     /// Rules shown in the list.
     pub settings: GameSettings,
-    /// How many members are seated.
+    /// How many members are seated. Humans and bots both count.
     pub players: u32,
+    /// When `Some(false)`, this table does not seat bots. Omitted means true.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub allow_bots: Option<bool>,
 }
 
 /// `GET /api/v1/lobbies`.

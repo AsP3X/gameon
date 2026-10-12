@@ -55,6 +55,10 @@ pub enum ClientMessage {
         visibility: Visibility,
         /// Rules.
         settings: GameSettings,
+        /// When false, the host cannot add a bot. Omitted means true.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[ts(optional)]
+        allow_bots: Option<bool>,
     },
     /// Join by code or by id.
     ///
@@ -135,6 +139,14 @@ pub enum ClientMessage {
     QueueLeave {
         /// Correlation id.
         id: MessageId,
+    },
+    /// Start a solo game. Not a lobby and not a queue.
+    #[serde(rename = "solo.start")]
+    SoloStart {
+        /// Correlation id.
+        id: MessageId,
+        /// One human plus bots. `maxPlayers` is 2..8.
+        settings: GameSettings,
     },
     /// Bid for the session's seat.
     #[serde(rename = "game.bid")]

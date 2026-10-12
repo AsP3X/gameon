@@ -12,16 +12,17 @@ use ts_rs::TS;
 use crate::client::ClientMessage;
 use crate::error_code::{ErrorBody, ErrorCode, ErrorObject};
 use crate::lobby::{
-    Lobby, LobbyList, LobbyPhase, LobbySummary, Member, QueueMode, QueueStatus, TableMode,
-    Visibility,
+    Lobby, LobbyList, LobbyPhase, LobbySummary, Member, QueueMode, QueueStatus, TableKind,
+    TableMode, Visibility,
 };
 use crate::pushes::{
     CloseReason, ErrMessage, GameEmotePush, GameOver, LobbyClosed, LobbyStatePush, OkReply,
     QueueStatusPush, SeatLost, SeatLostReason, Superseded, Welcome, WelcomeGame,
 };
 use crate::rest::{
-    ActionLog, ActionLogEntry, Active, Credentials, Health, LadderEntry, LadderPage, Me, Metrics,
-    Profile, ProfilePatch, Rating, Season, ServerConfig, Stats, TableColor, Timers, User,
+    ActionLog, ActionLogEntry, Active, Credentials, FinishedGame, FinishedSeat, GamePage, Health,
+    LadderEntry, LadderPage, Me, Metrics, ModeLine, Profile, ProfilePatch, Rating, Season,
+    ServerConfig, Stats, StatsByMode, TableColor, Timers, User,
 };
 use crate::samples;
 use crate::settings::{GameSettings, Pace};
@@ -185,7 +186,12 @@ fn export_rest(cfg: &ts_rs::Config) -> Result<(), ExportError> {
     ServerConfig::export_all(cfg)?;
     Active::export_all(cfg)?;
     User::export_all(cfg)?;
+    ModeLine::export_all(cfg)?;
+    StatsByMode::export_all(cfg)?;
     Stats::export_all(cfg)?;
+    FinishedSeat::export_all(cfg)?;
+    FinishedGame::export_all(cfg)?;
+    GamePage::export_all(cfg)?;
     Rating::export_all(cfg)?;
     Season::export_all(cfg)?;
     Me::export_all(cfg)?;
@@ -200,6 +206,7 @@ fn export_rest(cfg: &ts_rs::Config) -> Result<(), ExportError> {
 fn export_lobby(cfg: &ts_rs::Config) -> Result<(), ExportError> {
     Pace::export_all(cfg)?;
     GameSettings::export_all(cfg)?;
+    TableKind::export_all(cfg)?;
     TableMode::export_all(cfg)?;
     QueueMode::export_all(cfg)?;
     Visibility::export_all(cfg)?;

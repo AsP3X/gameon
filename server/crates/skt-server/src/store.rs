@@ -530,6 +530,7 @@ impl Store {
                 bids_made: u32::try_from(bids_made).unwrap_or(0),
                 bids_total: u32::try_from(bids_total).unwrap_or(0),
                 best_score,
+                by_mode: None,
             },
             skill,
         })
@@ -678,6 +679,7 @@ fn zero_stats() -> Stats {
         bids_made: 0,
         bids_total: 0,
         best_score: None,
+        by_mode: None,
     }
 }
 

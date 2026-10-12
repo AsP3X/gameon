@@ -1,0 +1,44 @@
+{
+  "games": 3,
+  "wins": 1,
+  "bidsMade": 4,
+  "bidsTotal": 10,
+  "bestScore": 240,
+  "byMode": {
+    "solo": {
+      "games": 1,
+      "wins": 1,
+      "bidsMade": 4,
+      "bidsTotal": 10,
+      "bestScore": 80
+    },
+    "friends": {
+      "games": 0,
+      "wins": 0,
+      "bidsMade": 0,
+      "bidsTotal": 0,
+      "bestScore": null
+    },
+    "public": {
+      "games": 0,
+      "wins": 0,
+      "bidsMade": 0,
+      "bidsTotal": 0,
+      "bestScore": null
+    },
+    "casual": {
+      "games": 0,
+      "wins": 0,
+      "bidsMade": 0,
+      "bidsTotal": 0,
+      "bestScore": null
+    },
+    "ranked": {
+      "games": 0,
+      "wins": 0,
+      "bidsMade": 0,
+      "bidsTotal": 0,
+      "bestScore": null
+    }
+  }
+}

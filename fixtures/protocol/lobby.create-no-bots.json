@@ -1,0 +1,17 @@
+{
+  "t": "lobby.create",
+  "id": 1,
+  "visibility": "public",
+  "settings": {
+    "maxPlayers": 4,
+    "scoring": "classic",
+    "format": "brawl",
+    "loot": false,
+    "kraken": false,
+    "whale": false,
+    "abilities": false,
+    "botLevel": "normal",
+    "pace": "standard"
+  },
+  "allowBots": false
+}

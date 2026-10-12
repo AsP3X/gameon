@@ -466,8 +466,16 @@ impl World {
                 id,
                 visibility,
                 settings,
+                allow_bots,
             } => {
+                // Human: The flag is on the message. A table still seats a bot until Package 2.
+                // Agent: READS allow_bots and drops it. WRITES the lobby with bots allowed.
+                let _ = allow_bots;
                 self.create_lobby(user, id, visibility, settings);
+            }
+            ClientMessage::SoloStart { .. } => {
+                // Human: The message is in the contract. The solo table is the next package.
+                // Agent: READS the frame. WRITES no reply, so a page that sends it early times out.
             }
             ClientMessage::LobbyJoin { id, code, lobby_id } => {
                 self.join_lobby(user, id, code, lobby_id);
@@ -525,6 +533,7 @@ impl World {
             visibility,
             host_id: Some(user.clone()),
             settings,
+            allow_bots: None,
             members: vec![self.human_member(user, false)],
             state: LobbyPhase::Open,
             game_id: None,
@@ -845,6 +854,7 @@ impl World {
                 ),
                 settings: lobby.settings,
                 players: u32::try_from(lobby.members.len()).unwrap_or(0),
+                allow_bots: lobby.allow_bots,
             })
             .collect();
         LobbyList { lobbies }
@@ -1073,6 +1083,7 @@ impl World {
             visibility: Visibility::Private,
             host_id: None,
             settings: skt_protocol::GameSettings::standard(),
+            allow_bots: None,
             members,
             state: LobbyPhase::Open,
             game_id: None,
@@ -1203,6 +1214,10 @@ impl World {
         let active = if let Some(id) = self.identity.game_of(user) {
             Some(Active::Game {
                 id: id.as_str().to_owned(),
+                table: None,
+                round: None,
+                rounds: None,
+                bots: None,
             })
         } else if self.ranked.contains(user) {
             Some(Active::Queue {

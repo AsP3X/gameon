@@ -1,0 +1,39 @@
+{
+  "games": [
+    {
+      "id": "018f6b4a-6a2e-7c3a-8b1d-9e0f1a2b3c4f",
+      "table": "solo",
+      "settings": {
+        "maxPlayers": 4,
+        "scoring": "classic",
+        "format": "brawl",
+        "loot": false,
+        "kraken": false,
+        "whale": false,
+        "abilities": false,
+        "botLevel": "normal",
+        "pace": "standard"
+      },
+      "startedAt": 1700000000000,
+      "endedAt": 1700000060000,
+      "seats": [
+        {
+          "userId": "018f6b4a-6a2e-7c3a-8b1d-9e0f1a2b3c4d",
+          "bot": false,
+          "place": 1,
+          "score": 80,
+          "bidsMade": 4,
+          "forfeited": false
+        },
+        {
+          "userId": null,
+          "bot": true,
+          "place": 2,
+          "score": 20,
+          "bidsMade": 2,
+          "forfeited": false
+        }
+      ]
+    }
+  ]
+}

@@ -37,6 +37,10 @@ export type Lobby = {
    */
   settings: GameSettings;
   /**
+   * When `Some(false)`, `lobby.addBot` is `BOTS_DISABLED`. Omitted means true.
+   */
+  allowBots?: boolean;
+  /**
    * Join order. `lobby.removeBot` indexes this array.
    */
   members: Array<Member>;

@@ -1,0 +1,83 @@
+{
+  "t": "game.start",
+  "gameId": "018f6b4a-6a2e-7c3a-8b1d-9e0f1a2b3c4f",
+  "mode": "custom",
+  "table": "solo",
+  "lobbyId": null,
+  "settings": {
+    "maxPlayers": 4,
+    "scoring": "classic",
+    "format": "brawl",
+    "loot": false,
+    "kraken": false,
+    "whale": false,
+    "abilities": false,
+    "botLevel": "normal",
+    "pace": "standard"
+  },
+  "deck": [
+    {
+      "kind": "num",
+      "id": 0,
+      "suit": "green",
+      "rank": 1
+    },
+    {
+      "kind": "escape",
+      "id": 56
+    },
+    {
+      "kind": "pirate",
+      "id": 61,
+      "ability": "helm"
+    },
+    {
+      "kind": "tigress",
+      "id": 66
+    },
+    {
+      "kind": "sk",
+      "id": 67
+    },
+    {
+      "kind": "mermaid",
+      "id": 68
+    },
+    {
+      "kind": "loot",
+      "id": 70
+    },
+    {
+      "kind": "kraken",
+      "id": 72
+    },
+    {
+      "kind": "whale",
+      "id": 73
+    }
+  ],
+  "schedule": [
+    6,
+    7,
+    8,
+    9,
+    10
+  ],
+  "seats": [
+    {
+      "name": "Anne",
+      "color": "#1cb0f6",
+      "bot": false,
+      "userId": "018f6b4a-6a2e-7c3a-8b1d-9e0f1a2b3c4d",
+      "tier": null
+    },
+    {
+      "name": "Calico",
+      "color": "#ff9600",
+      "bot": true,
+      "userId": null,
+      "tier": null
+    }
+  ],
+  "me": 0
+}

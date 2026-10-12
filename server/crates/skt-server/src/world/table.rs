@@ -1476,6 +1476,7 @@ impl Running {
             tag: GameStartTag::Value,
             game_id: self.id.clone(),
             mode: self.mode,
+            table: None,
             lobby_id: (!self.matchmade).then(|| self.lobby_id.clone()),
             settings: self.settings,
             deck: self.state.deck().to_vec(),

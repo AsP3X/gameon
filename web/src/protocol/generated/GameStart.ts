@@ -5,6 +5,7 @@ import type { GameSettings } from "./GameSettings";
 import type { LobbyId } from "./LobbyId";
 import type { Seat } from "./Seat";
 import type { SeatInfo } from "./SeatInfo";
+import type { TableKind } from "./TableKind";
 import type { TableMode } from "./TableMode";
 
 /**
@@ -20,11 +21,15 @@ export type GameStart = {
    */
   gameId: GameId;
   /**
-   * Custom, casual, or ranked.
+   * Custom, casual, or ranked. Solo, friends and public are `custom`.
    */
   mode: TableMode;
   /**
-   * The lobby to return to, or `null` for a queue game that has none.
+   * Which table. Absent on an older deal; the reader then uses `mode`.
+   */
+  table?: TableKind;
+  /**
+   * The lobby to return to, or `null` for a queue game and for solo.
    */
   lobbyId: LobbyId | null;
   /**

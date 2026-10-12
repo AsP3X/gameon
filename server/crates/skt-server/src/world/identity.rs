@@ -374,6 +374,7 @@ fn empty_stats() -> Stats {
         bids_made: 0,
         bids_total: 0,
         best_score: None,
+        by_mode: None,
     }
 }
 

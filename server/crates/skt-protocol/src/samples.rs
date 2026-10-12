@@ -13,8 +13,8 @@ use crate::client::{ActionAt, ClientMessage};
 use crate::error_code::{ErrorBody, ErrorCode, ErrorObject};
 use crate::ids::{GameId, LobbyId, MessageId, UnixMs, UserId};
 use crate::lobby::{
-    Lobby, LobbyList, LobbyPhase, LobbySummary, Member, QueueMode, QueueStatus, TableMode,
-    Visibility,
+    Lobby, LobbyList, LobbyPhase, LobbySummary, Member, QueueMode, QueueStatus, TableKind,
+    TableMode, Visibility,
 };
 use crate::output::{ExportError, put};
 use crate::pushes::{
@@ -24,8 +24,9 @@ use crate::pushes::{
     WelcomeGame, WelcomeTag,
 };
 use crate::rest::{
-    ActionLog, ActionLogEntry, Active, Credentials, Health, LadderEntry, LadderPage, Me, Profile,
-    ProfilePatch, Rating, Season, ServerConfig, Stats, TableColor, Timers, User, emote_ids,
+    ActionLog, ActionLogEntry, Active, Credentials, FinishedGame, FinishedSeat, GamePage, Health,
+    LadderEntry, LadderPage, Me, ModeLine, Profile, ProfilePatch, Rating, Season, ServerConfig,
+    Stats, StatsByMode, TableColor, Timers, User, emote_ids,
 };
 use crate::settings::GameSettings;
 use crate::table::{
@@ -140,6 +141,9 @@ fn people(dir: &Path, write: bool) -> Result<(), ExportError> {
     let stats = stats();
     put(dir, write, "user", &user)?;
     put(dir, write, "stats", &stats)?;
+    put(dir, write, "stats-by-mode", &stats_by_mode())?;
+    put(dir, write, "active-solo", &active_solo())?;
+    put(dir, write, "me-games", &game_page())?;
     put(dir, write, "rating", &rating())?;
     put(
         dir,
@@ -211,8 +215,18 @@ fn lobbies(dir: &Path, write: bool) -> Result<(), ExportError> {
         host_name: "Anne".to_owned(),
         settings: GameSettings::standard(),
         players: 2,
+        allow_bots: None,
     };
     put(dir, write, "lobby-summary", &summary)?;
+    put(
+        dir,
+        write,
+        "lobby-summary-no-bots",
+        &LobbySummary {
+            allow_bots: Some(false),
+            ..summary.clone()
+        },
+    )?;
     put(
         dir,
         write,
@@ -234,6 +248,7 @@ fn game(dir: &Path, write: bool) -> Result<(), ExportError> {
     put(dir, write, "seat-info", &seat_info())?;
     put(dir, write, "table-info", &table_info())?;
     put(dir, write, "game-start", &game_start())?;
+    put(dir, write, "game-start-solo", &game_start_solo())?;
     put(dir, write, "game-update", &game_update())?;
     put(dir, write, "game-result", &game_result())?;
     put(
@@ -293,6 +308,31 @@ fn game(dir: &Path, write: bool) -> Result<(), ExportError> {
     Ok(())
 }
 
+/// A create that refuses bots, and the solo start that is not a lobby.
+fn client_new_tables(dir: &Path, write: bool, id: MessageId) -> Result<(), ExportError> {
+    put(
+        dir,
+        write,
+        "lobby.create-no-bots",
+        &ClientMessage::LobbyCreate {
+            id,
+            visibility: Visibility::Public,
+            settings: GameSettings::standard(),
+            allow_bots: Some(false),
+        },
+    )?;
+    put(
+        dir,
+        write,
+        "solo.start",
+        &ClientMessage::SoloStart {
+            id,
+            settings: GameSettings::standard(),
+        },
+    )?;
+    Ok(())
+}
+
 fn client_lobby(dir: &Path, write: bool) -> Result<(), ExportError> {
     let id = MessageId::new(1);
     put(
@@ -314,8 +354,10 @@ fn client_lobby(dir: &Path, write: bool) -> Result<(), ExportError> {
             id,
             visibility: Visibility::Private,
             settings: GameSettings::standard(),
+            allow_bots: None,
         },
     )?;
+    client_new_tables(dir, write, id)?;
     put(
         dir,
         write,
@@ -598,6 +640,64 @@ fn stats() -> Stats {
         bids_made: 4,
         bids_total: 10,
         best_score: Some(240),
+        by_mode: None,
+    }
+}
+
+fn stats_by_mode() -> Stats {
+    let mut stats = stats();
+    stats.by_mode = Some(StatsByMode {
+        solo: ModeLine {
+            games: 1,
+            wins: 1,
+            bids_made: 4,
+            bids_total: 10,
+            best_score: Some(80),
+        },
+        ..StatsByMode::default()
+    });
+    stats
+}
+
+fn active_solo() -> Active {
+    Active::Game {
+        id: GAME.to_owned(),
+        table: Some(TableKind::Solo),
+        round: Some(4),
+        rounds: Some(10),
+        bots: Some(3),
+    }
+}
+
+fn game_page() -> GamePage {
+    GamePage {
+        games: vec![FinishedGame {
+            id: GameId::new(GAME),
+            table: TableKind::Solo,
+            settings: GameSettings::standard(),
+            started_at: UnixMs::new(WHEN),
+            ended_at: UnixMs::new(WHEN + 60_000),
+            season_id: None,
+            seats: vec![
+                FinishedSeat {
+                    user_id: Some(UserId::new(USER)),
+                    bot: false,
+                    place: 1,
+                    score: 80,
+                    bids_made: 4,
+                    forfeited: false,
+                },
+                FinishedSeat {
+                    user_id: None,
+                    bot: true,
+                    place: 2,
+                    score: 20,
+                    bids_made: 2,
+                    forfeited: false,
+                },
+            ],
+        }],
+        next: None,
     }
 }
 
@@ -647,6 +747,7 @@ fn lobby() -> Lobby {
         host_id: Some(UserId::new(USER)),
         settings: GameSettings::standard(),
         members: vec![human(), bot()],
+        allow_bots: None,
         state: LobbyPhase::Open,
         game_id: None,
     }
@@ -727,6 +828,7 @@ fn game_start() -> GameStart {
         tag: GameStartTag::Value,
         game_id: GameId::new(GAME),
         mode: TableMode::Custom,
+        table: None,
         lobby_id: Some(LobbyId::new(LOBBY)),
         settings: GameSettings::standard(),
         deck: deck(),
@@ -743,6 +845,13 @@ fn game_start() -> GameStart {
         ],
         me: Seat::from_index(0),
     }
+}
+
+fn game_start_solo() -> GameStart {
+    let mut start = game_start();
+    start.table = Some(TableKind::Solo);
+    start.lobby_id = None;
+    start
 }
 
 fn game_update() -> GameUpdate {
