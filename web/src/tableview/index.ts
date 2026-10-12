@@ -15,7 +15,7 @@ import { SPRITE } from './art';
 import { $$ } from './dom';
 import { listen } from './events';
 import { finale } from './motion';
-import { render, tuneMenu } from './render';
+import { render, resetMenuMusic, tuneMenu } from './render';
 import { clearTimer, loadState, prefs, savePrefs, session, stage, ui } from './state';
 import { Tracker } from './tracker';
 
@@ -30,7 +30,7 @@ export interface TavernHooks {
 
 /**
  * Tell the renderer that the page shows something else in its place (the online screens), or that
- * it is back. What it drew stays as it was. The theme follows that.
+ * it is back. What it drew stays as it was; the theme stops while the home screen cannot be seen.
  */
 export function coverTavern(covered: boolean): void {
   stage.covered = covered;
@@ -52,6 +52,7 @@ let mounted: (() => void) | null = null;
 export function mountTavern(app: HTMLElement, fx: HTMLCanvasElement, hooks: TavernHooks = {}): () => void {
   mounted?.();
   loadState();
+  resetMenuMusic();
   session.trk = Tracker.load();
   resetFeed();
   stage.app = app;
@@ -64,6 +65,7 @@ export function mountTavern(app: HTMLElement, fx: HTMLCanvasElement, hooks: Tave
   const unlisten = listen();
   const unhinted = !prefs.swipeHinted;
   ui.pillIntro = true;
+  if (ui.screen === 'home' && Sound.asksToStart()) ui.sheet = 'welcome';
   render();
   ui.pillIntro = false;
   // The first render may have spent the one-time swipe hint (views.ts, swipeContinue).

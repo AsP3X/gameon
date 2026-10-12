@@ -20,6 +20,7 @@ import {
   rulesSheet,
   setupView,
   soundSheet,
+  welcomeSheet,
 } from './views';
 
 const VIEWS: Record<Screen, () => string> = {
@@ -40,26 +41,28 @@ const SHEETS: Record<Sheet, () => string> = {
   leave: leaveSheet,
   trkResults: trkResultsSheet,
   trkBoard: () => boardSheet(trkView(), true),
+  welcome: welcomeSheet,
 };
 
-/** Set once a Play, Play online, or Continue press has started the theme. */
+/** Set once the welcome has been closed. The theme then belongs to the home screen. */
 let menuArmed = false;
 
-/**
- * The home screen stays quiet. Play, Play online, and Continue are the tap that
- * starts the theme, and it keeps going until the player is back on that screen.
- */
+/** A fresh page open has not closed the welcome yet. */
+export function resetMenuMusic(): void {
+  menuArmed = false;
+}
+
+/** The welcome's close is the tap that starts the theme. Call it inside that click. */
 export function armMenuMusic(): void {
   menuArmed = true;
   Sound.unlock();
-  Sound.music(true);
+  Sound.music(!!stage.app && ui.screen === 'home' && !stage.covered && !document.hidden);
 }
 
-/** Start or stop the theme for whatever is on screen now. */
+/** The theme plays on the home screen after the welcome, and nowhere else. A background tab pauses it. */
 export function tuneMenu(): void {
-  const idleHome = ui.screen === 'home' && !stage.covered;
-  if (idleHome) menuArmed = false;
-  Sound.music(!!stage.app && menuArmed && !document.hidden && !idleHome);
+  const home = !!stage.app && ui.screen === 'home' && !stage.covered && !document.hidden;
+  Sound.music(home && menuArmed);
 }
 
 /** The dialogs a redraw may put over the page: a sheet, or the pass-and-play curtain. */

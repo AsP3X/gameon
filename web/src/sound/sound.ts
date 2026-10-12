@@ -821,4 +821,11 @@ export const Sound = {
   },
   /** Every sound there is. */
   names: (): SoundName[] => Object.keys(LIB) as SoundName[],
+  /**
+   * A real browser withholds sound until a gesture. The test stand-in does not,
+   * so the welcome that supplies that gesture stays off there.
+   */
+  asksToStart(): boolean {
+    return browserMayPlayNow();
+  },
 };

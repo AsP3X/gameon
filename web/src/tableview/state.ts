@@ -139,7 +139,17 @@ export interface ScoreView {
 }
 
 export type Screen = 'home' | 'setup' | 'game' | 'end' | 'trackSetup' | 'track';
-export type Sheet = 'sound' | 'results' | 'board' | 'rules' | 'last' | 'peek' | 'leave' | 'trkResults' | 'trkBoard';
+export type Sheet =
+  | 'sound'
+  | 'results'
+  | 'board'
+  | 'rules'
+  | 'last'
+  | 'peek'
+  | 'leave'
+  | 'trkResults'
+  | 'trkBoard'
+  | 'welcome';
 
 /** What a swipe row deleted, kept for five seconds so it can be undone. */
 export type Undo = { kind: 'track'; data: TrackerState | null } | { kind: 'game'; data: GameState | null };

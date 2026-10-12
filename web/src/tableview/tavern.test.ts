@@ -289,17 +289,24 @@ describe('mountTavern', () => {
     expect(app.querySelector('img')).toBeNull();
   });
 
-  it('starts the menu music after Play and stops it on the home screen', () => {
+  it('starts the menu music when Welcome back is closed, and only on the home screen', () => {
     const music = vi.spyOn(Sound, 'music');
     const wanted = (): boolean | undefined => music.mock.calls.at(-1)?.[0];
     mount();
     expect(wanted()).toBe(false);
-    click('[data-act="soundSheet"]'); // a sheet over the home screen does not start it
-    expect(wanted()).toBe(false);
-    click('[data-act="closeSheet"]');
-    click('[data-act="setup"]');
+    ui.sheet = 'welcome';
+    render();
+    expect(app.querySelector('[aria-label="Welcome back"]')?.textContent).toContain('The lamps are lit');
+    click('[data-act="welcomeIn"]');
     expect(wanted()).toBe(true);
-    click('[data-act="start"]');
+    expect(app.querySelector('[aria-label="Welcome back"]')).toBeNull();
+    click('[data-act="setup"]');
+    expect(wanted()).toBe(false);
+    go('home');
+    expect(wanted()).toBe(true);
+    coverTavern(true);
+    expect(wanted()).toBe(false);
+    coverTavern(false);
     expect(wanted()).toBe(true);
     const hidden = vi.spyOn(document, 'hidden', 'get').mockReturnValue(true);
     document.dispatchEvent(new Event('visibilitychange'));
@@ -307,14 +314,6 @@ describe('mountTavern', () => {
     hidden.mockReturnValue(false);
     document.dispatchEvent(new Event('visibilitychange'));
     expect(wanted()).toBe(true);
-    go('home');
-    expect(wanted()).toBe(false);
-    click('[data-act="online"]');
-    expect(wanted()).toBe(true);
-    coverTavern(true);
-    expect(wanted()).toBe(true);
-    coverTavern(false);
-    expect(wanted()).toBe(false);
     const hush = vi.spyOn(Sound, 'hush');
     unmount?.();
     unmount = null;

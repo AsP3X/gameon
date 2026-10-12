@@ -326,7 +326,6 @@ export const ACTIONS: Record<string, ActionFn | undefined> = {
     go('home');
   },
   online() {
-    armMenuMusic();
     stage.online?.();
   },
   record() {
@@ -345,11 +344,9 @@ export const ACTIONS: Record<string, ActionFn | undefined> = {
     });
   },
   setup() {
-    armMenuMusic();
     go('setup');
   },
   resume() {
-    armMenuMusic();
     const s = Store.loadGame();
     if (!s) return go('home');
     openTable(s);
@@ -399,6 +396,12 @@ export const ACTIONS: Record<string, ActionFn | undefined> = {
   },
   closeSheet() {
     ui.sheet = null;
+    render();
+  },
+  /** Closes the greeting and starts the theme. Not in CLOSING, so it runs inside the click. */
+  welcomeIn() {
+    ui.sheet = null;
+    armMenuMusic();
     render();
   },
   reveal() {
@@ -620,6 +623,7 @@ export const UI_SOUNDS: Record<string, SoundName | undefined> = {
   peek: 'sheetUp',
   soundSheet: 'sheetUp',
   closeSheet: 'sheetDown',
+  welcomeIn: 'confirm',
   seerDone: 'sheetDown',
   reveal: 'whoosh',
   next: 'confirm',

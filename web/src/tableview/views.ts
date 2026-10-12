@@ -668,6 +668,14 @@ export function rulesSheet(): string {
     <ul><li>Kraken: nobody wins the trick. White Whale: specials stop counting, highest number wins.</li><li>Loot: acts as an Escape. Whoever takes it allies with its owner; +20 each if both hit their bids.</li></ul>
   </div></div>`;
 }
+/** The greeting on the home screen. Closing it is the tap that starts the theme. */
+export function welcomeSheet(): string {
+  return `<div class="sheet-scrim"></div><div class="sheet" role="dialog" aria-label="Welcome back"><div class="in">
+    <h2>Welcome back</h2>
+    <p class="muted">The lamps are lit. Pull up a chair.</p>
+    <button class="btn" data-act="welcomeIn">Come in</button>
+  </div></div>`;
+}
 export function soundSheet(): string {
   const vol = Math.round((prefs.volume == null ? 0.8 : prefs.volume) * 100),
     canBuzz = typeof navigator.vibrate === 'function';

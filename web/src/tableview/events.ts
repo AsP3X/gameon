@@ -6,7 +6,7 @@ import { Sound } from '../sound/sound';
 import { ACTIONS, CLOSING, GAME_INPUT, UI_SOUNDS } from './actions';
 import { $, $$, initial, reduced } from './dom';
 import type { ActionData } from './dom';
-import { render, tuneMenu } from './render';
+import { armMenuMusic, render, tuneMenu } from './render';
 import { clearTimer, prefs, savePrefs, session, timers, ui } from './state';
 import { Tracker, trkRound } from './tracker';
 import { bidText } from './views';
@@ -130,7 +130,9 @@ function onSwipeKey(e: KeyboardEvent): void {
 
 function onSheetKey(e: KeyboardEvent): void {
   if (e.key === 'Escape' && ui.sheet && !['results', 'peek'].includes(ui.sheet)) {
+    const greet = ui.sheet === 'welcome';
     ui.sheet = null;
+    if (greet) armMenuMusic();
     render();
   }
 }
