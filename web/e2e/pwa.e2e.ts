@@ -120,7 +120,8 @@ describe('the built page as an app', () => {
   it('talks to the server itself: nothing under /api comes from the worker', async () => {
     await page.locator('.sk-home .logo').waitFor();
     await comeIn();
-    await page.locator('.sk-way[href="/skull-king/online"]').click();
+    await page.locator('.sk-way[aria-controls="sk-online-ways"]').click();
+    await page.locator('.sk-opt[href="/skull-king/online"]').click();
     await page.getByText('Connected').waitFor();
     // The page is told of an answer before this script is: wait for the script to have heard of one.
     await expect.poll(() => api.length).toBeGreaterThan(0);
@@ -135,15 +136,17 @@ describe('the built page as an app', () => {
     await page.locator('.sk-home .logo').waitFor();
     await comeIn();
     // The home says nobody answers, and Online is out of reach there.
-    await page.getByText('Not connected. Solo and One screen still work.').waitFor({ timeout: 30_000 });
-    expect(await page.locator('.sk-way[href="/skull-king/online"]').count()).toBe(0);
+    await page.getByText('Not connected. Solo still works.').waitFor({ timeout: 30_000 });
+    expect(await page.locator('.sk-way[aria-controls="sk-online-ways"]').count()).toBe(0);
+    expect(await page.locator('.sk-opt[href="/skull-king/online"]').count()).toBe(0);
     // The hub, opened by its address, says so too and leads back to what works.
     await page.goto(`${url}/skull-king/online`);
     await page.getByText("Can't reach the tavern").waitFor({ timeout: 30_000 });
     await page.getByRole('button', { name: 'Play offline' }).click();
     await page.locator('.sk-home .logo').waitFor();
     // Solo asks the server first. Nobody answers, so after the wait an action gets it runs on the device.
-    await page.locator('.sk-way[href="/skull-king/solo"]').click();
+    await page.locator('.sk-way[aria-controls="sk-solo-ways"]').click();
+    await page.locator('.sk-opt[href="/skull-king/solo"]').click();
     await page.getByRole('button', { name: 'Start' }).click();
     await page.locator('.hand .card, .g-hand .card, [data-act="bid"]').first().waitFor({ timeout: 30_000 });
     expect(await page.locator('#app .g-info .pill.gold').textContent()).toBe('Offline');

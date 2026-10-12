@@ -1,5 +1,6 @@
-/* Skull King's home, as design/skt.pen draws it (plan item W2): the four ways to play, the way back
-   into a game that is not over, this device's stats, and the scoresheet for a real table. It is a
+/* Skull King's home, as design/skt.pen draws it (plan item W2): the two ways to play, each opening
+   its choice of two, the way back into a game that is not over, this device's stats, and the
+   scoresheet for a real table. It is a
    page of the frame (src/gameon) and takes the place of the legacy renderer's home screen. The
    renderer is still "at home" underneath and keeps what it alone can draw there: the greeting, the
    sound settings and the rules, which are its sheets (a control here opens one with `data-act`,
@@ -97,22 +98,78 @@ function JumpBack({ me, saved, onRejoin }: JumpProps) {
   );
 }
 
-interface WayProps {
+interface ChoiceProps {
+  /** The id of the list the card opens. */
+  id: string;
+  name: string;
+  icon: IconName;
+  tone: KeyTone;
+  line: string;
+  open: boolean;
+  onToggle: () => void;
+  /** The way needs a connection there is none of: the card is there and cannot be opened. */
+  dim?: boolean;
+  /** The ways the card holds. */
+  children?: ReactNode;
+}
+
+/** One of the two ways to play, on its card. The card opens in place, and what it holds is under it. */
+function Choice({ id, name, icon, tone, line, open, onToggle, dim, children }: ChoiceProps) {
+  const inside = (
+    <>
+      <IconKey icon={icon} tone={tone} />
+      <span className="sk-way-text">
+        <b>{name}</b>
+        <span>{line}</span>
+      </span>
+      <span className="sk-way-go">
+        <Icon name="chevronDown" />
+      </span>
+    </>
+  );
+  if (dim)
+    return (
+      <li className="sk-choice">
+        <div className="sk-way dim" aria-disabled="true">
+          {inside}
+        </div>
+      </li>
+    );
+  return (
+    <li className="sk-choice">
+      <button
+        type="button"
+        className="sk-way"
+        aria-expanded={open}
+        aria-controls={id}
+        onClick={() => {
+          Sound.play('tap');
+          onToggle();
+        }}
+      >
+        {inside}
+      </button>
+      <ul id={id} className="sk-opts" aria-label={name} hidden={!open}>
+        {children}
+      </ul>
+    </li>
+  );
+}
+
+interface OptionProps {
   name: string;
   icon: IconName;
   tone: KeyTone;
   line: ReactNode;
-  /** Where the card leads. Without it the card is there and cannot be followed. */
+  /** Where the row leads. Without it the row is there and cannot be followed. */
   to?: string;
   onFollow?: () => void;
-  /** The way is there and cannot be gone: nothing answers. */
-  dim?: boolean;
   pill?: ReactNode;
   children?: ReactNode;
 }
 
-/** One way to play, on its card. */
-function Way({ name, icon, tone, line, to, onFollow, dim, pill, children }: WayProps) {
+/** One way a card holds, on its row. */
+function Option({ name, icon, tone, line, to, onFollow, pill, children }: OptionProps) {
   const inside = (
     <>
       <IconKey icon={icon} tone={tone} />
@@ -130,14 +187,14 @@ function Way({ name, icon, tone, line, to, onFollow, dim, pill, children }: WayP
   if (to == null)
     return (
       <li>
-        <div className={dim ? 'sk-way dim' : 'sk-way'} aria-disabled="true">
+        <div className="sk-opt" aria-disabled="true">
           {inside}
         </div>
       </li>
     );
   return (
     <li onClickCapture={() => Sound.play('tap')}>
-      <Link to={to} className="sk-way" onFollow={onFollow}>
+      <Link to={to} className="sk-opt" onFollow={onFollow}>
         {inside}
       </Link>
     </li>
@@ -225,6 +282,9 @@ export function SkullKingHome({ online, state, go, onRejoin, behind }: SkullKing
   // visitor here, and gets its guest when it connects, as it always did.
   const who: Who = useWho(online, state.me, false);
   const [saved] = useState(savedGame);
+  /** The card that is open. One at a time: opening the other closes this one. */
+  const [open, setOpen] = useState<'solo' | 'online' | null>(null);
+  const toggle = (card: 'solo' | 'online') => (): void => setOpen((was) => (was === card ? null : card));
   const me = who.is === 'player' ? who.me : null,
     down = who.is === 'unknown',
     season = state.config?.season ?? null,
@@ -289,100 +349,127 @@ export function SkullKingHome({ online, state, go, onRejoin, behind }: SkullKing
               {down && (
                 <p className="go-banner" role="status">
                   <Icon name="wifiOff" />
-                  Not connected. Solo and One screen still work.
+                  Not connected. Solo still works.
                 </p>
               )}
               <ul className="sk-ways">
-                {solo ? (
-                  <Way
-                    name="Solo"
-                    icon="bot"
-                    tone="blue"
-                    line={`Round ${solo.round} of ${solo.rounds} is waiting.`}
-                    to={AT.table}
-                    onFollow={onRejoin}
-                  >
-                    <span className="pill blue sk-way-button">Back to your game</span>
-                  </Way>
-                ) : down ? (
-                  <Way
-                    name="Solo"
-                    icon="bot"
-                    tone="blue"
-                    line="Offline: runs on this device and is not counted in your stats."
-                    to={AT.solo}
-                    pill={<span className="pill gold">Offline</span>}
+                <Choice
+                  id="sk-solo-ways"
+                  name="Solo"
+                  icon="bot"
+                  tone="blue"
+                  line="Against bots, or one screen for the crew."
+                  open={open === 'solo'}
+                  onToggle={toggle('solo')}
+                >
+                  {solo ? (
+                    <Option
+                      name="Against bots"
+                      icon="bot"
+                      tone="blue"
+                      line={`Round ${solo.round} of ${solo.rounds} is waiting.`}
+                      to={AT.table}
+                      onFollow={onRejoin}
+                    >
+                      <span className="pill blue sk-way-button">Back to your game</span>
+                    </Option>
+                  ) : down ? (
+                    <Option
+                      name="Against bots"
+                      icon="bot"
+                      tone="blue"
+                      line="Offline: runs on this device and is not counted in your stats."
+                      to={AT.solo}
+                      pill={<span className="pill gold">Offline</span>}
+                    />
+                  ) : (
+                    <Option
+                      name="Against bots"
+                      icon="bot"
+                      tone="blue"
+                      line="Any time. Saved to your account."
+                      to={AT.solo}
+                    />
+                  )}
+                  <Option
+                    name="One screen"
+                    icon="smartphone"
+                    tone="gold"
+                    line={
+                      <>
+                        Pass one <span className="narrow-only">phone</span>
+                        <span className="wide-only">device</span> around. 2 to 8 pirates.
+                      </>
+                    }
+                    to={AT.oneScreen}
                   />
-                ) : (
-                  <Way
-                    name="Solo"
-                    icon="bot"
-                    tone="blue"
-                    line="Against bots, any time. Saved to your account."
-                    to={AT.solo}
-                  />
-                )}
-                <Way
-                  name="One screen"
-                  icon="smartphone"
-                  tone="gold"
-                  line={
-                    <>
-                      Pass one <span className="narrow-only">phone</span>
-                      <span className="wide-only">device</span> around. 2 to 8 pirates.
-                    </>
-                  }
-                  to={AT.oneScreen}
-                />
+                </Choice>
                 {down ? (
-                  <Way name="Online" icon="globe" tone="green" line="Needs a connection." dim />
-                ) : (
-                  <Way
+                  <Choice
+                    id="sk-online-ways"
                     name="Online"
                     icon="globe"
                     tone="green"
-                    line="Quick play, public tables, or a table of your own."
-                    to={AT.online}
-                  />
-                )}
-                {down ? (
-                  <Way name="Ranked" icon="crown" tone="purple" line="Needs a connection." dim />
-                ) : who.is === 'visitor' || me?.guest ? (
-                  <Way
-                    name="Ranked"
-                    icon="crown"
-                    tone="purple"
-                    line="Needs a free account."
-                    to={AT.signUp}
-                    pill={<span className="pill blue">Sign up</span>}
-                  />
-                ) : closed ? (
-                  // The server closed ranked for this player. The card says so and leads nowhere.
-                  <Way
-                    name="Ranked"
-                    icon="crown"
-                    tone="purple"
-                    line="Ranked is closed for you."
-                    pill={<span className="pill red">Cooldown</span>}
-                  />
-                ) : me && !me.rating ? (
-                  <Way
-                    name="Ranked"
-                    icon="crown"
-                    tone="purple"
-                    line="Five placement games set your tier."
-                    to={AT.ranked}
-                    pill={seasonPill}
+                    line="Needs a connection."
+                    open={false}
+                    onToggle={toggle('online')}
+                    dim
                   />
                 ) : (
-                  <Way
-                    name="Ranked"
-                    icon="crown"
-                    tone="purple"
-                    line="This quarter. The standard rules. No bots."
-                    to={AT.ranked}
-                    pill={seasonPill}
-                  />
+                  <Choice
+                    id="sk-online-ways"
+                    name="Online"
+                    icon="globe"
+                    tone="green"
+                    line="Tables with friends or strangers, and ranked."
+                    open={open === 'online'}
+                    onToggle={toggle('online')}
+                  >
+                    <Option
+                      name="Tables"
+                      icon="globe"
+                      tone="green"
+                      line="Quick play, public tables, a table of your own, or a code."
+                      to={AT.online}
+                    />
+                    {who.is === 'visitor' || me?.guest ? (
+                      <Option
+                        name="Ranked"
+                        icon="crown"
+                        tone="purple"
+                        line="Needs a free account."
+                        to={AT.signUp}
+                        pill={<span className="pill blue">Sign up</span>}
+                      />
+                    ) : closed ? (
+                      // The server closed ranked for this player. The row says so and leads nowhere.
+                      <Option
+                        name="Ranked"
+                        icon="crown"
+                        tone="purple"
+                        line="Ranked is closed for you."
+                        pill={<span className="pill red">Cooldown</span>}
+                      />
+                    ) : me && !me.rating ? (
+                      <Option
+                        name="Ranked"
+                        icon="crown"
+                        tone="purple"
+                        line="Five placement games set your tier."
+                        to={AT.ranked}
+                        pill={seasonPill}
+                      />
+                    ) : (
+                      <Option
+                        name="Ranked"
+                        icon="crown"
+                        tone="purple"
+                        line="This quarter. The standard rules. No bots."
+                        to={AT.ranked}
+                        pill={seasonPill}
+                      />
+                    )}
+                  </Choice>
                 )}
               </ul>
             </section>

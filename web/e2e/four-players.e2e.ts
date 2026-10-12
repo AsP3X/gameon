@@ -54,7 +54,7 @@ describe('four players at one table', () => {
 
     // Each context is a guest of its own: the hub says who.
     for (const p of players) {
-      await p.page.locator('.sk-way[href="/skull-king/online"]').click();
+      await p.way('Online', '/skull-king/online');
       await expect.poll(() => p.page.locator('#online .pill').textContent()).toBe('Connected');
     }
     // The name is at the right of a wide window's bar. On this one it is in the page and not drawn.
@@ -244,7 +244,7 @@ describe('offline, in the same browser', () => {
     const solo = await Player.join(stage.browser, 'Solo', stage.url);
     players.push(solo);
     // The new-game screen for one screen starts a game on the device. Solo proper asks the server (solo.e2e.ts).
-    await solo.page.locator('.sk-way[href="/skull-king/one-screen"]').click();
+    await solo.way('Solo', '/skull-king/one-screen');
     await solo.page.locator('[data-act="start"]').click();
     await solo.page.locator('#app .game').waitFor();
     // The first round of the classic game is one card: a bid, a card, and the round is scored.

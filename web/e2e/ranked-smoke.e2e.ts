@@ -37,8 +37,8 @@ describe('four accounts at a ranked table', () => {
       ['Ann', 'Bea', 'Cal', 'Dee'].map((name) => Player.join(stage.browser, name, stage.url)),
     );
     for (const [i, p] of players.entries()) {
-      // A browser nobody knows: the home's Ranked card leads to the sign-up page.
-      await p.page.locator('.sk-way[href="/sign-up"]').click();
+      // A browser nobody knows: Ranked, under the home's Online card, leads to the sign-up page.
+      await p.way('Online', '/sign-up');
       await p.page.locator('#signup-username').fill(`rk_${stamp}_${i}`);
       await p.page.locator('#signup-password').fill('secret');
       await p.page.locator('#signup-repeat').fill('secret');

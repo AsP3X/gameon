@@ -59,6 +59,12 @@ export class Player {
     return player;
   }
 
+  /** On the home: open one of its two cards, and follow the way it holds to that address. */
+  async way(card: 'Solo' | 'Online', to: string): Promise<void> {
+    await this.page.locator(`.sk-way[aria-controls="sk-${card.toLowerCase()}-ways"]`).click();
+    await this.page.locator(`.sk-opt[href="${to}"]`).click();
+  }
+
   /**
    * A page that opens on the home screen greets first: the "Welcome back" sheet, whose button is
    * the tap a browser wants before it plays the menu music. Until it is closed it lies over the

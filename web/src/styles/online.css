@@ -589,17 +589,9 @@ ol.ranking {
   padding-bottom: 110px;
 }
 
-/* The doors of the index are the home's way cards. One of them is a button. */
+/* The doors of the index are the home's way cards (skullking.css). One of them is a button. */
 .on-body .sk-ways {
   display: flex;
-}
-#gameon button.sk-way {
-  width: 100%;
-  text-align: left;
-}
-#gameon button.sk-way:active {
-  transform: translateY(4px);
-  box-shadow: 0 0 0 transparent;
 }
 #gameon .on-body > .alert {
   text-align: center;

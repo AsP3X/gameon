@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-/* Skull King's home: the four ways to play, the way back into a game that is not over, and what it
-   says about ranked. What the server says about the player is written by hand here, because the
+/* Skull King's home: the two ways to play and the choice each opens, the way back into a game that
+   is not over, and what it says about ranked. What the server says about the player is written by hand here, because the
    mock cannot be clicked into a solo game on the server, a cooldown or a rating. The ways in, the
    renderer's sheets and the seat that comes back run on the whole page against the mock server. */
 import { act, StrictMode, useState, useSyncExternalStore } from 'react';
@@ -59,20 +59,32 @@ async function click(selector: string): Promise<void> {
     await vi.advanceTimersByTimeAsync(0);
   });
 }
-/** The four ways to play, as the page has them: what each says and where it leads, or null where it leads nowhere. */
+const said = (el: Element): { name: string; line: string } => ({
+  name: el.querySelector('b')?.textContent ?? '',
+  line: el.querySelector('.sk-way-text > span')?.textContent ?? '',
+});
+/** The two cards, as the page has them: what each says, and whether it is open (null where it cannot be opened). */
+const cards = (): { name: string; line: string; open: boolean | null }[] =>
+  Array.from(document.querySelectorAll<HTMLElement>('.sk-way'), (card) => ({
+    ...said(card),
+    open: card.hasAttribute('aria-expanded') ? card.getAttribute('aria-expanded') === 'true' : null,
+  }));
+/** The ways the cards hold, open or not: what each says and where it leads, or null where it leads nowhere. */
 const ways = (): { name: string; line: string; to: string | null }[] =>
-  Array.from(document.querySelectorAll<HTMLElement>('.sk-way'), (way) => ({
-    name: way.querySelector('b')?.textContent ?? '',
-    line: way.querySelector('.sk-way-text > span')?.textContent ?? '',
+  Array.from(document.querySelectorAll<HTMLElement>('.sk-opt'), (way) => ({
+    ...said(way),
     to: way.getAttribute('href'),
   }));
+/** The ways of the card that is open. */
+const shown = (): string[] =>
+  Array.from(document.querySelectorAll<HTMLElement>('.sk-opts:not([hidden]) .sk-opt'), (way) => said(way).name);
 const way = (name: string): HTMLElement => {
-  const el = Array.from(document.querySelectorAll<HTMLElement>('.sk-way')).find(
-    (w) => w.querySelector('b')?.textContent === name,
-  );
+  const el = Array.from(document.querySelectorAll<HTMLElement>('.sk-opt')).find((w) => said(w).name === name);
   if (!el) throw new Error(`No way called "${name}"`);
   return el;
 };
+/** Open the card of that name, or close it. */
+const press = (name: string): Promise<void> => click(`.sk-way[aria-controls="sk-${name.toLowerCase()}-ways"]`);
 const jump = (): { title: string; line: string; button: string; to: string | null } | null => {
   const el = $('.sk-jump');
   return (
@@ -218,42 +230,76 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-describe('the four ways to play', () => {
-  it('offers Solo, One screen, Online and Ranked, each with its own address', async () => {
+describe('the two ways to play', () => {
+  it('offers Solo and Online, closed, and Ranked is not a card beside them', async () => {
     const me = await anAccount();
     await openHome({ 'GET /me': () => ok(me), 'GET /config': async () => ok(await config()) });
     expect($('.sk-home h1')?.textContent).toBe('Skull King');
     expect(document.title).toBe('Skull King · GameOn');
-    expect(ways()).toEqual([
-      { name: 'Solo', line: 'Against bots, any time. Saved to your account.', to: '/skull-king/solo' },
-      // One line for a phone and one for a wide window: only one of the two words is ever shown.
-      { name: 'One screen', line: 'Pass one phonedevice around. 2 to 8 pirates.', to: '/skull-king/one-screen' },
-      { name: 'Online', line: 'Quick play, public tables, or a table of your own.', to: '/skull-king/online' },
-      { name: 'Ranked', line: 'This quarter. The standard rules. No bots.', to: '/skull-king/ranked' },
+    expect(cards()).toEqual([
+      { name: 'Solo', line: 'Against bots, or one screen for the crew.', open: false },
+      { name: 'Online', line: 'Tables with friends or strangers, and ranked.', open: false },
     ]);
-    // The season on the Ranked card is the server's.
-    expect(way('Ranked').querySelector('.pill')?.textContent).toBe((await config()).season?.name);
+    // A card is a button that opens. It leads nowhere by itself.
+    expect(texts('.sk-way').length).toBe(2);
+    expect(document.querySelectorAll('button.sk-way').length).toBe(2);
+    expect(shown()).toEqual([]);
     expect($('.sk-jump')).toBeNull();
     expect($('.sk-back')?.getAttribute('href')).toBe('/games');
     expect($('.go-chip')?.getAttribute('href')).toBe('/profile');
     expect($('.go-chip-text small')?.textContent).toBe('Bosun');
   });
 
+  it('opens a card in place on its two ways, each with its own address, one card at a time', async () => {
+    const me = await anAccount();
+    await openHome({ 'GET /me': () => ok(me), 'GET /config': async () => ok(await config()) });
+    await press('Solo');
+    expect(cards().map((c) => c.open)).toEqual([true, false]);
+    expect(shown()).toEqual(['Against bots', 'One screen']);
+    expect(places.path()).toBe('/skull-king');
+    // The button names the list it opens.
+    expect($('#sk-solo-ways')?.getAttribute('aria-label')).toBe('Solo');
+
+    await press('Online');
+    expect(cards().map((c) => c.open)).toEqual([false, true]);
+    expect(shown()).toEqual(['Tables', 'Ranked']);
+    await press('Online');
+    expect(cards().map((c) => c.open)).toEqual([false, false]);
+    expect(shown()).toEqual([]);
+
+    expect(ways()).toEqual([
+      { name: 'Against bots', line: 'Any time. Saved to your account.', to: '/skull-king/solo' },
+      // One line for a phone and one for a wide window: only one of the two words is ever shown.
+      { name: 'One screen', line: 'Pass one phonedevice around. 2 to 8 pirates.', to: '/skull-king/one-screen' },
+      {
+        name: 'Tables',
+        line: 'Quick play, public tables, a table of your own, or a code.',
+        to: '/skull-king/online',
+      },
+      { name: 'Ranked', line: 'This quarter. The standard rules. No bots.', to: '/skull-king/ranked' },
+    ]);
+    // The season on the Ranked row is the server's.
+    expect(way('Ranked').querySelector('.pill')?.textContent).toBe((await config()).season?.name);
+  });
+
   it('opens the screen of each way, and Back is the home again', async () => {
     await openAt('/skull-king');
-    await click('.sk-way[href="/skull-king/solo"]');
+    await press('Solo');
+    await click('.sk-opt[href="/skull-king/solo"]');
     expect(places.path()).toBe('/skull-king/solo');
     expect($('.sk-solo h1')?.textContent).toBe('Solo game');
     expect($('.sk-home')).toBeNull();
     await back();
     expect($('.sk-home')).not.toBeNull();
 
-    await click('.sk-way[href="/skull-king/one-screen"]');
+    await press('Solo');
+    await click('.sk-opt[href="/skull-king/one-screen"]');
     expect(places.path()).toBe('/skull-king/one-screen');
     expect($('#app h2')?.textContent).toBe('New game');
     await back();
 
-    await click('.sk-way[href="/skull-king/online"]');
+    await press('Online');
+    await click('.sk-opt[href="/skull-king/online"]');
     await settle();
     expect(places.path()).toBe('/skull-king/online');
     expect($('#online h1, #online h2')?.textContent).toBe('Online');
@@ -269,7 +315,9 @@ describe('the four ways to play', () => {
     await page.rest('POST', '/auth/register', { username: 'calico', password: 'secret' });
     await openAt('/skull-king');
     expect(way('Ranked').getAttribute('href')).toBe('/skull-king/ranked');
-    await click('.sk-way[href="/skull-king/ranked"]');
+    await press('Online');
+    expect(shown()).toEqual(['Tables', 'Ranked']);
+    await click('.sk-opt[href="/skull-king/ranked"]');
     await settle();
     expect(places.path()).toBe('/skull-king/ranked');
     expect($('#online h1')?.textContent).toBe('Ranked');
@@ -285,7 +333,9 @@ describe('the four ways to play', () => {
     expect(sent).toEqual([]);
     expect($('.go-chip')).toBeNull();
     // Neither does the setup of a solo game, until "Start": the home itself starts nothing.
-    await click('.sk-way[href="/skull-king/solo"]');
+    await press('Solo');
+    await press('Online');
+    await click('.sk-opt[href="/skull-king/solo"]');
     await settle(3000);
     expect((await page.rest('GET', '/me')).status).toBe(401);
     expect(sent).toEqual([]);
@@ -306,7 +356,7 @@ describe('the four ways to play', () => {
 });
 
 describe('the way back into a game', () => {
-  it("says a solo game in the server's own numbers, and the Solo card is the way back to it", async () => {
+  it("says a solo game in the server's own numbers, and Against bots is the way back to it", async () => {
     await openHome(await seated({ kind: 'game', id: 'game-1', table: 'solo', bots: 2, round: 3, rounds: 5 }));
     expect(jump()).toEqual({
       title: 'Solo against 2 bots',
@@ -314,12 +364,13 @@ describe('the way back into a game', () => {
       button: 'Continue',
       to: '/skull-king/table',
     });
-    expect(ways()[0]).toEqual({ name: 'Solo', line: 'Round 3 of 5 is waiting.', to: '/skull-king/table' });
-    expect(way('Solo').querySelector('.pill')?.textContent).toBe('Back to your game');
+    expect(ways()[0]).toEqual({ name: 'Against bots', line: 'Round 3 of 5 is waiting.', to: '/skull-king/table' });
+    expect(way('Against bots').querySelector('.pill')?.textContent).toBe('Back to your game');
     // Both ask for the seat the server keeps. Neither starts a game.
     await click('.sk-jump a.btn');
     expect(rejoined).toBe(1);
-    await click('.sk-way[href="/skull-king/table"]');
+    await press('Solo');
+    await click('.sk-opt[href="/skull-king/table"]');
     expect(rejoined).toBe(2);
     expect(places.path()).toBe('/skull-king');
   });
@@ -330,7 +381,7 @@ describe('the way back into a game', () => {
     expect(jump()?.line).toBe('Round 10 of 10 · saved to your account');
   });
 
-  it("says any other game is the player's table, with no name in it, and leaves the Solo card as it rests", async () => {
+  it("says any other game is the player's table, with no name in it, and leaves Against bots as it rests", async () => {
     for (const table of ['friends', 'public', 'casual', 'ranked'] as const) {
       await openHome(await seated({ kind: 'game', id: 'game-1', table }));
       expect(jump()).toEqual({
@@ -339,7 +390,7 @@ describe('the way back into a game', () => {
         button: 'Rejoin',
         to: '/skull-king/table',
       });
-      expect(ways()[0].line).toBe('Against bots, any time. Saved to your account.');
+      expect(ways()[0].line).toBe('Any time. Saved to your account.');
       closePage();
     }
     // A reply that names no table, or a solo game without its numbers, is a game like any other.
@@ -443,6 +494,7 @@ describe('what the home says about ranked', () => {
   it('says ranked is closed while the cooldown the server named is ahead, and leads nowhere', async () => {
     const me = await anAccount();
     await openHome({ 'GET /me': () => ok({ ...me, cooldownUntil: Date.now() + 60_000 }) });
+    await press('Online');
     const ranked = way('Ranked');
     expect(ways()[3]).toEqual({ name: 'Ranked', line: 'Ranked is closed for you.', to: null });
     expect(ranked.tagName).toBe('DIV');
@@ -450,10 +502,10 @@ describe('what the home says about ranked', () => {
     expect(ranked.querySelector('.pill')?.textContent).toBe('Cooldown');
     // No minutes are drawn.
     expect(ranked.textContent).not.toMatch(/\d/);
-    await click('.sk-way[aria-disabled]');
+    await click('.sk-opt[aria-disabled]');
     expect(places.path()).toBe('/skull-king');
 
-    // When the time has come, the card is the way in again.
+    // When the time has come, the row is the way in again.
     await settle(61_000);
     expect(ways()[3]).toEqual({
       name: 'Ranked',
@@ -490,27 +542,36 @@ describe('what the home says about ranked', () => {
 });
 
 describe('without a connection', () => {
-  it('says so, keeps Solo and One screen, and takes Online and Ranked out of reach until the server answers', async () => {
+  it('says so, keeps both ways of Solo, and takes Online out of reach until the server answers', async () => {
     const me = await anAccount();
     let down = true;
     await openHome({ 'GET /me': () => (down ? Promise.reject(new Error('No network')) : ok(me)) });
-    expect($('.go-banner')?.textContent).toBe('Not connected. Solo and One screen still work.');
+    expect($('.go-banner')?.textContent).toBe('Not connected. Solo still works.');
+    expect(cards()).toEqual([
+      { name: 'Solo', line: 'Against bots, or one screen for the crew.', open: false },
+      // Online is there and cannot be opened: it holds nothing.
+      { name: 'Online', line: 'Needs a connection.', open: null },
+    ]);
+    const online = document.querySelectorAll<HTMLElement>('.sk-way')[1];
+    expect(online.tagName).toBe('DIV');
+    expect(online.getAttribute('aria-disabled')).toBe('true');
+    await press('Solo');
     expect(ways()).toEqual([
       {
-        name: 'Solo',
+        name: 'Against bots',
         line: 'Offline: runs on this device and is not counted in your stats.',
         to: '/skull-king/solo',
       },
       { name: 'One screen', line: 'Pass one phonedevice around. 2 to 8 pirates.', to: '/skull-king/one-screen' },
-      { name: 'Online', line: 'Needs a connection.', to: null },
-      { name: 'Ranked', line: 'Needs a connection.', to: null },
     ]);
-    expect(way('Solo').querySelector('.pill')?.textContent).toBe('Offline');
+    expect(way('Against bots').querySelector('.pill')?.textContent).toBe('Offline');
     expect($('.go-chip')).toBeNull();
 
     down = false;
     await settle(RETRY_MS);
     expect($('.go-banner')).toBeNull();
+    // The card that was open stays open, and Online can be opened again.
+    expect(cards().map((c) => c.open)).toEqual([true, false]);
     expect(ways().map((w) => w.to)).toEqual([
       '/skull-king/solo',
       '/skull-king/one-screen',

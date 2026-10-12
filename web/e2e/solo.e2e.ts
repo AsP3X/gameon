@@ -40,7 +40,7 @@ afterAll(async () => {
 describe('a solo game on the server', () => {
   it('starts from the setup page with what was chosen there, and says it is saved', async () => {
     solo = await Player.join(stage.browser, 'Solo', stage.url);
-    await solo.page.locator('.sk-way[href="/skull-king/solo"]').click();
+    await solo.way('Solo', '/skull-king/solo');
     await solo.page.getByRole('heading', { name: 'Solo game' }).waitFor();
     // Two bots and five rounds of five cards: a trick has three plays, and a round has five tricks.
     await solo.page.getByRole('button', { name: '2 bots' }).click();

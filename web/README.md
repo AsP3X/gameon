@@ -117,8 +117,15 @@ a phone and one from 1000 px up.
 ## Skull King's home
 
 `/skull-king` is `src/skullking/Home.tsx`, as `design/skt.pen` draws it (plan item W2). It takes the
-place of the legacy renderer's home screen and starts no game itself: each of the four ways in is a
-link to the screen that does.
+place of the legacy renderer's home screen and starts no game itself: each way in is a link to the
+screen that does.
+
+- **Two cards, each opening a choice.** Solo and Online are buttons that open in place, one at a
+  time (`aria-expanded`, and the list each one names with `aria-controls`). Solo holds "Against
+  bots" (`/skull-king/solo`) and "One screen" (`/skull-king/one-screen`). Online holds "Tables"
+  (`/skull-king/online`, the index with quick play, the public tables, a table of your own and the
+  code) and "Ranked" (`/skull-king/ranked`). Ranked is not a card beside Online. No address changed,
+  and the open card is not part of one: a page that comes back to the home has both closed.
 
 - **The renderer is still under it.** It is "at home" there and draws nothing but its sheets: the
   greeting, the sound settings and the rules (`mountTavern`, `pageHome`). The page's controls open
@@ -136,10 +143,10 @@ link to the screen that does.
 - **Back to a seat** ("Continue", "Rejoin", "Back to your game") connects and goes to
   `/skull-king/table`; the `welcome` that follows puts the table back. The home sends no
   `solo.start`: the solo setup does.
-- **Ranked** is closed while `Me.cooldownUntil` is ahead of the server's clock. The card says so
+- **Ranked** is closed while `Me.cooldownUntil` is ahead of the server's clock. Its row says so
   and leads nowhere. No time is drawn.
-- **Without a connection** the home says so, Solo and One screen stay, and Online and Ranked are
-  out of reach until the server answers again.
+- **Without a connection** the home says so, Solo opens on both of its ways, and Online is dimmed
+  and cannot be opened until the server answers again.
 - **Your stats** and the scoresheet entry are this device's, as the renderer keeps them.
 
 ## Solo

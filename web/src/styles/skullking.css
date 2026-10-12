@@ -179,7 +179,13 @@
     transform 0.06s,
     box-shadow 0.06s;
 }
-#gameon a.sk-way:active {
+/* A card that opens, or asks at once, is a button. */
+#gameon button.sk-way {
+  width: 100%;
+  text-align: left;
+}
+#gameon a.sk-way:active,
+#gameon button.sk-way:active {
   transform: translateY(4px);
   box-shadow: 0 0 0 transparent;
 }
@@ -219,6 +225,50 @@
   display: inline-flex;
   font-size: 20px;
   color: var(--faint);
+}
+/* A way to play opens in place: its card, and under it the two ways it holds. */
+.sk-choice,
+.sk-opts {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+#gameon .sk-opts {
+  padding-left: 16px;
+}
+.sk-opts[hidden] {
+  display: none;
+}
+.sk-way[aria-expanded] .sk-way-go {
+  transition: transform 0.15s;
+}
+.sk-way[aria-expanded='true'] .sk-way-go {
+  transform: rotate(180deg);
+}
+#gameon .sk-opt {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 60px;
+  padding: 10px 8px 10px 12px;
+  border: 2px solid var(--line);
+  border-radius: 14px;
+  background: var(--bg);
+  box-shadow: 0 2px 0 var(--line);
+  color: var(--fg);
+}
+.sk-opt .go-key {
+  --k: 36px;
+}
+.sk-opt .sk-way-text b {
+  font-size: 15px;
+}
+.sk-opt .sk-way-text > span {
+  font-size: 13px;
+}
+.sk-opt .pill {
+  flex: none;
 }
 #gameon .sk-real {
   display: flex;
@@ -359,6 +409,11 @@
   .sk-way .go-key {
     --k: 52px;
   }
+  /* The felt's middle is where the cards are. Room for an open card is kept, so opening one does
+     not move the card that was pressed. */
+  .sk-ways {
+    min-height: 340px;
+  }
 }
 @media (min-width: 1280px) {
   .sk-body {
@@ -368,6 +423,9 @@
   .sk-ways {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+    align-content: start;
+    min-height: 272px;
   }
 }
 
