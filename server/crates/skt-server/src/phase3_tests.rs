@@ -46,6 +46,7 @@ async fn ladder_pages_hide_usernames_and_reject_a_bad_query(pool: sqlx::PgPool) 
         .record_for_test(crate::world::GameReport {
             id: "ladder-game".to_owned(),
             mode: "ranked",
+            table_kind: None,
             seats: vec![],
             overs: vec![],
             penalise: vec![],
@@ -213,6 +214,7 @@ async fn a_far_rating_waits_for_the_window_to_widen(pool: sqlx::PgPool) {
         .record_for_test(crate::world::GameReport {
             id: "seed-rating".to_owned(),
             mode: "ranked",
+            table_kind: None,
             seats: vec![],
             overs: vec![],
             penalise: vec![],
@@ -414,6 +416,7 @@ async fn a_player_can_read_the_log_of_a_game_they_sat(pool: sqlx::PgPool) {
         .record_for_test(crate::world::GameReport {
             id: game.to_owned(),
             mode: "casual",
+            table_kind: None,
             seats: vec![crate::world::SeatTally {
                 user: skt_protocol::UserId::new(id),
                 seat: 0,

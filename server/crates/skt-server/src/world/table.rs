@@ -9,7 +9,7 @@ use skt_protocol::{
     GameEmotePush, GameEmoteTag, GameEvent, GameId, GameOver, GameOverTag, GameResult, GameStart,
     GameStartTag, GameUpdate, GameUpdateTag, Lobby, LobbyId, Member, MessageId, OkReply, OkTag,
     OnlineEvent, RatingChange, SeatInfo, SeatLost, SeatLostReason, SeatLostTag, SeatStatus,
-    TableInfo, TableMode, UserId, WelcomeGame,
+    TableInfo, TableKind, TableMode, UserId, WelcomeGame,
 };
 
 use crate::rating::{self, PlayerSkill};
@@ -68,8 +68,10 @@ pub struct RatedResult {
 pub struct GameReport {
     /// Game id.
     pub id: String,
-    /// `custom`, `casual`, or `ranked`.
+    /// `custom`, `casual`, or `ranked`. Solo stays `custom` on the wire.
     pub mode: &'static str,
+    /// `solo` for a solo table. Nothing for every other table.
+    pub table_kind: Option<&'static str>,
     /// Humans who were still seated. A `game.leave` is absent.
     pub seats: Vec<SeatTally>,
     /// Ranked humans, including forfeits. Empty for every other mode.
@@ -98,6 +100,8 @@ pub struct OpenDelta {
     pub entries: Vec<(i32, String, Option<i32>, String)>,
     /// Log lines stored once these rows are written.
     pub stored: usize,
+    /// `solo`, or nothing. A restart uses this to keep the table paused.
+    pub table_kind: Option<String>,
 }
 
 /// A seat as it is written into `open_games`.
@@ -117,6 +121,8 @@ pub struct RestoredGame {
     pub mode: String,
     /// Quick play and ranked have no lobby.
     pub matchmade: bool,
+    /// `solo`, or nothing.
+    pub table_kind: Option<String>,
     /// The rules the table opened with.
     pub settings: skt_protocol::GameSettings,
     /// Seats in order.
@@ -166,6 +172,8 @@ struct Running {
     /// Quick play and ranked have no lobby to reopen.
     matchmade: bool,
     mode: TableMode,
+    /// Solo, or nothing until a later package names the other tables.
+    kind: Option<TableKind>,
     settings: skt_protocol::GameSettings,
     state: GameState,
     seats: Vec<SeatPlay>,
@@ -201,12 +209,25 @@ pub struct InactivityKick {
     pub ranked: bool,
 }
 
+/// How a table was opened. Solo is not a lobby and not a queue.
+#[derive(Clone, Copy)]
+pub(crate) enum OpenAs {
+    /// A custom lobby the host started.
+    Lobby,
+    /// Casual or ranked. There is no lobby to reopen.
+    Match,
+    /// One human and bots. No clock on the human. A drop pauses the table.
+    Solo,
+}
+
 /// Every game in the process.
 pub struct Tables {
     games: HashMap<GameId, Running>,
     seat_of: HashMap<UserId, (GameId, Seat)>,
     /// `seat.lost` still owed. Removed once a `welcome` has had it queued.
     lost: HashMap<UserId, SeatLost>,
+    /// Solo games abandoned since the last persist. Their `open_games` rows must go.
+    abandoned: Vec<String>,
 }
 
 impl Tables {
@@ -219,6 +240,7 @@ impl Tables {
             games: HashMap::new(),
             seat_of: HashMap::new(),
             lost: HashMap::new(),
+            abandoned: Vec::new(),
         }
     }
 
@@ -228,7 +250,7 @@ impl Tables {
         lobby: &Lobby,
         now: Instant,
         live: &HashMap<UserId, super::Live>,
-        matchmade: bool,
+        open_as: OpenAs,
         priors: &HashMap<UserId, OpenPrior>,
     ) -> Vec<(UserId, GameId)> {
         let (mut seats, mut infos, status) = seats_from(lobby, live);
@@ -251,6 +273,11 @@ impl Tables {
         let Some((state, log)) = opening_deal(&lobby.settings, seats.len()) else {
             return Vec::new();
         };
+        let matchmade = matches!(open_as, OpenAs::Match);
+        let kind = match open_as {
+            OpenAs::Solo => Some(TableKind::Solo),
+            OpenAs::Lobby | OpenAs::Match => None,
+        };
         let mode = if matchmade {
             lobby.mode
         } else {
@@ -262,6 +289,7 @@ impl Tables {
             lobby_id: lobby.id.clone(),
             matchmade,
             mode,
+            kind,
             settings: lobby.settings,
             state,
             seats,
@@ -339,6 +367,48 @@ impl Tables {
         self.seat_of.get(user).map(|(id, _)| id.clone())
     }
 
+    /// 1-based round, format length, and seated bots for a solo game this player is still in.
+    pub fn solo_place(&self, user: &UserId) -> Option<(u32, u32, u32)> {
+        let (id, seat) = self.seat_of.get(user)?;
+        let running = self.games.get(id)?;
+        if running.kind != Some(TableKind::Solo) || running.over {
+            return None;
+        }
+        if running.status.get(seat.index()) == Some(&SeatStatus::Out) {
+            return None;
+        }
+        let view = running.state.view(*seat).ok()?;
+        let rounds = u32::try_from(running.settings.format.sequence().len()).unwrap_or(0);
+        let bots = u32::try_from(running.seats.iter().filter(|play| play.started_bot).count())
+            .unwrap_or(0);
+        Some((u32::from(view.round).saturating_add(1), rounds, bots))
+    }
+
+    /// Solo games abandoned since the last call. Their open rows are deleted on persist.
+    pub fn take_abandoned(&mut self) -> Vec<String> {
+        std::mem::take(&mut self.abandoned)
+    }
+
+    /// The solo player has dropped and the table is waiting. Tests use this.
+    #[cfg(test)]
+    pub fn solo_seat_offline(&self, user: &UserId) -> bool {
+        let Some((id, _)) = self.seat_of.get(user) else {
+            return false;
+        };
+        let Some(running) = self.games.get(id) else {
+            return false;
+        };
+        running.kind == Some(TableKind::Solo)
+            && running.status.first() == Some(&SeatStatus::Offline)
+    }
+
+    /// Stored steps of the game this player is sitting. Tests use this after a reload.
+    #[cfg(test)]
+    pub fn log_len(&self, user: &UserId) -> Option<usize> {
+        let (id, _) = self.seat_of.get(user)?;
+        self.games.get(id).map(|running| running.log.len())
+    }
+
     /// Steps not yet written to `open_log`.
     pub fn checkpoint(&self) -> Vec<OpenDelta> {
         self.games
@@ -377,6 +447,7 @@ impl Tables {
                     seats: serde_json::to_string(&seats).unwrap_or_else(|_| "[]".to_owned()),
                     entries,
                     stored: running.log.len(),
+                    table_kind: running.kind.map(|kind| kind_name(kind).to_owned()),
                 }
             })
             .collect()
@@ -429,15 +500,27 @@ impl Tables {
             .collect::<Vec<_>>();
         let stored = log.len();
         let id = GameId::new(game.id);
+        let kind = (game.table_kind.as_deref() == Some("solo")).then_some(TableKind::Solo);
+        let status = seats
+            .iter()
+            .map(|seat| {
+                if kind == Some(TableKind::Solo) && seat.started_bot {
+                    SeatStatus::Bot
+                } else {
+                    SeatStatus::Offline
+                }
+            })
+            .collect::<Vec<_>>();
         let mut running = Running {
             id: id.clone(),
             lobby_id: skt_protocol::LobbyId::new("restored"),
             matchmade: game.matchmade,
             mode: mode_of(&game.mode),
+            kind,
             settings: game.settings,
             state,
             seats,
-            status: vec![SeatStatus::Offline; count],
+            status,
             ready: vec![false; count],
             rev: u32::try_from(stored).unwrap_or(u32::MAX),
             bot_at: None,
@@ -706,6 +789,18 @@ impl Tables {
         let Some((id, _)) = self.seat_of.get(user).cloned() else {
             return (Vec::new(), false);
         };
+        let Some(running) = self.games.get(&id) else {
+            return (Vec::new(), false);
+        };
+        if running.kind == Some(TableKind::Solo) {
+            // Human: Leaving a solo game ends it. No bot sits down, and the result is not stored.
+            // Agent: WRITES ok; REMOVES the game and the seat; RETURNS the player with ranked false. No game.update and no game.over.
+            ok(live, user, msg);
+            self.abandoned.push(id.as_str().to_owned());
+            self.seat_of.remove(user);
+            self.games.remove(&id);
+            return (vec![user.clone()], false);
+        }
         let Some(running) = self.games.get_mut(&id) else {
             return (Vec::new(), false);
         };
@@ -751,7 +846,12 @@ impl Tables {
                         if let Some(report) = running.report.take() {
                             reports.push(report);
                         }
-                        Some((running.matchmade, running.lobby_id.clone(), users))
+                        Some((
+                            running.matchmade,
+                            running.kind == Some(TableKind::Solo),
+                            running.lobby_id.clone(),
+                            users,
+                        ))
                     }
                 } else {
                     if running.step_at.is_some_and(|at| at <= now) {
@@ -780,9 +880,10 @@ impl Tables {
                     kicked.push(InactivityKick { user, ranked });
                 }
             }
-            if let Some((matchmade, lobby_id, users)) = ended {
+            if let Some((matchmade, solo, lobby_id, users)) = ended {
                 // A quick-play table has no lobby. A custom lobby opens with nobody ready.
-                if !matchmade {
+                // A solo game was never a lobby.
+                if !matchmade && !solo {
                     reopen_lobby(&lobby_id, lobbies, live);
                 }
                 for user in users {
@@ -869,11 +970,20 @@ impl Running {
         self.seats.len()
     }
 
+    fn returns_to_lobby(&self) -> bool {
+        self.kind != Some(TableKind::Solo) && !self.matchmade
+    }
+
     fn arm(&mut self, now: Instant) {
         self.bot_at = None;
         self.step_at = None;
         self.shown = None;
         if self.over || self.state.phase() == Phase::GameOver {
+            return;
+        }
+        // Human: A solo player who has dropped is frozen. No bot plays and no trick advances until they are back.
+        // Agent: READS kind and the status of seat 0; WRITES no bot_at, step_at, or deadline while that seat is offline.
+        if self.kind == Some(TableKind::Solo) && self.status.first() == Some(&SeatStatus::Offline) {
             return;
         }
         let pace = scaled(self.settings.pace);
@@ -888,16 +998,22 @@ impl Running {
                     self.bot_at = Some(now + Duration::from_millis(self.auto_delay_ms()));
                 }
                 if let Some(mut deadline) = self.human_deadline() {
-                    let ms = match self.state.phase() {
-                        Phase::Bidding => pace(timers.bid_ms),
-                        Phase::Playing => pace(timers.play_ms),
-                        Phase::Ability => pace(timers.ability_ms),
-                        _ => timers.round_end_ms,
-                    };
-                    let at = identity::unix_now().get().saturating_add(i64::from(ms));
-                    deadline.at = skt_protocol::UnixMs::new(at);
-                    self.shown = Some(deadline);
-                    self.step_at = Some(now + Duration::from_millis(u64::from(ms)));
+                    // Human: Solo does not time a bid, a play, or an ability. A missed click plays nothing.
+                    // Agent: READS kind and deadline.kind; WRITES no shown deadline and no step_at for those clocks. Round end still waits.
+                    let solo_seat = self.kind == Some(TableKind::Solo)
+                        && deadline.kind != DeadlineKind::NextRound;
+                    if !solo_seat {
+                        let ms = match self.state.phase() {
+                            Phase::Bidding => pace(timers.bid_ms),
+                            Phase::Playing => pace(timers.play_ms),
+                            Phase::Ability => pace(timers.ability_ms),
+                            _ => timers.round_end_ms,
+                        };
+                        let at = identity::unix_now().get().saturating_add(i64::from(ms));
+                        deadline.at = skt_protocol::UnixMs::new(at);
+                        self.shown = Some(deadline);
+                        self.step_at = Some(now + Duration::from_millis(u64::from(ms)));
+                    }
                 }
             }
             Phase::GameOver => {}
@@ -1303,7 +1419,7 @@ impl Running {
                             Vec::new()
                         },
                         rating: changes.get(index).cloned().flatten(),
-                        lobby_id: (!self.matchmade).then(|| self.lobby_id.clone()),
+                        lobby_id: self.returns_to_lobby().then(|| self.lobby_id.clone()),
                     },
                 },
             ));
@@ -1312,6 +1428,7 @@ impl Running {
         self.report = Some(GameReport {
             id: self.id.as_str().to_owned(),
             mode: mode_name(self.mode),
+            table_kind: self.kind.map(kind_name),
             seats: tallies,
             rated,
             overs,
@@ -1476,8 +1593,8 @@ impl Running {
             tag: GameStartTag::Value,
             game_id: self.id.clone(),
             mode: self.mode,
-            table: None,
-            lobby_id: (!self.matchmade).then(|| self.lobby_id.clone()),
+            table: self.kind,
+            lobby_id: self.returns_to_lobby().then(|| self.lobby_id.clone()),
             settings: self.settings,
             deck: self.state.deck().to_vec(),
             schedule: self.state.schedule().to_vec(),
@@ -1557,6 +1674,16 @@ fn mode_name(mode: TableMode) -> &'static str {
         TableMode::Custom => "custom",
         TableMode::Casual => "casual",
         TableMode::Ranked => "ranked",
+    }
+}
+
+fn kind_name(kind: TableKind) -> &'static str {
+    match kind {
+        TableKind::Solo => "solo",
+        TableKind::Friends => "friends",
+        TableKind::Public => "public",
+        TableKind::Casual => "casual",
+        TableKind::Ranked => "ranked",
     }
 }
 

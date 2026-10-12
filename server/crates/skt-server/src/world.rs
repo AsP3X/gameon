@@ -26,8 +26,8 @@ use std::time::{Duration, Instant};
 use skt_protocol::{
     Active, ClientMessage, ErrMessage, ErrTag, ErrorCode, GameId, Lobby, LobbyClosed,
     LobbyClosedTag, LobbyId, LobbyList, LobbyPhase, LobbyStatePush, LobbyStateTag, LobbySummary,
-    Me, Member, MessageId, OkReply, OkTag, QueueMode, QueueStatus, QueueStatusPush, QueueStatusTag,
-    ServerConfig, TableColor, TableMode, UserId, Visibility,
+    Me, Member, MessageId, OkReply, OkTag, Pace, QueueMode, QueueStatus, QueueStatusPush,
+    QueueStatusTag, ServerConfig, TableColor, TableKind, TableMode, UserId, Visibility,
 };
 use tokio::sync::mpsc::UnboundedSender;
 
@@ -35,7 +35,7 @@ use identity::{AccountSnap, Identity};
 
 use crate::rating::{self, Waiter};
 
-use table::{OpenPrior, Tables};
+use table::{OpenAs, OpenPrior, Tables};
 
 /// One outbound frame, or an instruction to close the socket.
 pub enum Wire {
@@ -328,6 +328,23 @@ impl World {
         self.tables.mark_stored(id, stored);
     }
 
+    /// Solo games abandoned since the last persist. Their open rows are deleted.
+    pub fn take_abandoned(&mut self) -> Vec<String> {
+        self.tables.take_abandoned()
+    }
+
+    /// Stored steps of the game this player is sitting. Tests use this after a reload.
+    #[cfg(test)]
+    pub fn log_len(&self, user: &UserId) -> Option<usize> {
+        self.tables.log_len(user)
+    }
+
+    /// The solo seat is still this player's and the socket is down. Tests wait for a drop.
+    #[cfg(test)]
+    pub fn solo_seat_offline(&self, user: &UserId) -> bool {
+        self.tables.solo_seat_offline(user)
+    }
+
     /// Put games read from Postgres back on the clock.
     pub fn resume(&mut self, games: Vec<RestoredGame>) {
         for game in games {
@@ -473,10 +490,7 @@ impl World {
                 let _ = allow_bots;
                 self.create_lobby(user, id, visibility, settings);
             }
-            ClientMessage::SoloStart { .. } => {
-                // Human: The message is in the contract. The solo table is the next package.
-                // Agent: READS the frame. WRITES no reply, so a page that sends it early times out.
-            }
+            ClientMessage::SoloStart { id, settings } => self.start_solo(user, id, settings),
             ClientMessage::LobbyJoin { id, code, lobby_id } => {
                 self.join_lobby(user, id, code, lobby_id);
             }
@@ -749,11 +763,73 @@ impl World {
             self.note_party(&lobby);
         }
         let priors = self.priors_of(&lobby);
-        for (seated, game) in self
-            .tables
-            .open(&game_id, &lobby, self.now, &self.live, false, &priors)
-        {
+        for (seated, game) in self.tables.open(
+            &game_id,
+            &lobby,
+            self.now,
+            &self.live,
+            OpenAs::Lobby,
+            &priors,
+        ) {
             self.identity.set_game(&seated, Some(game));
+        }
+    }
+
+    // Human: One person sits at seat 0. Bots fill the other seats. The game is not a lobby.
+    // Agent: READS settings.max_players; WRITES ok, then open(OpenAs::Solo) with pace standard. Does not insert a lobby.
+    fn start_solo(
+        &mut self,
+        user: &UserId,
+        id: MessageId,
+        mut settings: skt_protocol::GameSettings,
+    ) {
+        if self.busy(user) {
+            self.fail_live(user, id, ErrorCode::AlreadySeated);
+            return;
+        }
+        if !(2..=8).contains(&settings.max_players) {
+            self.fail_live(user, id, ErrorCode::Validation);
+            return;
+        }
+        settings.pace = Pace::Standard;
+        let mut members = vec![self.human_member(user, true)];
+        while members.len() < usize::from(settings.max_players) {
+            let name = bot_name(&members);
+            let color = free_color(&members);
+            members.push(Member::Bot {
+                name,
+                color,
+                level: settings.bot_level,
+            });
+        }
+        let lobby = Lobby {
+            id: LobbyId::new(identity::uuid()),
+            code: String::new(),
+            mode: TableMode::Custom,
+            visibility: Visibility::Private,
+            host_id: None,
+            settings,
+            allow_bots: None,
+            members,
+            state: LobbyPhase::Open,
+            game_id: None,
+        };
+        self.ok(user, id, None, false);
+        let game_id = GameId::new(identity::uuid());
+        let priors = self.priors_of(&lobby);
+        let seated = self.tables.open(
+            &game_id,
+            &lobby,
+            self.now,
+            &self.live,
+            OpenAs::Solo,
+            &priors,
+        );
+        if seated.is_empty() {
+            tracing::error!("a solo game did not deal");
+        }
+        for (seated_user, game) in seated {
+            self.identity.set_game(&seated_user, Some(game));
         }
     }
 
@@ -1090,10 +1166,14 @@ impl World {
         };
         let game_id = GameId::new(identity::uuid());
         let priors = self.priors_of(&lobby);
-        for (seated, game) in self
-            .tables
-            .open(&game_id, &lobby, self.now, &self.live, true, &priors)
-        {
+        for (seated, game) in self.tables.open(
+            &game_id,
+            &lobby,
+            self.now,
+            &self.live,
+            OpenAs::Match,
+            &priors,
+        ) {
             self.identity.set_game(&seated, Some(game));
         }
     }
@@ -1212,12 +1292,13 @@ impl World {
 
     fn me_of(&self, user: &UserId) -> Me {
         let active = if let Some(id) = self.identity.game_of(user) {
+            let place = self.tables.solo_place(user);
             Some(Active::Game {
                 id: id.as_str().to_owned(),
-                table: None,
-                round: None,
-                rounds: None,
-                bots: None,
+                table: place.map(|_| TableKind::Solo),
+                round: place.map(|(round, _, _)| round),
+                rounds: place.map(|(_, rounds, _)| rounds),
+                bots: place.map(|(_, _, bots)| bots),
             })
         } else if self.ranked.contains(user) {
             Some(Active::Queue {

@@ -127,6 +127,27 @@ impl AppState {
         world.hand(user)
     }
 
+    /// Log length of a reloaded solo game, before and after 30 seconds on the new clock.
+    ///
+    /// A paused solo game stays the same length. Tests use this.
+    #[cfg(test)]
+    pub async fn reloaded_log_len(&self, user: &skt_protocol::UserId) -> Option<(usize, usize)> {
+        self.persist_open().await;
+        let saved = self.store.as_ref()?.load_open().await.ok()?;
+        let mut world = World::new();
+        world.resume(saved.into_iter().filter_map(restore_game).collect());
+        let before = world.log_len(user)?;
+        let _ = world.advance(std::time::Duration::from_secs(30));
+        let after = world.log_len(user)?;
+        Some((before, after))
+    }
+
+    /// The solo seat is offline. Tests wait until a closed socket has been noticed.
+    #[cfg(test)]
+    pub async fn solo_seat_offline(&self, user: &skt_protocol::UserId) -> bool {
+        self.world.lock().await.solo_seat_offline(user)
+    }
+
     /// Store leave penalties queued by the last socket messages.
     pub async fn persist_penalties(&self) {
         let pending = self.world.lock().await.take_penalties();
@@ -165,12 +186,21 @@ impl AppState {
         self.persist_open().await;
     }
 
-    /// Write steps of games that are still running.
+    /// Write steps of games that are still running, and delete abandoned solo games.
     pub async fn persist_open(&self) {
-        let pending = self.world.lock().await.checkpoint();
+        let (abandoned, pending) = {
+            let mut world = self.world.lock().await;
+            let abandoned = world.take_abandoned();
+            (abandoned, world.checkpoint())
+        };
         let Some(store) = &self.store else {
             return;
         };
+        for id in abandoned {
+            if store.drop_open(&id).await.is_err() {
+                tracing::error!("an abandoned solo game was not deleted");
+            }
+        }
         for game in pending {
             let write = crate::store::OpenWrite {
                 id: game.id.clone(),
@@ -178,6 +208,7 @@ impl AppState {
                 matchmade: game.matchmade,
                 settings: serde_json::to_string(&game.settings).unwrap_or_else(|_| "{}".to_owned()),
                 seats: game.seats,
+                table_kind: game.table_kind,
                 entries: game.entries,
             };
             if store.save_open(&write).await.is_ok() {
@@ -834,6 +865,7 @@ fn restore_game(game: crate::store::SavedGame) -> Option<crate::world::RestoredG
         id: game.id,
         mode: game.mode,
         matchmade: game.matchmade,
+        table_kind: game.table_kind,
         settings,
         seats,
         log,

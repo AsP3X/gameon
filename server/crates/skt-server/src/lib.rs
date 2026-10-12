@@ -6,6 +6,8 @@ mod phase1_tests;
 mod phase2_tests;
 #[cfg(test)]
 mod phase3_tests;
+#[cfg(test)]
+mod solo_tests;
 
 mod http_api;
 mod origin;

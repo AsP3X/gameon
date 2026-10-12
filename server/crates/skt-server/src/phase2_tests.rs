@@ -327,6 +327,7 @@ async fn stats_are_visible_on_me_after_a_recorded_game(pool: sqlx::PgPool) {
         .record_for_test(crate::world::GameReport {
             id: "game-1".to_owned(),
             mode: "casual",
+            table_kind: None,
             rated: vec![],
             overs: vec![],
             penalise: vec![],
@@ -651,6 +652,7 @@ async fn a_ranked_result_does_not_change_casual_stats(pool: sqlx::PgPool) {
         .record_for_test(crate::world::GameReport {
             id: "game-ranked".to_owned(),
             mode: "ranked",
+            table_kind: None,
             rated: vec![],
             overs: vec![],
             penalise: vec![],

@@ -43,6 +43,8 @@ pub struct SavedGame {
     pub settings: String,
     /// Seats as JSON.
     pub seats: String,
+    /// `solo`, or nothing.
+    pub table_kind: Option<String>,
     /// `seq`, kind, seat, body.
     pub log: Vec<(i32, String, Option<i32>, String)>,
 }
@@ -59,6 +61,8 @@ pub struct OpenWrite {
     pub settings: String,
     /// Seats as JSON.
     pub seats: String,
+    /// `solo`, or nothing. A restart uses this to keep the table paused.
+    pub table_kind: Option<String>,
     /// New rows only. `seq` is the position in the whole log.
     pub entries: Vec<(i32, String, Option<i32>, String)>,
 }
@@ -314,9 +318,10 @@ impl Store {
             .execute(connection(&mut tx))
             .await
             .map_err(|err| database(&err))?;
-        sqlx::query("INSERT INTO games (id, mode) VALUES ($1, $2)")
+        sqlx::query("INSERT INTO games (id, mode, table_kind) VALUES ($1, $2, $3)")
             .bind(&game.id)
             .bind(game.mode)
+            .bind(game.table_kind)
             .execute(connection(&mut tx))
             .await
             .map_err(|err| database(&err))?;
@@ -401,13 +406,14 @@ impl Store {
     pub async fn save_open(&self, game: &OpenWrite) -> Result<(), StoreFailure> {
         let mut tx = self.pool.begin().await.map_err(|err| database(&err))?;
         sqlx::query(
-            "INSERT INTO open_games (id, mode, matchmade, settings, seats) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (id) DO UPDATE SET settings = EXCLUDED.settings, seats = EXCLUDED.seats",
+            "INSERT INTO open_games (id, mode, matchmade, settings, seats, table_kind) VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT (id) DO UPDATE SET settings = EXCLUDED.settings, seats = EXCLUDED.seats, table_kind = EXCLUDED.table_kind",
         )
         .bind(&game.id)
         .bind(&game.mode)
         .bind(game.matchmade)
         .bind(&game.settings)
         .bind(&game.seats)
+        .bind(&game.table_kind)
         .execute(connection(&mut tx))
         .await
         .map_err(|err| database(&err))?;
@@ -428,20 +434,34 @@ impl Store {
         Ok(())
     }
 
+    /// Delete one abandoned game. `open_log` goes with the row.
+    ///
+    /// # Errors
+    ///
+    /// The delete failed.
+    pub async fn drop_open(&self, id: &str) -> Result<(), StoreFailure> {
+        sqlx::query("DELETE FROM open_games WHERE id = $1")
+            .bind(id)
+            .execute(&self.pool)
+            .await
+            .map_err(|err| database(&err))?;
+        Ok(())
+    }
+
     /// Games that were still running when the process last wrote them down.
     ///
     /// # Errors
     ///
     /// The read failed.
     pub async fn load_open(&self) -> Result<Vec<SavedGame>, StoreFailure> {
-        let games: Vec<(String, String, bool, String, String)> = sqlx::query_as(
-            "SELECT id, mode, matchmade, settings, seats FROM open_games ORDER BY id",
+        let games: Vec<(String, String, bool, String, String, Option<String>)> = sqlx::query_as(
+            "SELECT id, mode, matchmade, settings, seats, table_kind FROM open_games ORDER BY id",
         )
         .fetch_all(&self.pool)
         .await
         .map_err(|err| database(&err))?;
         let mut saved = Vec::new();
-        for (id, mode, matchmade, settings, seats) in games {
+        for (id, mode, matchmade, settings, seats, table_kind) in games {
             let log: Vec<(i32, String, Option<i32>, String)> = sqlx::query_as(
                 "SELECT seq, kind, seat, body FROM open_log WHERE game_id = $1 ORDER BY seq",
             )
@@ -455,6 +475,7 @@ impl Store {
                 matchmade,
                 settings,
                 seats,
+                table_kind,
                 log,
             });
         }

@@ -457,7 +457,7 @@ A bot move, a timeout and the server's `advance` are steps of their own. Each is
 `game.update`, written to a socket only after both frames of an earlier pair are queued on it.
 
 `game.leave` uses the `ok` then `game.update` pair, and that socket then receives no further
-`game.update` for the game. The client takes the table down when that update has been presented.
+`game.update` for the game. A solo leave is the exception: `ok` is the whole answer, and the game is gone. The client takes the table down when that update has been presented.
 The seat is a bot from that step. A later `welcome` for that user has `game: null`, and the hand
 cannot be resumed. In ranked the leave is a forfeit, recorded then and scored last. `forfeited`
 and `rating` travel on `game.over`, sent to the leaver when the game ends. If the leaver has no
@@ -581,7 +581,7 @@ not as a notice after `game.leave`.
 with a bot. `pace` is stored as `standard` and does not arm a deadline on the human's turn. A drop
 leaves the seat with that player. No bot is seated for the drop, and no card is played until the
 same player connects again. One unfinished solo game is kept, with no expiry. Registering a guest
-keeps that game on the same id. `game.leave` on any other table is unchanged.
+keeps that game on the same id. `game.leave` on `table: 'solo'` answers `ok` and then nothing else on that socket: no `game.update` and no `game.over`. The next `welcome` has `game: null`. `game.leave` on any other table is unchanged.
 
 Friends is `lobby.create` with `visibility: 'private'`. Public is `visibility: 'public'`. Casual
 is `queue.join` with `casual`, and ranked is `queue.join` with `ranked`. A named ruleset is a
