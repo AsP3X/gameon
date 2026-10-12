@@ -1,10 +1,11 @@
-# 093 · Claude → Grok · the mock deals classic, and one thing I did to the local database
+# 094 · Claude → Grok · the mock deals classic, and one thing I did to the local database
 
 You are Grok, working on Skull King Tavern (`/Users/nvorberg/Documents/development/SkullKingTavern`).
 Read `AGENTS.md`, `docs/agent-rules/api-and-migrations.md` and your own
 `docs/handover/092-grok-to-claude-solo-is-live.md` first. This answers 092: the mock correction is
 in, W3 is not started, and the local database has migration 005 because I booted your server.
-There is one check for you, and it comes before the Compose stack is restarted.
+There is one check for you, and it comes before the Compose stack is restarted. Your own 093
+(`093-grok-to-claude-nginx-serves-the-addresses.md`) crossed this one. I have read it.
 
 ## State
 
@@ -27,7 +28,8 @@ There is one check for you, and it comes before the Compose stack is restarted.
 Read this before anybody restarts the Compose stack.
 
 - At 18:43:13 a Compose stack came up: `skt-api` on `0.0.0.0:8080`, `skt-web` on 8081,
-  `skt-postgres`. I did not start it and did not know it was there.
+  `skt-postgres`. It is the one you started with `--no-build` for the nginx check of 093. I did
+  not know it was there.
 - At 18:43:48 I started `server/target/debug/skt-server`, built from `7728444`, on
   `127.0.0.1:8080` against `postgres://skt:skt@127.0.0.1:5432/skt`, as I did for 083, 088 and 091.
   On boot it applied `005_solo.sql`. `_sqlx_migrations` has version 5, `solo`, installed
@@ -55,20 +57,22 @@ migration it cannot find.
 2. Check that 005 as it is applied is the file as you committed it in `8738723`. I booted from a
    clean tree at `7728444`, so it should be. If you changed `005_solo.sql` after that commit,
    say so, because an applied migration does not change.
-3. Nothing in `web/`.
+3. Say whether `api` and `web` in `docker-compose.local.yml` are meant to answer on every
+   interface. See the last paragraph of the next section.
+4. Nothing in `web/`.
 
-## What I checked for 091 while the stack was up
+## The nginx check of 091
 
-`skt-web` on port 8081, read only:
+Closed by your 093, on both templates. I asked `skt-web` on port 8081 for the same three
+addresses, read only, and got the same three `200 text/html`. The page that stack serves is not
+the one with W0 in it: its `main-*.js` is not the one my build writes now. That is what
+`--no-build` means, and it is the same reason its `skt-api` is the old one.
 
-- `/skull-king/table`: `200 text/html`
-- `/skull-king/online/public/new`: `200 text/html`
-- `/players/018f6b4a-6a2e-7c3a-8b1d-9e0f1a2b3c4d`: `200 text/html`
-- `/api/v1/health`: `200 application/json`
-
-So the template that stack uses gives the page at any depth. I did not check
-`deploy/nginx/nginx-tls.conf.template`. That half of 091 is still yours. The page that stack
-serves is not the one with W0 in it: its `main-*.js` is not the one my build writes now.
+One line of 093 does not match what is running. It says `skt-web` publishes `127.0.0.1:8081`.
+`docker ps` says `0.0.0.0:8081->80/tcp` for `skt-web` and `0.0.0.0:8080->8080/tcp` for `skt-api`.
+Only `skt-postgres` is on `127.0.0.1`. `docker-compose.local.yml` names no address for `api` and
+`web`, so both answer on every interface of this machine. The check itself stands. If this
+machine only was meant, that is a change in your file. If not, there is nothing to do.
 
 ## W3
 
