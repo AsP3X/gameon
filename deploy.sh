@@ -110,6 +110,11 @@ show_help() {
   each with the networks it joins. Left and right there pick a container.
   a adds a Docker network and x removes one. skt-internal stays on every
   container. q in that dialog returns to this screen and writes nothing.
+  Enter on Logging opens the same kind of dialog. Each container shows what it
+  records and how much Docker keeps. Enter edits the marked line. q returns
+  to this screen and writes nothing. s on this screen writes the answers.
+  A log change applies the next time that container starts. It does not
+  touch the database.
   While the database is only inside the skt-postgres container, the reach mode, the
   Postgres port, the Postgres networks and the database user, password and name
   cannot be changed: that would recreate the container and delete what it stores.
@@ -130,7 +135,13 @@ show_help() {
     SKT_NETWORKS_POSTGRES  optional. Unset keeps skt-internal.
     SKT_NETWORKS_API       optional. Unset keeps skt-internal, plus proxy-network in NPM.
     SKT_NETWORKS_WEB       optional. Same default as the API.
-    RUST_LOG            API log level
+    RUST_LOG            API log level. The Logging dialog writes this.
+    SKT_LOG_POSTGRES    Postgres log_min_messages. Unset means warning.
+    SKT_LOG_WEB         page error log. Unset means notice.
+    SKT_LOG_SIZE_POSTGRES  SKT_LOG_SIZE_API  SKT_LOG_SIZE_WEB
+                        Docker json-file max size. Unset means 10m.
+    SKT_LOG_FILES_POSTGRES  SKT_LOG_FILES_API  SKT_LOG_FILES_WEB
+                        How many log files Docker keeps. Unset means 3.
     NO_COLOR            disable coloured output
 
   ${BOLD}NPM${NC} (PROXY_MODE=npm, no host ports), the same choice as the setup screen:
@@ -245,6 +256,20 @@ SETUP_NET_CUSTOM=0
 SETUP_NET_SVC=0
 SETUP_NET_ROW=0
 SETUP_NET_ERROR=""
+# What each container records, and how much json-file log Docker keeps for it.
+# Unset keys keep these. The Logging dialog edits them. s writes the answers.
+SETUP_LOG_POSTGRES="warning"
+SETUP_LOG_API="info"
+SETUP_LOG_WEB="notice"
+SETUP_LOG_SIZE_POSTGRES="10m"
+SETUP_LOG_SIZE_API="10m"
+SETUP_LOG_SIZE_WEB="10m"
+SETUP_LOG_FILES_POSTGRES="3"
+SETUP_LOG_FILES_API="3"
+SETUP_LOG_FILES_WEB="3"
+SETUP_LOG_SVC=0
+SETUP_LOG_ROW=0
+SETUP_LOG_ERROR=""
 SETUP_PGUSER="skt"
 SETUP_PGDB="skt"
 SETUP_PICK=0
@@ -272,6 +297,7 @@ load_setup_from() {
   SETUP_PGDB="$(file_value "$file" POSTGRES_DB)"
   SETUP_PGDB="${SETUP_PGDB:-skt}"
   net_load_from "$file"
+  log_load_from "$file"
 }
 
 setup_blank() {
@@ -352,6 +378,7 @@ setup_check() {
   SETUP_NET_POSTGRES="$(net_normalize "$SETUP_NET_POSTGRES")"
   SETUP_NET_API="$(net_normalize "$SETUP_NET_API")"
   SETUP_NET_WEB="$(net_normalize "$SETUP_NET_WEB")"
+  log_check || return 1
   setup_blank
 }
 
@@ -681,6 +708,7 @@ write_setup() {
     unset_key SKT_DATA_DIR .env
   fi
   write_network_keys
+  write_log_keys
   set_key DATABASE_URL "postgres://${SETUP_PGUSER}:${SETUP_PASSWORD}@127.0.0.1:${SETUP_PGPORT}/${SETUP_PGDB}" .env
   setup_blank
 }
@@ -743,7 +771,7 @@ setup_fields() {
   if [[ "$SETUP_MODE" != "npm" ]]; then
     printf '%s\n' web api pg
   fi
-  printf '%s\n' origin cookie password proxies data networks
+  printf '%s\n' origin cookie password proxies data networks logging
 }
 
 setup_field_count() {
@@ -819,6 +847,12 @@ setup_draw() {
         printf '      %-14s %s\n' "skt-api" "$(net_join "$SETUP_NET_API")"
         printf '      %-14s %s\n' "skt-web" "$(net_join "$SETUP_NET_WEB")"
         ;;
+      logging)
+        setup_row "$i" "Logging"
+        printf '      %-14s %s\n' "skt-postgres" "$(log_summary postgres)"
+        printf '      %-14s %s\n' "skt-api" "$(log_summary api)"
+        printf '      %-14s %s\n' "skt-web" "$(log_summary web)"
+        ;;
     esac
     i=$((i + 1))
   done < <(setup_fields)
@@ -839,6 +873,7 @@ setup_draw() {
   printf '\n  %s↑↓ move    ←→ storage    enter select    s save and start    r reset answers    q quit%s\n' "$DIM" "$NC"
   printf '  %sOn Storage, left is the named volume and right is the data folder. Enter edits the path.%s\n' "$DIM" "$NC"
   printf '  %sEnter on Networks lists skt-postgres, skt-api and skt-web with the networks each one joins.%s\n' "$DIM" "$NC"
+  printf '  %sEnter on Logging lists those containers with the level and the Docker log files for each.%s\n' "$DIM" "$NC"
   printf '  %sOn a text line, enter keeps the shown value. Type - to clear the origin or the proxies.%s\n' "$DIM" "$NC"
 }
 
@@ -1209,6 +1244,405 @@ setup_net_dialog() {
   done
 }
 
+# Process level and Docker json-file retention. Unset keys keep the defaults.
+# RUST_LOG is the API level. The other keys are written only when they differ.
+log_level_default() {
+  case "$1" in
+    postgres) printf 'warning' ;;
+    api) printf 'info' ;;
+    web) printf 'notice' ;;
+  esac
+}
+
+log_size_default() { printf '10m'; }
+log_files_default() { printf '3'; }
+
+log_level_key() {
+  case "$1" in
+    postgres) printf 'SKT_LOG_POSTGRES' ;;
+    api) printf 'RUST_LOG' ;;
+    web) printf 'SKT_LOG_WEB' ;;
+  esac
+}
+
+log_size_key() {
+  case "$1" in
+    postgres) printf 'SKT_LOG_SIZE_POSTGRES' ;;
+    api) printf 'SKT_LOG_SIZE_API' ;;
+    web) printf 'SKT_LOG_SIZE_WEB' ;;
+  esac
+}
+
+log_files_key() {
+  case "$1" in
+    postgres) printf 'SKT_LOG_FILES_POSTGRES' ;;
+    api) printf 'SKT_LOG_FILES_API' ;;
+    web) printf 'SKT_LOG_FILES_WEB' ;;
+  esac
+}
+
+log_level_get() {
+  case "$1" in
+    postgres) printf '%s' "$SETUP_LOG_POSTGRES" ;;
+    api) printf '%s' "$SETUP_LOG_API" ;;
+    web) printf '%s' "$SETUP_LOG_WEB" ;;
+  esac
+}
+
+log_level_set() {
+  case "$1" in
+    postgres) SETUP_LOG_POSTGRES="$2" ;;
+    api) SETUP_LOG_API="$2" ;;
+    web) SETUP_LOG_WEB="$2" ;;
+  esac
+}
+
+log_size_get() {
+  case "$1" in
+    postgres) printf '%s' "$SETUP_LOG_SIZE_POSTGRES" ;;
+    api) printf '%s' "$SETUP_LOG_SIZE_API" ;;
+    web) printf '%s' "$SETUP_LOG_SIZE_WEB" ;;
+  esac
+}
+
+log_size_set() {
+  case "$1" in
+    postgres) SETUP_LOG_SIZE_POSTGRES="$2" ;;
+    api) SETUP_LOG_SIZE_API="$2" ;;
+    web) SETUP_LOG_SIZE_WEB="$2" ;;
+  esac
+}
+
+log_files_get() {
+  case "$1" in
+    postgres) printf '%s' "$SETUP_LOG_FILES_POSTGRES" ;;
+    api) printf '%s' "$SETUP_LOG_FILES_API" ;;
+    web) printf '%s' "$SETUP_LOG_FILES_WEB" ;;
+  esac
+}
+
+log_files_set() {
+  case "$1" in
+    postgres) SETUP_LOG_FILES_POSTGRES="$2" ;;
+    api) SETUP_LOG_FILES_API="$2" ;;
+    web) SETUP_LOG_FILES_WEB="$2" ;;
+  esac
+}
+
+log_known_api_level() {
+  case "$1" in
+    error|warn|info|debug|trace|off) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+# Postgres and the page take one word. The API also takes a tracing filter.
+log_level_ok() {
+  local svc="$1" value="$2" lower
+  lower="$(printf '%s' "$value" | tr '[:upper:]' '[:lower:]')"
+  case "$svc" in
+    postgres)
+      case "$lower" in
+        error|warning|notice|info|log|debug) return 0 ;;
+        *) return 1 ;;
+      esac
+      ;;
+    web)
+      case "$lower" in
+        debug|info|notice|warn|error|crit|alert|emerg) return 0 ;;
+        *) return 1 ;;
+      esac
+      ;;
+    api)
+      log_known_api_level "$lower" && return 0
+      [[ ${#value} -ge 1 && ${#value} -le 200 ]] || return 1
+      [[ "$value" =~ ^[A-Za-z0-9_:.*=,-]+$ ]] || return 1
+      [[ "$value" != ,* && "$value" != *, && "$value" != *,,* ]] || return 1
+      return 0
+      ;;
+  esac
+  return 1
+}
+
+log_level_canon() {
+  local svc="$1" value="$2" lower
+  lower="$(printf '%s' "$value" | tr '[:upper:]' '[:lower:]')"
+  case "$svc" in
+    api)
+      if log_known_api_level "$lower"; then
+        printf '%s' "$lower"
+      else
+        printf '%s' "$value"
+      fi
+      ;;
+    *) printf '%s' "$lower" ;;
+  esac
+}
+
+log_level_error() {
+  case "$1" in
+    postgres) printf '%s' "Postgres records one of: error, warning, notice, info, log, debug." ;;
+    api) printf '%s' "The API level is error, warn, info, debug, trace or off, or a filter such as skt_server=debug." ;;
+    web) printf '%s' "The page records one of: debug, info, notice, warn, error, crit, alert, emerg." ;;
+  esac
+}
+
+log_size_ok() {
+  local raw num
+  raw="$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]')"
+  [[ "$raw" =~ ^([1-9][0-9]*)[kmg]$ ]] || return 1
+  num="${BASH_REMATCH[1]}"
+  (( num >= 1 && num <= 1024 ))
+}
+
+log_size_canon() {
+  printf '%s' "$1" | tr '[:upper:]' '[:lower:]'
+}
+
+log_files_ok() {
+  local raw="$1"
+  [[ "$raw" =~ ^[1-9][0-9]*$ ]] || return 1
+  (( 10#$raw >= 1 && 10#$raw <= 50 ))
+}
+
+log_summary() {
+  printf '%-8s %s x %s' "$(log_level_get "$1")" "$(log_size_get "$1")" "$(log_files_get "$1")"
+}
+
+log_row_label() {
+  case "$1" in
+    0) printf 'Level' ;;
+    1) printf 'File size' ;;
+    2) printf 'Files kept' ;;
+  esac
+}
+
+log_row_value() {
+  case "$2" in
+    0) log_level_get "$1" ;;
+    1) log_size_get "$1" ;;
+    2) log_files_get "$1" ;;
+  esac
+}
+
+log_edit_hint() {
+  case "$1:$2" in
+    postgres:0) printf '  (error warning notice info log debug)' ;;
+    api:0) printf '  (level or filter)' ;;
+    web:0) printf '  (debug info notice warn error crit alert emerg)' ;;
+    *:1) printf '  (such as 10m)' ;;
+    *:2) printf '  (1 to 50)' ;;
+  esac
+}
+
+# Sets the marked row. A bad value leaves the previous one and sets SETUP_LOG_ERROR.
+log_apply() {
+  local svc="$1" row="$2" raw
+  raw="$(trim_space "$3")"
+  case "$row" in
+    0)
+      if ! log_level_ok "$svc" "$raw"; then
+        SETUP_LOG_ERROR="$(log_level_error "$svc")"
+        return 1
+      fi
+      log_level_set "$svc" "$(log_level_canon "$svc" "$raw")"
+      ;;
+    1)
+      if ! log_size_ok "$raw"; then
+        SETUP_LOG_ERROR="A log file size is a number and a unit, such as 10m, up to 1024."
+        return 1
+      fi
+      log_size_set "$svc" "$(log_size_canon "$raw")"
+      ;;
+    2)
+      if ! log_files_ok "$raw"; then
+        SETUP_LOG_ERROR="Docker keeps from 1 to 50 log files for a container."
+        return 1
+      fi
+      log_files_set "$svc" "$((10#$raw))"
+      ;;
+    *)
+      SETUP_LOG_ERROR="That log setting is not on this container."
+      return 1
+      ;;
+  esac
+  SETUP_LOG_ERROR=""
+}
+
+log_check() {
+  local svc
+  for svc in postgres api web; do
+    if ! log_level_ok "$svc" "$(log_level_get "$svc")"; then
+      printf '%s\n' "$(log_level_error "$svc")" >&2
+      return 1
+    fi
+    log_level_set "$svc" "$(log_level_canon "$svc" "$(log_level_get "$svc")")"
+    if ! log_size_ok "$(log_size_get "$svc")"; then
+      printf 'A log file size is a number and a unit, such as 10m, up to 1024.\n' >&2
+      return 1
+    fi
+    log_size_set "$svc" "$(log_size_canon "$(log_size_get "$svc")")"
+    if ! log_files_ok "$(log_files_get "$svc")"; then
+      printf 'Docker keeps from 1 to 50 log files for a container.\n' >&2
+      return 1
+    fi
+    log_files_set "$svc" "$((10#$(log_files_get "$svc")))"
+  done
+}
+
+log_load_from() {
+  local file="$1" svc value
+  for svc in postgres api web; do
+    value="$(file_value "$file" "$(log_level_key "$svc")")"
+    log_level_set "$svc" "${value:-$(log_level_default "$svc")}"
+    value="$(file_value "$file" "$(log_size_key "$svc")")"
+    log_size_set "$svc" "${value:-$(log_size_default)}"
+    value="$(file_value "$file" "$(log_files_key "$svc")")"
+    log_files_set "$svc" "${value:-$(log_files_default)}"
+  done
+}
+
+# RUST_LOG stays in .env even at its default, so the API level is visible.
+# The other keys are removed when they match the default.
+write_log_keys() {
+  local svc key value default
+  for svc in postgres api web; do
+    key="$(log_level_key "$svc")"
+    value="$(log_level_get "$svc")"
+    default="$(log_level_default "$svc")"
+    if [[ "$svc" == "api" || "$value" != "$default" ]]; then
+      set_key "$key" "$value" .env
+    else
+      unset_key "$key" .env
+    fi
+    key="$(log_size_key "$svc")"
+    value="$(log_size_get "$svc")"
+    if [[ "$value" == "$(log_size_default)" ]]; then
+      unset_key "$key" .env
+    else
+      set_key "$key" "$value" .env
+    fi
+    key="$(log_files_key "$svc")"
+    value="$(log_files_get "$svc")"
+    if [[ "$value" == "$(log_files_default)" ]]; then
+      unset_key "$key" .env
+    else
+      set_key "$key" "$value" .env
+    fi
+  done
+}
+
+log_env_or() {
+  local value
+  value="$(env_value "$1")"
+  if [[ -n "$value" ]]; then
+    printf '%s' "$value"
+  else
+    printf '%s' "$2"
+  fi
+}
+
+log_status_line() {
+  local svc="$1"
+  printf '%-8s %s x %s' \
+    "$(log_env_or "$(log_level_key "$svc")" "$(log_level_default "$svc")")" \
+    "$(log_env_or "$(log_size_key "$svc")" "$(log_size_default)")" \
+    "$(log_env_or "$(log_files_key "$svc")" "$(log_files_default)")"
+}
+
+setup_log_service() {
+  local svc="$1" active="$2" row sel text value
+  setup_net_heading "$svc" "$active"
+  if [[ "$svc" == "$active" ]]; then
+    for row in 0 1 2; do
+      if (( row == SETUP_LOG_ROW )); then sel=1; else sel=0; fi
+      value="$(log_row_value "$svc" "$row")"
+      text="$(printf '%-22s < %s >' "$(log_row_label "$row")" "$value")"
+      net_line "$sel" "$text"
+    done
+  else
+    for row in 0 1 2; do
+      value="$(log_row_value "$svc" "$row")"
+      text="$(printf '%-22s %s' "$(log_row_label "$row")" "$value")"
+      if [[ -n "$DIM" ]]; then
+        printf '      %s%s%s\n' "$DIM" "$text" "$NC"
+      else
+        printf '      %s\n' "$text"
+      fi
+    done
+  fi
+  printf '\n'
+}
+
+setup_log_hint() {
+  local svc="$1" name
+  name="$(net_container_name "$svc")"
+  case "$2" in
+    0)
+      case "$svc" in
+        postgres)
+          printf '  %sEnter sets what %s records: error, warning, notice, info, log or debug.%s\n' "$DIM" "$name" "$NC"
+          ;;
+        api)
+          printf '  %sEnter sets RUST_LOG for %s. A level, or a filter such as skt_server=debug.%s\n' "$DIM" "$name" "$NC"
+          ;;
+        web)
+          printf '  %sEnter sets the error log for %s: debug, info, notice, warn, error, crit, alert or emerg.%s\n' "$DIM" "$name" "$NC"
+          ;;
+      esac
+      ;;
+    1)
+      printf '  %sEnter sets how large one Docker log for %s may grow, such as 10m.%s\n' "$DIM" "$name" "$NC"
+      ;;
+    2)
+      printf '  %sEnter sets how many old Docker logs %s keeps, from 1 to 50.%s\n' "$DIM" "$name" "$NC"
+      ;;
+  esac
+}
+
+setup_log_draw() {
+  local active svc
+  active="$(net_svc_name "$SETUP_LOG_SVC")"
+  if (( SETUP_LOG_ROW < 0 || SETUP_LOG_ROW > 2 )); then
+    SETUP_LOG_ROW=0
+  fi
+  printf '\033[H\033[2J'
+  printf '%sSkull King Tavern — logging%s\n' "$BOLD" "$NC"
+  printf '  %sEvery container is listed with what it records and how much Docker keeps. The marked one is being edited.%s\n\n' "$DIM" "$NC"
+  for svc in postgres api web; do
+    setup_log_service "$svc" "$active"
+  done
+  setup_log_hint "$active" "$SETUP_LOG_ROW"
+  printf '  %sA change applies the next time that container starts. The database is not touched.%s\n' "$DIM" "$NC"
+  printf '\n  %s↑↓ move    ←→ container    enter edit    q back%s\n' "$DIM" "$NC"
+}
+
+# All three containers stay on screen. Left and right pick which one is edited.
+# q and escape return to the setup screen and leave .env alone.
+setup_log_dialog() {
+  local svc
+  while true; do
+    setup_log_draw
+    setup_key
+    svc="$(net_svc_name "$SETUP_LOG_SVC")"
+    case "$SETUP_ACTION" in
+      up) SETUP_LOG_ROW=$(( (SETUP_LOG_ROW + 2) % 3 )) ;;
+      down) SETUP_LOG_ROW=$(( (SETUP_LOG_ROW + 1) % 3 )) ;;
+      left) SETUP_LOG_SVC=$(( (SETUP_LOG_SVC + 2) % 3 )) ;;
+      right) SETUP_LOG_SVC=$(( (SETUP_LOG_SVC + 1) % 3 )) ;;
+      enter)
+        setup_edit "$(log_row_value "$svc" "$SETUP_LOG_ROW")" "$(log_edit_hint "$svc" "$SETUP_LOG_ROW")"
+        if ! log_apply "$svc" "$SETUP_LOG_ROW" "$SETUP_ENTERED"; then
+          setup_note "$SETUP_LOG_ERROR"
+        fi
+        ;;
+      quit|back)
+        return 0
+        ;;
+    esac
+  done
+}
+
 run_setup() {
   [[ -t 0 && -t 1 ]] || die "Setup needs a terminal. Copy .env.example to .env to skip it."
   if [[ -f .env ]]; then
@@ -1297,6 +1731,11 @@ run_setup() {
             SETUP_NET_SVC=0
             SETUP_NET_ROW=0
             setup_net_dialog
+            ;;
+          logging)
+            SETUP_LOG_SVC=0
+            SETUP_LOG_ROW=0
+            setup_log_dialog
             ;;
         esac
         setup_clamp_pick
@@ -1758,6 +2197,10 @@ show_status() {
   printf '  Networks: %-14s %s\n' "skt-postgres" "$(net_effective postgres | tr ',' ' ')"
   printf '            %-14s %s\n' "skt-api" "$(net_effective api | tr ',' ' ')"
   printf '            %-14s %s\n' "skt-web" "$(net_effective web | tr ',' ' ')"
+  echo "  Logging:"
+  printf '            %-14s %s\n' "skt-postgres" "$(log_status_line postgres)"
+  printf '            %-14s %s\n' "skt-api" "$(log_status_line api)"
+  printf '            %-14s %s\n' "skt-web" "$(log_status_line web)"
   echo "  Web:   ${web_url}"
   echo "  API:   ${api_url}"
   echo ""

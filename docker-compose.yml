@@ -25,16 +25,15 @@
 
 name: skt
 
-x-log-rotation: &log-rotation
-  driver: json-file
-  options:
-    max-size: 10m
-    max-file: "3"
-
 services:
   postgres:
     image: postgres:16-alpine
     container_name: skt-postgres
+    # warning is Postgres's own default. The setup screen can set another level.
+    command:
+      - postgres
+      - -c
+      - log_min_messages=${SKT_LOG_POSTGRES:-warning}
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-skt}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-skt}
@@ -51,7 +50,11 @@ services:
       timeout: 5s
       retries: 10
       start_period: 20s
-    logging: *log-rotation
+    logging:
+      driver: json-file
+      options:
+        max-size: ${SKT_LOG_SIZE_POSTGRES:-10m}
+        max-file: "${SKT_LOG_FILES_POSTGRES:-3}"
     restart: unless-stopped
 
   api:
@@ -94,7 +97,11 @@ services:
       timeout: 5s
       retries: 6
       start_period: 20s
-    logging: *log-rotation
+    logging:
+      driver: json-file
+      options:
+        max-size: ${SKT_LOG_SIZE_API:-10m}
+        max-file: "${SKT_LOG_FILES_API:-3}"
     restart: unless-stopped
 
   web:
@@ -108,6 +115,8 @@ services:
     environment:
       # Container name. The service name api collides on a shared proxy-network.
       API_UPSTREAM: http://skt-api:8080
+      # notice matches the nginx image. The setup screen can set another level.
+      NGINX_LOG_LEVEL: ${SKT_LOG_WEB:-notice}
     networks:
       - skt-internal
     healthcheck:
@@ -116,7 +125,11 @@ services:
       timeout: 5s
       retries: 6
       start_period: 10s
-    logging: *log-rotation
+    logging:
+      driver: json-file
+      options:
+        max-size: ${SKT_LOG_SIZE_WEB:-10m}
+        max-file: "${SKT_LOG_FILES_WEB:-3}"
     restart: unless-stopped
 
 networks:
