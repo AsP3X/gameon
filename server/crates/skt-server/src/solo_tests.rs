@@ -406,6 +406,8 @@ async fn a_solo_table_pauses_on_drop_and_an_abandon_writes_nothing(pool: sqlx::P
     let second = parse(&read_text(&mut socket).await);
     assert_eq!(second["code"].as_str(), Some("ALREADY_SEATED"), "{second}");
 
+    // The reply does not wait on the log. The tick is what writes the open game.
+    state.persist_open().await;
     let kind: Option<String> = sqlx::query_scalar("SELECT table_kind FROM open_games")
         .fetch_one(&pool)
         .await
@@ -468,6 +470,7 @@ async fn a_solo_table_pauses_on_drop_and_an_abandon_writes_nothing(pool: sqlx::P
     assert!(me.contains("\"games\":0"), "{me}");
     assert!(me.contains("\"active\":null"), "{me}");
     assert!(me.contains("\"cooldownUntil\":null"), "{me}");
+    state.persist_open().await;
     let open_rows: i64 = sqlx::query_scalar("SELECT count(*) FROM open_games")
         .fetch_one(&pool)
         .await

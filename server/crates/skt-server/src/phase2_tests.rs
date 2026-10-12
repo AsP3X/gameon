@@ -238,7 +238,58 @@ async fn the_public_list_hides_private_lobbies_and_usernames(pool: sqlx::PgPool)
     assert!(created.contains("\"visibility\":\"private\""));
     let (status, _, list) = http(port, "GET", "/api/v1/lobbies", &cookie, "").await;
     assert_eq!(status, 200, "{list}");
-    assert_eq!(list, "{\"lobbies\":[]}");
+    assert!(!list.contains("swift"), "{list}");
+    assert!(!list.contains("Cara"), "{list}");
+    assert_eq!(
+        list.matches("\"hostName\":\"Open table\"").count(),
+        2,
+        "{list}"
+    );
+    assert_eq!(list.matches("\"format\":\"classic\"").count(), 2, "{list}");
+}
+
+#[sqlx::test(migrations = "../../migrations/postgres")]
+async fn a_full_house_table_starts_and_a_new_one_takes_its_place(pool: sqlx::PgPool) {
+    let state = AppState::for_tests(pool, Duration::ZERO, budgets());
+    let port = serve(state).await;
+    let (cookie, _) = guest(port).await;
+    let (_, _, list) = http(port, "GET", "/api/v1/lobbies", &cookie, "").await;
+    let table = list
+        .split("\"id\":\"")
+        .nth(1)
+        .unwrap()
+        .split('"')
+        .next()
+        .unwrap();
+    let mut sockets = Vec::new();
+    for index in 0..4 {
+        let (cookie, _) = guest(port).await;
+        let mut socket = open_socket(port, &cookie).await;
+        greet(&mut socket).await;
+        send(
+            &mut socket,
+            &format!(r#"{{"t":"lobby.join","id":{index},"lobbyId":"{table}"}}"#),
+        )
+        .await;
+        sockets.push(socket);
+    }
+    let mut saw_start = false;
+    for socket in &mut sockets {
+        for _ in 0..8 {
+            let frame = tokio::time::timeout(Duration::from_secs(2), read_text(socket))
+                .await
+                .expect("frame");
+            if frame.contains("\"t\":\"game.start\"") {
+                saw_start = true;
+                assert!(frame.contains(table), "{frame}");
+                break;
+            }
+        }
+    }
+    assert!(saw_start);
+    let (_, _, after) = http(port, "GET", "/api/v1/lobbies", &cookie, "").await;
+    assert!(!after.contains(table), "{after}");
+    assert_eq!(after.matches("\"players\":0").count(), 2, "{after}");
 }
 
 #[sqlx::test(migrations = "../../migrations/postgres")]

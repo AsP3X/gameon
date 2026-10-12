@@ -98,9 +98,12 @@ impl AppState {
     }
 
     /// Run due bot moves and deadlines, then store any game that finished.
+    ///
+    /// The socket does not wait on this. A click is answered before the log is written.
     pub async fn tick(&self) {
         let reports = self.world.lock().await.tick();
         self.settle(reports).await;
+        self.persist_penalties().await;
         self.persist_open().await;
     }
 
@@ -443,7 +446,9 @@ pub async fn lobbies(
 ) -> Result<Json<skt_protocol::LobbyList>, AppError> {
     let token = session_cookie(&headers).ok_or(AppError::new(ErrorCode::Unauthenticated))?;
     remember(&state, &token).await?;
-    Ok(Json(state.world.lock().await.public_lobbies()))
+    let mut world = state.world.lock().await;
+    world.ensure_house_tables();
+    Ok(Json(world.public_lobbies()))
 }
 
 pub async fn game_log(
@@ -555,8 +560,24 @@ async fn drive(
             break;
         }
         let wait = next_deadline(greeted, started, last_heard, hello_wait, silence_for);
+        // Human: A click is answered before the game log is written. The tick stores the log.
+        // Agent: SENDS queued frames first; CALLS on_message; does not await persist on this path.
         tokio::select! {
-            () = tokio::time::sleep(wait) => {}
+            biased;
+            outgoing = inbound.recv() => {
+                let Some(frame) = outgoing else { break; };
+                match frame {
+                    Wire::Text(text) => {
+                        if socket.send(Message::Text(text.into())).await.is_err() {
+                            break;
+                        }
+                    }
+                    Wire::Close(code) => {
+                        let _ = close_socket(&mut socket, code).await;
+                        break;
+                    }
+                }
+            }
             incoming = socket.recv() => {
                 let Some(Ok(message)) = incoming else { break; };
                 let Message::Text(text) = message else { continue; };
@@ -580,26 +601,11 @@ async fn drive(
                     continue;
                 }
                 state.world.lock().await.on_message(&user, conn, &text);
-                state.persist_penalties().await;
-                state.persist_open().await;
                 if !greeted && state.world.lock().await.greeted(&user, conn) {
                     greeted = true;
                 }
             }
-            outgoing = inbound.recv() => {
-                let Some(frame) = outgoing else { break; };
-                match frame {
-                    Wire::Text(text) => {
-                        if socket.send(Message::Text(text.into())).await.is_err() {
-                            break;
-                        }
-                    }
-                    Wire::Close(code) => {
-                        let _ = close_socket(&mut socket, code).await;
-                        break;
-                    }
-                }
-            }
+            () = tokio::time::sleep(wait) => {}
         }
     }
     state.world.lock().await.disconnect(&user, conn);

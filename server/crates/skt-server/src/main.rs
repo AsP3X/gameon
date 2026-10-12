@@ -22,6 +22,7 @@ async fn main() -> Result<(), std::io::Error> {
     // One task for every table. It wakes every 200ms and holds the world lock only for the tick.
     tokio::spawn(async move {
         let mut interval = tokio::time::interval(Duration::from_millis(200));
+        interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
         loop {
             interval.tick().await;
             ticking.tick().await;

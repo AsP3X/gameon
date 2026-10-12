@@ -822,12 +822,17 @@ impl Tables {
         &mut self,
         now: Instant,
         live: &HashMap<UserId, super::Live>,
-        lobbies: &mut HashMap<LobbyId, Lobby>,
-    ) -> (Vec<UserId>, Vec<GameReport>, Vec<InactivityKick>) {
+    ) -> (
+        Vec<UserId>,
+        Vec<GameReport>,
+        Vec<InactivityKick>,
+        Vec<LobbyId>,
+    ) {
         let ids: Vec<GameId> = self.games.keys().cloned().collect();
         let mut finished = Vec::new();
         let mut reports = Vec::new();
         let mut kicked = Vec::new();
+        let mut finished_lobbies = Vec::new();
         for id in ids {
             let ended = {
                 let Some(running) = self.games.get_mut(&id) else {
@@ -882,9 +887,9 @@ impl Tables {
             }
             if let Some((matchmade, solo, lobby_id, users)) = ended {
                 // A quick-play table has no lobby. A custom lobby opens with nobody ready.
-                // A solo game was never a lobby.
+                // A solo game was never a lobby. The world decides whether a finished lobby reopens.
                 if !matchmade && !solo {
-                    reopen_lobby(&lobby_id, lobbies, live);
+                    finished_lobbies.push(lobby_id);
                 }
                 for user in users {
                     self.seat_of.remove(&user);
@@ -892,7 +897,7 @@ impl Tables {
                 }
             }
         }
-        (finished, reports, kicked)
+        (finished, reports, kicked, finished_lobbies)
     }
 
     /// `seat.lost` for this account, if a welcome has not queued it yet.
@@ -1899,7 +1904,7 @@ fn fail(live: &HashMap<UserId, super::Live>, user: &UserId, id: MessageId, code:
     }
 }
 
-fn reopen_lobby(
+pub(super) fn reopen_lobby(
     lobby_id: &LobbyId,
     lobbies: &mut HashMap<LobbyId, Lobby>,
     live: &HashMap<UserId, super::Live>,

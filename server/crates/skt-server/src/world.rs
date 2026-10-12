@@ -20,7 +20,7 @@ pub(crate) use table::RestoredSeat;
 #[cfg(test)]
 pub(crate) use table::SeatTally;
 
-use std::collections::{HashMap, VecDeque};
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::time::{Duration, Instant};
 
 use skt_protocol::{
@@ -56,6 +56,10 @@ pub struct World {
     codes: HashMap<String, LobbyId>,
     /// Public-list order. Oldest first.
     opened: Vec<LobbyId>,
+    /// Standing public tables. Two of them stay open and not full.
+    house: Vec<LobbyId>,
+    /// House tables whose game has started. They leave the list when that game ends.
+    house_started: HashSet<LobbyId>,
     /// Quick play. May fill with bots.
     casual: Line,
     /// Accounts only. Never fills with bots.
@@ -194,6 +198,8 @@ impl World {
             lobbies: HashMap::new(),
             codes: HashMap::new(),
             opened: Vec::new(),
+            house: Vec::new(),
+            house_started: HashSet::new(),
             casual: Line::new(),
             ranked: Line::new(),
             fill,
@@ -401,7 +407,15 @@ impl World {
     fn step(&mut self) -> Vec<GameReport> {
         self.fill_queue();
         self.form_ranked();
-        let (finished, reports, kicked) = self.tables.tick(self.now, &self.live, &mut self.lobbies);
+        let (finished, reports, kicked, finished_lobbies) = self.tables.tick(self.now, &self.live);
+        for lobby_id in finished_lobbies {
+            if self.house_started.remove(&lobby_id) {
+                self.dissolve_house(&lobby_id);
+            } else {
+                table::reopen_lobby(&lobby_id, &mut self.lobbies, &self.live);
+            }
+        }
+        self.ensure_house_tables();
         for user in finished {
             self.identity.set_game(&user, None);
         }
@@ -591,16 +605,28 @@ impl World {
             self.fail_live(user, id, ErrorCode::LobbyFull);
             return;
         }
-        let member = self.human_member(user, false);
+        let house = self.house.iter().any(|standing| standing == &lobby_id);
+        let member = self.human_member(user, house);
         let lobby = self.lobbies.get_mut(&lobby_id);
         let Some(lobby) = lobby else {
             return;
         };
         lobby.members.push(member);
+        if house && lobby.host_id.is_none() {
+            lobby.host_id = Some(user.clone());
+        }
         self.identity.set_lobby(user, Some(lobby_id.clone()));
         let snapshot = lobby.clone();
+        let full = house
+            && snapshot.members.len() >= usize::from(snapshot.settings.max_players)
+            && lobby_can_start(&snapshot);
         self.ok(user, id, Some(snapshot.clone()), false);
         self.push_lobby(&snapshot);
+        // Human: A standing table starts itself when the last seat is taken, and leaves the list.
+        // Agent: CALLS begin_table when this house lobby is full and two humans are ready.
+        if full {
+            self.begin_table(&lobby_id);
+        }
     }
 
     fn leave_lobby(&mut self, user: &UserId, id: MessageId) {
@@ -750,12 +776,26 @@ impl World {
             return;
         }
         self.ok(user, id, None, false);
+        self.begin_table(&lobby_id);
+    }
+
+    /// Open the lobby's game. The lobby leaves the public list while that game runs.
+    fn begin_table(&mut self, lobby_id: &LobbyId) {
+        let Some(lobby) = self.lobbies.get(lobby_id).cloned() else {
+            return;
+        };
+        if lobby.state != LobbyPhase::Open {
+            return;
+        }
         let game_id = GameId::new(identity::uuid());
-        if let Some(lobby) = self.lobbies.get_mut(&lobby_id) {
+        if let Some(lobby) = self.lobbies.get_mut(lobby_id) {
             lobby.state = LobbyPhase::InGame;
             lobby.game_id = Some(game_id.clone());
         }
-        let snapshot = self.lobbies.get(&lobby_id).cloned();
+        if self.house.iter().any(|standing| standing == lobby_id) {
+            self.house_started.insert(lobby_id.clone());
+        }
+        let snapshot = self.lobbies.get(lobby_id).cloned();
         if let Some(snapshot) = snapshot {
             self.push_lobby(&snapshot);
         }
@@ -773,6 +813,7 @@ impl World {
         ) {
             self.identity.set_game(&seated, Some(game));
         }
+        self.ensure_house_tables();
     }
 
     // Human: One person sits at seat 0. Bots fill the other seats. The game is not a lobby.
@@ -908,9 +949,70 @@ impl World {
             self.codes.remove(&code);
             self.lobbies.remove(lobby_id);
             self.opened.retain(|id| id != lobby_id);
+            self.house.retain(|id| id != lobby_id);
+            self.ensure_house_tables();
             return;
         }
         self.push_lobby(&snapshot);
+    }
+
+    /// Keep two public tables open, with the standard rules, and room to join.
+    pub(crate) fn ensure_house_tables(&mut self) {
+        self.house.retain(|id| self.lobbies.contains_key(id));
+        let mut open = self
+            .house
+            .iter()
+            .filter(|id| {
+                self.lobbies.get(*id).is_some_and(|lobby| {
+                    lobby.state == LobbyPhase::Open
+                        && lobby.members.len() < usize::from(lobby.settings.max_players)
+                })
+            })
+            .count();
+        while open < 2 {
+            let id = self.spawn_house_table();
+            self.house.push(id);
+            open += 1;
+        }
+    }
+
+    /// One empty public table. The first person to sit down becomes its host.
+    fn spawn_house_table(&mut self) -> LobbyId {
+        let lobby_id = LobbyId::new(identity::uuid());
+        let code = self.fresh_code();
+        let lobby = Lobby {
+            id: lobby_id.clone(),
+            code: code.clone(),
+            mode: TableMode::Custom,
+            visibility: Visibility::Public,
+            host_id: None,
+            settings: skt_protocol::GameSettings::standard(),
+            allow_bots: None,
+            members: Vec::new(),
+            state: LobbyPhase::Open,
+            game_id: None,
+        };
+        self.codes.insert(code, lobby_id.clone());
+        self.lobbies.insert(lobby_id.clone(), lobby);
+        self.opened.push(lobby_id.clone());
+        lobby_id
+    }
+
+    /// The standing table's game is over. It does not return to the list.
+    fn dissolve_house(&mut self, lobby_id: &LobbyId) {
+        let Some(lobby) = self.lobbies.remove(lobby_id) else {
+            return;
+        };
+        self.codes.remove(&lobby.code);
+        self.opened.retain(|id| id != lobby_id);
+        self.house.retain(|id| id != lobby_id);
+        for member in &lobby.members {
+            if let Member::Human { user, .. } = member
+                && self.identity.lobby_of(&user.id).as_ref() == Some(lobby_id)
+            {
+                self.identity.set_lobby(&user.id, None);
+            }
+        }
     }
 
     /// Open public lobbies, oldest first, including full ones. In-game lobbies are omitted.
@@ -924,10 +1026,16 @@ impl World {
             })
             .map(|lobby| LobbySummary {
                 id: lobby.id.clone(),
-                host_name: lobby.host_id.as_ref().map_or_else(
-                    || "Sailor".to_owned(),
-                    |id| self.identity.public_user(id).name,
-                ),
+                host_name: if lobby.host_id.is_none()
+                    && self.house.iter().any(|standing| standing == &lobby.id)
+                {
+                    "Open table".to_owned()
+                } else {
+                    lobby.host_id.as_ref().map_or_else(
+                        || "Sailor".to_owned(),
+                        |id| self.identity.public_user(id).name,
+                    )
+                },
                 host_color: lobby
                     .host_id
                     .as_ref()
