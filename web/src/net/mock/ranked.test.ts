@@ -5,7 +5,7 @@
    difference of the two values that were sent, the tier of the band the value is in, and placement
    until the fifth game. */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test';
-import type { LadderPage, Me, Rating } from '../../protocol/generated';
+import type { GameUpdate, LadderPage, Me, Rating } from '../../protocol/generated';
 import type { RestMethod, RestResponse } from '../api';
 import type { ServerMessage } from '../messages';
 import { connectRaw, framesOf } from './raw';
@@ -363,6 +363,49 @@ describe('leaving a ranked game', () => {
     expect(result.forfeited).toEqual([2, 0]);
     expect([result.places[0], result.places[2]]).toEqual([4, 4]);
     expect([result.places[1], result.places[3]].toSorted((a, b) => a - b)[0]).toBe(1);
+  });
+
+  it('is a forfeit too when the seat is closed for two missed turns: last place, and the cooldown from the kick', async () => {
+    const players = await rankedTable(),
+      [anne, ...others] = players,
+      watcher = others[0].socket;
+    const kick = (): GameUpdate | undefined =>
+      framesOf(watcher, 'game.update').find((u) => u.events.some((e) => e.type === 'seatStatus' && e.status === 'out'));
+    anne.socket.close();
+    await until(() => kick() != null, 'the kick');
+    const kickedAt = Date.now();
+    expect(kick()?.table.status[0]).toBe('out');
+    // The cooldown is that of a leave, and it runs from the kick, not from the end of the game.
+    const me = await anne.me();
+    expect(me.active).toBeNull();
+    const since = (me.cooldownUntil ?? 0) - 15 * MINUTE_MS;
+    expect(kickedAt - since).toBeGreaterThanOrEqual(0);
+    expect(kickedAt - since).toBeLessThanOrEqual(50);
+
+    const back = await anne.connect();
+    expect(back.frames.map((f) => f.t)).toEqual(['ok', 'welcome', 'seat.lost']);
+    expect(last(back, 'welcome')).toMatchObject({ game: null, me: { cooldownUntil: me.cooldownUntil } });
+    expect(last(back, 'seat.lost')).toMatchObject({ mode: 'ranked', reason: 'inactivity' });
+
+    await played(others);
+    const theirs = last(watcher, 'game.over').result;
+    expect(theirs.forfeited).toEqual([0]);
+    expect(theirs.places[0]).toBe(4);
+    const mine = last(back, 'game.over');
+    expect(mine).toMatchObject({ seat: 0, result: { forfeited: [0] } });
+    if (!mine.result.rating) throw new Error('The kicked player has a rating change too');
+    expect(mine.result.rating.delta).toBeLessThan(0);
+  });
+
+  it('lists those who left before those whose seat was closed', async () => {
+    const players = await rankedTable();
+    players[1].socket.close();
+    await until(() => last(players[0].socket, 'game.update').table.status[1] === 'out', 'the kick');
+    await ask(players[3].socket, { t: 'game.leave' });
+    await played([players[0], players[2]]);
+    const { result } = last(players[0].socket, 'game.over');
+    expect(result.forfeited).toEqual([3, 1]);
+    expect([result.places[1], result.places[3]]).toEqual([4, 4]);
   });
 
   it('closes ranked for longer with every leave: 15 minutes, doubled each time, and a day at most', async () => {

@@ -187,7 +187,7 @@ describe('ranked, for an account', () => {
     const ranked = $('#online [aria-label="Ranked"]');
     expect(ranked?.querySelector('.plate')?.textContent).toBe('RatingUnratedPlay a ranked game to get a rating.Ladder');
     expect(ranked?.querySelector('p.muted')?.textContent).toBe(
-      'The standard rules against other pirates, no bots. Leaving a ranked game, or staying away for most of it, scores last place and starts a cooldown.',
+      'The standard rules against other pirates, no bots. Leaving a ranked game, losing your seat, or staying away for most of it scores last place and starts a cooldown.',
     );
     await press('Find a ranked game');
     expect(sentOf('queue.join')).toEqual([expect.objectContaining({ mode: 'ranked' })]);
@@ -196,7 +196,7 @@ describe('ranked, for an account', () => {
     // The standard rules, without the skill of bots a ranked table does not start with.
     expect(texts('#online .plate small')).toEqual(['Up to 4 pirates · Standard pace · No extra cards']);
     expect(texts('#online p.muted').at(-1)).toBe(
-      'The game starts by itself when the table is full. A ranked table has no bots. Leaving a ranked game, or staying away for most of it, scores last place and starts a cooldown.',
+      'The game starts by itself when the table is full. A ranked table has no bots. Leaving a ranked game, losing your seat, or staying away for most of it scores last place and starts a cooldown.',
     );
     // No waiting time is promised, and waiting does not bring bots.
     expect($('#online')?.textContent).not.toMatch(/\d+\s*(s|sec|seconds|min|minutes?)\b/);

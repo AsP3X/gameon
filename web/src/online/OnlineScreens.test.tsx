@@ -13,6 +13,7 @@ import type { MockStore } from '../net/mock/server';
 import type { Transport } from '../net/socket';
 import { Sound } from '../sound/sound';
 import { session, stats, tableView, ui } from '../tableview/state';
+import { noticeText } from './OnlineScreens';
 import { reloadPage } from './reload';
 
 vi.mock('./reload', () => ({ reloadPage: vi.fn<() => void>() }));
@@ -666,22 +667,43 @@ describe('playing online', () => {
       expect($('#app .home')).not.toBeNull();
     });
 
-    it('shows the result of a game that ended while the page was away, and opens no table for it', async () => {
+    it('says the seat is lost when the page stayed away for two turns, and opens no table for the game that goes on', async () => {
       await midHand();
       await settle();
       closePage();
-      // Nobody is at the table. The deadlines play this seat's cards, and the game runs to its end.
-      await settle(120_000);
+      // The clock plays this seat's turn twice. The second time closes the seat, and the friend plays on.
+      await settle(3000);
       await renderApp(server.transport('this-page'));
       await settle();
-      // welcome has no game, and the stored game.over follows it: this is the lobby again, with the news.
+      // welcome has no game and no lobby, and the news follows it: this is the hub.
       expect(session.table).toBeNull();
       expect(ui.screen).toBe('home');
       expect($('#app')?.hidden).toBe(true);
-      expect($('#online h2')?.textContent).toBe('Table');
+      expect($('#online h2')?.textContent).toBe('Play online');
+      expect($('#online .notice.gold b')?.textContent).toBe('You lost your seat');
+      expect($('#online .notice.gold p')?.textContent).toBe(
+        'You were away for two turns in a row. The game goes on without you.',
+      );
+      await press('OK');
+      expect($('#online .notice')).toBeNull();
+    });
+
+    it('shows the result of a game that ended while the page was away, with the seat that was lost in it', async () => {
+      await midHand();
+      await settle();
+      closePage();
+      // Nobody comes back. The seat is closed, the table plays it, and the game runs to its end.
+      await settle(180_000);
+      await renderApp(server.transport('this-page'));
+      await settle();
+      // The lost seat and the stored game.over both follow the welcome: the result is what is shown.
+      expect(session.table).toBeNull();
+      expect(ui.screen).toBe('home');
+      expect($('#app')?.hidden).toBe(true);
+      expect($('#online h2')?.textContent).toBe('Play online');
       expect($('#online .notice.gold b')?.textContent).toBe('Your last game is over');
       expect($('#online .notice.gold p')?.textContent).toMatch(
-        /^It ended while you were away\. Final place: (1st|2nd) of 2\.$/,
+        /^You lost your seat before the end\. Final place: (1st|2nd) of 2\.$/,
       );
       await press('OK');
       expect($('#online .notice')).toBeNull();
@@ -729,5 +751,31 @@ describe('playing online', () => {
     expect($('#app .sheet')).toBeNull();
     expect($('[data-act="resume"]')?.textContent).toBe('Continue · Round 1 of 10');
     expect(stats.games).toBe(0);
+  });
+});
+
+describe('what a notice says', () => {
+  it('says a lost seat is a forfeit only in a ranked game', () => {
+    expect(noticeText({ kind: 'seatLost', ranked: false })).toEqual({
+      title: 'You lost your seat',
+      text: 'You were away for two turns in a row. The game goes on without you.',
+    });
+    expect(noticeText({ kind: 'seatLost', ranked: true })).toEqual({
+      title: 'You lost your seat',
+      text: 'You were away for two turns in a row. The game goes on without you. It counts as a forfeit.',
+    });
+  });
+
+  it('says how the seat was given up when the result arrives later', () => {
+    const over = { kind: 'gameOver', place: 4, seats: 4, forfeited: true, delta: null } as const;
+    expect(noticeText({ ...over, left: false, lost: true }).text).toBe(
+      'You lost your seat before the end. Final place: 4th of 4. It counts as a forfeit.',
+    );
+    expect(noticeText({ ...over, left: true, lost: false }).text).toBe(
+      'You left before the end. Final place: 4th of 4. It counts as a forfeit.',
+    );
+    expect(noticeText({ ...over, left: false, lost: false, forfeited: false }).text).toBe(
+      'It ended while you were away. Final place: 4th of 4.',
+    );
   });
 });

@@ -9,7 +9,7 @@ const COPY: Record<Exclude<LinkStatus, 'online'>, { title: string; text: string;
   connecting: { title: 'Connection lost', text: '', action: 'Try now' },
   offline: {
     title: 'Connection lost',
-    text: 'Getting you back to the table. Your seat is kept while you are away, and the table plays for you when your time runs out.',
+    text: 'Getting you back to the table. The table plays for you when your time runs out. Miss two turns in a row and you lose your seat.',
     action: 'Try now',
   },
   superseded: {

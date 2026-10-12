@@ -117,8 +117,8 @@ export function RankedSection({ online, me, live, onLadder, onSignUp }: RankedSe
         </p>
       ) : (
         <p className="muted">
-          The standard rules against other pirates, no bots. Leaving a ranked game, or staying away for most of it,
-          scores last place and starts a cooldown.
+          The standard rules against other pirates, no bots. Leaving a ranked game, losing your seat, or staying away
+          for most of it scores last place and starts a cooldown.
         </p>
       )}
     </section>

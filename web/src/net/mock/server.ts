@@ -14,8 +14,9 @@
    What it is not: a security boundary or a reference for the rules. Accepted play goes through the
    reference engine in src/game (the seeded shuffle and the bots that read the whole state included),
    which the real server must never run. Accounts live in the page's memory and are gone with it,
-   passwords included, as they were typed. There are no emotes, no away detection, no bot takeover
-   after the grace period and no rate limit on REST.
+   passwords included, as they were typed. There are no emotes, no away detection and no rate limit
+   on REST. A dropped seat is closed after two missed turns in a row, as §5.5 says, and it keeps
+   that across a reload of the page, which the server it stands for does not yet do across a restart.
 
    Ranked follows the rules of docs/protocol.md §4, §5.4 and §5.5 in everything a screen can see:
    the tier bands, placement ending with the fifth game, the cooldown that doubles with every
@@ -55,6 +56,7 @@ import type {
   Rating,
   Season,
   Seat,
+  SeatLost,
   SeatStatus,
   ServerConfig,
   TableColor,
@@ -90,6 +92,8 @@ export const STANDARD_TIMERS: Timers = {
   disconnectGraceMs: 60_000,
 };
 const PACE = { relaxed: 2, standard: 1, fast: 0.5 } as const;
+/** How long the table waits before it plays the turn of a seat that is `out` (§5.6). */
+const OUT_SEAT_MS = 1500;
 /** The quick-play ruleset of §4. */
 export const STANDARD: GameSettings = {
   maxPlayers: 4,
@@ -228,6 +232,8 @@ interface Account {
   leaves: number;
   /** Results of games that ended while this player had no socket: written right after the next `welcome`. */
   owed: GameOver[];
+  /** The seat this player was kicked from for inactivity, until a `welcome` has been followed by it. */
+  lost: SeatLost | null;
 }
 interface Conn {
   account: Account;
@@ -264,6 +270,10 @@ interface Game {
   tiers: (string | null)[];
   /** Those who left, and the seat they gave up. In ranked that is a forfeit. */
   leavers: { account: Account; seat: Seat }[];
+  /** Those whose seat was closed for missing two turns in a row while offline, in that order. In ranked that is a forfeit too. */
+  kicked: { account: Account; seat: Seat }[];
+  /** The deadlines each seat has missed in a row since its socket dropped. */
+  misses: number[];
   status: SeatStatus[];
   ready: boolean[];
   deadline: Deadline | null;
@@ -450,6 +460,7 @@ export class MockServer {
       queued: null,
       leaves: 0,
       owed: [],
+      lost: null,
     };
     this.accounts.set(account.me.user.id, account);
     if (session != null) this.sessions.set(session, account);
@@ -528,6 +539,8 @@ export class MockServer {
       seat = game ? game.players.indexOf(account) : -1;
     if (!game || seat < 0 || game.over) return;
     const status: SeatStatus = connected ? 'online' : 'offline';
+    // Sitting back down before the kick forgives the misses, and a fresh drop starts the count again.
+    game.misses[seat] = 0;
     game.status[seat] = status;
     this.step(game, [{ type: 'seatStatus', seat, status }]);
   }
@@ -577,6 +590,9 @@ export class MockServer {
     account.conn = conn;
     this.write(conn, { t: 'ok', re: m.id });
     this.write(conn, this.welcome(account));
+    // Once, after the `welcome` that no longer has the game, and before a result that is owed.
+    if (account.lost) this.write(conn, account.lost);
+    account.lost = null;
     account.owed.splice(0).forEach((over) => this.write(conn, over));
     this.presence(account, true);
   }
@@ -1068,6 +1084,8 @@ export class MockServer {
       // A seat is announced with the tier its account has at the deal, at any table; a bot's is null.
       tiers: players.map((a) => a?.me.rating?.tier ?? null),
       leavers: [],
+      kicked: [],
+      misses: players.map(() => 0),
       status: players.map((a) => (a ? (a.conn ? 'online' : 'offline') : 'bot')),
       ready: players.map(() => false),
       deadline: null,
@@ -1247,18 +1265,20 @@ export class MockServer {
       later = (ms: number, fn: () => void): void => {
         game.timers.push(setTimeout(fn, ms));
       },
-      pause = (): number => this.bot.minMs + this.random() * (this.bot.maxMs - this.bot.minMs);
+      // A bot takes a moment so people can follow. A seat that is out is played after a fixed wait.
+      pause = (seat: Seat): number =>
+        game.status[seat] === 'out' ? OUT_SEAT_MS : this.bot.minMs + this.random() * (this.bot.maxMs - this.bot.minMs);
     if (s.phase === 'bidding')
       s.bids.forEach((bid, seat) => {
         if (bid == null && bot(seat))
-          later(pause(), () => this.act(game, { type: 'bid', seat, bid: Bots.bid(game.state, seat) }, []));
+          later(pause(seat), () => this.act(game, { type: 'bid', seat, bid: Bots.bid(game.state, seat) }, []));
       });
     else if (s.phase === 'playing' && s.turn != null && bot(s.turn)) {
       const seat = s.turn;
-      later(pause(), () => this.act(game, { type: 'play', seat, ...Bots.play(game.state, seat) }, []));
+      later(pause(seat), () => this.act(game, { type: 'play', seat, ...Bots.play(game.state, seat) }, []));
     } else if (s.phase === 'ability' && s.pending && bot(s.pending.seat)) {
       const seat = s.pending.seat;
-      later(pause(), () => this.act(game, { type: 'ability', seat, choice: Bots.ability(game.state, seat) }, []));
+      later(pause(seat), () => this.act(game, { type: 'ability', seat, choice: Bots.ability(game.state, seat) }, []));
     } else if (s.phase === 'trickEnd') later(this.timers.trickEndMs, () => this.act(game, { type: 'advance' }, []));
     else if (s.phase === 'roundEnd') {
       const waiting = game.players.some((a, i) => a?.conn && !game.ready[i]),
@@ -1274,19 +1294,45 @@ export class MockServer {
     game.timers = [];
   }
 
-  /** A deadline passed: the server plays the bot's move for each seat that missed it, one step per seat. */
+  /**
+   * A deadline passed: the server plays the bot's move for each seat that missed it, one step per
+   * seat. The second miss in a row of a seat that is offline closes that seat in the same step.
+   */
   private expire(game: Game, deadline: Deadline): void {
     if (deadline.kind === 'nextRound') return this.act(game, { type: 'advance' }, []);
     for (const seat of deadline.seats) {
-      const s = game.state,
-        timedOut: GameEvent[] = [{ type: 'timedOut', seat }];
+      const s = game.state;
+      let action: Action;
       if (deadline.kind === 'bid' && s.phase === 'bidding' && s.bids[seat] == null)
-        this.act(game, { type: 'bid', seat, bid: Bots.bid(s, seat) }, timedOut);
+        action = { type: 'bid', seat, bid: Bots.bid(s, seat) };
       else if (deadline.kind === 'play' && s.phase === 'playing' && s.turn === seat)
-        this.act(game, { type: 'play', seat, ...Bots.play(s, seat) }, timedOut);
+        action = { type: 'play', seat, ...Bots.play(s, seat) };
       else if (deadline.kind === 'ability' && s.phase === 'ability' && s.pending?.seat === seat)
-        this.act(game, { type: 'ability', seat, choice: Bots.ability(s, seat) }, timedOut);
+        action = { type: 'ability', seat, choice: Bots.ability(s, seat) };
+      else continue;
+      const events: GameEvent[] = [{ type: 'timedOut', seat }];
+      if (game.status[seat] === 'offline' && ++game.misses[seat] >= 2 && this.kick(game, seat))
+        events.push({ type: 'seatStatus', seat, status: 'out' });
+      this.act(game, action, events);
     }
+  }
+
+  /**
+   * Close the seat of a player who was offline for two turns in a row. The name and the colour stay
+   * at the table, the table plays the seat from here, and the player cannot sit back down. They are
+   * told once, after their next `welcome`. In ranked it is a forfeit, with the cooldown of a leave.
+   */
+  private kick(game: Game, seat: Seat): boolean {
+    const account = game.players[seat];
+    if (!account) return false;
+    game.status[seat] = 'out';
+    game.players[seat] = null;
+    game.kicked.push({ account, seat });
+    account.game = null;
+    account.lost = { t: 'seat.lost', gameId: game.id, mode: game.mode, reason: 'inactivity' };
+    if (game.mode === 'ranked') account.me.cooldownUntil = this.now() + cooldownAfter(++account.leaves);
+    this.unseat(account);
+    return true;
   }
 
   /** After the final `game.update`: the result to everyone who played, and the lobby opens again. */
@@ -1297,8 +1343,9 @@ export class MockServer {
       room = game.room,
       open = room != null && this.rooms.has(room),
       ranked = game.mode === 'ranked',
-      // A leave is a forfeit in ranked only: the seat is placed last, whatever the bot scored in it.
-      forfeited = ranked ? game.leavers.map((l) => l.seat) : [],
+      // A leave or a kick is a forfeit in ranked only: the seat is placed last, whatever was scored in
+      // it. The leavers come first, in the order they left, then the kicked, in the order of the kicks.
+      forfeited = ranked ? [...game.leavers, ...game.kicked].map((l) => l.seat) : [],
       places = totals.map((t, seat) =>
         forfeited.includes(seat)
           ? totals.length
@@ -1348,6 +1395,7 @@ export class MockServer {
       tell(account, seat);
     });
     game.leavers.forEach(({ account, seat }) => tell(account, seat));
+    game.kicked.forEach(({ account, seat }) => tell(account, seat));
     if (!open || !room) return;
     room.lobby.state = 'open';
     room.lobby.gameId = null;
@@ -1396,6 +1444,7 @@ export class MockServer {
         login: a.login,
         leaves: a.leaves,
         owed: a.owed,
+        lost: a.lost,
       })),
       rooms: [...this.rooms].map((r) => ({ lobby: r.lobby, humans: r.humans.map(id) })),
       games: running.map((g) => ({
@@ -1409,6 +1458,8 @@ export class MockServer {
         colors: g.colors,
         tiers: g.tiers,
         leavers: g.leavers.map((l) => ({ user: id(l.account), seat: l.seat })),
+        kicked: g.kicked.map((l) => ({ user: id(l.account), seat: l.seat })),
+        misses: g.misses,
         status: g.status,
         ready: g.ready,
         deadline: g.deadline,
@@ -1425,7 +1476,14 @@ export class MockServer {
     let saved: {
       v: number;
       ids: number;
-      accounts: { session: string | null; me: Me; login: Account['login']; leaves?: number; owed: GameOver[] }[];
+      accounts: {
+        session: string | null;
+        me: Me;
+        login: Account['login'];
+        leaves?: number;
+        owed: GameOver[];
+        lost?: SeatLost | null;
+      }[];
       rooms: { lobby: Lobby; humans: string[] }[];
       games: {
         id: string;
@@ -1438,6 +1496,8 @@ export class MockServer {
         colors: TableColor[];
         tiers?: (string | null)[];
         leavers: { user: string; seat: Seat }[];
+        kicked?: { user: string; seat: Seat }[];
+        misses?: number[];
         status: SeatStatus[];
         ready: boolean[];
         deadline: Deadline | null;
@@ -1462,6 +1522,7 @@ export class MockServer {
         queued: null,
         leaves: a.leaves ?? 0,
         owed: a.owed,
+        lost: a.lost ?? null,
       };
       this.accounts.set(a.me.user.id, account);
       if (a.session != null) this.sessions.set(a.session, account);
@@ -1477,6 +1538,10 @@ export class MockServer {
       rooms.set(r.lobby.id, room);
       this.rooms.add(room);
     }
+    const seated = (l: { user: string; seat: Seat }): { account: Account; seat: Seat }[] => {
+      const account = this.accounts.get(l.user);
+      return account ? [{ account, seat: l.seat }] : [];
+    };
     for (const g of saved.games) {
       const room = g.lobby == null ? null : (rooms.get(g.lobby) ?? null);
       if (g.lobby != null && !room) continue;
@@ -1490,10 +1555,9 @@ export class MockServer {
         players: g.players.map((x) => (x == null ? null : (this.accounts.get(x) ?? null))),
         colors: g.colors,
         tiers: g.tiers ?? g.players.map(() => null),
-        leavers: g.leavers.flatMap((l) => {
-          const account = this.accounts.get(l.user);
-          return account ? [{ account, seat: l.seat }] : [];
-        }),
+        leavers: g.leavers.flatMap(seated),
+        kicked: (g.kicked ?? []).flatMap(seated),
+        misses: g.misses ?? g.players.map(() => 0),
         status: g.status,
         ready: g.ready,
         deadline: g.deadline,

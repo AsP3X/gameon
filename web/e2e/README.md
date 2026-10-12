@@ -37,5 +37,8 @@ Playwright's own once: `npx playwright-core install chromium`.
 - `player.ts`: one context, its page, every frame it exchanged, and the hands that click.
 - `four-players.e2e.ts`: the script.
 - `ranked-smoke.e2e.ts`: four accounts at one ranked table, and the record of the game.
+- `empty-seat.e2e.ts`: three guests at a fast table. One stays away for two turns: the others see
+  the seat marked OUT and play on, and the one who went is told once that the seat is lost.
+  `SKT_E2E_SHOTS=<folder>` writes a picture of both.
 - `pwa.e2e.ts`: the built page as an installed app. It builds the page, serves it with `vp preview`
   in front of the mock host, and takes both away: the page must still open and deal a game.

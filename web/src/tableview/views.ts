@@ -193,8 +193,10 @@ function presenceTag(v: TableView, seat: Seat): string {
   const status = v.online?.status[seat];
   if (status === 'offline') return '<span class="presence off">Offline</span>';
   if (status === 'away') return '<span class="presence away">Away</span>';
-  // `bot` on a seat that started as a person: a bot took it over.
+  // `bot` on a seat that started as a person: they left, and a bot took it over.
   if (status === 'bot' && !v.seats[seat].bot) return '<span class="presence bot">Bot</span>';
+  // The player was offline for two turns in a row. The seat is still theirs by name, and the table plays it.
+  if (status === 'out') return '<span class="presence out">Out</span>';
   return '';
 }
 function seatBid(v: TableView, i: Seat): string {
@@ -214,6 +216,7 @@ function statusText(v: TableView): string {
     case 'playing': {
       if (v.turn == null || v.turn === v.me) return 'Your turn';
       const status = v.online?.status[v.turn];
+      if (status === 'out') return `The table plays for ${who(v, v.turn)}…`;
       return `${who(v, v.turn)} is ${status === 'offline' ? 'offline' : status === 'away' ? 'away' : 'thinking'}…`;
     }
     case 'trickEnd': {

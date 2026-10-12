@@ -315,7 +315,7 @@ describe('the clock of an online table', () => {
 });
 
 describe('who is at an online table', () => {
-  it('tags a seat whose player is offline, away, or replaced by a bot, and says whom the table waits for', async () => {
+  it('tags a seat whose player is offline, away, out, or replaced by a bot, and says whom the table waits for', async () => {
     online = present();
     openTable();
     expect(app.querySelector('.presence')).toBeNull();
@@ -341,6 +341,16 @@ describe('who is at an online table', () => {
     expect(remy().querySelector('.presence.away')?.textContent).toBe('Away');
     expect(remy().classList.contains('gone')).toBe(false);
     expect(text('.status')).toBe('<b>Remy</b> is away…');
+
+    // Two turns missed while offline: the seat is closed. The name stays, and the table plays it.
+    tell(present(['online', 'out', 'bot']), OTHERS, [{ type: 'seatStatus', seat: 1, status: 'out' }]);
+    await settle();
+    expect(remy().querySelector('.presence.out')?.textContent).toBe('Out');
+    expect(remy().classList.contains('gone')).toBe(true);
+    expect(remy().querySelector('.sname')?.textContent).toBe('<b>Remy</b>');
+    expect(remy().querySelector('.ring')).toBeNull();
+    expect(text('.status')).toBe('The table plays for <b>Remy</b>…');
+    expect(app.querySelector('.status b')).toBeNull();
 
     tell(present(['online', 'bot', 'bot']), OTHERS, [{ type: 'seatStatus', seat: 1, status: 'bot' }]);
     await settle();
@@ -378,8 +388,11 @@ describe('who is at an online table', () => {
     expect(text('.mebar .ready')).toBe('Ready');
     expect(app.querySelectorAll('.seat .ready')).toHaveLength(0);
 
-    // A player who is not connected is not waited for.
+    // A player who is not connected is not waited for, and neither is one whose seat is closed.
     tell({ ...present(['online', 'offline', 'bot']), ready: [true, false, false] }, OTHERS);
+    await settle();
+    expect(text('.actions')).toBe('Ready · next round is coming');
+    tell({ ...present(['online', 'out', 'bot']), ready: [true, false, false] }, OTHERS);
     await settle();
     expect(text('.actions')).toBe('Ready · next round is coming');
 

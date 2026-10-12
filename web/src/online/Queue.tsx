@@ -78,7 +78,7 @@ export function QueueScreen({ online, queue, live, rules }: QueueScreenProps) {
           )}
           <p className="muted">
             {ranked
-              ? 'The game starts by itself when the table is full. A ranked table has no bots. Leaving a ranked game, or staying away for most of it, scores last place and starts a cooldown.'
+              ? 'The game starts by itself when the table is full. A ranked table has no bots. Leaving a ranked game, losing your seat, or staying away for most of it scores last place and starts a cooldown.'
               : 'The game starts by itself when the table is full. Open seats are filled with bots.'}
           </p>
         </div>

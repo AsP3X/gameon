@@ -20,7 +20,8 @@ const COPY: Partial<Record<Failure['code'], string>> = {
   ALREADY_REGISTERED: 'This pirate already has an account.',
   ACCOUNT_REQUIRED: 'Ranked needs an account.',
   // The server's message for this carries no time either: `Me.cooldownUntil` does, and the hub shows it.
-  // A forfeit is a ranked game that was left, or one the player was away from for most of its rounds.
+  // A forfeit is a ranked game that was left, one the player lost their seat in by missing two turns
+  // while offline, or one they were away from for most of its rounds.
   QUEUE_COOLDOWN: 'You forfeited a ranked game. Ranked is closed for you for a while.',
 };
 

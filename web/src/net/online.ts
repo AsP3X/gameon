@@ -50,16 +50,30 @@ export type Notice =
   /**
    * A game ended while its table was not on screen: the seat was left, or the result arrived after a
    * reconnect. `place` is null only when the result did not say whose seat it is about and this
-   * device does not remember one. `left` is what this device remembers.
+   * device does not remember one. `left` and `lost` are what this device remembers: the seat was
+   * given up, or it was closed for being offline for two turns in a row.
    */
   | {
       kind: 'gameOver';
       left: boolean;
+      lost: boolean;
       place: number | null;
       seats: number;
       forfeited: boolean;
       delta: number | null;
-    };
+    }
+  /**
+   * The server closed this player's seat in a running game: they were offline for two turns in a
+   * row. The game goes on without them. In a ranked game that is a forfeit.
+   */
+  | { kind: 'seatLost'; ranked: boolean };
+
+/** What this device knows about a game it sat in. `seat` is null when only the server's word that the seat is lost is known. */
+interface Played {
+  seat: Seat | null;
+  left: boolean;
+  lost?: boolean;
+}
 
 export interface OnlineState {
   status: LinkStatus;
@@ -78,8 +92,8 @@ export interface OnlineState {
 export interface Remembered {
   /** The player sat in a lobby or at a table when the server was last heard. */
   seated: boolean;
-  /** The seat played in each game that has not reported its result yet. */
-  games: Record<GameId, { seat: Seat; left: boolean }>;
+  /** The seat played in each game that has not reported its result yet, and how it was given up. */
+  games: Record<GameId, Played>;
 }
 /** Where `Remembered` is kept: localStorage in the page, an object in a test. */
 export interface OnlineMemory {
@@ -109,8 +123,8 @@ export class Online {
   private state: OnlineState = EMPTY;
   /** A `game.start` whose first `game.update` has not arrived: the table opens with both. */
   private starting: GameStart | null = null;
-  /** The seat this device played in each game it opened, and whether it left it. */
-  private readonly played: Map<GameId, { seat: Seat; left: boolean }>;
+  /** The seat this device played in each game it opened, and whether it left or lost it. */
+  private readonly played: Map<GameId, Played>;
   private readonly memory: OnlineMemory | null;
   private seated: boolean;
 
@@ -384,6 +398,14 @@ export class Online {
           }
           case 'game.over':
             return this.gameOver(m);
+          case 'seat.lost': {
+            // Said once, after the `welcome` that no longer has the game. The result still follows when the game ends.
+            const played = this.played.get(m.gameId);
+            if (played) played.lost = true;
+            else this.played.set(m.gameId, { seat: null, left: false, lost: true });
+            this.remember();
+            return this.set({ notice: { kind: 'seatLost', ranked: m.mode === 'ranked' } });
+          }
           default:
             return;
         }
@@ -416,6 +438,7 @@ export class Online {
       notice: {
         kind: 'gameOver',
         left: played?.left ?? false,
+        lost: played?.lost ?? false,
         place: seat == null ? null : (r.places[seat] ?? null),
         seats: r.places.length,
         forfeited: seat != null && r.forfeited.includes(seat),

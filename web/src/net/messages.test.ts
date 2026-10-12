@@ -27,6 +27,7 @@ const SERVER = [
   'game.start',
   'game.update',
   'game.over',
+  'seat.lost',
 ];
 
 describe('parseServerMessage', () => {

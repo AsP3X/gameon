@@ -12,6 +12,7 @@ import type {
   LobbyStatePush,
   OkReply,
   QueueStatusPush,
+  SeatLost,
   Superseded,
   Welcome,
 } from '../protocol/generated';
@@ -31,7 +32,8 @@ export type ServerPush =
   | GameStart
   | GameUpdate
   | GameEmotePush
-  | GameOver;
+  | GameOver
+  | SeatLost;
 export type ServerMessage = ServerReply | ServerPush;
 
 /** A client message before it is given its `id`. */
@@ -49,6 +51,7 @@ const SERVER_TYPES: Record<ServerMessage['t'], true> = {
   'game.update': true,
   'game.emote': true,
   'game.over': true,
+  'seat.lost': true,
 };
 
 /**

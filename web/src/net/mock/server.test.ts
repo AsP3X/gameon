@@ -658,4 +658,140 @@ describe('the table', () => {
     // Nothing on the new socket answers an id of the old one.
     expect(back.frames.filter((f) => f.t === 'ok' || f.t === 'err')).toHaveLength(1);
   });
+
+  describe('a seat nobody comes back to', () => {
+    /** Seat 0 is the host, seat 1 a bot, seat 2 the one who joined. The host can connect again as `as`. */
+    async function table(): Promise<{ as: ReturnType<MockServer['transport']>; host: RawClient; other: RawClient }> {
+      const as = server.transport();
+      const host = await connect(as);
+      host.send({ t: 'lobby.create', visibility: 'private', settings: SETTINGS });
+      host.send({ t: 'lobby.addBot' });
+      host.send({ t: 'lobby.ready', ready: true });
+      await flush();
+      const other = await connect();
+      other.send({ t: 'lobby.join', code: lobbyOf(host).code });
+      other.send({ t: 'lobby.ready', ready: true });
+      await flush();
+      host.send({ t: 'lobby.start' });
+      await flush();
+      return { as, host, other };
+    }
+    const updates = (client: RawClient): GameUpdate[] => framesOf(client, 'game.update');
+    /** The steps in which the clock played for seat 0. */
+    const misses = (client: RawClient): GameUpdate[] =>
+      updates(client).filter((u) => u.events.some((e) => e.type === 'timedOut' && e.seat === 0));
+    const closed = (client: RawClient): GameUpdate | undefined =>
+      updates(client).find((u) => u.events.some((e) => e.type === 'seatStatus' && e.status === 'out'));
+
+    it('closes it with the second missed turn in a row: the move, timedOut and out in one step, and no bot', async () => {
+      const { host, other } = await table();
+      host.close();
+      await until(() => misses(other).length === 1, 'the first miss');
+      // One miss is a turn the table played. The seat is still that player's.
+      expect(misses(other)[0].table.status).toEqual(['offline', 'bot', 'online']);
+      expect(closed(other)).toBeUndefined();
+
+      await until(() => closed(other) != null, 'the second miss');
+      const kick = closed(other);
+      if (!kick) throw new Error('unreachable');
+      expect(misses(other)).toHaveLength(2);
+      expect(misses(other)[1]).toBe(kick);
+      // The move the table made for the seat, then that the time ran out, then that the seat is closed.
+      expect(kick.events.slice(-2)).toEqual([
+        { type: 'timedOut', seat: 0 },
+        { type: 'seatStatus', seat: 0, status: 'out' },
+      ]);
+      expect(
+        kick.events.slice(0, -2).some((e) => (e.type === 'cardPlayed' || e.type === 'bidPlaced') && e.seat === 0),
+      ).toBe(true);
+      expect(kick.table.status).toEqual(['out', 'bot', 'online']);
+      // The name and the colour stay at the table, and the player is out of its lobby.
+      expect(last(other, 'game.start').seats[0]).toMatchObject({ bot: false });
+      expect(lobbyOf(other).members).toHaveLength(2);
+
+      // From here the table plays the seat: 1.5 seconds after the turn reaches it, on no clock.
+      await until(() => view(other).phase === 'playing' && view(other).turn === 0, "the closed seat's turn");
+      const turn = last(other, 'game.update');
+      expect(turn.table.deadline).toBeNull();
+      await vi.advanceTimersByTimeAsync(1400);
+      expect(last(other, 'game.update').rev).toBe(turn.rev);
+      await vi.advanceTimersByTimeAsync(100);
+      expect(last(other, 'game.update').events).toMatchObject([{ type: 'cardPlayed', seat: 0 }]);
+
+      await until(() => framesOf(other, 'game.over').length > 0, 'the game ends');
+      // Two misses were the player's. No later turn of the seat is one, and it is never on a clock again.
+      expect(misses(other)).toHaveLength(2);
+      const after = updates(other).filter((u) => u.rev > kick.rev);
+      expect(after.every((u) => u.table.status[0] === 'out' && !u.table.deadline?.seats.includes(0))).toBe(true);
+      expect(after.every((u) => !u.table.ready[0])).toBe(true);
+      // Not a forfeit at a table that is not ranked.
+      expect(last(other, 'game.over').result.forfeited).toEqual([]);
+    });
+
+    it('tells the player once, after the welcome that has no game, and still owes them the result', async () => {
+      const { as, host, other } = await table();
+      const gameId = last(host, 'game.start').gameId;
+      host.close();
+      await until(() => closed(other) != null, 'the kick');
+
+      const back = await connect(as);
+      expect(back.frames.map((f) => f.t)).toEqual(['ok', 'welcome', 'seat.lost']);
+      expect(last(back, 'welcome')).toMatchObject({
+        game: null,
+        lobby: null,
+        me: { active: null, cooldownUntil: null },
+      });
+      expect(last(back, 'seat.lost')).toEqual({ t: 'seat.lost', gameId, mode: 'custom', reason: 'inactivity' });
+      // The seat cannot be taken again, and nobody else hears that it was lost.
+      const bid = back.send({ t: 'game.bid', at: at(other), bid: 1 });
+      await flush();
+      expect(answer(back, bid).reply).toMatchObject({ t: 'err', code: 'NOT_IN_GAME' });
+      expect(framesOf(other, 'seat.lost')).toHaveLength(0);
+      expect(last(other, 'game.update').table.status[0]).toBe('out');
+
+      // Said once: the next socket is not told again.
+      back.close();
+      const again = await connect(as);
+      expect(again.frames.map((f) => f.t)).toEqual(['ok', 'welcome']);
+
+      await until(() => framesOf(other, 'game.over').length > 0, 'the game ends');
+      expect(again.frames.slice(2)).toEqual([{ ...last(other, 'game.over'), seat: 0 }]);
+    });
+
+    it('writes the lost seat before the result when the game ended in between', async () => {
+      const { as, host, other } = await table();
+      host.close();
+      await until(() => framesOf(other, 'game.over').length > 0, 'the game ends');
+      const back = await connect(as);
+      expect(back.frames.map((f) => f.t)).toEqual(['ok', 'welcome', 'seat.lost', 'game.over']);
+      expect(last(back, 'game.over')).toMatchObject({ seat: 0, result: last(other, 'game.over').result });
+    });
+
+    it('forgives the misses of a player who sits back down in time', async () => {
+      const { as, host, other } = await table();
+      host.close();
+      await until(() => misses(other).length === 1, 'the first miss');
+      const back = await connect(as);
+      expect(last(back, 'welcome').game?.update.table.status[0]).toBe('offline');
+      expect(last(back, 'game.update')).toMatchObject({ events: [{ type: 'seatStatus', seat: 0, status: 'online' }] });
+      expect(framesOf(back, 'seat.lost')).toHaveLength(0);
+
+      // Gone again: the count starts over, so the next miss is a first one.
+      back.close();
+      await until(() => misses(other).length === 2, 'a miss after the return');
+      expect(misses(other)[1].table.status[0]).toBe('offline');
+      expect(closed(other)).toBeUndefined();
+      await until(() => closed(other) != null, 'the second miss in a row');
+      expect(misses(other)).toHaveLength(3);
+    });
+
+    it('does not close the seat of a player who is there and only slow', async () => {
+      const { host, other } = await table();
+      await until(() => framesOf(other, 'game.over').length > 0, 'the game ends');
+      expect(misses(other).length).toBeGreaterThan(2);
+      expect(closed(other)).toBeUndefined();
+      expect(framesOf(host, 'seat.lost')).toHaveLength(0);
+      expect(last(host, 'game.over')).toMatchObject({ seat: 0 });
+    });
+  });
 });

@@ -240,6 +240,7 @@ describe('Online', () => {
     expect(online.getState().notice).toEqual({
       kind: 'gameOver',
       left: true,
+      lost: false,
       place: 2,
       seats: 2,
       forfeited: true,
@@ -258,6 +259,36 @@ describe('Online', () => {
       table: null,
       notice: { kind: 'gameOver', left: false, place: null, seats: 3, forfeited: false, delta: null },
     });
+  });
+
+  it('takes a lost seat it knows nothing about as news, and the result that follows takes its place', () => {
+    welcome({ lobby: null, game: null });
+    wire().say({ t: 'seat.lost', gameId: 'played-elsewhere', mode: 'ranked', reason: 'inactivity' });
+    expect(online.getState()).toMatchObject({ table: null, notice: { kind: 'seatLost', ranked: true } });
+    // The game was already over: its result was owed too, and it is written right after.
+    wire().say({
+      t: 'game.over',
+      gameId: 'played-elsewhere',
+      seat: 3,
+      result: { totals: [10, 20, 30, -40], places: [3, 2, 1, 4], forfeited: [3], rating: null, lobbyId: null },
+    });
+    expect(online.getState().notice).toEqual({
+      kind: 'gameOver',
+      left: false,
+      lost: true,
+      place: 4,
+      seats: 4,
+      forfeited: true,
+      delta: null,
+    });
+  });
+
+  it('says a lost seat is no forfeit at a table that is not ranked', () => {
+    welcome({ lobby: null, game: null });
+    wire().say({ t: 'seat.lost', gameId: 'a-friends-game', mode: 'custom', reason: 'inactivity' });
+    expect(online.getState().notice).toEqual({ kind: 'seatLost', ranked: false });
+    online.dismissNotice();
+    expect(online.getState().notice).toBeNull();
   });
 
   describe('what one page leaves for the next', () => {
@@ -314,6 +345,46 @@ describe('Online', () => {
       expect(d.page().wasSeated).toBe(false);
     });
 
+    it('keeps that the seat was lost, so the result on a later page can say so', async () => {
+      const d = device();
+      await pageWith(d.memory);
+      welcome({ lobby, game });
+      online.close();
+
+      // Two turns went by without this player. The next page is told once.
+      await pageWith(d.memory);
+      welcome({ lobby: null, game: null });
+      wire().say({ t: 'seat.lost', gameId: game.start.gameId, mode: 'custom', reason: 'inactivity' });
+      expect(online.getState()).toMatchObject({
+        table: null,
+        lobby: null,
+        notice: { kind: 'seatLost', ranked: false },
+      });
+      expect(d.kept).toEqual({ seated: false, games: { [game.start.gameId]: { seat: 0, left: false, lost: true } } });
+      online.close();
+
+      // The game ends a page later, and nothing is said about the seat again.
+      await pageWith(d.memory);
+      welcome({ lobby: null, game: null });
+      expect(online.getState().notice).toBeNull();
+      wire().say({
+        t: 'game.over',
+        gameId: game.start.gameId,
+        seat: 0,
+        result: { totals: [10, 80], places: [2, 1], forfeited: [], rating: null, lobbyId: null },
+      });
+      expect(online.getState().notice).toEqual({
+        kind: 'gameOver',
+        left: false,
+        lost: true,
+        place: 2,
+        seats: 2,
+        forfeited: false,
+        delta: null,
+      });
+      expect(d.kept).toEqual({ seated: false, games: {} });
+    });
+
     it('knows on the next page which seat was played, so a late result can say the place', async () => {
       const d = device();
       await pageWith(d.memory);
@@ -330,6 +401,7 @@ describe('Online', () => {
       expect(online.getState().notice).toEqual({
         kind: 'gameOver',
         left: false,
+        lost: false,
         place: 2,
         seats: 2,
         forfeited: false,
@@ -349,6 +421,7 @@ describe('Online', () => {
     expect(online.getState().notice).toMatchObject({
       kind: 'gameOver',
       left: false,
+      lost: false,
       place: 1,
       seats: 3,
       forfeited: true,

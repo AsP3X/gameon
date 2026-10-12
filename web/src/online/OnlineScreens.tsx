@@ -37,15 +37,24 @@ const STATUS_PILL: Record<LinkStatus, { tone: string; text: string }> = {
   unsupported: { tone: 'red', text: 'Update needed' },
 };
 
-function noticeText(notice: Notice): { title: string; text: string } {
+export function noticeText(notice: Notice): { title: string; text: string } {
   if (notice.kind === 'lobbyClosed')
     return notice.reason === 'kicked'
       ? { title: 'The host removed you from the table', text: 'You can join another table or create your own.' }
       : notice.reason === 'idle'
         ? { title: 'The table was closed', text: 'Nothing happened at it for too long.' }
         : { title: 'The table was closed', text: 'Nobody was left to host it.' };
+  if (notice.kind === 'seatLost')
+    return {
+      title: 'You lost your seat',
+      text: `You were away for two turns in a row. The game goes on without you.${notice.ranked ? ' It counts as a forfeit.' : ''}`,
+    };
   const parts = [
-    notice.left ? 'You left before the end.' : 'It ended while you were away.',
+    notice.left
+      ? 'You left before the end.'
+      : notice.lost
+        ? 'You lost your seat before the end.'
+        : 'It ended while you were away.',
     notice.place != null ? `Final place: ${ordinal(notice.place)} of ${notice.seats}.` : '',
     notice.forfeited ? 'It counts as a forfeit.' : '',
     notice.delta != null ? `Rating ${notice.delta > 0 ? '+' : ''}${whole(notice.delta)}.` : '',

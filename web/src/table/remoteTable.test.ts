@@ -399,6 +399,7 @@ describe('RemoteTable at a table on the mock server', () => {
     expect(online.getState().notice).toEqual({
       kind: 'gameOver',
       left: true,
+      lost: false,
       place: over.result.places[0],
       seats: 3,
       forfeited: false,
