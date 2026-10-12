@@ -877,12 +877,6 @@ describe('the addresses of the online screens', () => {
     await openAt('/skull-king/ranked');
     expect($('#online h1, #online h2')?.textContent).toBe('Ranked');
     expect(places.entries()).toEqual({ paths: ['/skull-king/ranked'], at: 0 });
-    closePage();
-    await openAt('/ladder');
-    expect($('#online h1, #online h2')?.textContent).toBe('Ladder');
-    closePage();
-    await openAt('/profile');
-    expect($('#online h1, #online h2')?.textContent).toBe('Your profile');
   });
 
   it('moves the address with every page, and Back is the way the player came', async () => {

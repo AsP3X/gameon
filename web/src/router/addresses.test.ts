@@ -68,8 +68,10 @@ describe('the addresses', () => {
       expect(kind(path)).toBe('legacy');
     // The solo setup is none of the three: a page of its own, which connects only to start a game.
     expect(kind('/skull-king/solo')).toBe('');
-    for (const path of ['/', '/games', '/sign-in', '/sign-up']) expect(kind(path)).toBe('frame');
-    for (const path of ['/skull-king/online', '/skull-king/online/join', '/ladder', '/profile', `/players/${ID}`])
+    // The profile, another player and the ladder are the frame's: they need no connection.
+    for (const path of ['/', '/games', '/sign-in', '/sign-up', '/ladder', '/profile', `/players/${ID}`])
+      expect(kind(path)).toBe('frame');
+    for (const path of ['/skull-king/online', '/skull-king/online/join', '/skull-king/ranked'])
       expect(kind(path)).toBe('online');
   });
 });

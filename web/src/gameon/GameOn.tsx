@@ -1,10 +1,12 @@
 /* GameOn: the frame around the game. The landing, Games, and signing up and in are its pages
-   (plan item W1); Skull King is the one game inside it. React draws them next to the legacy
-   renderer's #app and the online screens, and the page's address says which is up.
+   (plan item W1), and so are the profile, another player and the ladder (W5); Skull King is the
+   one game inside it. React draws them next to the legacy renderer's #app and the online screens,
+   and the page's address says which is up.
 
    The frame needs no connection. It asks the server who this browser is over REST and shows what
-   it is told: a visitor without a session stays one on the landing and on the two forms, and gets
-   a guest at Games, where they are on their way to a table. Nothing here decides anything about a
+   it is told: a visitor without a session stays one on the landing, on the two forms, on the
+   ladder and on another player's page, and gets a guest at Games, where they are on their way to
+   a table. Nothing here decides anything about a
    game, a rating or a seat. */
 import { useEffect } from 'react';
 import type { Online, OnlineState } from '../net/online';
@@ -15,7 +17,9 @@ import { SignIn, SignUp } from './Account';
 import { accountOf, GoContext } from './Frame';
 import type { Go } from './Frame';
 import { Games } from './Games';
+import { LadderPage } from './Ladder';
 import { Landing } from './Landing';
+import { PlayerPage, ProfilePage } from './Profile';
 import { useWho } from './who';
 
 export interface GameOnProps {
@@ -24,11 +28,14 @@ export interface GameOnProps {
   /** The page the address names. */
   route: FrameRoute;
   go: Go;
+  /** The Back of a page that has one parent, and of a page that has none (src/router/router.ts). */
+  up: (parent: string) => void;
+  back: (fallback: string) => void;
   /** Sit down at a public table. The online screens take it from there. */
   onJoin: (id: LobbyId) => void;
 }
 
-export function GameOn({ online, state, route, go, onJoin }: GameOnProps) {
+export function GameOn({ online, state, route, go, up, back, onJoin }: GameOnProps) {
   // At Games the player is on their way in: a browser without a session gets its guest there.
   const who = useWho(online, state.me, route.page === 'games');
   const season = state.config ? state.config.season : undefined;
@@ -65,6 +72,14 @@ export function GameOn({ online, state, route, go, onJoin }: GameOnProps) {
               return r;
             }}
           />
+        ) : route.page === 'profile' ? (
+          <ProfilePage online={online} who={who} season={season} go={go} />
+        ) : route.page === 'player' ? (
+          // Reached from a table, the ladder or its address: Back leads to where it was come from.
+          <PlayerPage key={route.id} online={online} who={who} id={route.id} go={go} onBack={() => back(AT.ladder)} />
+        ) : route.page === 'ladder' ? (
+          // The ladder belongs to Skull King's ranked page, and goes back there.
+          <LadderPage online={online} who={who} season={season} onBack={() => up(AT.ranked)} />
         ) : (
           <Landing online={online} who={who} season={season} />
         )}

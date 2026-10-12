@@ -6,6 +6,8 @@
    - up(parent) is the Back arrow of a page. When the page was reached from that parent, it is the
      browser's Back, so the entries stay as short as the way the player went. Reached any other
      way (a typed address, a reload into a new tab), the parent takes this entry's place.
+   - back(fallback) is the Back arrow of a page that has no one parent: it leads to the page this
+     one was reached from, whichever that was, and to the fallback when it was reached by itself.
 
    Each entry is given a note of where it was made from, which is how up() knows. The browser
    answers Back a moment later, and the page has to show the parent now: the router says so at
@@ -19,6 +21,7 @@ export interface Router {
   subscribe: (changed: () => void) => () => void;
   go: (path: string, how?: { replace?: boolean }) => void;
   up: (parent: string) => void;
+  back: (fallback: string) => void;
 }
 
 const fromOf = (note: unknown): string | null =>
@@ -59,6 +62,15 @@ export function createRouter(places: Places): Router {
     else write(to, replace);
     show(to);
   };
+  const up: Router['up'] = (parent) => {
+    if (parent === path) return;
+    if (arriving || fromOf(places.note()) !== parent) return go(parent, { replace: true });
+    arriving = [];
+    unlisten ??= places.listen(moved);
+    // Shown first: a history that answers at once (the tests' own) is then already where it says.
+    show(parent);
+    places.back();
+  };
   return {
     getPath: () => path,
     subscribe(changed) {
@@ -72,14 +84,8 @@ export function createRouter(places: Places): Router {
       };
     },
     go,
-    up(parent) {
-      if (parent === path) return;
-      if (arriving || fromOf(places.note()) !== parent) return go(parent, { replace: true });
-      arriving = [];
-      unlisten ??= places.listen(moved);
-      // Shown first: a history that answers at once (the tests' own) is then already where it says.
-      show(parent);
-      places.back();
-    },
+    up,
+    // While the browser is still on its way back, the note is the entry's it is leaving.
+    back: (fallback) => up((arriving ? null : fromOf(places.note())) ?? fallback),
   };
 }

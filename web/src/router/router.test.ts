@@ -62,6 +62,23 @@ describe('the router', () => {
     expect(places.entries()).toEqual({ paths: ['/list', '/home'], at: 1 });
   });
 
+  it('leads back to wherever the page was reached from, and to the fallback when it was reached by itself', () => {
+    const places = memoryPlaces('/table');
+    const { router, seen } = watched(places);
+    router.go('/players/x');
+    router.back('/ladder');
+    // Reached from the table: the browser's Back, and no new entry.
+    expect(places.entries()).toEqual({ paths: ['/table', '/players/x'], at: 0 });
+    expect(seen).toEqual(['/players/x', '/table']);
+
+    // Reached by its address: the fallback takes its place.
+    const typed = memoryPlaces('/players/x');
+    const alone = watched(typed);
+    alone.router.back('/ladder');
+    expect(typed.entries()).toEqual({ paths: ['/ladder'], at: 0 });
+    expect(alone.router.getPath()).toBe('/ladder');
+  });
+
   it('remembers where an entry was made from through a redirect', () => {
     const places = memoryPlaces('/home');
     const { router } = watched(places);

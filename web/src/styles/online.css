@@ -363,22 +363,8 @@ input.field[aria-invalid='true'] {
   border-color: var(--red);
 }
 
-/* Who a profile is about: the big avatar, the name, and what kind of account it is. */
-.who {
-  gap: 14px;
-  padding-block: 4px;
-}
-.who b {
-  display: block;
-  font-size: 20px;
-  font-weight: 900;
-  overflow-wrap: anywhere;
-}
-.who .pill {
-  margin-top: 4px;
-}
-
-/* The eight table colours: four to a row, each a 48 px target around its dot. */
+/* The eight table colours on the profile (src/gameon/Profile.tsx): four to a row, each a 48 px
+   target around its dot. */
 .swatches {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -481,60 +467,6 @@ ul.tables {
 .plate b.unrated {
   font-size: 20px;
   font-weight: 900;
-}
-
-/* The ladder: the season on top, then one row per player. The list is `.ranking` and a row's number
-   `.place`: tavern.css already has a `.ladder` and a `.rank`, for the how-to-play sheet and the standings. */
-.season b {
-  display: block;
-  font-size: 18px;
-  font-weight: 900;
-}
-.season small {
-  display: block;
-  color: var(--muted);
-  font-size: 13px;
-}
-ol.ranking {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.ranking li {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-height: 50px;
-  padding: 8px 12px;
-  border: 2px solid var(--line);
-  border-radius: 14px;
-}
-.ranking li.you {
-  border-color: var(--blue);
-  background: var(--blue-bg);
-}
-.ranking .place {
-  flex: none;
-  min-width: 28px;
-  text-align: center;
-  color: var(--muted);
-  font-size: 14px;
-  font-weight: 900;
-}
-.ranking li b {
-  display: block;
-  font-weight: 900;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.ranking li small {
-  display: block;
-  color: var(--muted);
-  font-size: 12px;
 }
 
 /* ---------- the index, the ranked page and the tables ---------- */

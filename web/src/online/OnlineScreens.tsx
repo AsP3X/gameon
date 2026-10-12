@@ -1,12 +1,13 @@
 /* The online screens: the index with its three doors, the ranked page, the public tables, a new
-   table, the table's lobby, joining by code, the queue, the ladder and the profile. Signing up and
-   in are pages of the frame (src/gameon). React draws them next to the legacy renderer's #app; the
+   table, the table's lobby, joining by code and the queue. Signing up and in, the profile, another
+   player and the ladder are pages of the frame (src/gameon). React draws them next to the legacy
+   renderer's #app; the
    game itself is still played there, at the same table the offline modes use. Everything shown is
    what the server said (src/net/online.ts): a tap asks, and the screen changes when the answer or
    the next state arrives.
 
    The index, the ranked page and the five tables are drawn as design/skt.pen draws them (plan item
-   W4). The queue, the code, the ladder and the profile are the screens they were. */
+   W4). The queue and the code are the screens they were. */
 import { useState } from 'react';
 import type { FormEvent, ReactNode } from 'react';
 import type { KeyTone } from '../gameon/art';
@@ -25,11 +26,10 @@ import type { OnlineRoute } from '../router/addresses';
 import { failureText, ordinal } from './copy';
 import { LobbyRoom } from './LobbyRoom';
 import { Bar, Head, Page } from './parts';
-import { PlayerScreen, ProfileScreen } from './Profile';
 import { PublicTables } from './PublicTables';
 import { QueueScreen } from './Queue';
 import { reloadPage } from './reload';
-import { LadderScreen, RankedScreen } from './Ranked';
+import { RankedScreen } from './Ranked';
 import { FIXED, loadTable, saveSettings } from './settings';
 import { SettingsForm } from './SettingsForm';
 
@@ -342,8 +342,6 @@ export function OnlineScreens({ online, state, route, go, up, onExit, sit, onSat
     live = state.status === 'online',
     hub = (): void => up(AT.online);
 
-  // Another player's page is the same from the lobby, the ladder or a typed address.
-  if (route.page === 'player') return <PlayerScreen online={online} id={route.id} onBack={hub} />;
   if (lobby && me) {
     const back = (): void => setRules(null);
     if (rules === lobby.id && lobby.hostId === me.user.id && lobby.state === 'open')
@@ -445,23 +443,6 @@ export function OnlineScreens({ online, state, route, go, up, onExit, sit, onSat
         onCreate={() => go(AT.newPublicTable)}
         sit={sit ?? null}
         onSat={onSat}
-      />
-    );
-  if (route.page === 'ladder')
-    // The ladder is reached from the ranked page, and goes back there.
-    return <LadderScreen online={online} me={me?.user.id ?? null} live={live} onBack={() => up(AT.ranked)} />;
-  if (me && route.page === 'profile')
-    return (
-      <ProfileScreen
-        // Another player after signing in: the form starts from who they are.
-        key={me.user.id}
-        online={online}
-        me={me}
-        live={live}
-        onBack={hub}
-        onSignUp={() => go(AT.signUp)}
-        onSignIn={() => go(AT.signIn)}
-        onSignedOut={onExit}
       />
     );
   return <Hub online={online} state={state} onExit={onExit} go={go} />;

@@ -1,8 +1,9 @@
 // @vitest-environment jsdom
 /* Accounts, the public tables and quick play, on the whole page against the mock server: what a
    player clicks and types, and what the screens say back. The sign-up and sign-in pages have their
-   own tests in src/gameon/GameOn.test.tsx; here they are reached from the profile. The mock's own answers are checked frame
-   by frame in src/net/mock/accounts.test.ts. */
+   own tests in src/gameon/GameOn.test.tsx, and the profile has its own in src/gameon/Profile.test.tsx;
+   here they are reached from the hub, with the connection up. The mock's own answers are checked
+   frame by frame in src/net/mock/accounts.test.ts. */
 import { act, StrictMode, useState, useSyncExternalStore } from 'react';
 import { createRoot } from 'react-dom/client';
 import type { Root } from 'react-dom/client';
@@ -195,10 +196,12 @@ describe('an account', () => {
     await openHub();
     const guest = await me();
     await click('#online a[href="/profile"]');
-    expect($('#online h1, #online h2')?.textContent).toBe('Your profile');
-    expect(texts('#online .who .pill')).toEqual(['Guest']);
-    // Signing up is a page of the frame (src/gameon). It leaves the connection as it is.
-    await press('Create an account');
+    // The profile is a page of the frame (src/gameon). It leaves the connection as it is.
+    expect(places.path()).toBe('/profile');
+    expect($('#gameon h1')?.textContent).toBe(guest.user.name);
+    expect($('#gameon .go-who p')?.textContent).toBe('Guest');
+    // So is signing up.
+    await click('#gameon .go-quarter a[href="/sign-up"]');
     expect(places.path()).toBe('/sign-up');
     expect($('#gameon h1')?.textContent).toBe('Create your account');
     await signUp('Anne_Bonny', 'three sheets');
@@ -211,10 +214,11 @@ describe('an account', () => {
 
     // Back is the profile the player came from, and it knows the account.
     await back();
-    expect($('#online h1, #online h2')?.textContent).toBe('Your profile');
-    expect(texts('#online .who .pill')).toEqual(['@Anne_Bonny']);
-    expect($('#online [aria-label="Account"] p')?.textContent).toBe('Signed in as @Anne_Bonny.');
-    await click('[aria-label="Back"]');
+    expect(places.path()).toBe('/profile');
+    expect($('#gameon .go-who p')?.textContent).toBe('Anne_Bonny');
+    expect(texts('#gameon .go-account-actions .btn')).toEqual(['Save', 'Sign out']);
+    await back();
+    await settle();
     expect($('#online .go-chip-text small')?.textContent).toBe('Anne_Bonny');
     expect(texts('#online .pill')).toEqual(['Connected']);
   });
@@ -224,7 +228,8 @@ describe('an account', () => {
     await openHub();
     const guest = await me();
     await click('#online a[href="/profile"]');
-    await press('Sign in');
+    // A guest's bar has the way to an account they already have.
+    await click('#gameon .go-nav a[href="/sign-in"]');
     expect(places.path()).toBe('/sign-in');
     expect($('#gameon h1')?.textContent).toBe('Welcome back');
     await type('#signin-username', 'anne_bonny');
@@ -241,32 +246,42 @@ describe('an account', () => {
     // The connection that was up was made again with the new session.
     await back();
     await settle();
-    expect(texts('#online .who .pill')).toEqual(['@anne_bonny']);
-    await click('[aria-label="Back"]');
+    expect($('#gameon h1')?.textContent).toBe('Anne');
+    expect($('#gameon .go-who p')?.textContent).toBe('anne_bonny');
+    await back();
+    await settle();
     expect($('#online .go-chip-text b')?.textContent).toBe('Anne');
     expect($('#online .go-chip-text small')?.textContent).toBe('anne_bonny');
     expect(texts('#online .pill')).toEqual(['Connected']);
   });
 
-  it('signs out to the home screen, and whoever plays online next is a new guest', async () => {
+  it('signs out to the front page, and whoever plays online next is a new guest', async () => {
     await page.rest('POST', '/auth/guest');
     await page.rest('POST', '/auth/register', { username: 'calico', password: 'secret' });
     const calico = await me();
     await openHub();
     await click('#online a[href="/profile"]');
     await press('Sign out');
-    expect($('#online')).toBeNull();
-    expect($('#app')?.hidden).toBe(false);
-    expect($('.sk-home')).not.toBeNull();
-    expect((await page.rest('GET', '/me')).status).toBe(401);
-
-    await click('#gameon a[href="/skull-king/online"]');
     await settle();
+    // The session is over, and so is the connection: the front page, for a visitor.
+    expect(places.path()).toBe('/');
+    expect($('#online')).toBeNull();
+    expect($('#gameon h1')?.textContent).toBe('Game night, switched on.');
+    expect($('#gameon .go-chip')).toBeNull();
+    expect($('#gameon .go-nav a[href="/sign-in"]')).not.toBeNull();
+    expect((await page.rest('GET', '/me')).status).toBe(401);
+    // The front page took the profile's place: Back is the hub the player came from, and whoever
+    // is there now is somebody new.
+    await back();
+    await settle();
+    expect(places.path()).toBe('/skull-king/online');
+
     expect($('#online .go-chip-text small')?.textContent).toBe('Guest');
     expect((await me()).user.id).not.toBe(calico.user.id);
     // A guest has nothing to sign out of: the profile offers an account instead.
     await click('#online a[href="/profile"]');
-    expect(texts('#online [aria-label="Account"] .btn')).toEqual(['Create an account', 'Sign in']);
+    expect(texts('#gameon .go-account-actions .btn')).toEqual(['Save']);
+    expect($('#gameon .go-quarter a.btn')?.textContent).toBe('Create an account');
   });
 });
 
@@ -275,7 +290,7 @@ describe('the profile', () => {
     await openHub();
     const before = await me();
     await click('#online a[href="/profile"]');
-    const swatches = Array.from(document.querySelectorAll<HTMLElement>('#online .swatch'));
+    const swatches = Array.from(document.querySelectorAll<HTMLElement>('#gameon .swatch'));
     expect(swatches.map((s) => s.getAttribute('aria-label'))).toEqual([
       'Blue',
       'Orange',
@@ -298,37 +313,44 @@ describe('the profile', () => {
       'rgb(255, 95, 191)',
     ]);
     expect(swatches.filter((s) => s.getAttribute('aria-checked') === 'true')).toHaveLength(1);
-    expect($('#online .swatches')?.getAttribute('role')).toBe('radiogroup');
+    expect($('#gameon .swatches')?.getAttribute('role')).toBe('radiogroup');
     // Nothing to save yet, and no free-text colour anywhere.
     expect(button('Save').disabled).toBe(true);
-    expect(document.querySelectorAll('#online input')).toHaveLength(1);
+    expect(document.querySelectorAll('#gameon input')).toHaveLength(1);
 
     const other = before.user.color === '#ff5fbf' ? 'Navy' : 'Pink';
-    await click(`#online .swatch[aria-label="${other}"]`);
-    await type('#display-name', '  Calico Jack ');
+    await click(`#gameon .swatch[aria-label="${other}"]`);
+    await type('#go-display-name', '  Calico Jack ');
     await press('Save');
-    expect($('#online .foot-hint')?.textContent).toBe('Saved.');
-    expect($('#online .who b')?.textContent).toBe('Calico Jack');
+    expect($('#gameon .go-account-note')?.textContent).toBe('Saved.');
+    expect($('#gameon .go-who h1')?.textContent).toBe('Calico Jack');
     expect((await me()).user).toEqual({
       ...before.user,
       name: 'Calico Jack',
       color: other === 'Pink' ? '#ff5fbf' : '#2b70c9',
     });
     expect(button('Save').disabled).toBe(true);
-    await click('[aria-label="Back"]');
+    await back();
+    await settle();
     expect($('#online .go-chip-text b')?.textContent).toBe('Calico Jack');
   });
 
   it('cannot save an empty name, and shows no games before the first one', async () => {
     await openHub();
     await click('#online a[href="/profile"]');
-    expect(texts('#online .stat')).toEqual(['0Games', '0Wins', '–Bids hit', '–Best']);
-    expect($('#online [aria-label="Online games"] p')?.textContent).toBe(
-      'No online games yet. Your first one counts here.',
-    );
-    await type('#display-name', '   ');
+    await settle();
+    expect(texts('#gameon .go-lines tbody tr')).toEqual([
+      'Solo000 of 0',
+      'Friends000 of 0',
+      'Public000 of 0',
+      'Casual000 of 0',
+      'Ranked000 of 0',
+    ]);
+    expect($('#gameon .go-best > b')?.textContent).toBe('–');
+    expect($('#gameon .go-played-note')?.textContent).toBe('No finished games yet.');
+    await type('#go-display-name', '   ');
     expect(button('Save').disabled).toBe(true);
-    expect($('#display-name')?.getAttribute('maxlength')).toBe('16');
+    expect($('#go-display-name')?.getAttribute('maxlength')).toBe('16');
   });
 });
 
@@ -451,12 +473,16 @@ describe('public tables', () => {
     await click('#online a[href="/skull-king/online/public"]');
     await press('Join');
     await press('Mary Read');
-    expect($('#online h1, #online h2')?.textContent).toBe('Pirate');
-    expect($('#online .who b')?.textContent).toBe('Mary Read');
-    expect($('#online .who .avatar')?.style.background).toBe('rgb(88, 204, 2)');
-    expect(texts('#online .stat')).toEqual(['0Games', '0Wins', '–Bids hit', '–Best']);
-    expect($('#online [aria-label="Online games"] p')?.textContent).toBe('No online games yet.');
-    await click('[aria-label="Back"]');
+    await settle();
+    // Another player is a page of the frame. The seat at the table is kept while it is looked at.
+    expect(places.path()).toMatch(/^\/players\//);
+    expect($('#gameon h1')?.textContent).toBe('Mary Read');
+    expect($('#gameon .go-who .avatar')?.style.background).toBe('rgb(88, 204, 2)');
+    expect($('#gameon .go-who p')).toBeNull();
+    expect(texts('#gameon .go-lines tbody th')).toEqual(['Solo', 'Friends', 'Public', 'Casual', 'Ranked']);
+    expect($('#gameon .go-played')).toBeNull();
+    await press('Back');
+    await settle();
     expect($('#online h1, #online h2')?.textContent).toBe('Public table');
   });
 });
@@ -507,13 +533,17 @@ describe('quick play', () => {
     const mine = await me();
     expect(mine.stats.games).toBe(1);
     await click('#online a[href="/profile"]');
-    expect(texts('#online .stat')).toEqual([
-      '1Games',
-      `${mine.stats.wins}Wins`,
-      `${Math.round((mine.stats.bidsMade / mine.stats.bidsTotal) * 100)}%Bids hit`,
-      `${mine.stats.bestScore}Best`,
+    await settle();
+    // The game is on the casual line and on no other, in the headline best score, and in the list.
+    expect(texts('#gameon .go-lines tbody tr')).toEqual([
+      'Solo000 of 0',
+      'Friends000 of 0',
+      'Public000 of 0',
+      `Casual1${mine.stats.wins}${mine.stats.bidsMade} of ${mine.stats.bidsTotal}`,
+      'Ranked000 of 0',
     ]);
-    expect($('#online [aria-label="Online games"] p')).toBeNull();
+    expect($('#gameon .go-best > b')?.textContent).toBe(String(mine.stats.bestScore).replace('-', '−'));
+    expect(texts('#gameon .go-played li .go-played-what b')).toEqual(['Casual']);
   });
 
   it('keeps the queue screen through a dropped connection, and takes the place the server still has', async () => {

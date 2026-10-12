@@ -148,7 +148,17 @@ function Frame({ online, at }: { online: Online; at: string }) {
   const path = useSyncExternalStore(router.subscribe, router.getPath);
   const route = routeOf(path);
   if (!isFrame(route)) return <p id="left">{path}</p>;
-  return <GameOn online={online} state={state} route={route} go={router.go} onJoin={() => {}} />;
+  return (
+    <GameOn
+      online={online}
+      state={state}
+      route={route}
+      go={router.go}
+      up={router.up}
+      back={router.back}
+      onJoin={() => {}}
+    />
+  );
 }
 async function openFrame(answers: Answers, at: string): Promise<void> {
   root = createRoot(host);

@@ -34,6 +34,12 @@
    trick is collected, no round goes on. Leaving it is `ok` and then nothing: the game is gone,
    with no result and no stats.
 
+   The record follows docs/protocol.md §4, which the server it stands for has not built yet:
+   `Stats.byMode` is the five lines, on `GET /me` and on `GET /users/{id}`, and `GET /me/games` is
+   one row per finished game the player sat, newest first, a page at a time. A ranked game is in
+   `byMode.ranked` and in that list, and not in the headline numbers. The lines count the seats
+   that were still taken when the game ended. The list also has the games a seat was left in.
+
    A browser() is one browser profile: a cookie jar that holds at most one session, the REST calls
    that carry it, and the sockets opened with it. */
 import { Bots, Engine, Rules } from '../../game';
@@ -45,8 +51,10 @@ import type {
   Deadline,
   EngineView,
   ErrorCode,
+  FinishedGame,
   GameEvent,
   GameOver,
+  GamePage,
   GameSettings,
   GameStart,
   GameUpdate,
@@ -56,6 +64,7 @@ import type {
   LobbySummary,
   Me,
   Member,
+  ModeLine,
   Profile,
   QueueMode,
   QueueStatus,
@@ -65,6 +74,7 @@ import type {
   SeatLost,
   SeatStatus,
   ServerConfig,
+  StatsByMode,
   TableColor,
   TableKind,
   TableMode,
@@ -160,6 +170,17 @@ function byBytes(a: string, b: string): number {
 const BYTES = new TextEncoder();
 const LADDER_PAGE = 25;
 const LADDER_MAX = 100;
+/** `GET /me/games`: the page when no limit is named, and the largest one. */
+const GAMES_PAGE = 25;
+const GAMES_MAX = 100;
+const noLine = (): ModeLine => ({ games: 0, wins: 0, bidsMade: 0, bidsTotal: 0, bestScore: null });
+const noLines = (): StatsByMode => ({
+  solo: noLine(),
+  friends: noLine(),
+  public: noLine(),
+  casual: noLine(),
+  ranked: noLine(),
+});
 
 /** The HTTP status of each code REST can answer with (§3). */
 const STATUS: Partial<Record<ErrorCode, number>> = {
@@ -242,6 +263,8 @@ interface Account {
   owed: GameOver[];
   /** The seat this player was kicked from for inactivity, until a `welcome` has been followed by it. */
   lost: SeatLost | null;
+  /** The finished games this player sat, newest first (`GET /me/games`). */
+  finished: FinishedGame[];
 }
 interface Conn {
   account: Account;
@@ -271,6 +294,8 @@ interface Game {
   /** Which table it is, where the server says so: only a solo game is named (`game.start.table`). */
   table: TableKind | null;
   settings: GameSettings;
+  /** When it was dealt. */
+  startedAt: number;
   state: GameState;
   rev: number;
   /** Who plays each seat. null is a bot seat, or one whose player left. */
@@ -460,7 +485,7 @@ export class MockServer {
         username: null,
         active: null,
         cooldownUntil: null,
-        stats: { games: 0, wins: 0, bidsMade: 0, bidsTotal: 0, bestScore: null },
+        stats: { ...noLine(), byMode: noLines() },
         rating: null,
       },
       login: null,
@@ -471,6 +496,7 @@ export class MockServer {
       leaves: 0,
       owed: [],
       lost: null,
+      finished: [],
     };
     this.accounts.set(account.me.user.id, account);
     if (session != null) this.sessions.set(session, account);
@@ -658,7 +684,7 @@ export class MockServer {
       status: STATUS[code] ?? 500,
       body: { error: { code, message } },
     });
-    // A query belongs to the request, not to the path: only the ladder reads one.
+    // A query belongs to the request, not to the path: the ladder and the list of games read one.
     const [path, search = ''] = target.split('?', 2);
     const user = /^\/users\/([^/]+)$/.exec(path);
     const gameLog = /^\/games\/([^/]+)\/log$/.exec(path);
@@ -670,6 +696,7 @@ export class MockServer {
       '/auth/login': 'POST',
       '/auth/logout': 'POST',
       '/me': 'GET PATCH',
+      '/me/games': 'GET',
       '/lobbies': 'GET',
       '/ladder': 'GET',
     };
@@ -733,6 +760,10 @@ export class MockServer {
       if (color !== undefined) account.me.user.color = color;
       if (account.room && (name !== undefined || color !== undefined)) this.pushLobby(account.room);
       return ok(this.profile(account));
+    }
+    if (path === '/me/games') {
+      const page = this.gamesOf(account, new URLSearchParams(search));
+      return typeof page === 'string' ? fail(page) : ok(page);
     }
     if (path === '/lobbies') {
       const lobbies: LobbySummary[] = [...this.rooms]
@@ -818,6 +849,23 @@ export class MockServer {
     const entries: LadderEntry[] = rated.slice(from, from + limit).map((e, i) => ({ rank: from + i + 1, ...e }));
     const page: LadderPage = { season, entries };
     if (from + limit < rated.length && entries.length) page.next = entries[entries.length - 1].user.id;
+    return page;
+  }
+
+  /**
+   * One page of the finished games a player sat, newest first. `after` is the id of the last row
+   * the caller has; `next` is the id of this page's last row, while more follow. A limit that is
+   * not 1 to 100, or an `after` that is not one of this player's games, is `VALIDATION`.
+   */
+  private gamesOf(account: Account, query: URLSearchParams): GamePage | 'VALIDATION' {
+    const limit = query.has('limit') ? Number(query.get('limit')) : GAMES_PAGE,
+      after = query.get('after');
+    if (!isInt(limit) || limit < 1 || limit > GAMES_MAX) return 'VALIDATION';
+    const from = after == null ? 0 : account.finished.findIndex((g) => g.id === after) + 1;
+    if (after != null && from === 0) return 'VALIDATION';
+    const games = account.finished.slice(from, from + limit);
+    const page: GamePage = { games };
+    if (from + limit < account.finished.length && games.length) page.next = games[games.length - 1].id;
     return page;
   }
 
@@ -1106,6 +1154,7 @@ export class MockServer {
       mode,
       table,
       settings: s,
+      startedAt: this.now(),
       state: Engine.create({
         seats,
         scoring: s.scoring,
@@ -1420,22 +1469,50 @@ export class MockServer {
           ? totals.length
           : 1 + totals.filter((x, other) => x > t && !forfeited.includes(other)).length,
       );
-    // A custom or a casual game counts for everyone still in their seat, before anyone is told it
-    // is over: a `GET /me` that follows `game.over` already has it. A seat that was left is not
-    // counted. A ranked game changes no `Stats` at all: it is counted in the rating's `games`.
+    // A custom, a casual or a solo game counts for everyone still in their seat, before anyone is
+    // told it is over: a `GET /me` that follows `game.over` already has it. A seat that was left is
+    // not counted. A ranked game changes no headline number: it is counted in the rating's `games`
+    // and on the ranked line.
+    const kind: TableKind =
+        game.table ?? (game.mode !== 'custom' ? game.mode : room?.lobby.visibility === 'public' ? 'public' : 'friends'),
+      hits = totals.map((_, seat) => s.log.map((round) => (round.done ? Rules.scoreSeat(s.cfg, round, seat) : null))),
+      gone = [...game.leavers, ...game.kicked];
     game.players.forEach((account, seat) => {
-      if (!account || ranked) return;
-      const stats = account.me.stats;
-      stats.games++;
-      if (places[seat] === 1) stats.wins++;
-      stats.bestScore = Math.max(stats.bestScore ?? totals[seat], totals[seat]);
-      s.log.forEach((round) => {
-        const score = round.done ? Rules.scoreSeat(s.cfg, round, seat) : null;
-        if (!score) return;
-        stats.bidsTotal++;
-        if (score.hit) stats.bidsMade++;
-      });
+      if (!account) return;
+      const lines = (account.me.stats.byMode ??= noLines());
+      for (const line of ranked ? [lines.ranked] : [account.me.stats, lines[kind]]) {
+        line.games++;
+        if (places[seat] === 1) line.wins++;
+        line.bestScore = Math.max(line.bestScore ?? totals[seat], totals[seat]);
+        hits[seat].forEach((score) => {
+          if (!score) return;
+          line.bidsTotal++;
+          if (score.hit) line.bidsMade++;
+        });
+      }
     });
+    // The stored row: one line for every seat, for whoever sat the game, the seats that were left
+    // included.
+    const row: FinishedGame = {
+      id: game.id,
+      table: kind,
+      settings: game.settings,
+      startedAt: game.startedAt,
+      endedAt: this.now(),
+      ...(ranked ? { seasonId: seasonAt(this.now()).id } : {}),
+      seats: totals.map((score, seat) => {
+        const account = game.players[seat] ?? gone.find((l) => l.seat === seat)?.account ?? null;
+        return {
+          userId: account?.me.user.id ?? null,
+          bot: account == null,
+          place: places[seat],
+          score,
+          bidsMade: hits[seat].filter((x) => x?.hit).length,
+          forfeited: forfeited.includes(seat),
+        };
+      }),
+    };
+    [...game.players, ...gone.map((l) => l.account)].forEach((account) => account?.finished.unshift(row));
     /**
      * What one seat is told: whose seat it is, the standings for all, and in ranked this seat's own
      * rating change.
@@ -1514,6 +1591,7 @@ export class MockServer {
         leaves: a.leaves,
         owed: a.owed,
         lost: a.lost,
+        finished: a.finished,
       })),
       rooms: [...this.rooms].map((r) => ({ lobby: r.lobby, humans: r.humans.map(id) })),
       games: running.map((g) => ({
@@ -1522,6 +1600,7 @@ export class MockServer {
         mode: g.mode,
         table: g.table,
         settings: g.settings,
+        startedAt: g.startedAt,
         state: g.state,
         rev: g.rev,
         players: g.players.map((a) => (a ? id(a) : null)),
@@ -1553,6 +1632,7 @@ export class MockServer {
         leaves?: number;
         owed: GameOver[];
         lost?: SeatLost | null;
+        finished?: FinishedGame[];
       }[];
       rooms: { lobby: Lobby; humans: string[] }[];
       games: {
@@ -1561,6 +1641,7 @@ export class MockServer {
         mode: TableMode;
         table?: TableKind | null;
         settings: GameSettings;
+        startedAt?: number;
         state: GameState;
         rev: number;
         players: (string | null)[];
@@ -1594,7 +1675,10 @@ export class MockServer {
         leaves: a.leaves ?? 0,
         owed: a.owed,
         lost: a.lost ?? null,
+        finished: a.finished ?? [],
       };
+      // What an older life wrote down has no lines yet.
+      a.me.stats.byMode ??= noLines();
       this.accounts.set(a.me.user.id, account);
       if (a.session != null) this.sessions.set(a.session, account);
     }
@@ -1622,6 +1706,7 @@ export class MockServer {
         mode: g.mode,
         table: g.table ?? null,
         settings: g.settings,
+        startedAt: g.startedAt ?? this.now(),
         state: g.state,
         rev: g.rev,
         players: g.players.map((x) => (x == null ? null : (this.accounts.get(x) ?? null))),

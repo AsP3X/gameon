@@ -319,12 +319,17 @@ export class Online {
     return outcome(r);
   }
 
-  /** Another player, as the server knows them. */
   /** The stored steps of a finished game this session sat. */
   record(gameId: string): ReturnType<Api['gameLog']> {
     return this.api.gameLog(gameId);
   }
 
+  /** One page of this player's finished games: the first, or the one after the page whose `next` is given. */
+  games(limit: number, after?: string): ReturnType<Api['games']> {
+    return this.api.games(limit, after);
+  }
+
+  /** Another player, as the server knows them. */
   profile(id: UserId): Promise<ApiResult<Profile>> {
     return this.api.user(id);
   }

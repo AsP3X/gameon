@@ -82,9 +82,9 @@ function Avatar({ me }: { me: Me }) {
 }
 
 /** The signed-in player, at the right of the bar: it leads to their profile. */
-function PlayerChip({ me }: { me: Me }) {
+function PlayerChip({ me, current }: { me: Me; current: boolean }) {
   return (
-    <Link to={AT.profile} className="go-chip" label={`${me.user.name}, your profile`}>
+    <Link to={AT.profile} className="go-chip" label={`${me.user.name}, your profile`} current={current}>
       <Avatar me={me} />
       <span className="go-chip-text wide-only">
         <b>{me.user.name}</b>
@@ -106,7 +106,9 @@ export interface NavProps {
 
 export function Nav({ page, who, onWays }: NavProps) {
   const account = accountOf(who),
-    form = page === 'signIn' || page === 'signUp';
+    form = page === 'signIn' || page === 'signUp',
+    // The profile, another player and the ladder are not under Games.
+    aside = page === 'profile' || page === 'player' || page === 'ladder';
   return (
     <header className="go-nav">
       <div className="go-in">
@@ -116,7 +118,7 @@ export function Nav({ page, who, onWays }: NavProps) {
           </Link>
           {!form && (
             <nav className="go-links wide-only" aria-label="GameOn">
-              <Link to={AT.games} className="go-link on" current={page === 'games'}>
+              <Link to={AT.games} className={aside ? 'go-link' : 'go-link on'} current={page === 'games'}>
                 Games
               </Link>
               {onWays && (
@@ -124,7 +126,7 @@ export function Nav({ page, who, onWays }: NavProps) {
                   Ways to play
                 </button>
               )}
-              <Link to={AT.ladder} className="go-link">
+              <Link to={AT.ladder} className={page === 'ladder' ? 'go-link on' : 'go-link'} current={page === 'ladder'}>
                 Ladder
               </Link>
             </nav>
@@ -154,7 +156,7 @@ export function Nav({ page, who, onWays }: NavProps) {
           <div className="go-nav-right">
             {account ? (
               <span className={page === 'landing' ? 'wide-only' : undefined}>
-                <PlayerChip me={account} />
+                <PlayerChip me={account} current={page === 'profile'} />
               </span>
             ) : (
               (who.is === 'visitor' || who.is === 'player' || who.is === 'unknown') && (
@@ -176,7 +178,7 @@ export function Nav({ page, who, onWays }: NavProps) {
   );
 }
 
-/** The footer of the landing and of Games. */
+/** The footer of the landing, of Games, of the profile and of the ladder. */
 export function Footer({ page, who }: { page: FramePage; who: Who }) {
   return (
     <footer className="go-foot">

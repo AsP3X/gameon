@@ -1780,3 +1780,619 @@
     padding-inline: 28px;
   }
 }
+
+/* ---------- the profile, another player and the ladder (plan item W5) ---------- */
+/* As design/gameon.pen draws them. A phone reads one column. A wide window puts the player's games
+   in a rail at the right of the profile. */
+.go-profile {
+  padding-block: 24px 32px;
+}
+.go-ladder {
+  padding-block: 12px 32px;
+}
+.go-profile .go-in,
+.go-ladder .go-in,
+.go-profile-cols,
+.go-profile-main,
+.go-profile-rail,
+.go-profile-more {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.go-profile-cols > div {
+  min-width: 0;
+}
+/* A link that asks instead of leading somewhere is a button. */
+#gameon button.go-text-link {
+  border: 0;
+  padding: 0;
+  background: none;
+  font-family: inherit;
+}
+#gameon button.go-text-link:disabled {
+  color: var(--faint);
+}
+#gameon .go-back {
+  align-self: flex-start;
+}
+.go-profile .go-back {
+  margin-block: -12px -12px;
+}
+
+/* Who the page is about. */
+.go-who {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.go-who-avatar {
+  width: 64px;
+  height: 64px;
+  font-size: 28px;
+}
+.go-who-text {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.go-who h1,
+.go-ladder-title h1 {
+  font-size: 28px;
+  font-weight: 900;
+  line-height: 1.1;
+  letter-spacing: -0.4px;
+  overflow-wrap: anywhere;
+}
+.go-who p {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.4;
+  color: var(--muted);
+}
+
+/* A block of the page, on its card. */
+.go-card {
+  overflow: hidden;
+  border: 2px solid var(--line);
+  border-radius: 20px;
+  background: var(--card);
+}
+.go-card h2 {
+  font-size: 20px;
+  font-weight: 900;
+  line-height: 1.2;
+}
+#gameon .go-card .alert {
+  color: var(--red-ink);
+}
+
+/* This quarter. */
+.go-quarter {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px 18px 6px;
+}
+.go-quarter-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+}
+.go-quarter > p,
+.go-failed p,
+.go-played-note,
+.go-ladder-empty {
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.4;
+  color: var(--muted);
+}
+.go-quarter > .btn {
+  margin-bottom: 16px;
+}
+.go-quarter-tiles {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.go-quarter-tiles div {
+  display: flex;
+  flex-direction: column-reverse;
+  align-items: center;
+  justify-content: center;
+  height: 66px;
+  border: 2px solid var(--line);
+  border-radius: 14px;
+}
+.go-quarter-tiles dd {
+  font-size: 20px;
+  font-weight: 900;
+  line-height: 1.25;
+}
+.go-quarter-tiles dt {
+  font-size: 11px;
+  font-weight: 900;
+  line-height: 1.4;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+#gameon .go-quarter-ladder {
+  align-self: flex-start;
+}
+
+/* The five lines. The scoresheet's table of tavern.css is not this one: its cells are taken back. */
+#gameon .go-lines table {
+  width: 100%;
+  border-collapse: collapse;
+}
+#gameon .go-lines :is(th, td) {
+  position: static;
+  padding: 14px 8px 14px 0;
+  border: 0;
+  background: none;
+  text-align: right;
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 16px;
+  font-weight: 900;
+  line-height: 1.3;
+  color: var(--fg);
+}
+#gameon .go-lines thead th {
+  padding-block: 12px;
+  background: var(--soft);
+  font-size: 12px;
+  line-height: 1.4;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+#gameon .go-lines tbody tr {
+  border-top: 2px solid var(--line);
+}
+#gameon .go-lines tbody th {
+  font-weight: 800;
+}
+#gameon .go-lines th:first-child {
+  padding-left: 16px;
+  text-align: left;
+}
+#gameon .go-lines :is(th, td):nth-child(2) {
+  width: 60px;
+}
+#gameon .go-lines :is(th, td):nth-child(3) {
+  width: 52px;
+}
+#gameon .go-lines :is(th, td):last-child {
+  width: 108px;
+  padding-right: 16px;
+}
+
+/* The best score. */
+.go-best {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 18px;
+}
+.go-best div {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.go-best p {
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--muted);
+}
+.go-best > b {
+  font-size: 32px;
+  font-weight: 900;
+  line-height: 1.1;
+}
+
+/* Your games. */
+.go-played h2 {
+  padding: 16px 16px 14px;
+}
+.go-played li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-top: 2px solid var(--line);
+}
+.go-played-what {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.go-played-what b,
+.go-ladder-name b {
+  font-size: 16px;
+  font-weight: 800;
+  line-height: 1.3;
+}
+.go-played-what small,
+.go-ladder-name small {
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--muted);
+}
+.go-played-score,
+.go-ladder-rating {
+  flex: none;
+  min-width: 48px;
+  text-align: right;
+  font-size: 18px;
+  font-weight: 900;
+  line-height: 1.3;
+}
+.go-played-note {
+  padding: 14px 16px 18px;
+  border-top: 2px solid var(--line);
+}
+/* The foot of a list that has more: what could not be loaded, and the way to ask. */
+.go-more {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 52px;
+  padding: 4px 16px;
+  border-top: 2px solid var(--line);
+}
+.go-more .alert {
+  padding-top: 8px;
+  font-size: 13px;
+  font-weight: 800;
+  text-align: center;
+}
+
+/* The account. */
+.go-account-card,
+.go-account-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.go-account-card {
+  padding: 18px;
+}
+.go-account-fields > * {
+  flex: 1;
+  min-width: 0;
+}
+.go-field-label {
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.go-account-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-bottom: 4px;
+}
+.go-account-actions .btn {
+  width: 100%;
+}
+.go-account-note {
+  font-size: 14px;
+  font-weight: 800;
+  text-align: center;
+  color: var(--green-ink);
+}
+
+/* The server did not answer, and the page while it has not yet. */
+.go-failed {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 18px 16px 22px;
+}
+.go-skeleton,
+.go-skeleton span {
+  display: flex;
+  flex-direction: column;
+}
+.go-skeleton {
+  gap: 20px;
+}
+.go-skeleton span {
+  gap: 8px;
+}
+.go-skeleton i {
+  display: block;
+  border-radius: 99px;
+  background: var(--soft);
+}
+.go-skeleton-who {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.go-skeleton-who > i {
+  width: 64px;
+  height: 64px;
+}
+.go-skeleton-who span i:first-child {
+  width: 150px;
+  height: 22px;
+}
+.go-skeleton-who span i + i {
+  width: 104px;
+  height: 14px;
+}
+.go-skeleton .go-card > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 62px;
+  padding: 12px 16px;
+}
+.go-skeleton .go-card > div + div {
+  border-top: 2px solid var(--line);
+}
+.go-skeleton .go-card span i:first-child {
+  width: 140px;
+  height: 16px;
+}
+.go-skeleton .go-card span i + i {
+  width: 110px;
+  height: 12px;
+}
+.go-skeleton .go-card > div > i {
+  width: 48px;
+  height: 14px;
+}
+
+/* The ladder. */
+.go-ladder-head {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.go-ladder-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+.go-ladder-head p {
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.4;
+  color: var(--muted);
+}
+.go-ladder-list li,
+.go-ladder-cols {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-inline: 16px;
+}
+.go-ladder-list li {
+  min-height: 62px;
+}
+.go-ladder-list li + li {
+  border-top: 2px solid var(--line);
+}
+.go-ladder-rank {
+  flex: none;
+  min-width: 24px;
+  font-size: 16px;
+  font-weight: 900;
+  color: var(--muted);
+}
+#gameon .go-ladder-who {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+  color: var(--fg);
+}
+.go-ladder-avatar {
+  width: 36px;
+  height: 36px;
+  font-size: 15px;
+}
+.go-ladder-name {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.go-ladder-name > span {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.go-ladder-name b {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.go-ladder-empty {
+  padding: 16px;
+}
+
+@media (min-width: 1000px) {
+  .go-profile {
+    padding-block: 44px 80px;
+  }
+  .go-ladder {
+    padding-block: 28px 80px;
+  }
+  .go-profile .go-in {
+    gap: 36px;
+  }
+  .go-ladder .go-in {
+    gap: 28px;
+  }
+  .go-profile-cols {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 340px;
+    align-items: start;
+    gap: 24px 32px;
+  }
+  .go-profile-main,
+  .go-profile-more {
+    grid-column: 1;
+    gap: 24px;
+  }
+  .go-profile-rail {
+    grid-area: 1 / 2 / span 2;
+  }
+  .go-profile .go-back {
+    margin-block: -24px;
+  }
+  #gameon .go-chip[aria-current='page'] {
+    border-color: var(--green-bg);
+    background: var(--green-bg);
+  }
+  .go-chip[aria-current='page'] :is(small, .go-chip-more) {
+    color: var(--green-ink);
+  }
+  .go-who {
+    gap: 20px;
+  }
+  .go-who-avatar {
+    width: 88px;
+    height: 88px;
+    font-size: 38px;
+  }
+  .go-who-text {
+    gap: 8px;
+  }
+  .go-who h1,
+  .go-ladder-title h1 {
+    font-size: 44px;
+    letter-spacing: -0.6px;
+  }
+  .go-who p,
+  .go-ladder-head p {
+    gap: 10px;
+    font-size: 17px;
+  }
+  .go-quarter {
+    gap: 20px;
+    padding: 20px;
+  }
+  /* The way to the ladder is at the right of the heading. */
+  .go-quarter-head {
+    padding-right: 150px;
+  }
+  #gameon .go-quarter-ladder {
+    position: absolute;
+    top: 10px;
+    right: 20px;
+  }
+  .go-quarter > .btn {
+    margin-bottom: 4px;
+  }
+  #gameon .go-lines :is(th, td) {
+    padding: 16px 16px 16px 0;
+  }
+  #gameon .go-lines thead th {
+    padding-block: 12px;
+  }
+  #gameon .go-lines th:first-child {
+    padding-left: 20px;
+  }
+  #gameon .go-lines :is(th, td):nth-child(2),
+  #gameon .go-lines :is(th, td):nth-child(3) {
+    width: 112px;
+  }
+  #gameon .go-lines :is(th, td):last-child {
+    width: 160px;
+    padding-right: 20px;
+  }
+  .go-best,
+  .go-account-card {
+    padding: 20px;
+  }
+  .go-played h2 {
+    padding-inline: 20px;
+  }
+  .go-played li,
+  .go-played-note {
+    padding-inline: 20px;
+  }
+  .go-account-fields {
+    flex-direction: row;
+    gap: 32px;
+  }
+  .go-account-actions {
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+  }
+  .go-account-actions .btn {
+    width: 220px;
+  }
+  .go-ladder-title {
+    gap: 14px;
+  }
+  .go-ladder-head {
+    gap: 4px;
+  }
+  .go-ladder-list li,
+  .go-ladder-cols {
+    gap: 16px;
+    padding-inline: 20px;
+  }
+  .go-ladder-list li {
+    border-top: 2px solid var(--line);
+  }
+  .go-ladder-cols {
+    min-height: 41px;
+    background: var(--soft);
+  }
+  #gameon .go-ladder-cols span {
+    min-height: 0;
+    font-size: 12px;
+    font-weight: 900;
+    line-height: 1.4;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .go-ladder-rank {
+    width: 48px;
+  }
+  .go-ladder-tier {
+    flex: none;
+    width: 240px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .go-ladder-rating {
+    width: 96px;
+  }
+}
+/* On a phone the current page's chip is its avatar in a ring. */
+@media (max-width: 999.98px) {
+  .go-chip[aria-current='page'] .go-avatar {
+    outline: 3px solid var(--green-bg);
+  }
+}

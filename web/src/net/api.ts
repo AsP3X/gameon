@@ -9,6 +9,7 @@ import type {
   ActionLog,
   Credentials,
   ErrorCode,
+  GamePage,
   LadderPage,
   LobbyList,
   Me,
@@ -84,9 +85,14 @@ export class Api {
     return this.call('GET', '/lobbies');
   }
   /**
-   * One page of the current season's ladder. `after` is the `next` of the page before it: the
-   * server's own cursor, sent back as it came.
+   * One page of this session's finished games, newest first. `after` is the `next` of the page
+   * before it, sent back as it came.
    */
+  games(limit: number, after?: string): Promise<ApiResult<GamePage>> {
+    const query = new URLSearchParams({ limit: String(limit) });
+    if (after != null) query.set('after', after);
+    return this.call('GET', `/me/games?${query.toString()}`);
+  }
   /**
    * The deals and accepted actions of a finished game this session sat. An unknown game, or one
    * this session did not sit, is `NOT_FOUND`.
@@ -95,6 +101,10 @@ export class Api {
     if (!UUID.test(id)) return Promise.resolve({ ok: false, code: 'NOT_FOUND', message: 'No such game.' });
     return this.call('GET', `/games/${id}/log`);
   }
+  /**
+   * One page of the current season's ladder. `after` is the `next` of the page before it: the
+   * server's own cursor, sent back as it came.
+   */
   ladder(after?: string): Promise<ApiResult<LadderPage>> {
     const query = new URLSearchParams({ limit: String(LADDER_PAGE) });
     if (after != null) query.set('after', after);

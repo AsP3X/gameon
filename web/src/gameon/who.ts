@@ -14,6 +14,8 @@ const RETRY_MS = 5000;
  */
 export function useWho(online: Online, me: Me | null, create: boolean): Who {
   const [asked, setAsked] = useState<Identity | 'asking'>('asking');
+  /** Counts the times the player this page knew was gone: each one is asked about again. */
+  const [round, setRound] = useState(0);
 
   useEffect(() => {
     let stale = false,
@@ -30,7 +32,15 @@ export function useWho(online: Online, me: Me | null, create: boolean): Who {
       stale = true;
       clearTimeout(timer);
     };
-  }, [online, create]);
+  }, [online, create, round]);
+
+  // The player the server named is gone from the page (they signed out): who this browser is now
+  // is the server's to say again.
+  useEffect(() => {
+    if (me != null || asked !== 'known') return;
+    setAsked('asking');
+    setRound((n) => n + 1);
+  }, [me, asked]);
 
   if (me) return { is: 'player', me };
   if (asked === 'failed') return { is: 'unknown' };

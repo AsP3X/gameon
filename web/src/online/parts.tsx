@@ -5,7 +5,7 @@ import type { ReactNode } from 'react';
 import { GoContext, Link } from '../gameon/Frame';
 import type { Go } from '../gameon/Frame';
 import type { LinkStatus } from '../net/socket';
-import type { Me, Rating, Stats, TableColor } from '../protocol/generated';
+import type { Me, Rating, TableColor } from '../protocol/generated';
 import { AT } from '../router/addresses';
 import { ICON } from '../tableview/art';
 import { cssColor, whole } from '../tableview/dom';
@@ -167,25 +167,5 @@ export function RatingBadge({ rating }: { rating: Rating }) {
       <span className="pill gold">{rating.tier}</span>
       {rating.provisional && <span className="pill soft">Placement</span>}
     </span>
-  );
-}
-
-/** A player's online record. A bid counts as hit when the tricks taken matched it. */
-export function StatTiles({ stats }: { stats: Stats }) {
-  const tiles: [string, string][] = [
-    [String(stats.games), 'Games'],
-    [String(stats.wins), 'Wins'],
-    [stats.bidsTotal > 0 ? `${Math.round((stats.bidsMade / stats.bidsTotal) * 100)}%` : '–', 'Bids hit'],
-    [stats.bestScore != null ? String(stats.bestScore) : '–', 'Best'],
-  ];
-  return (
-    <div className="stats">
-      {tiles.map(([value, label]) => (
-        <div className="stat" key={label}>
-          <b>{value}</b>
-          <small>{label}</small>
-        </div>
-      ))}
-    </div>
   );
 }

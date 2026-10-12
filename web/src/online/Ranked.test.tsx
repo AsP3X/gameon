@@ -1,28 +1,23 @@
 // @vitest-environment jsdom
 /* Ranked on the whole page against the mock server: the ranked page, the queue, the leave
-   warning, the cooldown, the rating line at the end of a game, and the ladder. The mock's numbers
+   warning, the cooldown, and the rating line at the end of a game, on the profile and on the
+   ladder (which has its own tests in src/gameon/Ladder.test.tsx). The mock's numbers
    are stand-ins; what is checked here is that the page shows what it was sent and sends nothing it
    should not. The mock's own frames are in src/net/mock/ranked.test.ts. */
-import { act, StrictMode, useState, useSyncExternalStore } from 'react';
+import { act, StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import type { Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 import { App } from '../App';
-import { AT, HUB, isOnline, routeOf } from '../router/addresses';
 import { memoryPlaces } from '../router/places';
 import type { MemoryPlaces } from '../router/places';
-import { createRouter } from '../router/router';
-import { Api } from '../net/api';
-import type { Backend, RestResponse } from '../net/api';
+import type { Backend } from '../net/api';
 import { connectRaw, framesOf } from '../net/mock/raw';
 import type { RawClient } from '../net/mock/raw';
 import { MockServer } from '../net/mock/server';
-import { Online } from '../net/online';
-import { SocketClient } from '../net/socket';
 import type { Wire } from '../net/socket';
-import type { LadderEntry, LadderPage, Me, TableColor } from '../protocol/generated';
+import type { Me } from '../protocol/generated';
 import { session, ui } from '../tableview/state';
-import { OnlineScreens } from './OnlineScreens';
 
 function seeded(seed: number): () => number {
   let a = seed >>> 0;
@@ -204,15 +199,15 @@ describe('ranked, for a guest', () => {
     });
     expect($('#online h1')?.textContent).toBe('Ranked');
 
+    // The ladder is a page of the frame (src/gameon/Ladder.test.tsx). The season on it is the server's.
     await visit('/ladder');
-    expect($('#online h1, #online h2')?.textContent).toBe('Ladder');
-    // The season is the server's: its name as sent, and its days, the last one being the day before `endsAt`.
-    expect($('#online .season b')?.textContent).toBe('2026 Q4');
-    expect($('#online .season small')?.textContent).toBe('1 Oct 2026 – 31 Dec 2026');
-    expect($('#online .notice')?.textContent).toBe('Nobody is on the ladder yetPlay a ranked game to be the first.');
-    expect(document.querySelector('#online .footbar')).toBeNull();
+    expect($('#gameon h1')?.textContent).toBe('Ladder');
+    expect(texts('#gameon .go-ladder-title .pill')).toEqual(['2026 Q4']);
+    expect($('#gameon .go-ladder-empty')?.textContent).toBe('Nobody is rated this quarter yet.');
     // Back from the ladder is the ranked page.
-    await click('[aria-label="Back"]');
+    await press('Ranked');
+    await settle();
+    expect(places.path()).toBe('/skull-king/ranked');
     expect($('#online h1')?.textContent).toBe('Ranked');
   });
 });
@@ -466,145 +461,41 @@ describe('ranked, for an account', () => {
     await settle();
     expect($('#online h1, #online h2')?.textContent).toBe('Online');
     await click('#online a[href="/profile"]');
-    expect($('#online [aria-label="Ranked"] .rating')?.textContent).toBe(badge);
-    expect(texts('#online .stat')[0]).toBe('0Games');
+    await settle();
+    // The profile: the quarter's rating and its games, the tier, and "Provisional" while the server says so.
+    expect(texts('#gameon .go-quarter-tiles dd')).toEqual([value, '1']);
+    expect(texts('#gameon .go-quarter-head .pill')).toEqual(['2026 Q4', 'Provisional']);
+    expect(texts('#gameon .go-who .pill')).toEqual([rating.tier]);
+    // The ranked game is on the ranked line and in the list. It is not in the headline best score.
+    expect(texts('#gameon .go-lines tbody tr')[4]).toMatch(/^Ranked1[01]\d+ of \d+$/);
+    expect(texts('#gameon .go-lines tbody tr').slice(0, 4)).toEqual([
+      'Solo000 of 0',
+      'Friends000 of 0',
+      'Public000 of 0',
+      'Casual000 of 0',
+    ]);
+    expect($('#gameon .go-best > b')?.textContent).toBe('–');
+    expect(texts('#gameon .go-played li .go-played-what b')).toEqual(['Ranked']);
     await visit('/skull-king/ranked');
     expect($('#online [aria-label="Ranked"] .rating')?.textContent).toBe(badge);
 
     await press('Ladder');
-    const rows = Array.from(document.querySelectorAll<HTMLElement>('#online .ranking li'));
-    expect(rows.map((li) => li.querySelector('.place')?.textContent)).toEqual(['1', '2', '3', '4']);
+    await settle();
+    expect(places.path()).toBe('/ladder');
+    const rows = Array.from(document.querySelectorAll<HTMLElement>('#gameon .go-ladder-list li'));
+    expect(rows.map((li) => li.querySelector('.go-ladder-rank')?.textContent)).toEqual(['1', '2', '3', '4']);
     expect(
-      rows.map((li) => li.querySelector('.grow b')?.textContent ?? '').toSorted((a, b) => a.localeCompare(b)),
+      rows.map((li) => li.querySelector('.go-ladder-name b')?.textContent ?? '').toSorted((a, b) => a.localeCompare(b)),
     ).toEqual(['Anne', 'Calico', 'Kidd', 'Mary']);
-    const mine = rows.filter((li) => li.classList.contains('you'));
+    // The player's own row is on this page of the ladder, and is marked.
+    const mine = rows.filter((li) => li.querySelector('.pill.green'));
     expect(mine).toHaveLength(1);
-    expect(mine[0].querySelector('.grow b')?.textContent).toBe('Anne');
-    expect(mine[0].querySelector('small')?.textContent).toBe(`${rating.tier} · Placement · You`);
-    expect(mine[0].querySelector('b.num:last-child')?.textContent).toBe(value);
+    expect(mine[0].querySelector('.go-ladder-name b')?.textContent).toBe('Anne');
+    expect(mine[0].querySelector('.pill.green')?.textContent).toBe('You');
+    expect(mine[0].querySelector('.go-ladder-tier')?.textContent).toBe(`${rating.tier}Provisional`);
+    expect(mine[0].querySelector('.go-ladder-rating')?.textContent).toBe(value);
     // The ladder is public players: nobody's login name is on it.
-    expect($('#online')?.textContent).not.toMatch(/_login/);
-    expect(document.querySelector('#online .footbar')).toBeNull();
-  });
-});
-
-/* The ladder against REST answers written by hand: a first page with a `next`, and the page after it. */
-describe('the ladder, a page at a time', () => {
-  const COLORS: TableColor[] = ['#1cb0f6', '#ff9600', '#ce82ff'];
-  const entry = (rank: number): LadderEntry => ({
-    rank,
-    user: {
-      id: `11111111-0000-4000-8000-${String(rank).padStart(12, '0')}`,
-      name: `Pirate ${rank}`,
-      color: COLORS[rank % 3],
-      tier: 'Bosun',
-    },
-    rating: { value: 2000 - rank, tier: 'Bosun', provisional: false, games: 12 },
-  });
-  const season = {
-    id: 3,
-    name: 'Season of the Kraken',
-    startsAt: Date.UTC(2026, 9, 1, 12),
-    endsAt: Date.UTC(2026, 11, 31, 12),
-  };
-  let asked: string[];
-  let answers: Record<string, RestResponse>;
-
-  /** The online screens alone, with addresses of their own: no page around them. */
-  function Screens({ online }: { online: Online }) {
-    const state = useSyncExternalStore(online.subscribe, online.getState);
-    const [router] = useState(() => createRouter(memoryPlaces(AT.ladder)));
-    const route = routeOf(useSyncExternalStore(router.subscribe, router.getPath));
-    return (
-      <div id="online">
-        <OnlineScreens
-          online={online}
-          state={state}
-          route={isOnline(route) ? route : HUB}
-          go={router.go}
-          up={router.up}
-          onExit={() => {}}
-        />
-      </div>
-    );
-  }
-  /** The ladder of a connected guest whose server answers REST from `answers`. */
-  async function openLadder(): Promise<Online> {
-    const frames: { id: number }[] = [];
-    const wire: Wire = {
-      send: (data) => void frames.push(JSON.parse(data) as { id: number }),
-      close: () => {},
-      onmessage: null,
-      onclose: null,
-    };
-    const online = new Online(
-      new SocketClient({ transport: () => Promise.resolve(wire), build: 'test' }),
-      new Api((method, path) => {
-        asked.push(`${method} ${path}`);
-        const answer = answers[path];
-        return answer ? Promise.resolve(answer) : Promise.reject(new Error('No answer'));
-      }),
-    );
-    online.open();
-    root = createRoot(host);
-    await act(async () => {
-      root?.render(<Screens online={online} />);
-      await vi.advanceTimersByTimeAsync(0);
-    });
-    const guest = (await server.browser().rest('POST', '/auth/guest')).body;
-    await act(async () => {
-      wire.onmessage?.(JSON.stringify({ t: 'ok', re: frames[0].id }));
-      wire.onmessage?.(
-        JSON.stringify({ t: 'welcome', me: guest, serverTime: Date.now(), lobby: null, queue: null, game: null }),
-      );
-      await vi.advanceTimersByTimeAsync(0);
-    });
-    return online;
-  }
-
-  beforeEach(() => {
-    asked = [];
-    answers = {};
-  });
-
-  it('asks for 25, shows the season the server named, and loads the next page with the cursor it was given', async () => {
-    const first: LadderPage = { season, entries: Array.from({ length: 25 }, (_, i) => entry(i + 1)), next: 'c:25' };
-    const second: LadderPage = { season, entries: [entry(26), entry(27)] };
-    answers['/ladder?limit=25'] = { status: 200, body: first };
-    answers['/ladder?limit=25&after=c%3A25'] = { status: 200, body: second };
-    const online = await openLadder();
-    expect(asked).toContain('GET /ladder?limit=25');
-    // The season comes with the ladder: the config was never answered here.
-    expect(online.getState().config).toBeNull();
-    expect($('#online .season b')?.textContent).toBe('Season of the Kraken');
-    expect($('#online .season small')?.textContent).toBe('1 Oct 2026 – 31 Dec 2026');
-    expect(document.querySelectorAll('#online .ranking li')).toHaveLength(25);
-    expect(texts('#online .ranking li:first-child small')).toEqual(['Bosun']);
-    expect(texts('#online .ranking li:first-child b')).toEqual(['Pirate 1', '1999']);
-
-    await press('Show more');
-    expect(asked.at(-1)).toBe('GET /ladder?limit=25&after=c%3A25');
-    expect(document.querySelectorAll('#online .ranking li')).toHaveLength(27);
-    expect(texts('#online .ranking li .place').slice(-3)).toEqual(['25', '26', '27']);
-    // That was the last page: there is nothing more to ask for.
-    expect(document.querySelector('#online .footbar')).toBeNull();
-    online.dispose();
-  });
-
-  it('says so when the ladder or its next page cannot be loaded, and tries again when asked', async () => {
-    const online = await openLadder();
-    expect($('#online .notice')?.textContent).toBe(
-      "Couldn't load the ladderCheck your connection and try again.Try again",
-    );
-    answers['/ladder?limit=25'] = { status: 200, body: { season, entries: [entry(1)], next: 'x' } };
-    await press('Try again');
-    expect(document.querySelectorAll('#online .ranking li')).toHaveLength(1);
-    await press('Show more');
-    expect($('#online .footbar [role="alert"]')?.textContent).toBe("Couldn't load more. Try again.");
-    expect(document.querySelectorAll('#online .ranking li')).toHaveLength(1);
-    answers['/ladder?limit=25&after=x'] = { status: 200, body: { season, entries: [entry(2)] } };
-    await press('Show more');
-    expect(document.querySelectorAll('#online .ranking li')).toHaveLength(2);
-    online.dispose();
+    expect($('#gameon')?.textContent).not.toMatch(/_login/);
+    expect($('#gameon .go-more')).toBeNull();
   });
 });

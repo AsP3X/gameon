@@ -266,8 +266,12 @@ describe('the result of a ranked game', () => {
           entries: expect.arrayContaining([expect.objectContaining({ kind: 'deal' })]),
         }),
       );
-      // A ranked game is counted in the rating's `games`, and changes no `Stats`.
-      expect(me.stats).toEqual({ games: 0, wins: 0, bidsMade: 0, bidsTotal: 0, bestScore: null });
+      // A ranked game is counted in the rating's `games` and on the ranked line. It changes no
+      // headline number, and no other line.
+      expect(me.stats).toMatchObject({ games: 0, wins: 0, bidsMade: 0, bidsTotal: 0, bestScore: null });
+      expect(me.stats.byMode?.ranked.games).toBe(1);
+      expect(me.stats.byMode?.ranked.wins).toBe(places[seat] === 1 ? 1 : 0);
+      expect(me.stats.byMode?.casual.games).toBe(0);
     }
     // With a rating, the seat is announced with its tier at a casual table too. A bot's is null.
     const rated = players[0],

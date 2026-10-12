@@ -42,7 +42,8 @@ export interface AppProps {
  *
  * React renders #app and #fx once and never looks inside them: the legacy renderer owns #app (it
  * rebuilds it from HTML strings) and draws confetti on #fx. The new-game screen, the scoresheet and
- * the game table live there. The frame (GameOn: the landing, Games, signing up and in), Skull
+ * the game table live there. The frame (GameOn: the landing, Games, signing up and in, the profile,
+ * another player and the ladder), Skull
  * King's home and the online screens are React's; an online game is played back at the renderer's
  * table, with the server on the other side of it.
  *
@@ -291,6 +292,8 @@ export function App({ backend = appBackend, memory = appMemory, places }: AppPro
           state={state}
           route={framed}
           go={router.go}
+          up={router.up}
+          back={router.back}
           onJoin={(id) => {
             setSitting(id);
             router.go(AT.publicTables);
