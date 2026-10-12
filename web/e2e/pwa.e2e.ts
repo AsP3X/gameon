@@ -140,5 +140,20 @@ describe('the built page as an app', () => {
     await page.locator('[data-act="setup"]').click();
     await page.locator('[data-act="start"]').click();
     await page.locator('.hand .card, .g-hand .card, [data-act="bid"]').first().waitFor({ timeout: 30_000 });
+    // The game has an address of its own, and the table is at it.
+    expect(new URL(page.url()).pathname).toBe('/skull-king/table');
+  });
+
+  it('opens any address of the page with the server gone, not only the front door', async () => {
+    // Nothing answers: the worker gives the kept page for whatever address is asked for.
+    await page.goto(`${url}/skull-king/score`);
+    await page.getByRole('heading', { name: 'Score a real game' }).waitFor();
+    expect(new URL(page.url()).pathname).toBe('/skull-king/score');
+    await page.goto(`${url}/skull-king/online/join`);
+    await page.getByRole('heading', { name: 'Join a table' }).waitFor();
+    // An address that only leads somewhere is replaced by where it leads.
+    await page.goto(`${url}/games`);
+    await page.locator('.home .logo').waitFor();
+    expect(new URL(page.url()).pathname).toBe('/skull-king');
   });
 });

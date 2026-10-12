@@ -6,11 +6,16 @@ import { createRoot } from 'react-dom/client';
 import type { Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 import { App } from './App';
+import { memoryPlaces } from './router/places';
+import type { MemoryPlaces } from './router/places';
 
 let host: HTMLDivElement;
 let root: Root | null = null;
+/** The page's address and the entries behind it. A reload in a test keeps them, as a browser does. */
+let places: MemoryPlaces;
 
 beforeEach(() => {
+  places = memoryPlaces();
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
   vi.stubGlobal('matchMedia', (query: string) => ({ matches: true, media: query }));
   vi.stubGlobal('scrollTo', () => {});
@@ -30,7 +35,7 @@ function renderApp(): void {
   act(() => {
     root?.render(
       <StrictMode>
-        <App />
+        <App places={places} />
       </StrictMode>,
     );
   });

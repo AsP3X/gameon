@@ -4,7 +4,7 @@
 import { Sound } from '../sound/sound';
 import { $ } from './dom';
 import { animateBar, countUp, flip, snapshot } from './motion';
-import { clearTimer, patchUi, stage, ui } from './state';
+import { clearTimer, patchUi, placeNow, stage, ui } from './state';
 import type { Screen, Sheet } from './state';
 import { trackScreen, trkResultsSheet, trkSetupView, trkView } from './tracker';
 import {
@@ -154,6 +154,19 @@ export function render(): void {
   patchUi({ enter: false, deal: false, reveal: false, bump: null, justSel: false, just: null });
 }
 
+/** Set while the page's address is what moves the renderer: then the page is not told what it already knows. */
+let led = false;
+
+/** Go to a screen because the address says so, without telling the page that the renderer moved. */
+export function follow(move: () => void): void {
+  led = true;
+  try {
+    move();
+  } finally {
+    led = false;
+  }
+}
+
 export function go(screen: Screen): void {
   if (screen !== 'home') {
     ui.swipeOpen = null;
@@ -167,4 +180,5 @@ export function go(screen: Screen): void {
   window.scrollTo(0, 0);
   render();
   ui.pillIntro = false;
+  if (!led) stage.moved?.(placeNow());
 }

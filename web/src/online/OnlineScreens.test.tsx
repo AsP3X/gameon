@@ -6,6 +6,8 @@ import { createRoot } from 'react-dom/client';
 import type { Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 import { App } from '../App';
+import { memoryPlaces } from '../router/places';
+import type { MemoryPlaces } from '../router/places';
 import { connectRaw, framesOf } from '../net/mock/raw';
 import type { RawClient } from '../net/mock/raw';
 import { MockServer } from '../net/mock/server';
@@ -31,6 +33,8 @@ function seeded(seed: number): () => number {
 
 let host: HTMLDivElement;
 let root: Root | null = null;
+/** The page's address and the entries behind it. A reload in a test keeps them, as a browser does. */
+let places: MemoryPlaces;
 let server: MockServer;
 
 const $ = (selector: string): HTMLElement | null => document.querySelector<HTMLElement>(selector);
@@ -76,6 +80,7 @@ async function renderApp(transport: Transport = server.transport()): Promise<voi
     root?.render(
       <StrictMode>
         <App
+          places={places}
           backend={{
             transport,
             rest: () => Promise.reject(new Error('This screen test has no REST')),
@@ -104,6 +109,7 @@ async function createTable(): Promise<void> {
 }
 
 beforeEach(() => {
+  places = memoryPlaces();
   vi.useFakeTimers();
   vi.spyOn(Math, 'random').mockImplementation(seeded(21));
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
@@ -472,7 +478,7 @@ describe('playing online', () => {
     const as = server.browser();
     root = createRoot(host);
     await act(async () => {
-      root?.render(<App backend={as} />);
+      root?.render(<App backend={as} places={places} />);
       await vi.advanceTimersByTimeAsync(0);
     });
     await click('[data-act="online"]');
@@ -663,11 +669,32 @@ describe('playing online', () => {
       expect(texts('#online .member small')).toEqual(['Host · you', 'Bot · Normal']);
     });
 
-    it('stays on the home screen when the player was only looking at the hub', async () => {
+    it('comes back to the hub when that is what the player was looking at: the address is still the hub', async () => {
       await renderApp(server.transport('this-page'));
       await click('[data-act="online"]');
       await settle();
+      expect(places.path()).toBe('/skull-king/online');
       await reload();
+      expect(places.path()).toBe('/skull-king/online');
+      expect($('#online h2')?.textContent).toBe('Play online');
+      expect(texts('#online .pill')).toEqual(['Connected']);
+      // Back is still the way out, to the home screen it was reached from.
+      await click('[aria-label="Back"]');
+      expect(places.path()).toBe('/skull-king');
+      expect($('#online')).toBeNull();
+      expect($('#app .home')).not.toBeNull();
+    });
+
+    it('opens on the home screen for a player who was only looking at the hub and comes in at the front door', async () => {
+      await renderApp(server.transport('this-page'));
+      await click('[data-act="online"]');
+      await settle();
+      closePage();
+      // Another tab, or the installed app opened again: nobody is seated, so nothing connects by itself.
+      places = memoryPlaces();
+      await renderApp(server.transport('this-page'));
+      await settle();
+      expect(places.path()).toBe('/skull-king');
       expect($('#online')).toBeNull();
       expect($('#app .home')).not.toBeNull();
     });
@@ -714,6 +741,31 @@ describe('playing online', () => {
       expect($('#online .notice')).toBeNull();
     });
 
+    it("keeps the table through the browser's Back: a seat is left by the table's own way out, and then the hub is where the page is", async () => {
+      await midHand();
+      expect(places.path()).toBe('/skull-king/table');
+      const before = places.entries();
+      await act(async () => {
+        places.back();
+        await vi.advanceTimersByTimeAsync(0);
+      });
+      // Still seated on the server, so still at the table, and at its address.
+      expect(places.path()).toBe('/skull-king/table');
+      expect(places.entries()).toEqual(before);
+      expect($('#online')).toBeNull();
+      expect($('#app')?.hidden).toBe(false);
+      expect(ui.screen).toBe('game');
+      expect(session.table).not.toBeNull();
+
+      await click('#app .g-top [data-act="home"]');
+      await click('[data-act="leaveTable"]');
+      await settle();
+      expect($('#online h2')?.textContent).toBe('Play online');
+      // The hub takes the table's place: there is no table to go back to.
+      expect(places.path()).toBe('/skull-king/online');
+      expect(places.entries().paths).not.toContain('/skull-king/table');
+    });
+
     it('shows the result of a game the player left, on the hub, the next time they come online', async () => {
       await midHand();
       await click('#app .g-top [data-act="home"]');
@@ -723,7 +775,8 @@ describe('playing online', () => {
       closePage();
       await settle(120_000);
 
-      // Not seated any more: the next page waits to be asked.
+      // Not seated any more: a page opened afresh, at the front door, waits to be asked.
+      places = memoryPlaces();
       await renderApp(server.transport('this-page'));
       expect($('#online')).toBeNull();
       await click('[data-act="online"]');
@@ -756,6 +809,112 @@ describe('playing online', () => {
     expect($('#app .sheet')).toBeNull();
     expect($('[data-act="resume"]')?.textContent).toBe('Continue · Round 1 of 10');
     expect(stats.games).toBe(0);
+  });
+});
+
+describe('the addresses of the online screens', () => {
+  /** Open the page at an address, as a typed address, a link or a bookmark does. */
+  async function openAt(at: string): Promise<void> {
+    places = memoryPlaces(at);
+    await renderApp();
+    await settle();
+  }
+
+  it('connects by itself and opens the page its address names', async () => {
+    await openAt('/skull-king/online/join');
+    expect($('#online h2')?.textContent).toBe('Join a table');
+    expect($('#app')?.hidden).toBe(true);
+    closePage();
+    await openAt('/skull-king/online/public');
+    expect($('#online h2')?.textContent).toBe('Public tables');
+    closePage();
+    await openAt('/skull-king/online/new');
+    expect($('#online h2')?.textContent).toBe('New table');
+    expect(button('Private').getAttribute('aria-pressed')).toBe('true');
+    closePage();
+    await openAt('/skull-king/online/public/new');
+    expect($('#online h2')?.textContent).toBe('New table');
+    expect(button('Public').getAttribute('aria-pressed')).toBe('true');
+    closePage();
+    await openAt('/ladder');
+    expect($('#online h2')?.textContent).toBe('Ladder');
+    closePage();
+    await openAt('/profile');
+    expect($('#online h2')?.textContent).toBe('Your profile');
+    closePage();
+    await openAt('/sign-up');
+    expect($('#online h2')?.textContent).toBe('Create an account');
+    closePage();
+    await openAt('/sign-in');
+    expect($('#online h2')?.textContent).toBe('Sign in');
+  });
+
+  it('leads the ranked page, which is not built yet, to the hub that has its section', async () => {
+    await openAt('/skull-king/ranked');
+    expect(places.entries()).toEqual({ paths: ['/skull-king/online'], at: 0 });
+    expect($('#online h2')?.textContent).toBe('Play online');
+    expect(texts('#online .label')).toContain('Ranked');
+  });
+
+  it('moves the address with every page, and Back is the way the player came', async () => {
+    await openAt('/');
+    await click('[data-act="online"]');
+    await settle();
+    await press('Create a table');
+    expect(places.entries()).toEqual({
+      paths: ['/skull-king', '/skull-king/online', '/skull-king/online/new'],
+      at: 2,
+    });
+    await click('[aria-label="Back"]');
+    expect($('#online h2')?.textContent).toBe('Play online');
+    expect(places.entries().at).toBe(1);
+
+    await press('Browse tables');
+    await press('Create a public table');
+    expect(places.path()).toBe('/skull-king/online/public/new');
+    // Back from a new public table is the list it was reached from, not the hub.
+    await click('[aria-label="Back"]');
+    expect($('#online h2')?.textContent).toBe('Public tables');
+    expect(places.path()).toBe('/skull-king/online/public');
+    await click('[aria-label="Back"]');
+    expect(places.path()).toBe('/skull-king/online');
+    await click('[aria-label="Back"]');
+    expect(places.path()).toBe('/skull-king');
+    expect($('#online')).toBeNull();
+    expect($('#app .home')).not.toBeNull();
+  });
+
+  it("follows the browser's Back and Forward between the hub, a page of it and the home screen, and hangs up at home", async () => {
+    await openAt('/');
+    await click('[data-act="online"]');
+    await settle();
+    await press('Join with a code');
+    const go = async (move: () => void): Promise<void> => {
+      await act(async () => {
+        move();
+        await vi.advanceTimersByTimeAsync(0);
+      });
+    };
+    await go(() => places.back());
+    expect($('#online h2')?.textContent).toBe('Play online');
+    expect(texts('#online .pill')).toEqual(['Connected']);
+    await go(() => places.back());
+    expect($('#online')).toBeNull();
+    expect($('#app .home')).not.toBeNull();
+    await go(() => places.forward());
+    await settle();
+    expect($('#online h2')?.textContent).toBe('Play online');
+    expect(texts('#online .pill')).toEqual(['Connected']);
+    await go(() => places.forward());
+    expect($('#online h2')?.textContent).toBe('Join a table');
+  });
+
+  it('sits down at a table from a page opened by its address, and the lobby is at the hub', async () => {
+    await openAt('/skull-king/online/new');
+    await press('Create table');
+    expect($('#online h2')?.textContent).toBe('Table');
+    // Opened by its address, the form has no way back: the hub takes its place.
+    expect(places.entries()).toEqual({ paths: ['/skull-king/online'], at: 0 });
   });
 });
 

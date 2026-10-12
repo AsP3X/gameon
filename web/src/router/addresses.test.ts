@@ -1,0 +1,73 @@
+/* The address table: which page each address shows, and where an address leads that has none. */
+import { describe, expect, it } from 'vite-plus/test';
+import { AT, isLegacy, playerAt, routeOf, settle } from './addresses';
+
+const ID = '018f6b4a-6a2e-7c3a-8b1d-9e0f1a2b3c4d';
+
+describe('the addresses', () => {
+  it('has one page for every address of the plan that is built', () => {
+    expect(routeOf('/skull-king')).toEqual({ page: 'home' });
+    expect(routeOf('/skull-king/solo')).toEqual({ page: 'setup' });
+    expect(routeOf('/skull-king/one-screen')).toEqual({ page: 'setup' });
+    expect(routeOf('/skull-king/score')).toEqual({ page: 'score' });
+    expect(routeOf('/skull-king/table')).toEqual({ page: 'table' });
+    expect(routeOf('/skull-king/online')).toEqual({ page: 'online' });
+    expect(routeOf('/skull-king/online/new')).toEqual({ page: 'newTable', visibility: 'private' });
+    expect(routeOf('/skull-king/online/join')).toEqual({ page: 'join' });
+    expect(routeOf('/skull-king/online/public')).toEqual({ page: 'publicTables' });
+    expect(routeOf('/skull-king/online/public/new')).toEqual({ page: 'newTable', visibility: 'public' });
+    expect(routeOf('/ladder')).toEqual({ page: 'ladder' });
+    expect(routeOf('/profile')).toEqual({ page: 'profile' });
+    expect(routeOf('/sign-in')).toEqual({ page: 'signIn' });
+    expect(routeOf('/sign-up')).toEqual({ page: 'signUp' });
+    expect(routeOf(`/players/${ID}`)).toEqual({ page: 'player', id: ID });
+  });
+
+  it('keeps an address that has a page, and both addresses of the new-game screen', () => {
+    for (const at of Object.values(AT).filter((a) => a !== AT.landing && a !== AT.games && a !== AT.ranked))
+      expect(settle(at)).toBe(at);
+    expect(settle(`/players/${ID}`)).toBe(`/players/${ID}`);
+  });
+
+  it('leads an address whose page is not built yet to the nearest one that is', () => {
+    expect(settle('/')).toBe('/skull-king');
+    expect(settle('/games')).toBe('/skull-king');
+    expect(settle('/skull-king/ranked')).toBe('/skull-king/online');
+  });
+
+  it("takes a path that is nobody's to the home screen, and drops a slash at the end", () => {
+    expect(settle('/nowhere')).toBe('/skull-king');
+    expect(settle('/skull-king/online/public/')).toBe('/skull-king/online/public');
+    expect(settle('/skull-king/')).toBe('/skull-king');
+    expect(routeOf('/skull-king/table/7')).toEqual({ page: 'home' });
+  });
+
+  it("claims nothing that is the server's or the build's", () => {
+    for (const path of ['/api', '/api/v1/me', '/assets/main.js', '/sw.js', '/index.html', '/manifest.json'])
+      expect(routeOf(path)).toEqual({ page: 'home' });
+    expect(Object.values(AT).some((at) => /^\/(api|assets|sw\.js|index\.html|manifest\.json)(\/|$)/.test(at))).toBe(
+      false,
+    );
+  });
+
+  it("puts only a server's user id into an address, and reads nothing else out of one", () => {
+    expect(playerAt(ID)).toBe(`/players/${ID}`);
+    expect(playerAt(ID.toUpperCase())).toBe(`/players/${ID}`);
+    expect(playerAt('../../api/v1/me')).toBeNull();
+    expect(playerAt('<b>Remy</b>')).toBeNull();
+    expect(settle('/players/someone')).toBe('/skull-king');
+    expect(settle(`/players/${ID}/more`)).toBe('/skull-king');
+  });
+
+  it("tells the renderer's pages from the online screens", () => {
+    expect(
+      ['/skull-king', '/skull-king/solo', '/skull-king/table', '/skull-king/score'].map((p) => isLegacy(routeOf(p))),
+    ).toEqual([true, true, true, true]);
+    expect(['/skull-king/online', '/ladder', '/profile', `/players/${ID}`].map((p) => isLegacy(routeOf(p)))).toEqual([
+      false,
+      false,
+      false,
+      false,
+    ]);
+  });
+});

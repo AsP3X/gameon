@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { Api } from './net/api';
 import type { Backend } from './net/api';
 import { appBackend, appMemory, BUILD } from './net/connect';
@@ -8,46 +8,93 @@ import { SocketClient } from './net/socket';
 import { GameRecord } from './online/GameRecord';
 import { OnlineScreens } from './online/OnlineScreens';
 import { TableOverlay } from './online/TableOverlay';
-import { closeOnlineTable, coverTavern, mountTavern, openOnlineTable, showOnlineResult } from './tableview';
+import { AT, HUB, isLegacy, routeOf, settle } from './router/addresses';
+import { browserPlaces } from './router/places';
+import type { Places } from './router/places';
+import { createRouter } from './router/router';
+import { closeOnlineTable, coverTavern, mountTavern, openOnlineTable, showOnlineResult, showPlace } from './tableview';
 
 export interface AppProps {
   /** How the online screens reach a server. Tests hand in a mock server's browser. */
   backend?: Backend;
   /** What one page leaves on the device for the next. Tests hand in an object. */
   memory?: OnlineMemory;
+  /** The browser's history, which holds the page's address. Tests hand in a list of their own. */
+  places?: Places;
 }
 
 /**
- * The page: the legacy renderer and, next to it, the online screens.
+ * The page: the legacy renderer and, next to it, the online screens. Which of them is up, and which
+ * screen of it, is the page's address (src/router/addresses.ts).
  *
  * React renders #app and #fx once and never looks inside them: the legacy renderer owns #app (it
  * rebuilds it from HTML strings) and draws confetti on #fx. Home, the offline modes and the game
- * table live there. "Play online" hands over to the online screens, which are React's; an online
- * game is played back at the renderer's table, with the server on the other side of it.
+ * table live there. The addresses under "online" are React's; an online game is played back at the
+ * renderer's table, with the server on the other side of it.
+ *
+ * The address and the renderer follow each other. A tap in the renderer that goes to another screen
+ * moves the address (`moved`). An address that changed by itself, by Back, Forward, a reload or a
+ * typed address, moves the renderer (`showPlace`). An online table is the one page an address
+ * cannot leave: for as long as the server says the player sits there, the page is the table.
  *
  * A page that opens on a device whose last page was seated in a lobby or at a table connects by
  * itself: that is what a reload is. What it comes back to is whatever the server's `welcome` says.
  */
-export function App({ backend = appBackend, memory = appMemory }: AppProps) {
+export function App({ backend = appBackend, memory = appMemory, places }: AppProps) {
   const app = useRef<HTMLDivElement>(null);
   const fx = useRef<HTMLCanvasElement>(null);
   const [online] = useState(
     () => new Online(new SocketClient({ transport: backend.transport, build: BUILD }), new Api(backend.rest), memory),
   );
+  const [router] = useState(() => {
+    const made = createRouter(places ?? browserPlaces());
+    // An address without a page of its own leads to one, and a device that was seated comes back
+    // online wherever it opens: the address says so before anything is drawn.
+    const at = settle(made.getPath());
+    made.go(online.wasSeated && isLegacy(routeOf(at)) ? AT.online : at, { replace: true });
+    return made;
+  });
+  const path = useSyncExternalStore(router.subscribe, router.getPath);
+  const route = useMemo(() => routeOf(path), [path]);
   const state = useSyncExternalStore(online.subscribe, online.getState);
-  const [inOnline, setInOnline] = useState(() => online.wasSeated);
+  /** The page is in its online part: connected, or trying to be. */
+  const [linked, setLinked] = useState(() => online.wasSeated);
   const [record, setRecord] = useState(false);
   const table = state.table;
+
+  // Forward, or a typed address, can land on one that only leads somewhere.
+  useEffect(() => {
+    router.go(settle(path), { replace: true });
+  }, [router, path]);
 
   useEffect(() => {
     if (!app.current || !fx.current) return;
     return mountTavern(app.current, fx.current, {
-      online: () => {
-        online.open();
-        setInOnline(true);
+      online: () => router.go(AT.online),
+      moved: (place) => {
+        const from = routeOf(router.getPath()).page;
+        // Back at the home screen is the way back, not a step further on.
+        if (place === 'home') router.up(AT.home);
+        else if (place === 'setup') router.go(from === 'setup' ? router.getPath() : AT.solo);
+        // A game that starts takes the place of the screen it was set up on: Back from a table is home.
+        else if (place === 'table') router.go(AT.table, { replace: from === 'setup' });
+        else router.go(AT.score);
       },
     });
-  }, [online]);
+  }, [router]);
+
+  // The link follows the address: up at the online screens, given up at the renderer's own.
+  // The table is on both sides, and leaves the link as it is.
+  useEffect(() => {
+    if (!isLegacy(route)) {
+      online.open();
+      setLinked(true);
+    } else if (route.page !== 'table' && linked) {
+      online.close(true);
+      setLinked(false);
+    }
+  }, [online, route, linked]);
+  useEffect(() => () => online.close(), [online]);
 
   // The server seated this session at a table: play it where every game is played.
   useEffect(() => {
@@ -68,13 +115,26 @@ export function App({ backend = appBackend, memory = appMemory }: AppProps) {
     };
   }, [online, table]);
 
+  // A seat at a table holds its address: Back does not leave it, the table's own way out does.
+  // And when that table is gone, the page is back at the online screens it came from.
   useEffect(() => {
-    if (online.wasSeated) online.open();
-    return () => online.close();
-  }, [online]);
+    if (table) router.go(AT.table);
+    else if (route.page === 'table' && linked) router.go(AT.online, { replace: true });
+  }, [router, route, table, linked]);
 
-  const screens = inOnline && !table;
-  // The online screens take the renderer's place: its home screen is still there, but not to be seen.
+  // The address changed by itself: the renderer shows what belongs there, or there is nothing to
+  // show (no game is open or saved) and the page is at home.
+  // Under the online screens the renderer is at its home screen, as it was when they first went up.
+  useEffect(() => {
+    if (table) return;
+    if (!isLegacy(route)) showPlace('home');
+    else if (!linked && !showPlace(route.page)) router.go(AT.home, { replace: true });
+  }, [router, route, table, linked]);
+
+  // The online screens are up where the address is theirs, and for the moment a closed table's
+  // address still stands.
+  const screens = !table && (!isLegacy(route) || (route.page === 'table' && linked));
+  // They take the renderer's place: its home screen is still there, but not to be seen.
   useEffect(() => coverTavern(screens), [screens]);
   // The table is on screen and the server is not there: what it shows may be old.
   const cut = table != null && state.status !== 'online' ? state.status : null;
@@ -91,10 +151,10 @@ export function App({ backend = appBackend, memory = appMemory }: AppProps) {
           <OnlineScreens
             online={online}
             state={state}
-            onExit={() => {
-              online.close(true);
-              setInOnline(false);
-            }}
+            route={isLegacy(route) ? HUB : route}
+            go={router.go}
+            up={router.up}
+            onExit={() => router.up(AT.home)}
           />
         </div>
       )}

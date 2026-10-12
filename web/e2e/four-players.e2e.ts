@@ -64,6 +64,8 @@ describe('four players at one table', () => {
     await button(host, 'Create table').click();
     const code = (await host.page.locator('#online .code').textContent()) ?? '';
     expect(code).toMatch(/^[ABCDEFGHJKMNPQRSTUVWXYZ23456789]{6}$/);
+    // The lobby is at the hub's address: the form that made it is not a page to come back to.
+    expect(new URL(host.page.url()).pathname).toBe('/skull-king/online');
 
     for (const p of guests) {
       await button(p, 'Join with a code').click();
@@ -155,6 +157,8 @@ describe('four players at one table', () => {
       // The new page said hello and nothing else: what the old one had sent is not sent again.
       expect(reloader.sent.slice(sent).map((m) => m.t)).toEqual(['hello']);
       await reloader.page.locator('#app .hand.myturn').waitFor();
+      // The reload asked for the table's address, and that is where the page is again.
+      expect(new URL(reloader.page.url()).pathname).toBe('/skull-king/table');
       reloads.push({ before, after: await reloader.onScreen() });
       expect(await reloader.page.locator('.table-overlay').count()).toBe(0);
       reloader.busy = false;

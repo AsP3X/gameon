@@ -13,7 +13,7 @@ import { $, reduced } from './dom';
 import type { ActionFn } from './dom';
 import { layout } from './layout';
 import { banner, collectTrick, finale, finishFinale, playFinale } from './motion';
-import { armMenuMusic, go, render } from './render';
+import { armMenuMusic, follow, go, render } from './render';
 import {
   BOT_NAMES,
   clearTimer,
@@ -25,6 +25,7 @@ import {
   isTableView,
   localSeatsOf,
   patchUi,
+  placeNow,
   prefs,
   savePrefs,
   session,
@@ -34,7 +35,7 @@ import {
   timers,
   ui,
 } from './state';
-import type { OnlineHooks } from './state';
+import type { OnlineHooks, Place } from './state';
 import { recordGame } from './stats';
 import { Store } from './store';
 import { Tracker, trkCreate, trkNow } from './tracker';
@@ -251,7 +252,8 @@ export function closeOnlineTable(): void {
   session.table = null;
   session.view = null;
   patchUi({ waiting: false, curtain: false });
-  go('home');
+  // The page took the table away, and it knows where it goes from here: it is not told.
+  follow(() => go('home'));
 }
 /** Make `table` the open one, seen through its first local seat. The caller goes to the game screen. */
 export function showTable(table: Table): void {
@@ -311,6 +313,45 @@ function myPlay(as?: PlayedAs): void {
 }
 function useAbility(choice: AbilityChoice, undo?: () => void): void {
   act({ type: 'ability', seat: tableView().me, choice }, undo);
+}
+
+/**
+ * The page's address changed under the renderer: Back, Forward, a typed address, or a reload. Show
+ * what belongs at that place. Returns false when there is nothing to show there: the address is the
+ * table's and no game is open or saved.
+ *
+ * It never leaves an online table: that seat is the server's, and the page keeps the table's
+ * address for as long as the server says the player sits there.
+ */
+export function showPlace(place: Place): boolean {
+  if (placeNow() === place) return true;
+  if (session.online) return place === 'table';
+  let shown = true;
+  follow(() => {
+    if (place === 'table') {
+      const saved = Store.loadGame();
+      if (!saved) {
+        shown = false;
+        return;
+      }
+      openTable(saved);
+      ui.lastPct = null;
+      return go('game');
+    }
+    // Away from an offline table or a scoresheet: both are saved as they are played.
+    finale.token++;
+    if (session.table) session.table.stop();
+    if (place === 'home') return go('home');
+    if (place === 'setup') return go('setup');
+    // The scoresheet: the one that is running, or the setup of a new one.
+    if (session.trk && !session.trk.finished) {
+      ui.lastPct = null;
+      ui.open = {};
+      return go('track');
+    }
+    go('trackSetup');
+  });
+  return shown;
 }
 
 export const ACTIONS: Record<string, ActionFn | undefined> = {

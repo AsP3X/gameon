@@ -258,19 +258,45 @@ export interface Session {
 export const session: Session = { table: null, online: null, view: null, trk: null };
 
 /**
- * Where the renderer draws, and how it hands over to the online screens: set by mountTavern, cleared
- * when it unmounts. `covered` is the page's to set (coverTavern): it shows something else in the
- * renderer's place.
+ * The four places the renderer's screens are at, as the page's addresses name them: the home
+ * screen, the new-game screen, the table (a game, and its end) and the scoresheet (its setup, its
+ * rounds and its end).
+ */
+export type Place = 'home' | 'setup' | 'table' | 'score';
+/** The place of the screen that is up. */
+export function placeNow(): Place {
+  switch (ui.screen) {
+    case 'home':
+      return 'home';
+    case 'setup':
+      return 'setup';
+    case 'game':
+      return 'table';
+    case 'end':
+      return ui.endFrom === 'track' ? 'score' : 'table';
+    case 'trackSetup':
+    case 'track':
+      return 'score';
+  }
+}
+
+/**
+ * Where the renderer draws, and how it hands over to the page around it: set by mountTavern,
+ * cleared when it unmounts. `online` is "Play online". `moved` tells the page that the renderer went
+ * to another place by itself (a tap), so the address can follow. `covered` is the page's to set
+ * (coverTavern): it shows something else in the renderer's place.
  */
 export const stage: {
   app: HTMLElement | null;
   fx: HTMLCanvasElement | null;
   online: (() => void) | null;
+  moved: ((place: Place) => void) | null;
   covered: boolean;
 } = {
   app: null,
   fx: null,
   online: null,
+  moved: null,
   covered: false,
 };
 

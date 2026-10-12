@@ -19,13 +19,16 @@ import { render, resetMenuMusic, tuneMenu } from './render';
 import { clearTimer, loadState, prefs, savePrefs, session, stage, ui } from './state';
 import { Tracker } from './tracker';
 
-export { closeOnlineTable, openOnlineTable, showOnlineResult } from './actions';
-export type { OnlineHooks } from './state';
+export { closeOnlineTable, openOnlineTable, showOnlineResult, showPlace } from './actions';
+export type { OnlineHooks, Place } from './state';
+import type { Place } from './state';
 
 /** What the page around the renderer does for it. */
 export interface TavernHooks {
   /** "Play online" on the home screen: the online screens are React's, not the renderer's. */
   online?: () => void;
+  /** The renderer went to another place because the player tapped something: the address follows. */
+  moved?: (place: Place) => void;
 }
 
 /**
@@ -58,6 +61,7 @@ export function mountTavern(app: HTMLElement, fx: HTMLCanvasElement, hooks: Tave
   stage.app = app;
   stage.fx = fx;
   stage.online = hooks.online ?? null;
+  stage.moved = hooks.moved ?? null;
 
   /* ---------- boot ---------- */
   document.body.insertAdjacentHTML('afterbegin', SPRITE);
@@ -94,6 +98,7 @@ export function mountTavern(app: HTMLElement, fx: HTMLCanvasElement, hooks: Tave
     stage.app = null;
     stage.fx = null;
     stage.online = null;
+    stage.moved = null;
   };
   mounted = cleanup;
   return cleanup;

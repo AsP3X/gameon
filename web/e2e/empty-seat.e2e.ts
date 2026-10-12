@@ -149,10 +149,9 @@ describe('a seat nobody comes back to', () => {
 
     // Read, and not said again: the next page has no notice and was sent no second frame.
     await button(gone, 'OK').click();
+    expect(new URL(gone.page.url()).pathname).toBe('/skull-king/online');
     await gone.page.reload();
-    // Not seated any more, so this page opens on the home screen, and that greets first.
-    await gone.comeIn();
-    await button(gone, 'Play online').click();
+    // The address is still the hub's, so the next page is the hub again and connects by itself.
     await expect.poll(() => gone.page.locator('#online .pill').textContent()).toBe('Connected');
     expect(gone.framesOf('seat.lost')).toHaveLength(1);
     expect(await gone.page.locator('#online .notice.gold').count()).toBe(0);

@@ -9,7 +9,9 @@ import type { Notice, Online, OnlineState, Outcome } from '../net/online';
 import type { LinkStatus } from '../net/socket';
 import { Sound } from '../sound/sound';
 import { cssColor, whole } from '../tableview/dom';
-import type { LobbyId, UserId, Visibility } from '../protocol/generated';
+import type { LobbyId } from '../protocol/generated';
+import { AT, playerAt } from '../router/addresses';
+import type { OnlineRoute } from '../router/addresses';
 import { SignIn, SignUp } from './Account';
 import { failureText, ordinal } from './copy';
 import { LobbyRoom } from './LobbyRoom';
@@ -21,8 +23,6 @@ import { reloadPage } from './reload';
 import { LadderScreen, RankedSection } from './Ranked';
 import { loadSettings, MIN_SEATS, saveSettings } from './settings';
 import { SettingsForm } from './SettingsForm';
-
-type Page = 'hub' | 'create' | 'join' | 'tables' | 'ladder' | 'profile' | 'signup' | 'signin';
 
 /** The characters a table code is made of (docs/protocol.md §5.3). Everything else is dropped as it is typed. */
 const NOT_CODE = /[^ABCDEFGHJKMNPQRSTUVWXYZ23456789]/g;
@@ -123,7 +123,7 @@ function LinkNotice({ status, online, onOffline }: { status: LinkStatus; online:
   }
 }
 
-function Hub(props: { online: Online; state: OnlineState; onExit: () => void; onPage: (page: Page) => void }) {
+function Hub(props: { online: Online; state: OnlineState; onExit: () => void; go: (path: string) => void }) {
   const { online, state } = props,
     me = state.me,
     live = state.status === 'online',
@@ -131,9 +131,9 @@ function Hub(props: { online: Online; state: OnlineState; onExit: () => void; on
     notice = state.notice ? noticeText(state.notice) : null;
   const [finding, setFinding] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const to = (page: Page) => () => {
+  const to = (path: string) => () => {
     Sound.play('tap');
-    props.onPage(page);
+    props.go(path);
   };
   const find = (): void => {
     Sound.play('confirm');
@@ -164,7 +164,7 @@ function Hub(props: { online: Online; state: OnlineState; onExit: () => void; on
             <small>{me?.username ? `Playing as @${me.username}` : me ? 'Playing as a guest' : 'Playing as'}</small>
             <b>{me ? me.user.name : '…'}</b>
           </span>
-          <button type="button" className="mini" disabled={!me} onClick={to('profile')}>
+          <button type="button" className="mini" disabled={!me} onClick={to(AT.profile)}>
             Profile
           </button>
         </div>
@@ -202,21 +202,21 @@ function Hub(props: { online: Online; state: OnlineState; onExit: () => void; on
           online={online}
           me={me}
           live={live}
-          onLadder={() => props.onPage('ladder')}
-          onSignUp={() => props.onPage('signup')}
+          onLadder={() => props.go(AT.ladder)}
+          onSignUp={() => props.go(AT.signUp)}
         />
         <section className="stack">
           <span className="label">Public tables</span>
-          <button type="button" className="btn ghost" disabled={!live} onClick={to('tables')}>
+          <button type="button" className="btn ghost" disabled={!live} onClick={to(AT.publicTables)}>
             Browse tables
           </button>
         </section>
         <section className="stack">
           <span className="label">Your own table</span>
-          <button type="button" className="btn ghost" disabled={!live} onClick={to('create')}>
+          <button type="button" className="btn ghost" disabled={!live} onClick={to(AT.newTable)}>
             Create a table
           </button>
-          <button type="button" className="btn ghost" disabled={!live} onClick={to('join')}>
+          <button type="button" className="btn ghost" disabled={!live} onClick={to(AT.join)}>
             Join with a code
           </button>
           <p className="muted">
@@ -292,24 +292,28 @@ function Join(props: { live: boolean; onBack: () => void; onJoin: (code: string)
 export interface OnlineScreensProps {
   online: Online;
   state: OnlineState;
+  /** The page the address names. A lobby or a queue the server seated the player in is shown instead. */
+  route: OnlineRoute;
+  /** To another page, as a link goes. */
+  go: (path: string) => void;
+  /** Back to the page this one is reached from. */
+  up: (parent: string) => void;
   /** Back from the hub: to the home screen. */
   onExit: () => void;
 }
 
-export function OnlineScreens({ online, state, onExit }: OnlineScreensProps) {
-  const [page, setPage] = useState<Page>('hub');
-  /** Whether "New table" opens set to public: it does when it was reached from the public list. */
-  const [open, setOpen] = useState<Visibility>('private');
-  /** What is open on top of a lobby. It belongs to that lobby and is gone with it. */
-  const [over, setOver] = useState<{ lobby: LobbyId; view: 'rules' } | { lobby: LobbyId; player: UserId } | null>(null);
+export function OnlineScreens({ online, state, route, go, up, onExit }: OnlineScreensProps) {
+  /** The rules, open on top of a lobby. They belong to that lobby and are gone with it. */
+  const [rules, setRules] = useState<LobbyId | null>(null);
   const { lobby, me, queue } = state,
     live = state.status === 'online',
-    hub = (): void => setPage('hub');
+    hub = (): void => up(AT.online);
 
+  // Another player's page is the same from the lobby, the ladder or a typed address.
+  if (route.page === 'player') return <PlayerScreen online={online} id={route.id} onBack={hub} />;
   if (lobby && me) {
-    const on = over?.lobby === lobby.id ? over : null,
-      back = (): void => setOver(null);
-    if (on && 'view' in on && lobby.hostId === me.user.id && lobby.state === 'open')
+    const back = (): void => setRules(null);
+    if (rules === lobby.id && lobby.hostId === me.user.id && lobby.state === 'open')
       return (
         <SettingsForm
           title="Table rules"
@@ -329,7 +333,6 @@ export function OnlineScreens({ online, state, onExit }: OnlineScreensProps) {
           }}
         />
       );
-    if (on && 'player' in on) return <PlayerScreen online={online} id={on.player} onBack={back} />;
     return (
       <LobbyRoom
         online={online}
@@ -337,22 +340,27 @@ export function OnlineScreens({ online, state, onExit }: OnlineScreensProps) {
         me={me}
         status={state.status}
         notice={state.notice ? noticeText(state.notice) : null}
-        onRules={() => setOver({ lobby: lobby.id, view: 'rules' })}
-        onPlayer={(id) => setOver({ lobby: lobby.id, player: id })}
+        onRules={() => setRules(lobby.id)}
+        onPlayer={(id) => {
+          const at = playerAt(id);
+          if (at) go(at);
+        }}
       />
     );
   }
   if (queue) return <QueueScreen online={online} queue={queue} live={live} rules={state.config?.standard ?? null} />;
-  if (page === 'create')
+  if (route.page === 'newTable') {
+    // "New table" opens set to public when it was reached from the public list, and goes back there.
+    const from = route.visibility === 'public' ? AT.publicTables : AT.online;
     return (
       <SettingsForm
         title="New table"
         submit="Create table"
         initial={loadSettings()}
-        visibility={open}
+        visibility={route.visibility}
         minSeats={MIN_SEATS}
         disabled={!live}
-        onBack={() => setPage(open === 'public' ? 'tables' : 'hub')}
+        onBack={() => up(from)}
         onSubmit={async (settings, visibility) => {
           const r = await online.createLobby(visibility, settings);
           if (r.ok) {
@@ -363,7 +371,8 @@ export function OnlineScreens({ online, state, onExit }: OnlineScreensProps) {
         }}
       />
     );
-  if (page === 'join')
+  }
+  if (route.page === 'join')
     return (
       <Join
         live={live}
@@ -375,20 +384,11 @@ export function OnlineScreens({ online, state, onExit }: OnlineScreensProps) {
         }}
       />
     );
-  if (page === 'tables')
-    return (
-      <PublicTables
-        online={online}
-        live={live}
-        onBack={hub}
-        onCreate={() => {
-          setOpen('public');
-          setPage('create');
-        }}
-      />
-    );
-  if (page === 'ladder') return <LadderScreen online={online} me={me?.user.id ?? null} live={live} onBack={hub} />;
-  if (me && page === 'profile')
+  if (route.page === 'publicTables')
+    return <PublicTables online={online} live={live} onBack={hub} onCreate={() => go(AT.newPublicTable)} />;
+  if (route.page === 'ladder')
+    return <LadderScreen online={online} me={me?.user.id ?? null} live={live} onBack={hub} />;
+  if (me && route.page === 'profile')
     return (
       <ProfileScreen
         // Another player after signing in: the form starts from who they are.
@@ -397,29 +397,29 @@ export function OnlineScreens({ online, state, onExit }: OnlineScreensProps) {
         me={me}
         live={live}
         onBack={hub}
-        onSignUp={() => setPage('signup')}
-        onSignIn={() => setPage('signin')}
+        onSignUp={() => go(AT.signUp)}
+        onSignIn={() => go(AT.signIn)}
         onSignedOut={onExit}
       />
     );
-  if (me && page === 'signup')
+  if (me && route.page === 'signUp')
     return (
       <SignUp
         live={live}
-        onBack={() => setPage('profile')}
+        onBack={() => up(AT.profile)}
         onSubmit={async (credentials) => {
           const r = await online.register(credentials);
-          if (r.ok) setPage('profile');
+          if (r.ok) up(AT.profile);
           return r;
         }}
       />
     );
-  if (page === 'signin')
+  if (route.page === 'signIn')
     return (
       <SignIn
         live={live}
         guest={me?.guest ?? true}
-        onBack={() => setPage('profile')}
+        onBack={() => up(AT.profile)}
         onSubmit={async (credentials) => {
           const r = await online.login(credentials);
           if (r.ok) hub();
@@ -427,15 +427,5 @@ export function OnlineScreens({ online, state, onExit }: OnlineScreensProps) {
         }}
       />
     );
-  return (
-    <Hub
-      online={online}
-      state={state}
-      onExit={onExit}
-      onPage={(next) => {
-        if (next === 'create') setOpen('private');
-        setPage(next);
-      }}
-    />
-  );
+  return <Hub online={online} state={state} onExit={onExit} go={go} />;
 }

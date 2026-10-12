@@ -3,11 +3,15 @@
    warning, the cooldown, the rating line at the end of a game, and the ladder. The mock's numbers
    are stand-ins; what is checked here is that the page shows what it was sent and sends nothing it
    should not. The mock's own frames are in src/net/mock/ranked.test.ts. */
-import { act, StrictMode, useSyncExternalStore } from 'react';
+import { act, StrictMode, useState, useSyncExternalStore } from 'react';
 import { createRoot } from 'react-dom/client';
 import type { Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 import { App } from '../App';
+import { AT, HUB, isLegacy, routeOf } from '../router/addresses';
+import { memoryPlaces } from '../router/places';
+import type { MemoryPlaces } from '../router/places';
+import { createRouter } from '../router/router';
 import { Api } from '../net/api';
 import type { Backend, RestResponse } from '../net/api';
 import { connectRaw, framesOf } from '../net/mock/raw';
@@ -38,6 +42,8 @@ const COOLDOWN_MS = 15 * 60_000;
 
 let host: HTMLDivElement;
 let root: Root | null = null;
+/** The page's address and the entries behind it. A reload in a test keeps them, as a browser does. */
+let places: MemoryPlaces;
 let server: MockServer;
 /** The browser the page runs in, and every frame the page wrote to its socket. */
 let page: Backend;
@@ -105,7 +111,7 @@ async function openHub(username?: string): Promise<void> {
   await act(async () => {
     root?.render(
       <StrictMode>
-        <App backend={page} />
+        <App backend={page} places={places} />
       </StrictMode>,
     );
     await vi.advanceTimersByTimeAsync(0);
@@ -129,6 +135,7 @@ async function threeMore(): Promise<RawClient[]> {
 }
 
 beforeEach(() => {
+  places = memoryPlaces();
   vi.useFakeTimers();
   vi.setSystemTime(NOW);
   vi.spyOn(Math, 'random').mockImplementation(seeded(21));
@@ -427,11 +434,21 @@ describe('the ladder, a page at a time', () => {
   let asked: string[];
   let answers: Record<string, RestResponse>;
 
+  /** The online screens alone, with addresses of their own: no page around them. */
   function Screens({ online }: { online: Online }) {
     const state = useSyncExternalStore(online.subscribe, online.getState);
+    const [router] = useState(() => createRouter(memoryPlaces(AT.online)));
+    const route = routeOf(useSyncExternalStore(router.subscribe, router.getPath));
     return (
       <div id="online">
-        <OnlineScreens online={online} state={state} onExit={() => {}} />
+        <OnlineScreens
+          online={online}
+          state={state}
+          route={isLegacy(route) ? HUB : route}
+          go={router.go}
+          up={router.up}
+          onExit={() => {}}
+        />
       </div>
     );
   }
