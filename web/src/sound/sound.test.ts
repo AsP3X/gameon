@@ -302,7 +302,7 @@ describe('menu music', () => {
   const sentTo = (tune: FakeNode | undefined): number | null | undefined =>
     tune && made[made.indexOf(tune) + 1]?.gain.target;
 
-  it('does not start the tune while the context is suspended, and does on the next try', async () => {
+  it('starts the tune in the tap while the context is still suspended', async () => {
     const held: { resume: (() => void) | null } = { resume: null };
     class Held extends FakeAudioContext {
       override state = 'suspended';
@@ -315,12 +315,20 @@ describe('menu music', () => {
         });
     }
     vi.stubGlobal('AudioContext', Held);
+    vi.stubGlobal(
+      'OfflineAudioContext',
+      class {
+        decodeAudioData = (file: ArrayBuffer) => decodeFile(file);
+      },
+    );
     const Sound = await mixer();
     Sound.tunes([{ file: file(), loop: LOOP }]);
     Sound.music(true);
     await settle();
+    // The tune starts in the tap, while the context still says suspended.
+    // Waiting for resume() puts the start outside the gesture, and phones drop it.
     expect(Sound.unlock()).toBe(false);
-    expect(tunes()).toEqual([]);
+    expect(tunes()).toHaveLength(1);
     const resume = held.resume;
     if (!resume) throw new Error('the context was not asked to resume');
     resume();
@@ -353,12 +361,9 @@ describe('menu music', () => {
     expect(resumes).toBe(2);
     expect(tunes()).toHaveLength(1);
     const audio = Watching.current;
-    if (!audio?.onstatechange) throw new Error('the context has no state handler');
+    if (!audio) throw new Error('the context was not built');
     audio.state = 'suspended';
-    audio.onstatechange();
-    audio.state = 'running';
-    audio.onstatechange();
-    await settle();
+    Sound.unlock();
     expect(tunes()).toHaveLength(2);
   });
 

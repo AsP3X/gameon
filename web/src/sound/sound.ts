@@ -101,24 +101,6 @@ function boot(): Rig | null {
     const noiseBuf = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate);
     const n = noiseBuf.getChannelData(0);
     for (let i = 0; i < n.length; i++) n[i] = Math.random() * 2 - 1;
-    // A context that says it is running can still be silent, and one that
-    // suspends drops the source. Start the tune whenever it is really running.
-    ctx.onstatechange = () => {
-      if (ctx.state === 'running') {
-        syncMusic();
-        return;
-      }
-      if (!mus) return;
-      const dropped = mus;
-      mus = null;
-      try {
-        dropped.s.stop();
-      } catch {
-        // Already stopped.
-      }
-      const n = tunes.length;
-      if (n) turn = (turn - 1 + n) % n;
-    };
     rig = { ctx, master, wet, noiseBuf };
   } catch {
     rig = null;
@@ -641,6 +623,19 @@ function decodeTune(next: Tune): void {
   }
 }
 
+/** One silent sample, in the gesture, so a suspended context is allowed to play afterwards. */
+function poke(ctx: AudioContext): void {
+  try {
+    const buf = ctx.createBuffer(1, 1, ctx.sampleRate);
+    const src = ctx.createBufferSource();
+    src.buffer = buf;
+    src.connect(ctx.destination);
+    src.start(0);
+  } catch {
+    // resume() is still called by the tap.
+  }
+}
+
 /** Start or stop the music, so that a tune plays exactly while it is wanted and sound is on. */
 function syncMusic(): void {
   const on = musicWanted && !prefs.muted;
@@ -652,9 +647,6 @@ function syncMusic(): void {
   // Without an audio graph nothing plays: it is built on the first tap, and unlock() comes back here.
   const r = rig;
   if (!r) return;
-  // A source started while the context is suspended is thrown away, and iOS does
-  // not play it when the context later runs. Wait until it is running.
-  if (next && r.ctx.state !== 'running') return;
   const t = r.ctx.currentTime;
   if (next && tune) {
     const s = r.ctx.createBufferSource(),
@@ -667,14 +659,22 @@ function syncMusic(): void {
     s.loop = true;
     s.loopStart = loop.starts / 2;
     s.loopEnd = loop.starts / 2 + loop.repeats;
-    g.gain.value = 0;
+    // Audible immediately. A ramp from silence is lost when the clock is not
+    // running yet, and the tune then stays at zero.
+    g.gain.value = MUSIC_V;
     s.connect(g).connect(r.master);
     // Record it before start(), so a state change inside start() does not
     // begin a second copy.
     mus = { s, g };
     const n = tunes.length;
     if (n) turn = (turn + 1) % n;
-    s.start(t, loop.starts);
+    try {
+      s.start(t, loop.starts);
+    } catch {
+      mus = null;
+      if (n) turn = (turn - 1 + n) % n;
+      return;
+    }
     g.gain.setTargetAtTime(MUSIC_V, t, 0.4);
   } else if (!on && mus) {
     const m = mus;
@@ -732,21 +732,34 @@ export const Sound = {
     syncMusic();
   },
   /**
-   * Audio may only start after a user gesture. Call this on every tap, not
-   * only the first: a context can report `running` and still be silent until
-   * `resume()` runs inside a gesture the browser accepts.
+   * Audio may only start after a user gesture. Call this on every tap.
+   * The tune is started in this call, not after `resume()` resolves: a source
+   * begun in that promise is outside the gesture, and phones throw it away.
    * True when the graph is running, or this browser has no Web Audio.
    */
   unlock(): boolean {
     const r = boot();
     if (!r) return true;
-    const kick = (): void => {
+    // A source left from a suspended context does not play. Begin again, in this tap.
+    if (r.ctx.state !== 'running' && mus) {
+      const dropped = mus;
+      mus = null;
+      try {
+        dropped.s.stop();
+      } catch {
+        // Already stopped.
+      }
+      const n = tunes.length;
+      if (n) turn = (turn - 1 + n) % n;
+    }
+    if (r.ctx.state !== 'running') poke(r.ctx);
+    // No await before resume: it has to be called in the gesture itself.
+    void r.ctx.resume().then(() => {
       if (prefs.ambience && !prefs.muted) ambience(true);
       syncMusic();
-    };
-    // No await before resume: it has to be called in the gesture itself.
-    void r.ctx.resume().then(kick);
-    if (r.ctx.state === 'running') kick();
+    });
+    if (prefs.ambience && !prefs.muted && r.ctx.state === 'running') ambience(true);
+    syncMusic();
     return r.ctx.state === 'running';
   },
   /**

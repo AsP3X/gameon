@@ -334,10 +334,9 @@ export function listen(): () => void {
   window.addEventListener('pointermove', onSwipeMove, { signal });
   window.addEventListener('pointerup', (e) => endSwipe(e, false), { signal });
   window.addEventListener('pointercancel', (e) => endSwipe(e, true), { signal });
-  // Every tap resumes audio. The first event often reports a running context
-  // that is still silent, on desktop and on phones. The sound button used to be
-  // the only later click that called resume(), because these listeners stopped
-  // after that first event. They stay for as long as listen() does.
+  // Every tap starts the tune in the gesture itself. A start that waits until
+  // resume() finishes is outside the tap, and phones throw it away. These
+  // listeners stay for as long as listen() does: the sound button is not special.
   const unlockAudio = (): void => {
     Sound.unlock();
   };
