@@ -118,9 +118,9 @@ describe('the built page as an app', () => {
   });
 
   it('talks to the server itself: nothing under /api comes from the worker', async () => {
-    await page.locator('.home .logo').waitFor();
+    await page.locator('.sk-home .logo').waitFor();
     await comeIn();
-    await page.getByRole('button', { name: 'Play online' }).click();
+    await page.locator('.sk-way[href="/skull-king/online"]').click();
     await page.getByText('Connected').waitFor();
     // The page is told of an answer before this script is: wait for the script to have heard of one.
     await expect.poll(() => api.length).toBeGreaterThan(0);
@@ -132,13 +132,17 @@ describe('the built page as an app', () => {
     stopPreview();
     await host.close();
     await page.reload();
-    await page.locator('.home .logo').waitFor();
+    await page.locator('.sk-home .logo').waitFor();
     await comeIn();
-    await page.getByRole('button', { name: 'Play online' }).click();
+    // The home says nobody answers, and Online is out of reach there.
+    await page.getByText('Not connected. Solo and One screen still work.').waitFor({ timeout: 30_000 });
+    expect(await page.locator('.sk-way[href="/skull-king/online"]').count()).toBe(0);
+    // The hub, opened by its address, says so too and leads back to what works.
+    await page.goto(`${url}/skull-king/online`);
     await page.getByText("Can't reach the tavern").waitFor({ timeout: 30_000 });
     await page.getByRole('button', { name: 'Play offline' }).click();
-    await page.locator('.home .logo').waitFor();
-    await page.locator('[data-act="setup"]').click();
+    await page.locator('.sk-home .logo').waitFor();
+    await page.locator('.sk-way[href="/skull-king/solo"]').click();
     await page.locator('[data-act="start"]').click();
     await page.locator('.hand .card, .g-hand .card, [data-act="bid"]').first().waitFor({ timeout: 30_000 });
     // The game has an address of its own, and the table is at it.

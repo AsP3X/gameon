@@ -6,19 +6,17 @@
    it is told: a visitor without a session stays one on the landing and on the two forms, and gets
    a guest at Games, where they are on their way to a table. Nothing here decides anything about a
    game, a rating or a seat. */
-import { useEffect, useState } from 'react';
-import type { Identity, Online, OnlineState } from '../net/online';
+import { useEffect } from 'react';
+import type { Online, OnlineState } from '../net/online';
 import type { LobbyId } from '../protocol/generated';
 import { AT } from '../router/addresses';
 import type { FrameRoute } from '../router/addresses';
 import { SignIn, SignUp } from './Account';
 import { accountOf, GoContext } from './Frame';
-import type { Go, Who } from './Frame';
+import type { Go } from './Frame';
 import { Games } from './Games';
 import { Landing } from './Landing';
-
-/** How long the frame waits before it asks a server again that could not be reached. */
-const RETRY_MS = 5000;
+import { useWho } from './who';
 
 export interface GameOnProps {
   online: Online;
@@ -31,35 +29,8 @@ export interface GameOnProps {
 }
 
 export function GameOn({ online, state, route, go, onJoin }: GameOnProps) {
-  const [asked, setAsked] = useState<Identity | 'asking'>('asking');
   // At Games the player is on their way in: a browser without a session gets its guest there.
-  const create = route.page === 'games';
-
-  useEffect(() => {
-    let stale = false,
-      timer: ReturnType<typeof setTimeout> | undefined;
-    const ask = (): void => {
-      void online.identify(create).then((answer) => {
-        if (stale) return;
-        setAsked(answer);
-        if (answer === 'failed') timer = setTimeout(ask, RETRY_MS);
-      });
-    };
-    ask();
-    return () => {
-      stale = true;
-      clearTimeout(timer);
-    };
-  }, [online, create]);
-
-  const me = state.me;
-  const who: Who = me
-    ? { is: 'player', me }
-    : asked === 'failed'
-      ? { is: 'unknown' }
-      : asked === 'nobody' && !create
-        ? { is: 'visitor' }
-        : { is: 'asking' };
+  const who = useWho(online, state.me, route.page === 'games');
   const season = state.config ? state.config.season : undefined;
   const account = accountOf(who) != null;
 

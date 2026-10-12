@@ -11,6 +11,7 @@ import { GameRecord } from './online/GameRecord';
 import { OnlineScreens } from './online/OnlineScreens';
 import { TableOverlay } from './online/TableOverlay';
 import { AT, HUB, isFrame, isLegacy, isOnline, routeOf, settle } from './router/addresses';
+import { SkullKingHome } from './skullking/Home';
 import { browserPlaces } from './router/places';
 import type { Places } from './router/places';
 import { createRouter } from './router/router';
@@ -30,10 +31,14 @@ export interface AppProps {
  * Which of the three is up, and which screen of it, is the page's address (src/router/addresses.ts).
  *
  * React renders #app and #fx once and never looks inside them: the legacy renderer owns #app (it
- * rebuilds it from HTML strings) and draws confetti on #fx. Skull King's home, the offline modes and
- * the game table live there. The frame (GameOn: the landing, Games, signing up and in) and the
- * online screens are React's; an online game is played back at the renderer's table, with the
- * server on the other side of it.
+ * rebuilds it from HTML strings) and draws confetti on #fx. The new-game screen, the scoresheet and
+ * the game table live there. The frame (GameOn: the landing, Games, signing up and in), Skull
+ * King's home and the online screens are React's; an online game is played back at the renderer's
+ * table, with the server on the other side of it.
+ *
+ * At Skull King's home the renderer is still there, under the page, for the sheets only it draws
+ * (the greeting, the sound settings, the rules). The home's address is one of the renderer's own:
+ * the connection is given up there, and the home asks the server who the player is over REST.
  *
  * The frame needs no connection and leaves the one there is alone: it is made at the online
  * screens and given up at the renderer's own.
@@ -68,6 +73,8 @@ export function App({ backend = appBackend, memory = appMemory, places }: AppPro
   const [record, setRecord] = useState(false);
   /** The public table the player asked to sit down at from Games. The public list does the asking. */
   const [sitting, setSitting] = useState<LobbyId | null>(null);
+  /** One of the renderer's sheets is open: over the home the page draws, it is the only thing to reach. */
+  const [sheet, setSheet] = useState(false);
   const table = state.table;
 
   // Forward, or a typed address, can land on one that only leads somewhere.
@@ -78,7 +85,10 @@ export function App({ backend = appBackend, memory = appMemory, places }: AppPro
   useEffect(() => {
     if (!app.current || !fx.current) return;
     return mountTavern(app.current, fx.current, {
-      online: () => router.go(AT.online),
+      // Skull King's home is the page's own (src/skullking). The renderer keeps its sheets there.
+      pageHome: true,
+      greet: routeOf(router.getPath()).page === 'home',
+      dialog: setSheet,
       moved: (place) => {
         const from = routeOf(router.getPath()).page;
         // Back at the home screen is the way back, not a step further on.
@@ -147,13 +157,15 @@ export function App({ backend = appBackend, memory = appMemory, places }: AppPro
   // They take the renderer's place: its home screen is still there, but not to be seen.
   const covered = screens || framed != null;
   useEffect(() => coverTavern(covered), [covered]);
+  // Skull King's home: the page's own, with the renderer under it.
+  const atHome = !table && !covered && route.page === 'home';
   // The table is on screen and the server is not there: what it shows may be old.
   const cut = table != null && state.status !== 'online' ? state.status : null;
   // The record is a dialog over the end screen: the table underneath takes no input while it is open.
   const shown = record && table?.result != null;
   return (
     <>
-      <div id="app" ref={app} hidden={covered} inert={cut != null || shown}></div>
+      <div id="app" ref={app} hidden={covered} data-behind={atHome ? '' : undefined} inert={cut != null || shown}></div>
       <canvas id="fx" ref={fx} hidden></canvas>
       {cut && <TableOverlay status={cut} online={online} />}
       {table && shown && <GameRecord online={online} gameId={table.gameId} onClose={() => setRecord(false)} />}
@@ -170,6 +182,20 @@ export function App({ backend = appBackend, memory = appMemory, places }: AppPro
             onSat={() => setSitting(null)}
           />
         </div>
+      )}
+      {atHome && (
+        <SkullKingHome
+          online={online}
+          state={state}
+          go={router.go}
+          behind={sheet}
+          onRejoin={() => {
+            // The seat is the server's: the connection is made, and its `welcome` puts the table back.
+            online.open();
+            setLinked(true);
+            router.go(AT.table);
+          }}
+        />
       )}
       {framed && (
         <GameOn

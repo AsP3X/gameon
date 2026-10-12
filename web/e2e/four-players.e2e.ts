@@ -52,7 +52,7 @@ describe('four players at one table', () => {
 
     // Each context is a guest of its own: the hub says who.
     for (const p of players) {
-      await button(p, 'Play online').click();
+      await p.page.locator('.sk-way[href="/skull-king/online"]').click();
       await expect.poll(() => p.page.locator('#online .pill').textContent()).toBe('Connected');
     }
     const names = await Promise.all(players.map((p) => p.page.locator('#online .identity b').textContent()));
@@ -241,7 +241,7 @@ describe('offline, in the same browser', () => {
   it('still plays a solo round against bots to its result, with nothing of the online table on it', async () => {
     const solo = await Player.join(stage.browser, 'Solo', stage.url);
     players.push(solo);
-    await solo.page.locator('[data-act="setup"]').click();
+    await solo.page.locator('.sk-way[href="/skull-king/solo"]').click();
     await solo.page.locator('[data-act="start"]').click();
     await solo.page.locator('#app .game').waitFor();
     // The first round of the classic game is one card: a bid, a card, and the round is scored.

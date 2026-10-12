@@ -292,12 +292,18 @@ export const stage: {
   online: (() => void) | null;
   moved: ((place: Place) => void) | null;
   covered: boolean;
+  /** The page draws the home screen itself: the renderer draws nothing there but its sheets. */
+  pageHome: boolean;
+  /** Told when a sheet or the curtain opens or closes, so the page can take what is behind it out of reach. */
+  dialog: ((open: boolean) => void) | null;
 } = {
   app: null,
   fx: null,
   online: null,
   moved: null,
   covered: false,
+  pageHome: false,
+  dialog: null,
 };
 
 type Timer = ReturnType<typeof setTimeout>;

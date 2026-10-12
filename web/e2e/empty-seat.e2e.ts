@@ -60,7 +60,7 @@ describe('a seat nobody comes back to', () => {
     stayers = [host, second];
     gone = third;
     for (const p of players) {
-      await button(p, 'Play online').click();
+      await p.page.locator('.sk-way[href="/skull-king/online"]').click();
       await expect.poll(() => p.page.locator('#online .pill').textContent()).toBe('Connected');
     }
     goneName = (await gone.page.locator('#online .identity b').textContent()) ?? '';

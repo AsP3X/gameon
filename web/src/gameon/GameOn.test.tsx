@@ -222,10 +222,10 @@ describe('the landing', () => {
     await openAt('/');
     await follow('Play Skull King');
     expect(places.entries()).toEqual({ paths: ['/', '/skull-king'], at: 1 });
-    expect($('#gameon')).toBeNull();
+    expect($('.go-nav')).toBeNull();
     expect($('#app')?.hidden).toBe(false);
-    expect($('#app .home')).not.toBeNull();
-    expect(document.title).toBe('Skull King Tavern');
+    expect($('.sk-home h1')?.textContent).toBe('Skull King');
+    expect(document.title).toBe('Skull King · GameOn');
     await act(async () => {
       places.back();
       await vi.advanceTimersByTimeAsync(0);
@@ -370,7 +370,7 @@ describe('Games', () => {
     expect(link('Play').getAttribute('href')).toBe('/skull-king');
     await follow('Play');
     expect(places.entries()).toEqual({ paths: ['/games', '/skull-king'], at: 1 });
-    expect($('#app .home')).not.toBeNull();
+    expect($('.sk-home')).not.toBeNull();
     expect($('#app')?.hidden).toBe(false);
   });
 
@@ -467,7 +467,7 @@ describe('Games', () => {
   it('offers the game saved on this device, and continues it at the table', async () => {
     // A solo game against bots, left after the first bid: that is when it is saved.
     await openAt('/skull-king');
-    await clickOn($('[data-act="setup"]') ?? host);
+    await clickOn($('#gameon a[href="/skull-king/solo"]') ?? host);
     await clickOn($('[data-act="start"]') ?? host);
     await settle(3000);
     const round = $('#app .g-top')?.textContent;

@@ -51,7 +51,7 @@ const back = (): void => act(() => places.back());
 const forward = (): void => act(() => places.forward());
 /** What the renderer shows: the heading of a screen that has one, or what it is. */
 const screen = (): string =>
-  $('#app .home') ? 'home' : $('#app .game') ? 'table' : ($('#app h2')?.textContent ?? 'something else');
+  $('.sk-home') ? 'home' : $('#app .game') ? 'table' : ($('#app h2')?.textContent ?? 'something else');
 
 beforeEach(() => {
   vi.useFakeTimers();
@@ -84,11 +84,17 @@ describe('where the page opens', () => {
     expect(places.entries()).toEqual({ paths: ['/games'], at: 0 });
   });
 
-  it("opens Skull King's home at its address, with no frame around it", () => {
+  it("opens Skull King's home at its address: the page's own, with the renderer under it for its sheets", () => {
     open('/skull-king');
     expect(screen()).toBe('home');
+    expect($('.sk-home h1')?.textContent).toBe('Skull King');
+    // The renderer is there and draws no home screen of its own.
     expect($('#app')?.hidden).toBe(false);
-    expect($('#gameon')).toBeNull();
+    expect($('#app')?.hasAttribute('data-behind')).toBe(true);
+    expect($('#app')?.innerHTML).toBe('');
+    // No bar and no footer of the frame's other pages.
+    expect($('.go-nav')).toBeNull();
+    expect($('.go-foot')).toBeNull();
   });
 
   it("leads any address that is nobody's to Skull King's home", () => {
@@ -124,7 +130,7 @@ describe('where the page opens', () => {
 describe('a tap moves the address', () => {
   it("goes to the new-game screen and back, and Back is the browser's Back", () => {
     open();
-    click('[data-act="setup"]');
+    click('#gameon a[href="/skull-king/solo"]');
     expect(screen()).toBe('New game');
     expect(places.entries()).toEqual({ paths: ['/skull-king', '/skull-king/solo'], at: 1 });
     click('[data-act="home"]');
@@ -135,7 +141,7 @@ describe('a tap moves the address', () => {
 
   it('puts the table in the place of the screen the game was set up on, and saves the game under its address', () => {
     open();
-    click('[data-act="setup"]');
+    click('#gameon a[href="/skull-king/solo"]');
     click('[data-act="start"]');
     expect(screen()).toBe('table');
     expect(places.entries()).toEqual({ paths: ['/skull-king', '/skull-king/table'], at: 1 });
@@ -153,15 +159,15 @@ describe('a tap moves the address', () => {
     click('#app .g-top [data-act="home"]');
     expect(screen()).toBe('home');
     expect(places.entries()).toEqual({ paths: ['/skull-king', '/skull-king/table'], at: 0 });
-    expect($('#app [data-act="resume"]')).not.toBeNull();
-    click('[data-act="resume"]');
+    expect($('.sk-jump a.btn')).not.toBeNull();
+    click('.sk-jump a.btn');
     expect(screen()).toBe('table');
     expect(places.entries()).toEqual({ paths: ['/skull-king', '/skull-king/table'], at: 1 });
   });
 
   it('goes to the scoresheet and back', () => {
     open();
-    click('[data-act="track"]');
+    click('#gameon a[href="/skull-king/score"]');
     expect(screen()).toBe('Score a real game');
     expect(places.entries()).toEqual({ paths: ['/skull-king', '/skull-king/score'], at: 1 });
     click('[data-act="home"]');
@@ -180,7 +186,7 @@ describe('a tap moves the address', () => {
 describe("the browser's Back and Forward move the screen", () => {
   it('goes back from the new-game screen to the home screen, and forward to it again', () => {
     open();
-    click('[data-act="setup"]');
+    click('#gameon a[href="/skull-king/solo"]');
     back();
     expect(screen()).toBe('home');
     expect(places.path()).toBe('/skull-king');
@@ -191,12 +197,12 @@ describe("the browser's Back and Forward move the screen", () => {
 
   it('leaves an offline table by Back with the game saved, and sits back down at it by Forward', () => {
     open();
-    click('[data-act="setup"]');
+    click('#gameon a[href="/skull-king/solo"]');
     click('[data-act="start"]');
     wait(3000);
     back();
     expect(screen()).toBe('home');
-    expect($('#app [data-act="resume"]')).not.toBeNull();
+    expect($('.sk-jump a.btn')).not.toBeNull();
     forward();
     expect(screen()).toBe('table');
     expect(places.entries()).toEqual({ paths: ['/skull-king', '/skull-king/table'], at: 1 });
@@ -204,7 +210,7 @@ describe("the browser's Back and Forward move the screen", () => {
 
   it('goes from the scoresheet to the home screen and back to the same sheet', () => {
     open();
-    click('[data-act="track"]');
+    click('#gameon a[href="/skull-king/score"]');
     click('[data-act="trkStart"]');
     const sheet = $('#app .g-top')?.textContent;
     expect(sheet).toBeTruthy();

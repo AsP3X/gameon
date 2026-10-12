@@ -29,6 +29,8 @@ export function Link(props: {
   className?: string;
   label?: string;
   current?: boolean;
+  /** What a plain click does in the place of going to the address: the page has more to do on the way. */
+  onFollow?: () => void;
   children: ReactNode;
 }) {
   const go = useContext(GoContext);
@@ -36,7 +38,8 @@ export function Link(props: {
     // A new tab, a new window or a download is the browser's to do.
     if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
     e.preventDefault();
-    go(props.to);
+    if (props.onFollow) props.onFollow();
+    else go(props.to);
   };
   return (
     <a

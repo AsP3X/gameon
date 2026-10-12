@@ -37,7 +37,7 @@ describe('four accounts at a ranked table', () => {
       ['Ann', 'Bea', 'Cal', 'Dee'].map((name) => Player.join(stage.browser, name, stage.url)),
     );
     for (const [i, p] of players.entries()) {
-      await button(p, 'Play online').click();
+      await p.page.locator('.sk-way[href="/skull-king/online"]').click();
       await expect.poll(() => p.page.locator('#online .pill').textContent()).toBe('Connected');
       await button(p, 'Create an account').click();
       await p.page.locator('#signup-username').fill(`rk_${stamp}_${i}`);

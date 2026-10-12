@@ -91,7 +91,9 @@ const dataOf = (el: HTMLElement): string =>
  */
 function focused(app: HTMLElement): (() => HTMLElement | null) | null {
   const el = document.activeElement;
-  if (!(el instanceof HTMLElement) || el === app || !app.contains(el)) return null;
+  if (!(el instanceof HTMLElement) || el === app || el === document.body) return null;
+  // A control of the page around the renderer (the home it draws itself): a redraw leaves it as it is.
+  if (!app.contains(el)) return () => (el.isConnected ? el : null);
   if (el.id) {
     const id = el.id;
     return () => document.getElementById(id);
@@ -120,6 +122,7 @@ function keepFocus(app: HTMLElement, before: (() => HTMLElement | null) | null):
     closed = name == null && over.name != null;
   if (opened && over.name == null) over.opener = before;
   over.name = name;
+  if (opened || closed) stage.dialog?.(name != null);
   if (dialog && (opened || !dialog.contains(before?.() ?? null))) {
     dialog.tabIndex = -1;
     dialog.focus({ preventScroll: true });
@@ -135,11 +138,13 @@ export function render(): void {
   if (!app) return; // unmounted: a late timer or a finished animation has nothing to draw on
   tuneMenu();
   const snap = ui.screen === 'game' && !ui.curtain ? snapshot() : null;
-  let html = VIEWS[ui.screen]();
+  // A page that draws the home itself leaves the renderer nothing to draw there but a sheet.
+  const blank = ui.screen === 'home' && stage.pageHome;
+  let html = blank ? '' : VIEWS[ui.screen]();
   if (ui.screen === 'game' && ui.curtain) html += curtainView();
   else if (ui.sheet) html += SHEETS[ui.sheet]();
   app.toggleAttribute('data-enter', ui.enter);
-  app.classList.toggle('full', ui.screen === 'end' || ui.screen === 'home');
+  app.classList.toggle('full', ui.screen === 'end' || (ui.screen === 'home' && !blank));
   // A redraw must not take a control from under the keyboard: a bot's bid redraws the table while
   // the player is still stepping through theirs, or is on a card.
   const before = focused(app);

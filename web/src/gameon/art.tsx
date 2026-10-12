@@ -9,7 +9,7 @@ import type { IconName } from './icons';
 import { WORDMARK_BOX, WORDMARK_GAME, WORDMARK_ON } from './wordmark';
 
 /** The mark of design/brand/gameon/gameon-mark.svg: the G on its key, with the key's lower edge. */
-function Mark() {
+export function Mark() {
   return (
     <svg className="go-mark" viewBox="0 0 512 512" aria-hidden="true">
       <rect width="512" height="512" rx="112" fill="var(--green-d)" />

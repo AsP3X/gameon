@@ -83,7 +83,11 @@ async function renderApp(transport: Transport = server.transport()): Promise<voi
           places={places}
           backend={{
             transport,
-            rest: () => Promise.reject(new Error('This screen test has no REST')),
+            // The home asks who this browser is, and is told nobody. Nothing else is answered.
+            rest: (method, path) =>
+              method === 'GET' && path === '/me'
+                ? Promise.resolve({ status: 401, body: { error: { code: 'UNAUTHENTICATED', message: 'No session.' } } })
+                : Promise.reject(new Error('This screen test has no REST')),
           }}
         />
       </StrictMode>,
@@ -101,7 +105,7 @@ const makeServer = (store?: MockStore): MockServer =>
   new MockServer({ random: seeded(4), timers: CLOCKS, bot: { minMs: 40, maxMs: 80 }, store });
 /** From the home screen to the lobby of a new private table with three seats and five short rounds. */
 async function createTable(): Promise<void> {
-  await click('[data-act="online"]');
+  await click('#gameon a[href="/skull-king/online"]');
   await press('Create a table');
   await click('[aria-label="Fewer seats"]');
   await press('Swift-n-Salty');
@@ -135,7 +139,7 @@ describe('playing online', () => {
     expect($('#online')).toBeNull();
     expect($('#app')?.hidden).toBe(false);
     act(() => {
-      $('[data-act="online"]')?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      $('#gameon a[href="/skull-king/online"]')?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     });
     // The hub is up at once, and says it is still connecting.
     expect($('#app')?.hidden).toBe(true);
@@ -155,7 +159,7 @@ describe('playing online', () => {
     await click('[aria-label="Back"]');
     expect($('#online')).toBeNull();
     expect($('#app')?.hidden).toBe(false);
-    expect($('#app .home')).not.toBeNull();
+    expect($('.sk-home')).not.toBeNull();
   });
 
   it('plays the menu music on the hub, where the home screen was, and keeps it on the way back', async () => {
@@ -167,7 +171,7 @@ describe('playing online', () => {
     render();
     await click('[data-act="welcomeIn"]');
     expect(wanted()).toBe(true);
-    await click('[data-act="online"]');
+    await click('#gameon a[href="/skull-king/online"]');
     expect(wanted()).toBe(true);
     await click('[aria-label="Back"]');
     expect(wanted()).toBe(true);
@@ -306,7 +310,7 @@ describe('playing online', () => {
     it('joins by code, says so when the code is wrong, and waits for the host as a guest', async () => {
       const code = await friendsTable();
       await renderApp();
-      await click('[data-act="online"]');
+      await click('#gameon a[href="/skull-king/online"]');
       await press('Join with a code');
       expect(button('Join table').disabled).toBe(true);
       await type('#table-code', 'zz-zz zz!');
@@ -340,7 +344,7 @@ describe('playing online', () => {
     it('is told when the host removes them, and can read it and move on', async () => {
       const code = await friendsTable();
       await renderApp();
-      await click('[data-act="online"]');
+      await click('#gameon a[href="/skull-king/online"]');
       await press('Join with a code');
       await type('#table-code', code);
       await press('Join table');
@@ -356,7 +360,7 @@ describe('playing online', () => {
     it('leaves a running game after being asked, lands on the hub, and hears how the game ended', async () => {
       const code = await friendsTable();
       await renderApp();
-      await click('[data-act="online"]');
+      await click('#gameon a[href="/skull-king/online"]');
       await press('Join with a code');
       await type('#table-code', code);
       await press('Join table');
@@ -393,7 +397,7 @@ describe('playing online', () => {
 
   it('takes the keyboard to the title of each screen it opens', async () => {
     await renderApp();
-    await click('[data-act="online"]');
+    await click('#gameon a[href="/skull-king/online"]');
     await settle();
     expect(document.activeElement).toBe($('#online h2'));
     expect(document.activeElement?.textContent).toBe('Play online');
@@ -428,7 +432,7 @@ describe('playing online', () => {
       };
     };
     await renderApp(old);
-    await click('[data-act="online"]');
+    await click('#gameon a[href="/skull-king/online"]');
     await settle();
     expect(texts('#online .pill')).toEqual(['Update needed']);
     expect($('#online .notice[role="alert"] b')?.textContent).toBe('The tavern has moved on');
@@ -447,21 +451,21 @@ describe('playing online', () => {
   it('shows the way to the offline modes when the server cannot be reached', async () => {
     server.drop(true);
     await renderApp();
-    await click('[data-act="online"]');
+    await click('#gameon a[href="/skull-king/online"]');
     await settle();
     expect($('#online .notice p:last-of-type')?.textContent).toBe(
       'Bots, one phone for the crew and the scoresheet need no connection.',
     );
     await press('Play offline');
     expect($('#online')).toBeNull();
-    expect($('#app .home')).not.toBeNull();
+    expect($('.sk-home')).not.toBeNull();
     expect(ui.screen).toBe('home');
   });
 
   it('says when the server cannot be reached, keeps trying, and recovers', async () => {
     server.drop(true);
     await renderApp();
-    await click('[data-act="online"]');
+    await click('#gameon a[href="/skull-king/online"]');
     await settle();
     expect(texts('#online .pill')).toEqual(['Offline']);
     expect($('#online .notice b')?.textContent).toBe("Can't reach the tavern");
@@ -481,7 +485,7 @@ describe('playing online', () => {
       root?.render(<App backend={as} places={places} />);
       await vi.advanceTimersByTimeAsync(0);
     });
-    await click('[data-act="online"]');
+    await click('#gameon a[href="/skull-king/online"]');
     await settle();
     const elsewhere = await connectRaw(as.transport);
     await settle();
@@ -500,7 +504,7 @@ describe('playing online', () => {
     /** This page hosts a table of three: itself, a friend on another connection, and a bot. The game is on. */
     async function seated(transport?: Transport): Promise<void> {
       await renderApp(transport);
-      await click('[data-act="online"]');
+      await click('#gameon a[href="/skull-king/online"]');
       await press('Create a table');
       await click('[aria-label="Fewer seats"]');
       await press('Swift-n-Salty');
@@ -671,7 +675,7 @@ describe('playing online', () => {
 
     it('comes back to the hub when that is what the player was looking at: the address is still the hub', async () => {
       await renderApp(server.transport('this-page'));
-      await click('[data-act="online"]');
+      await click('#gameon a[href="/skull-king/online"]');
       await settle();
       expect(places.path()).toBe('/skull-king/online');
       await reload();
@@ -682,12 +686,12 @@ describe('playing online', () => {
       await click('[aria-label="Back"]');
       expect(places.path()).toBe('/skull-king');
       expect($('#online')).toBeNull();
-      expect($('#app .home')).not.toBeNull();
+      expect($('.sk-home')).not.toBeNull();
     });
 
     it('opens on the home screen for a player who was only looking at the hub and comes in at the front door', async () => {
       await renderApp(server.transport('this-page'));
-      await click('[data-act="online"]');
+      await click('#gameon a[href="/skull-king/online"]');
       await settle();
       closePage();
       // Another tab, or the installed app opened again: nobody is seated, so nothing connects by itself.
@@ -696,7 +700,7 @@ describe('playing online', () => {
       await settle();
       expect(places.path()).toBe('/skull-king');
       expect($('#online')).toBeNull();
-      expect($('#app .home')).not.toBeNull();
+      expect($('.sk-home')).not.toBeNull();
     });
 
     it('says the seat is lost when the page stayed away for two turns, and opens no table for the game that goes on', async () => {
@@ -779,7 +783,7 @@ describe('playing online', () => {
       places = memoryPlaces('/skull-king');
       await renderApp(server.transport('this-page'));
       expect($('#online')).toBeNull();
-      await click('[data-act="online"]');
+      await click('#gameon a[href="/skull-king/online"]');
       await settle();
       expect($('#online h2')?.textContent).toBe('Play online');
       expect(session.table).toBeNull();
@@ -791,10 +795,10 @@ describe('playing online', () => {
 
   it('leaves the offline game as it was: a solo round after a visit to the hub is saved and counted on the device', async () => {
     await renderApp();
-    await click('[data-act="online"]');
+    await click('#gameon a[href="/skull-king/online"]');
     await settle();
     await click('[aria-label="Back"]');
-    await click('[data-act="setup"]');
+    await click('#gameon a[href="/skull-king/solo"]');
     await click('[data-act="start"]');
     expect(ui.screen).toBe('game');
     expect(session.online).toBeNull();
@@ -807,7 +811,8 @@ describe('playing online', () => {
     await click('#app .g-top [data-act="home"]');
     expect(ui.screen).toBe('home');
     expect($('#app .sheet')).toBeNull();
-    expect($('[data-act="resume"]')?.textContent).toBe('Continue · Round 1 of 10');
+    expect($('.sk-jump-text > span')?.textContent).toBe('Round 1 of 10 · offline, on this device only');
+    expect($('.sk-jump a.btn')?.textContent).toBe('Continue');
     expect(stats.games).toBe(0);
   });
 });
@@ -852,7 +857,7 @@ describe('the addresses of the online screens', () => {
 
   it('moves the address with every page, and Back is the way the player came', async () => {
     await openAt('/skull-king');
-    await click('[data-act="online"]');
+    await click('#gameon a[href="/skull-king/online"]');
     await settle();
     await press('Create a table');
     expect(places.entries()).toEqual({
@@ -875,12 +880,12 @@ describe('the addresses of the online screens', () => {
     await click('[aria-label="Back"]');
     expect(places.path()).toBe('/skull-king');
     expect($('#online')).toBeNull();
-    expect($('#app .home')).not.toBeNull();
+    expect($('.sk-home')).not.toBeNull();
   });
 
   it("follows the browser's Back and Forward between the hub, a page of it and the home screen, and hangs up at home", async () => {
     await openAt('/skull-king');
-    await click('[data-act="online"]');
+    await click('#gameon a[href="/skull-king/online"]');
     await settle();
     await press('Join with a code');
     const go = async (move: () => void): Promise<void> => {
@@ -894,7 +899,7 @@ describe('the addresses of the online screens', () => {
     expect(texts('#online .pill')).toEqual(['Connected']);
     await go(() => places.back());
     expect($('#online')).toBeNull();
-    expect($('#app .home')).not.toBeNull();
+    expect($('.sk-home')).not.toBeNull();
     await go(() => places.forward());
     await settle();
     expect($('#online h2')?.textContent).toBe('Play online');

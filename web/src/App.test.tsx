@@ -42,17 +42,22 @@ function renderApp(): void {
 }
 
 describe('App', () => {
-  it('renders #app and #fx inside #root and lets the legacy renderer draw the home screen', () => {
+  it("renders #app and #fx inside #root, and Skull King's home next to them", () => {
     renderApp();
     const app = document.querySelector('#root > #app');
-    expect(app?.querySelector('.home .logo')?.textContent).toBe('Skull King');
+    expect(app?.querySelector('.home')).toBeNull();
+    expect(document.querySelector('#root > .sk-home .logo')?.textContent).toBe('Skull King');
     expect(document.querySelector<HTMLCanvasElement>('#root > canvas#fx')?.hidden).toBe(true);
   });
 
   it('mounts the table exactly once under StrictMode', () => {
     renderApp();
     expect(document.querySelectorAll('symbol#ill-back')).toHaveLength(1);
-    document.querySelector('[data-act="setup"]')?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    act(() => {
+      document
+        .querySelector('#gameon a[href="/skull-king/solo"]')
+        ?.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+    });
     document.querySelector('[data-act="crewAdd"]')?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     expect(document.querySelectorAll('.crew-row')).toHaveLength(5); // a second listener would have added two
   });

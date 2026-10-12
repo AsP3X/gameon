@@ -29,6 +29,15 @@ export interface TavernHooks {
   online?: () => void;
   /** The renderer went to another place because the player tapped something: the address follows. */
   moved?: (place: Place) => void;
+  /**
+   * The page draws the home screen itself (src/skullking). The renderer is still "at home" there,
+   * and draws only its sheets: the greeting, the sound settings and the rules.
+   */
+  pageHome?: boolean;
+  /** Whether the page opened on the home screen: only then is the player greeted. On by default. */
+  greet?: boolean;
+  /** A sheet or the curtain opened or closed. */
+  dialog?: (open: boolean) => void;
 }
 
 /**
@@ -62,6 +71,8 @@ export function mountTavern(app: HTMLElement, fx: HTMLCanvasElement, hooks: Tave
   stage.fx = fx;
   stage.online = hooks.online ?? null;
   stage.moved = hooks.moved ?? null;
+  stage.pageHome = hooks.pageHome === true;
+  stage.dialog = hooks.dialog ?? null;
 
   /* ---------- boot ---------- */
   document.body.insertAdjacentHTML('afterbegin', SPRITE);
@@ -69,7 +80,7 @@ export function mountTavern(app: HTMLElement, fx: HTMLCanvasElement, hooks: Tave
   const unlisten = listen();
   const unhinted = !prefs.swipeHinted;
   ui.pillIntro = true;
-  if (ui.screen === 'home' && Sound.asksToStart()) ui.sheet = 'welcome';
+  if (ui.screen === 'home' && hooks.greet !== false && Sound.asksToStart()) ui.sheet = 'welcome';
   render();
   ui.pillIntro = false;
   // The first render may have spent the one-time swipe hint (views.ts, swipeContinue).
@@ -99,6 +110,8 @@ export function mountTavern(app: HTMLElement, fx: HTMLCanvasElement, hooks: Tave
     stage.fx = null;
     stage.online = null;
     stage.moved = null;
+    stage.pageHome = false;
+    stage.dialog = null;
   };
   mounted = cleanup;
   return cleanup;

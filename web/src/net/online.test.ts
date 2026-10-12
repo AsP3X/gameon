@@ -631,6 +631,17 @@ describe('Online', () => {
         expect(asked).not.toContain('GET /me');
       });
 
+      it('takes the answer when the connection was only hung up while it was asked', async () => {
+        answers['GET /me'] = { status: 200, body: anne };
+        await online.identify();
+        // The page went from the hub to the home: the home asks, and the link is given up under it.
+        const asking = online.identify();
+        online.close(true);
+        expect(online.getState().me).toBeNull();
+        expect(await asking).toBe('known');
+        expect(online.getState()).toMatchObject({ status: 'idle', me: anne });
+      });
+
       it('forgets a player whose session is gone', async () => {
         answers['GET /me'] = { status: 200, body: anne };
         await online.identify();

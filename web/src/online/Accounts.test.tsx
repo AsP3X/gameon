@@ -100,7 +100,7 @@ async function renderApp(): Promise<void> {
 /** From the home screen to the hub, connected. */
 async function openHub(): Promise<void> {
   await renderApp();
-  await click('[data-act="online"]');
+  await click('#gameon a[href="/skull-king/online"]');
   await settle();
 }
 const me = async (): Promise<Me> => (await page.rest('GET', '/me')).body as Me;
@@ -244,10 +244,10 @@ describe('an account', () => {
     await press('Sign out');
     expect($('#online')).toBeNull();
     expect($('#app')?.hidden).toBe(false);
-    expect($('#app .home')).not.toBeNull();
+    expect($('.sk-home')).not.toBeNull();
     expect((await page.rest('GET', '/me')).status).toBe(401);
 
-    await click('[data-act="online"]');
+    await click('#gameon a[href="/skull-king/online"]');
     await settle();
     expect($('#online .identity small')?.textContent).toBe('Playing as a guest');
     expect((await me()).user.id).not.toBe(calico.user.id);

@@ -48,6 +48,12 @@ export async function startMockHost(options: MockOptions = {}): Promise<MockHost
       res.setHeader('Set-Cookie', `${COOKIE}=${session}; HttpOnly; SameSite=Strict; Path=/`);
       return json(res, 200, mock.me(session));
     }
+    if (path === '/api/v1/me' && req.method === 'GET') {
+      // The home asks who the browser is. A browser that never asked for a guest is nobody.
+      const session = sessionOf(req);
+      if (!session) return json(res, 401, { error: { code: 'UNAUTHENTICATED', message: 'No session.' } });
+      return json(res, 200, mock.me(session));
+    }
     json(res, 404, { error: { code: 'NOT_FOUND', message: 'No such path.' } });
   });
   const sockets = new WebSocketServer({ noServer: true });

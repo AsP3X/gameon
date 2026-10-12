@@ -116,7 +116,7 @@ async function openHub(username?: string): Promise<void> {
     );
     await vi.advanceTimersByTimeAsync(0);
   });
-  await click('[data-act="online"]');
+  await click('#gameon a[href="/skull-king/online"]');
   await settle();
 }
 /** Three more accounts in the ranked queue: with the page's, that is a table. */

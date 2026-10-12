@@ -135,6 +135,8 @@ export class Online {
   private seated: boolean;
   /** The guest this page made so that a sign-up had a session to upgrade, until that sign-up went through. */
   private fresh: UserId | null = null;
+  /** Counts the sessions this page has had: a login or a logout starts the next one. */
+  private era = 0;
   /** The question `identify` has out, and whether it may make a guest. */
   private identifying: { create: boolean; answer: Promise<Identity> } | null = null;
 
@@ -221,16 +223,19 @@ export class Online {
   private async whoAmI(create: boolean): Promise<Identity> {
     if (!this.state.config) void this.loadConfig();
     const before = this.state.me?.user.id ?? null,
+      era = this.era,
       r = create ? await this.api.guest() : await this.api.me();
-    // A login or a `welcome` that arrived in between knows better than this answer.
-    const same = (this.state.me?.user.id ?? null) === before;
+    // A login, a logout or a `welcome` that arrived in between knows better than this answer. A
+    // connection that was only hung up does not: who the browser is has not changed with it.
+    const now = this.state.me?.user.id ?? null,
+      same = era === this.era && (now === before || now == null);
     if (r.ok) {
       if (same) this.set({ me: r.value });
       return 'known';
     }
     if (r.code !== 'UNAUTHENTICATED') return 'failed';
     // The session this page remembered is gone, and no connection says otherwise.
-    if (same && before != null && this.state.status === 'idle') this.set({ me: null });
+    if (same && now != null && this.state.status === 'idle') this.set({ me: null });
     return 'nobody';
   }
 
@@ -279,6 +284,7 @@ export class Online {
     const r = await this.api.login(credentials);
     if (!r.ok) return r;
     const linked = this.state.status !== 'idle';
+    this.era++;
     this.close();
     this.fresh = null;
     this.set({ me: r.value });
@@ -291,6 +297,7 @@ export class Online {
     const r = await this.api.logout();
     // No session to end is the state that was asked for.
     if (!r.ok && r.code !== 'UNAUTHENTICATED') return r;
+    this.era++;
     this.close();
     return { ok: true };
   }
