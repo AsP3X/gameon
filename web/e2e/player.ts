@@ -54,7 +54,18 @@ export class Player {
       });
     });
     await page.goto(url);
+    await player.comeIn();
     return player;
+  }
+
+  /**
+   * A page that opens on the home screen greets first: the "Welcome back" sheet, whose button is
+   * the tap a browser wants before it plays the menu music. Until it is closed it lies over the
+   * home screen. A page that opened somewhere else has no greeting, and this does nothing.
+   */
+  async comeIn(): Promise<void> {
+    const greeting = this.page.getByRole('button', { name: 'Come in' });
+    if (await greeting.isVisible()) await greeting.click();
   }
 
   /**

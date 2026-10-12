@@ -69,6 +69,12 @@ afterAll(async () => {
   await host?.close();
 });
 
+/** A page that opens on the home screen greets first. "Come in" closes that sheet, as a person would. */
+const comeIn = async (): Promise<void> => {
+  const greeting = page.getByRole('button', { name: 'Come in' });
+  if (await greeting.isVisible()) await greeting.click();
+};
+
 describe('the built page as an app', () => {
   it('names a manifest with icons that are there', async () => {
     await page.goto(url);
@@ -111,9 +117,12 @@ describe('the built page as an app', () => {
   });
 
   it('talks to the server itself: nothing under /api comes from the worker', async () => {
+    await page.locator('.home .logo').waitFor();
+    await comeIn();
     await page.getByRole('button', { name: 'Play online' }).click();
     await page.getByText('Connected').waitFor();
-    expect(api.length).toBeGreaterThan(0);
+    // The page is told of an answer before this script is: wait for the script to have heard of one.
+    await expect.poll(() => api.length).toBeGreaterThan(0);
     expect(api.filter((answer) => answer.worker)).toEqual([]);
     await page.getByRole('button', { name: 'Back' }).click();
   });
@@ -123,6 +132,7 @@ describe('the built page as an app', () => {
     await host.close();
     await page.reload();
     await page.locator('.home .logo').waitFor();
+    await comeIn();
     await page.getByRole('button', { name: 'Play online' }).click();
     await page.getByText("Can't reach the tavern").waitFor({ timeout: 30_000 });
     await page.getByRole('button', { name: 'Play offline' }).click();

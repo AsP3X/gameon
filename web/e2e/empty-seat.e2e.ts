@@ -150,6 +150,8 @@ describe('a seat nobody comes back to', () => {
     // Read, and not said again: the next page has no notice and was sent no second frame.
     await button(gone, 'OK').click();
     await gone.page.reload();
+    // Not seated any more, so this page opens on the home screen, and that greets first.
+    await gone.comeIn();
     await button(gone, 'Play online').click();
     await expect.poll(() => gone.page.locator('#online .pill').textContent()).toBe('Connected');
     expect(gone.framesOf('seat.lost')).toHaveLength(1);
