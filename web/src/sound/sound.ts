@@ -68,6 +68,8 @@ let decoding: Tune | null = null;
 /** Whether the page asks for the menu music, and the music that plays. */
 let musicWanted = false;
 let mus: Music | null = null;
+/** resume() is already in flight, so a refusal does not ask again until it settles. */
+let waking = false;
 const level = (): number => (prefs.muted ? 0 : Math.pow(prefs.volume == null ? 0.8 : prefs.volume, 1.6));
 
 function boot(): Rig | null {
@@ -623,6 +625,19 @@ function decodeTune(next: Tune): void {
   }
 }
 
+/**
+ * A real browser may play as soon as the home screen is up. The test stand-in
+ * and the parity recorder are not native, and stay quiet until a tap so their
+ * traces keep the old shape.
+ */
+function browserMayPlayNow(): boolean {
+  try {
+    return Function.prototype.toString.call(AudioContext).includes('[native code]');
+  } catch {
+    return false;
+  }
+}
+
 /** One silent sample, in the gesture, so a suspended context is allowed to play afterwards. */
 function poke(ctx: AudioContext): void {
   try {
@@ -644,9 +659,24 @@ function syncMusic(): void {
     decodeTune(next); // which comes back here
     return;
   }
-  // Without an audio graph nothing plays: it is built on the first tap, and unlock() comes back here.
+  // Start as soon as the tune is wanted. A browser that blocks autoplay leaves
+  // the context suspended; the next tap begins the tune inside that gesture.
+  if (on && !rig && browserMayPlayNow()) boot();
   const r = rig;
   if (!r) return;
+  if (on && r.ctx.state !== 'running' && !waking) {
+    waking = true;
+    void r.ctx.resume().then(
+      () => {
+        waking = false;
+        // Only try again once the browser has actually allowed sound.
+        if (r.ctx.state === 'running') syncMusic();
+      },
+      () => {
+        waking = false;
+      },
+    );
+  }
   const t = r.ctx.currentTime;
   if (next && tune) {
     const s = r.ctx.createBufferSource(),
@@ -781,8 +811,9 @@ export const Sound = {
     syncMusic();
   },
   /**
-   * Say whether the menu music is wanted. It plays once the tunes are in and audio is unlocked, and
-   * not while sound is off. Asking again for what already is changes nothing.
+   * Say whether the menu music is wanted. It plays once the tunes are in, and
+   * not while sound is off. A browser that blocks autoplay holds it until the
+   * next tap. Asking again for what already is changes nothing.
    */
   music(on: boolean): void {
     musicWanted = on;
