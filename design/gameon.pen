@@ -40952,6 +40952,240 @@
         },
         {
           "type": "frame",
+          "id": "pBaEL",
+          "name": "State · Open tables · a table nobody hosts",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 12,
+          "children": [
+            {
+              "type": "text",
+              "id": "N8xUeh",
+              "name": "Label",
+              "fill": "$faint",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "STATE · OPEN TABLES · A TABLE NOBODY HOSTS YET",
+              "lineHeight": 1.4,
+              "fontFamily": "$f-ui",
+              "fontSize": 12,
+              "fontWeight": "900",
+              "letterSpacing": 1
+            },
+            {
+              "type": "frame",
+              "id": "HyjSr",
+              "name": "Open tables",
+              "clip": true,
+              "width": "fill_container",
+              "fill": "$card",
+              "cornerRadius": 20,
+              "stroke": "$line",
+              "strokeWidth": 2,
+              "strokeAlignment": "inner",
+              "layout": "vertical",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "VYHpj",
+                  "name": "Header",
+                  "width": "fill_container",
+                  "fill": "$soft",
+                  "padding": [
+                    14,
+                    16
+                  ],
+                  "justifyContent": "space_between",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "gFbkP",
+                      "fill": "$muted",
+                      "content": "OPEN TABLES · SKULL KING",
+                      "lineHeight": 1.4,
+                      "fontFamily": "$f-ui",
+                      "fontSize": 12,
+                      "fontWeight": "900",
+                      "letterSpacing": 1
+                    },
+                    {
+                      "id": "H1lOGz",
+                      "type": "ref",
+                      "ref": "qUZQR",
+                      "descendants": {
+                        "kQQHu": {
+                          "content": "1"
+                        }
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "TSlu0",
+                  "name": "Table · nobody hosts",
+                  "width": "fill_container",
+                  "stroke": "$line",
+                  "strokeWidth": {
+                    "top": 2
+                  },
+                  "strokeAlignment": "inner",
+                  "gap": 12,
+                  "padding": [
+                    12,
+                    14,
+                    14,
+                    16
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "id": "Yo4Of",
+                      "type": "ref",
+                      "ref": "SebZL",
+                      "width": 42,
+                      "height": 42,
+                      "fill": "$soft",
+                      "stroke": "$line",
+                      "descendants": {
+                        "peRO2": {
+                          "content": "O",
+                          "fontSize": 18,
+                          "fill": "$muted"
+                        }
+                      }
+                    },
+                    {
+                      "type": "frame",
+                      "id": "I4Ucs",
+                      "name": "Text",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "L2NRow",
+                          "fill": "$fg",
+                          "content": "Open table",
+                          "lineHeight": 1.3,
+                          "fontFamily": "$f-ui",
+                          "fontSize": 16,
+                          "fontWeight": "800"
+                        },
+                        {
+                          "type": "text",
+                          "id": "WXG3a",
+                          "fill": "$muted",
+                          "content": "0 of 4 seats · Classic",
+                          "lineHeight": 1.3,
+                          "fontFamily": "$f-ui",
+                          "fontSize": 13,
+                          "fontWeight": "700"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "wlctw",
+                      "name": "Join",
+                      "width": 78,
+                      "layout": "vertical",
+                      "padding": [
+                        0,
+                        0,
+                        3,
+                        0
+                      ],
+                      "children": [
+                        {
+                          "id": "Fckyq",
+                          "type": "ref",
+                          "ref": "R4KVz",
+                          "height": 44,
+                          "effect": {
+                            "type": "shadow",
+                            "shadowType": "outer",
+                            "color": "$line",
+                            "offset": {
+                              "x": 0,
+                              "y": 3
+                            }
+                          },
+                          "descendants": {
+                            "tMaLT": {
+                              "content": "JOIN"
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "Sp6hO",
+                  "name": "Footer",
+                  "width": "fill_container",
+                  "height": 52,
+                  "stroke": "$line",
+                  "strokeWidth": {
+                    "top": 2
+                  },
+                  "strokeAlignment": "inner",
+                  "padding": [
+                    0,
+                    16
+                  ],
+                  "justifyContent": "space_between",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "rPLY4",
+                      "name": "All tables",
+                      "gap": 2,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "TUuqx",
+                          "fill": "$blue-ink",
+                          "content": "All public tables",
+                          "lineHeight": 1.4,
+                          "fontFamily": "$f-ui",
+                          "fontSize": 14,
+                          "fontWeight": "900"
+                        },
+                        {
+                          "type": "icon",
+                          "id": "yy3Fz",
+                          "width": 16,
+                          "height": 16,
+                          "icon": "chevron-right",
+                          "library": "lucide",
+                          "fill": "$blue-ink"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "rFiSH",
+                      "fill": "$blue-ink",
+                      "content": "Join with a code",
+                      "lineHeight": 1.4,
+                      "fontFamily": "$f-ui",
+                      "fontSize": 14,
+                      "fontWeight": "900"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
           "id": "k5g81Z",
           "name": "State · Page · not connected",
           "width": "fill_container",
@@ -50520,6 +50754,240 @@
         },
         {
           "type": "frame",
+          "id": "hGeU3",
+          "name": "State · Open tables · a table nobody hosts",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 12,
+          "children": [
+            {
+              "type": "text",
+              "id": "rIRpg",
+              "name": "Label",
+              "fill": "$faint",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "STATE · OPEN TABLES · A TABLE NOBODY HOSTS YET",
+              "lineHeight": 1.4,
+              "fontFamily": "$f-ui",
+              "fontSize": 12,
+              "fontWeight": "900",
+              "letterSpacing": 1
+            },
+            {
+              "type": "frame",
+              "id": "fT4qV",
+              "name": "Open tables",
+              "clip": true,
+              "width": "fill_container",
+              "fill": "$card",
+              "cornerRadius": 20,
+              "stroke": "$line",
+              "strokeWidth": 2,
+              "strokeAlignment": "inner",
+              "layout": "vertical",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "Cbbvg",
+                  "name": "Header",
+                  "width": "fill_container",
+                  "fill": "$soft",
+                  "padding": [
+                    14,
+                    16
+                  ],
+                  "justifyContent": "space_between",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "awblN",
+                      "fill": "$muted",
+                      "content": "OPEN TABLES · SKULL KING",
+                      "lineHeight": 1.4,
+                      "fontFamily": "$f-ui",
+                      "fontSize": 12,
+                      "fontWeight": "900",
+                      "letterSpacing": 1
+                    },
+                    {
+                      "id": "VjJog",
+                      "type": "ref",
+                      "ref": "qUZQR",
+                      "descendants": {
+                        "kQQHu": {
+                          "content": "1"
+                        }
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "SozIT",
+                  "name": "Table · nobody hosts",
+                  "width": "fill_container",
+                  "stroke": "$line",
+                  "strokeWidth": {
+                    "top": 2
+                  },
+                  "strokeAlignment": "inner",
+                  "gap": 12,
+                  "padding": [
+                    12,
+                    14,
+                    14,
+                    16
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "id": "dyZMd",
+                      "type": "ref",
+                      "ref": "SebZL",
+                      "width": 42,
+                      "height": 42,
+                      "fill": "$soft",
+                      "stroke": "$line",
+                      "descendants": {
+                        "peRO2": {
+                          "content": "O",
+                          "fontSize": 18,
+                          "fill": "$muted"
+                        }
+                      }
+                    },
+                    {
+                      "type": "frame",
+                      "id": "dOSlA",
+                      "name": "Text",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "cWir9",
+                          "fill": "$fg",
+                          "content": "Open table",
+                          "lineHeight": 1.3,
+                          "fontFamily": "$f-ui",
+                          "fontSize": 16,
+                          "fontWeight": "800"
+                        },
+                        {
+                          "type": "text",
+                          "id": "zcwfl",
+                          "fill": "$muted",
+                          "content": "0 of 4 seats · Classic",
+                          "lineHeight": 1.3,
+                          "fontFamily": "$f-ui",
+                          "fontSize": 13,
+                          "fontWeight": "700"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "JAQO9",
+                      "name": "Join",
+                      "width": 78,
+                      "layout": "vertical",
+                      "padding": [
+                        0,
+                        0,
+                        3,
+                        0
+                      ],
+                      "children": [
+                        {
+                          "id": "G3zkJ",
+                          "type": "ref",
+                          "ref": "R4KVz",
+                          "height": 44,
+                          "effect": {
+                            "type": "shadow",
+                            "shadowType": "outer",
+                            "color": "$line",
+                            "offset": {
+                              "x": 0,
+                              "y": 3
+                            }
+                          },
+                          "descendants": {
+                            "tMaLT": {
+                              "content": "JOIN"
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "ntl2q",
+                  "name": "Footer",
+                  "width": "fill_container",
+                  "height": 52,
+                  "stroke": "$line",
+                  "strokeWidth": {
+                    "top": 2
+                  },
+                  "strokeAlignment": "inner",
+                  "padding": [
+                    0,
+                    16
+                  ],
+                  "justifyContent": "space_between",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "HdMpK",
+                      "name": "All tables",
+                      "gap": 2,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "LqzCr",
+                          "fill": "$blue-ink",
+                          "content": "All public tables",
+                          "lineHeight": 1.4,
+                          "fontFamily": "$f-ui",
+                          "fontSize": 14,
+                          "fontWeight": "900"
+                        },
+                        {
+                          "type": "icon",
+                          "id": "QcyEi",
+                          "width": 16,
+                          "height": 16,
+                          "icon": "chevron-right",
+                          "library": "lucide",
+                          "fill": "$blue-ink"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "NSFAL",
+                      "fill": "$blue-ink",
+                      "content": "Join with a code",
+                      "lineHeight": 1.4,
+                      "fontFamily": "$f-ui",
+                      "fontSize": 14,
+                      "fontWeight": "900"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
           "id": "F5TTs",
           "name": "State · Page · not connected",
           "width": "fill_container",
@@ -50897,7 +51365,7 @@
       "type": "frame",
       "id": "HJGLz",
       "x": 0,
-      "y": 10000,
+      "y": 10400,
       "name": "Profile · desktop",
       "theme": {
         "mode": "light"
@@ -52516,7 +52984,7 @@
       "type": "frame",
       "id": "ayXD4",
       "x": 3080,
-      "y": 10000,
+      "y": 10400,
       "name": "Profile · phone",
       "theme": {
         "mode": "light"
@@ -53857,7 +54325,7 @@
       "type": "frame",
       "id": "nKLoo",
       "x": 3980,
-      "y": 10000,
+      "y": 10400,
       "name": "Profile · states",
       "theme": {
         "mode": "light"
@@ -55826,7 +56294,7 @@
       "type": "frame",
       "id": "D0k5P",
       "x": 1540,
-      "y": 10000,
+      "y": 10400,
       "name": "Profile · desktop · dark",
       "theme": {
         "mode": "dark"
@@ -57445,7 +57913,7 @@
       "type": "frame",
       "id": "J09axv",
       "x": 3530,
-      "y": 10000,
+      "y": 10400,
       "name": "Profile · phone · dark",
       "theme": {
         "mode": "dark"
@@ -58786,7 +59254,7 @@
       "type": "frame",
       "id": "cxJIr",
       "x": 4430,
-      "y": 10000,
+      "y": 10400,
       "name": "Profile · states · dark",
       "theme": {
         "mode": "dark"
