@@ -334,16 +334,12 @@ export function listen(): () => void {
   window.addEventListener('pointermove', onSwipeMove, { signal });
   window.addEventListener('pointerup', (e) => endSwipe(e, false), { signal });
   window.addEventListener('pointercancel', (e) => endSwipe(e, true), { signal });
-  // iOS does not count a pointer event as a gesture for audio. A tap's end and a
-  // click do. Keep listening until the context is actually running: the first
-  // event is often the one iOS ignores.
+  // Every tap resumes audio. The first event often reports a running context
+  // that is still silent, on desktop and on phones. The sound button used to be
+  // the only later click that called resume(), because these listeners stopped
+  // after that first event. They stay for as long as listen() does.
   const unlockAudio = (): void => {
-    if (!Sound.unlock()) return;
-    window.removeEventListener('pointerdown', unlockAudio, true);
-    window.removeEventListener('pointerup', unlockAudio, true);
-    window.removeEventListener('touchend', unlockAudio, true);
-    window.removeEventListener('click', unlockAudio, true);
-    window.removeEventListener('keydown', unlockAudio, true);
+    Sound.unlock();
   };
   window.addEventListener('pointerdown', unlockAudio, { capture: true, signal });
   window.addEventListener('pointerup', unlockAudio, { capture: true, signal });

@@ -81,6 +81,8 @@ class FakeAudioContext {
   createDynamicsCompressor = () => node('limiter');
   createBuffer = (_channels: number, length: number) => ({ getChannelData: () => new Float32Array(length) });
   decodeAudioData = (file: ArrayBuffer) => decodeFile(file);
+  onstatechange: (() => void) | null = null;
+  resume = (): Promise<void> => Promise.resolve();
 }
 
 /** Four files, each one byte long so the decoded take can say which file it came from. */
@@ -325,6 +327,39 @@ describe('menu music', () => {
     await settle();
     expect(tunes()).toHaveLength(1);
     expect(Sound.unlock()).toBe(true);
+  });
+
+  it('resumes on every tap, and starts the tune again after the context suspends', async () => {
+    let resumes = 0;
+    class Watching extends FakeAudioContext {
+      static current: Watching | null = null;
+      constructor() {
+        super();
+        Watching.current = this;
+      }
+      override resume = (): Promise<void> => {
+        resumes += 1;
+        return Promise.resolve();
+      };
+    }
+    vi.stubGlobal('AudioContext', Watching);
+    const Sound = await mixer();
+    Sound.tunes([{ file: file(), loop: LOOP }]);
+    Sound.music(true);
+    await settle();
+    Sound.unlock();
+    await settle();
+    Sound.unlock();
+    expect(resumes).toBe(2);
+    expect(tunes()).toHaveLength(1);
+    const audio = Watching.current;
+    if (!audio?.onstatechange) throw new Error('the context has no state handler');
+    audio.state = 'suspended';
+    audio.onstatechange();
+    audio.state = 'running';
+    audio.onstatechange();
+    await settle();
+    expect(tunes()).toHaveLength(2);
   });
 
   it('waits for the first tap, then plays the tune round its loop, fading in', async () => {

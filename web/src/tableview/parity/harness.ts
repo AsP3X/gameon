@@ -75,12 +75,18 @@ function part(label: string): object {
       return made;
     },
     set(_target, prop, value: unknown) {
+      // The port watches the context so a tap can resume a silent graph. That
+      // assignment is not part of a sound's recipe.
+      if (prop === 'onstatechange') return true;
       effects.push(`${label}.${String(prop)} = ${show(value)}`);
       return true;
     },
     apply(_target, _self, args: unknown[]) {
-      effects.push(`${label}(${args.map(show).join(', ')})`);
       const method = label.slice(label.lastIndexOf('.') + 1);
+      // resume() is how a tap unlocks audio. The legacy page does not call it
+      // on a context that already says it is running, and the port does.
+      if (method === 'resume') return Promise.resolve();
+      effects.push(`${label}(${args.map(show).join(', ')})`);
       if (method === 'createBuffer') {
         const buffer = { getChannelData: () => new Float32Array(Number(args[1])) };
         labels.set(buffer, `buffer#${++audioNodes}`);
@@ -88,7 +94,6 @@ function part(label: string): object {
       }
       if (method.startsWith('create')) return part(`${method.slice('create'.length)}#${++audioNodes}`);
       if (method === 'connect') return args[0];
-      if (method === 'resume') return Promise.resolve();
       return undefined;
     },
   });

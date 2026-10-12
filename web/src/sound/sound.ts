@@ -101,6 +101,24 @@ function boot(): Rig | null {
     const noiseBuf = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate);
     const n = noiseBuf.getChannelData(0);
     for (let i = 0; i < n.length; i++) n[i] = Math.random() * 2 - 1;
+    // A context that says it is running can still be silent, and one that
+    // suspends drops the source. Start the tune whenever it is really running.
+    ctx.onstatechange = () => {
+      if (ctx.state === 'running') {
+        syncMusic();
+        return;
+      }
+      if (!mus) return;
+      const dropped = mus;
+      mus = null;
+      try {
+        dropped.s.stop();
+      } catch {
+        // Already stopped.
+      }
+      const n = tunes.length;
+      if (n) turn = (turn - 1 + n) % n;
+    };
     rig = { ctx, master, wet, noiseBuf };
   } catch {
     rig = null;
@@ -651,11 +669,13 @@ function syncMusic(): void {
     s.loopEnd = loop.starts / 2 + loop.repeats;
     g.gain.value = 0;
     s.connect(g).connect(r.master);
+    // Record it before start(), so a state change inside start() does not
+    // begin a second copy.
+    mus = { s, g };
+    const n = tunes.length;
+    if (n) turn = (turn + 1) % n;
     s.start(t, loop.starts);
     g.gain.setTargetAtTime(MUSIC_V, t, 0.4);
-    mus = { s, g };
-    // The next time the music starts, it is the next tune's turn.
-    turn = (turn + 1) % tunes.length;
   } else if (!on && mus) {
     const m = mus;
     mus = null;
@@ -674,7 +694,7 @@ export const Sound = {
     if (prefs.muted) return;
     const r = boot();
     if (!r) return;
-    if (r.ctx.state === 'suspended') void r.ctx.resume();
+    if (r.ctx.state === 'suspended') void r.ctx.resume().then(() => syncMusic());
     const now = performance.now();
     const prev = last[name];
     if (prev && now - prev < 30) return;
@@ -712,26 +732,21 @@ export const Sound = {
     syncMusic();
   },
   /**
-   * Audio may only start after a user gesture. Call this from one.
+   * Audio may only start after a user gesture. Call this on every tap, not
+   * only the first: a context can report `running` and still be silent until
+   * `resume()` runs inside a gesture the browser accepts.
    * True when the graph is running, or this browser has no Web Audio.
-   * False while the context is still suspended: the caller must try again
-   * on the next gesture. iOS ignores the pointer going down, so one try is
-   * not enough.
    */
   unlock(): boolean {
     const r = boot();
     if (!r) return true;
-    if (r.ctx.state === 'suspended') {
-      // No await before resume: it has to be called in the gesture itself.
-      // Sources started before it finishes are discarded, so start them after.
-      void r.ctx.resume().then(() => {
-        if (prefs.ambience && !prefs.muted) ambience(true);
-        syncMusic();
-      });
-    } else if (prefs.ambience && !prefs.muted) {
-      ambience(true);
-    }
-    syncMusic();
+    const kick = (): void => {
+      if (prefs.ambience && !prefs.muted) ambience(true);
+      syncMusic();
+    };
+    // No await before resume: it has to be called in the gesture itself.
+    void r.ctx.resume().then(kick);
+    if (r.ctx.state === 'running') kick();
     return r.ctx.state === 'running';
   },
   /**
