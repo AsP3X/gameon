@@ -543391,6 +543391,214 @@
           "fontWeight": "700"
         }
       ]
+    },
+    {
+      "type": "frame",
+      "id": "Lz8U6",
+      "x": 2000,
+      "y": -5400,
+      "name": "Solo · new game · states",
+      "theme": {
+        "mode": "light"
+      },
+      "clip": true,
+      "width": 390,
+      "fill": "$bg",
+      "layout": "vertical",
+      "gap": 28,
+      "padding": 16,
+      "children": [
+        {
+          "type": "frame",
+          "id": "kwHBs",
+          "name": "State · Starting",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 14,
+          "children": [
+            {
+              "type": "text",
+              "id": "PpfTI",
+              "name": "Label",
+              "fill": "$faint",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "STATE · STARTING: THE SERVER IS ASKED, FOR AS LONG AS AN ACTION GETS",
+              "lineHeight": 1.4,
+              "fontFamily": "$f-ui",
+              "fontSize": 12,
+              "fontWeight": "900",
+              "letterSpacing": 1
+            },
+            {
+              "id": "lHC4X",
+              "type": "ref",
+              "ref": "ELQqO",
+              "name": "Start · waiting",
+              "width": "fill_container",
+              "descendants": {
+                "iZ2T9": {
+                  "content": "START"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "W66fY",
+          "name": "State · The server refused",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 14,
+          "children": [
+            {
+              "type": "text",
+              "id": "M0sKn",
+              "name": "Label",
+              "fill": "$faint",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "STATE · THE SERVER REFUSED THE TABLE: ITS OWN WORDS, AND NO GAME ANYWHERE",
+              "lineHeight": 1.4,
+              "fontFamily": "$f-ui",
+              "fontSize": 12,
+              "fontWeight": "900",
+              "letterSpacing": 1
+            },
+            {
+              "type": "text",
+              "id": "UFHAU",
+              "name": "Refusal",
+              "fill": "$red-ink",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "That message is not valid.",
+              "lineHeight": 1.4,
+              "textAlign": "center",
+              "fontFamily": "$f-ui",
+              "fontSize": 14,
+              "fontWeight": "700"
+            },
+            {
+              "id": "jA8wt",
+              "type": "ref",
+              "ref": "kMpaU",
+              "name": "Start button",
+              "width": "fill_container",
+              "descendants": {
+                "K2spjd": {
+                  "content": "START"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "KsQjg",
+      "x": 2450,
+      "y": -5400,
+      "name": "Solo · new game · states · dark",
+      "theme": {
+        "mode": "dark"
+      },
+      "clip": true,
+      "width": 390,
+      "fill": "$bg",
+      "layout": "vertical",
+      "gap": 28,
+      "padding": 16,
+      "children": [
+        {
+          "type": "frame",
+          "id": "cAmLA",
+          "name": "State · Starting",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 14,
+          "children": [
+            {
+              "type": "text",
+              "id": "YDXYt",
+              "name": "Label",
+              "fill": "$faint",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "STATE · STARTING: THE SERVER IS ASKED, FOR AS LONG AS AN ACTION GETS",
+              "lineHeight": 1.4,
+              "fontFamily": "$f-ui",
+              "fontSize": 12,
+              "fontWeight": "900",
+              "letterSpacing": 1
+            },
+            {
+              "id": "CDW7e",
+              "type": "ref",
+              "ref": "ELQqO",
+              "name": "Start · waiting",
+              "width": "fill_container",
+              "descendants": {
+                "iZ2T9": {
+                  "content": "START"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "LZSIb",
+          "name": "State · The server refused",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 14,
+          "children": [
+            {
+              "type": "text",
+              "id": "o5jZbp",
+              "name": "Label",
+              "fill": "$faint",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "STATE · THE SERVER REFUSED THE TABLE: ITS OWN WORDS, AND NO GAME ANYWHERE",
+              "lineHeight": 1.4,
+              "fontFamily": "$f-ui",
+              "fontSize": 12,
+              "fontWeight": "900",
+              "letterSpacing": 1
+            },
+            {
+              "type": "text",
+              "id": "t94rpG",
+              "name": "Refusal",
+              "fill": "$red-ink",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "That message is not valid.",
+              "lineHeight": 1.4,
+              "textAlign": "center",
+              "fontFamily": "$f-ui",
+              "fontSize": 14,
+              "fontWeight": "700"
+            },
+            {
+              "id": "jnzai",
+              "type": "ref",
+              "ref": "kMpaU",
+              "name": "Start button",
+              "width": "fill_container",
+              "descendants": {
+                "K2spjd": {
+                  "content": "START"
+                }
+              }
+            }
+          ]
+        }
+      ]
     }
   ],
   "themes": {
