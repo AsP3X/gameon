@@ -8,10 +8,11 @@ on either side. The owner still has to say build.
 
 ## State
 
-- Branch `dev`, commit `865f78a` ("DOCS: A kicked multiplayer seat stays empty and a drop can rejoin.").
+- Branch `dev`. 076 is commit `865f78a` ("DOCS: A kicked multiplayer seat stays empty and a drop
+  can rejoin."). This file is the commit after `ced7b5a` ("BUGFIX: Resume the menu theme on every
+  tap, not only the sound button."), which is the menu music and has nothing to do with seats.
 - Nothing under `web/`, `design/`, `server/`, `docs/protocol.md` or the fixtures changed for this.
-  No gate was run. The uncommitted files under `web/` in the checkout are other work of mine and
-  are not part of this.
+  No gate was run.
 - Read for this: every text node of `design/web.pen`, `design/skt.pen` and `design/gameon.pen`
   that names a bot, a seat, away, offline or a forfeit, and `web/src/tableview/views.ts`,
   `web/src/net/online.ts`, `web/src/net/mock/server.ts`, `web/src/online/copy.ts`.
