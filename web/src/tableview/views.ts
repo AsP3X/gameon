@@ -19,6 +19,7 @@ import {
   savePrefs,
   scoreView,
   session,
+  stage,
   stats,
   tableView,
   ui,
@@ -181,9 +182,29 @@ const HURRY_MS = 5000;
  * until the deadline. The page only shows it. When it is empty the server plays for the seat.
  * The ring runs as a CSS animation from what is left right now, so nothing has to redraw it.
  */
+/**
+ * A device game with one player, in an app that sets solo games up on a page of its own: the
+ * offline form of solo. It is not counted on the server, and the table and its end say so.
+ */
+const soloOnDevice = (v: TableView | ScoreView): boolean =>
+  !session.online && stage.soloAgain != null && localSeatsOf(v).length === 1;
+/** Where a solo game is kept, next to the round's pills: on the server, or on this device alone. */
+function soloPill(v: TableView): string {
+  if (session.online?.solo) return '<span class="pill green">Saved</span>';
+  return soloOnDevice(v) ? '<span class="pill gold">Offline</span>' : '';
+}
+/** Under the standings of a solo game: whether it counted. */
+function soloEndNote(v: ScoreView): string {
+  if (session.online?.solo) return '<p class="end-note"><span class="pill green">Saved to your stats</span></p>';
+  return soloOnDevice(v)
+    ? '<p class="end-note"><span class="pill soft">Offline game · not counted in your stats</span></p>'
+    : '';
+}
 function deadlineRing(v: TableView, seat: Seat): string {
   const d = v.online?.deadline;
   if (!d || !session.online || !d.seats.includes(seat)) return '';
+  // A solo game has no clock on the player: nothing counts down on their seat, whatever is timed.
+  if (session.online.solo && seat === v.me) return '';
   const left = Math.max(0, Math.round(d.at - session.online.now())),
     gone = 100 * (1 - Math.min(1, left / d.total));
   return `<svg class="ring" viewBox="0 0 50 50" aria-hidden="true" style="--gone:${gone.toFixed(1)};--left:${left}ms;--calm:${Math.max(0, left - HURRY_MS)}ms;--ticks:${Math.max(1, Math.ceil(left / 1000))}"><circle class="ring-track" cx="25" cy="25" r="23"/><circle class="ring-left${left <= HURRY_MS ? ' hurry' : ''}" cx="25" cy="25" r="23" pathLength="100"/></svg>`;
@@ -467,14 +488,14 @@ export function gameView(): string {
     railed = lay === 'desk' && ui.rail;
   const info = `<div class="g-info"><span class="pill blue">Round ${v.round + 1} of ${v.rounds}</span><span class="pill soft">${v.cards} ${v.cards === 1 ? 'card' : 'cards'}</span>
       ${v.phase === 'playing' || trickEnd ? `<span class="pill soft">Trick ${Math.min(v.cards, doneTricks + (trickEnd ? 0 : 1))} of ${v.cards}</span>` : ''}
-      ${R.wager[me] ? `<span class="pill gold">Bet ${R.wager[me]}</span>` : ''}</div>`;
+      ${R.wager[me] ? `<span class="pill gold">Bet ${R.wager[me]}</span>` : ''}${soloPill(v)}</div>`;
   // Wide, the card size is the stylesheet's and the overlap is worked out there from the room the hand has.
   const handStyle = wide ? `--n:${hand.length};--gaps:${Math.max(1, hand.length - 1)}` : `--cw:${cw}px;--ov:${ov}px`;
   return `<div class="game${railed ? ' railed' : ''}">
     <div class="g-top"><button class="icon-btn" data-act="home" aria-label="${session.online ? 'Leave table' : 'Leave table (game is saved)'}">${ICON.x}</button>${wide ? info : ''}
       <div class="bar grow" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(pct)}"><i style="width:${from}%" data-to="${pct}"></i></div>
       <button class="icon-btn" data-act="board" aria-label="Scoreboard"${lay === 'desk' ? ` aria-pressed="${ui.rail}"` : ''}>${ICON.table}</button></div>
-    ${wide ? '' : info}
+    ${wide ? '' : info}${soloOnDevice(v) ? '<p class="g-note">Offline game · not counted in your stats</p>' : ''}
     <div class="seats">${seats}</div>
     <div class="felt">
       ${ls ? `<span class="pill soft lead pop"><i class="sdot s-${ls}"></i>Follow ${Rules.SUIT_NAME[ls]}</span>` : ''}
@@ -620,6 +641,14 @@ export function lastSheet(): string {
  * game it is also a forfeit, and the sheet says what that costs before anything is sent.
  */
 export function leaveSheet(): string {
+  // A solo game is nobody else's table: leaving it ends it, and the sheet says what that means.
+  if (session.online?.solo)
+    return `<div class="sheet-scrim" data-act="closeSheet"></div><div class="sheet" role="dialog" aria-label="Leave this game"><div class="in">
+    <h2>Leave this game?</h2>
+    <p>It will not be saved to your stats.</p>
+    <button class="btn red" data-act="leaveTable">Leave</button>
+    <button class="btn ghost" data-act="closeSheet">Keep playing</button>
+  </div></div>`;
   const ranked = session.online?.ranked === true;
   return `<div class="sheet-scrim" data-act="closeSheet"></div><div class="sheet" role="dialog" aria-label="${ranked ? 'Leave the ranked game' : 'Leave the table'}"><div class="in">
     <h2>${ranked ? 'Leave this ranked game?' : 'Leave the table?'}</h2>
@@ -789,6 +818,7 @@ export function endView(): string {
     // rating line, which stays empty until then.
     result = session.online?.result() ?? null,
     ranked = session.online?.ranked === true,
+    soloOnServer = session.online?.solo === true,
     change = result?.rating ?? null;
   const order = standings(tot, result),
     // First place, or the best place there is should the server have given nobody the first.
@@ -822,8 +852,8 @@ export function endView(): string {
     </section>
     ${rows ? `<ol class="standings ${rest.length > 4 ? 'two' : ''}">${rows}</ol>` : ''}
     ${aw ? `<div class="awards">${aw}</div>` : ''}
-    </div>${ranked ? `<p class="end-rating" aria-live="polite"${change ? '' : ' hidden'}>${change ? ratingLine(change) : ''}</p>` : ''}
-    <div class="end-actions${session.online ? ' online' : ''}"><button class="btn" data-act="again">Play again</button>${session.online ? '<button class="btn ghost" data-act="record">The record</button>' : '<button class="btn ghost" data-act="home">Home</button>'}</div>
+    </div>${ranked ? `<p class="end-rating" aria-live="polite"${change ? '' : ' hidden'}>${change ? ratingLine(change) : ''}</p>` : ''}${soloEndNote(v)}
+    <div class="end-actions${session.online && !soloOnServer ? ' online' : ''}"><button class="btn" data-act="again">Play again</button>${session.online && !soloOnServer ? '<button class="btn ghost" data-act="record">The record</button>' : '<button class="btn ghost" data-act="home">Home</button>'}</div>
     <p class="skip-hint" aria-hidden="true">Tap to skip</p>
   </div>`;
 }

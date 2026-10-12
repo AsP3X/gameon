@@ -107,10 +107,13 @@ describe('where the page opens', () => {
   });
 
   it('opens the screen its address names', () => {
+    // Solo is set up on a page of its own, with the renderer out of the way under it.
     open('/skull-king/solo');
-    expect(screen()).toBe('New game');
+    expect($('.sk-solo h1')?.textContent).toBe('Solo game');
+    expect($('#app')?.innerHTML).toBe('');
+    expect(places.path()).toBe('/skull-king/solo');
     close();
-    // One screen has no page of its own yet: it is the same new-game screen, and its address stays.
+    // One screen is the renderer's new-game screen.
     open('/skull-king/one-screen');
     expect(screen()).toBe('New game');
     expect(places.path()).toBe('/skull-king/one-screen');
@@ -130,18 +133,18 @@ describe('where the page opens', () => {
 describe('a tap moves the address', () => {
   it("goes to the new-game screen and back, and Back is the browser's Back", () => {
     open();
-    click('#gameon a[href="/skull-king/solo"]');
+    click('#gameon a[href="/skull-king/one-screen"]');
     expect(screen()).toBe('New game');
-    expect(places.entries()).toEqual({ paths: ['/skull-king', '/skull-king/solo'], at: 1 });
+    expect(places.entries()).toEqual({ paths: ['/skull-king', '/skull-king/one-screen'], at: 1 });
     click('[data-act="home"]');
     expect(screen()).toBe('home');
     // Not a third entry: the way back is the way the player came.
-    expect(places.entries()).toEqual({ paths: ['/skull-king', '/skull-king/solo'], at: 0 });
+    expect(places.entries()).toEqual({ paths: ['/skull-king', '/skull-king/one-screen'], at: 0 });
   });
 
   it('puts the table in the place of the screen the game was set up on, and saves the game under its address', () => {
     open();
-    click('#gameon a[href="/skull-king/solo"]');
+    click('#gameon a[href="/skull-king/one-screen"]');
     click('[data-act="start"]');
     expect(screen()).toBe('table');
     expect(places.entries()).toEqual({ paths: ['/skull-king', '/skull-king/table'], at: 1 });
@@ -176,7 +179,7 @@ describe('a tap moves the address', () => {
   });
 
   it('puts the home screen in the place of a screen that was opened by its address: there is no way back to go', () => {
-    open('/skull-king/solo');
+    open('/skull-king/one-screen');
     click('[data-act="home"]');
     expect(screen()).toBe('home');
     expect(places.entries()).toEqual({ paths: ['/skull-king'], at: 0 });
@@ -186,18 +189,18 @@ describe('a tap moves the address', () => {
 describe("the browser's Back and Forward move the screen", () => {
   it('goes back from the new-game screen to the home screen, and forward to it again', () => {
     open();
-    click('#gameon a[href="/skull-king/solo"]');
+    click('#gameon a[href="/skull-king/one-screen"]');
     back();
     expect(screen()).toBe('home');
     expect(places.path()).toBe('/skull-king');
     forward();
     expect(screen()).toBe('New game');
-    expect(places.path()).toBe('/skull-king/solo');
+    expect(places.path()).toBe('/skull-king/one-screen');
   });
 
   it('leaves an offline table by Back with the game saved, and sits back down at it by Forward', () => {
     open();
-    click('#gameon a[href="/skull-king/solo"]');
+    click('#gameon a[href="/skull-king/one-screen"]');
     click('[data-act="start"]');
     wait(3000);
     back();

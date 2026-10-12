@@ -142,9 +142,11 @@ describe('the built page as an app', () => {
     await page.getByText("Can't reach the tavern").waitFor({ timeout: 30_000 });
     await page.getByRole('button', { name: 'Play offline' }).click();
     await page.locator('.sk-home .logo').waitFor();
+    // Solo asks the server first. Nobody answers, so after the wait an action gets it runs on the device.
     await page.locator('.sk-way[href="/skull-king/solo"]').click();
-    await page.locator('[data-act="start"]').click();
+    await page.getByRole('button', { name: 'Start' }).click();
     await page.locator('.hand .card, .g-hand .card, [data-act="bid"]').first().waitFor({ timeout: 30_000 });
+    expect(await page.locator('#app .g-info .pill.gold').textContent()).toBe('Offline');
     // The game has an address of its own, and the table is at it.
     expect(new URL(page.url()).pathname).toBe('/skull-king/table');
   });

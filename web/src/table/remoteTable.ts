@@ -24,6 +24,7 @@ import type {
   GameStart,
   GameUpdate,
   Seat,
+  TableKind,
   TableMode,
 } from '../protocol/generated';
 import type { ClientRequest } from '../net/messages';
@@ -69,6 +70,11 @@ export class RemoteTable implements Table {
   readonly gameId: GameId;
   /** How the table came to be: a lobby's game, quick play, or ranked. */
   readonly mode: TableMode;
+  /**
+   * Which table it is, where the server says so (`game.start.table`). `solo` is the player alone
+   * against bots: no clock on their own move, and a leave that is answered with `ok` and nothing more.
+   */
+  readonly kind: TableKind | null;
   /** The one seat `game.start` calls `me`. */
   readonly localSeats: readonly Seat[];
   private readonly client: SocketClient;
@@ -96,6 +102,7 @@ export class RemoteTable implements Table {
     this.client = client;
     this.gameId = start.gameId;
     this.mode = start.mode;
+    this.kind = start.table ?? null;
     this.localSeats = [start.me];
     this.start = start;
     this.rev = update.rev;
@@ -219,6 +226,15 @@ export class RemoteTable implements Table {
       return this.take(event.message, due);
     // Anything else where the update was due: the server broke the pair. The input is given back anyway.
     if (due) this.settle(due);
+    // A solo game that is left is gone with the `ok`: no update follows it, and none is waited for.
+    if (
+      this.kind === 'solo' &&
+      event.type === 'reply' &&
+      event.request.t === 'game.leave' &&
+      event.reply.t === 'ok' &&
+      this.sent.delete(event.request)
+    )
+      return this.settle('game.leave');
     if (
       event.type === 'reply' &&
       this.sent.delete(event.request) &&

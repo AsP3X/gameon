@@ -64,8 +64,9 @@ describe('four players at one table', () => {
     await button(host, 'Create table').click();
     const code = (await host.page.locator('#online .code').textContent()) ?? '';
     expect(code).toMatch(/^[ABCDEFGHJKMNPQRSTUVWXYZ23456789]{6}$/);
-    // The lobby is at the hub's address: the form that made it is not a page to come back to.
-    expect(new URL(host.page.url()).pathname).toBe('/skull-king/online');
+    // The lobby is at the hub's address: the form that made it is not a page to come back to. The
+    // way there is the browser's own Back, which arrives a moment after the lobby is on screen.
+    await expect.poll(() => new URL(host.page.url()).pathname).toBe('/skull-king/online');
 
     for (const p of guests) {
       await button(p, 'Join with a code').click();
@@ -238,10 +239,11 @@ describe('four players at one table', () => {
 });
 
 describe('offline, in the same browser', () => {
-  it('still plays a solo round against bots to its result, with nothing of the online table on it', async () => {
+  it('still plays a round on the device against bots to its result, with nothing of the online table on it', async () => {
     const solo = await Player.join(stage.browser, 'Solo', stage.url);
     players.push(solo);
-    await solo.page.locator('.sk-way[href="/skull-king/solo"]').click();
+    // The new-game screen for one screen starts a game on the device. Solo proper asks the server (solo.e2e.ts).
+    await solo.page.locator('.sk-way[href="/skull-king/one-screen"]').click();
     await solo.page.locator('[data-act="start"]').click();
     await solo.page.locator('#app .game').waitFor();
     // The first round of the classic game is one card: a bid, a card, and the round is scored.

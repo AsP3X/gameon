@@ -227,6 +227,37 @@ describe('RemoteTable, frame by frame', () => {
     expect(heard).toHaveLength(1);
   });
 
+  it('is a table like any other unless game.start names it: only a solo game is named', () => {
+    expect(table.kind).toBeNull();
+    expect(new RemoteTable(client, { ...sample.start, table: 'solo' }, sample.update).kind).toBe('solo');
+  });
+
+  it('ends a solo game with the ok alone: no update follows a leave there, and none is waited for', async () => {
+    const solo = new RemoteTable(client, { ...sample.start, table: 'solo', lobbyId: null }, sample.update),
+      said = listen(solo);
+    const left = solo.leave();
+    expect(wire.sent[1]).toMatchObject({ t: 'game.leave' });
+    expect(solo.hasLeft).toBe(false);
+    wire.say({ t: 'ok', re: wire.sent[1].id });
+    expect(await left).toEqual({ ok: true });
+    // The table is over the moment the server said yes.
+    expect(solo.hasLeft).toBe(true);
+    expect(said).toEqual([{ events: [], info: { unlock: true, last: true }, bids: [2, -1] }]);
+    // Whatever might still arrive is not shown.
+    wire.say(update(3, { events: [{ type: 'bidPlaced', seat: 1 }] }));
+    expect(said).toHaveLength(1);
+  });
+
+  it('keeps a solo game when the leave is refused', async () => {
+    const solo = new RemoteTable(client, { ...sample.start, table: 'solo', lobbyId: null }, sample.update),
+      said = listen(solo);
+    const left = solo.leave();
+    wire.say({ t: 'err', re: wire.sent[1].id, code: 'NOT_IN_GAME', message: 'No game.' });
+    expect(await left).toMatchObject({ ok: false, code: 'NOT_IN_GAME' });
+    expect(solo.hasLeft).toBe(false);
+    expect(said).toEqual([]);
+  });
+
   it('forgets what it waited for when the socket closes, and starts over from the snapshot of the next one', async () => {
     const answer = table.dispatch({ type: 'bid', seat: 0, bid: 3 });
     wire.say({ t: 'ok', re: wire.sent[1].id });

@@ -42,6 +42,7 @@ import type {
   Visibility,
 } from '../protocol/generated';
 import { RemoteTable } from '../table/remoteTable';
+import { DISPATCH_TIMEOUT_MS } from '../table/table';
 import type { DispatchResult } from '../table/table';
 import type { Api, ApiResult } from './api';
 import type { ClientRequest } from './messages';
@@ -107,6 +108,12 @@ export interface OnlineMemory {
 /** What `identify` learned: the server knows this browser, it does not, or it could not be asked. */
 export type Identity = 'known' | 'nobody' | 'failed';
 
+/**
+ * The answer to `startSolo`. `TIMEOUT` is no answer in the time an action gets at a table, and
+ * `OFFLINE` a server that cannot be reached: after either, the game is played on the device.
+ */
+export type SoloOutcome = { ok: true } | { ok: false; code: ErrorCode | 'OFFLINE' | 'TIMEOUT'; message: string };
+
 /** The answer to an intent. `ok` says the server accepted it; what it changed arrives as state. */
 export type Outcome = { ok: true } | { ok: false; code: ErrorCode | 'OFFLINE'; message: string };
 
@@ -135,6 +142,8 @@ export class Online {
   private seated: boolean;
   /** The guest this page made so that a sign-up had a session to upgrade, until that sign-up went through. */
   private fresh: UserId | null = null;
+  /** The connection has said its `welcome`: where the player sits is known, not remembered. */
+  private greeted = false;
   /** Counts the sessions this page has had: a login or a logout starts the next one. */
   private era = 0;
   /** The question `identify` has out, and whether it may make a guest. */
@@ -185,6 +194,7 @@ export class Online {
    */
   close(forget = false): void {
     this.client.stop();
+    this.greeted = false;
     this.state.table?.dispose();
     this.starting = null;
     this.state = { ...EMPTY, config: this.state.config };
@@ -378,6 +388,45 @@ export class Online {
     return this.ask({ t: 'queue.leave' });
   }
 
+  /* ---------- solo ---------- */
+
+  /**
+   * Start a game alone against bots on the server (`solo.start`). It connects first, and waits for
+   * the `welcome`: a player who already sits somewhere is not asked for, and is told so as the
+   * server would (`ALREADY_SEATED`). The table itself arrives as state, after the `ok`.
+   *
+   * The whole of it has `ms` to be answered, the time an action at a table gets. With no answer by
+   * then the result is `TIMEOUT`, and whatever the server says later is not waited for.
+   */
+  startSolo(settings: GameSettings, ms: number = DISPATCH_TIMEOUT_MS): Promise<SoloOutcome> {
+    this.open();
+    return new Promise((resolve) => {
+      let asked = false,
+        settled = false;
+      const done = (answer: SoloOutcome): void => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        unlisten();
+        resolve(answer);
+      };
+      const timer = setTimeout(
+        () => done({ ok: false, code: 'TIMEOUT', message: 'The server did not answer in time.' }),
+        ms,
+      );
+      const look = (): void => {
+        if (asked || settled || !this.greeted || this.state.status !== 'online') return;
+        const { table, lobby, queue } = this.state;
+        if (table || lobby || queue)
+          return done({ ok: false, code: 'ALREADY_SEATED', message: 'You are already at a table.' });
+        asked = true;
+        void this.ask({ t: 'solo.start', settings }).then(done);
+      };
+      const unlisten = this.subscribe(look);
+      look();
+    });
+  }
+
   /* ---------- the table ---------- */
 
   /**
@@ -435,12 +484,14 @@ export class Online {
   private onLink(event: LinkEvent): void {
     switch (event.type) {
       case 'status':
+        if (event.status !== 'online') this.greeted = false;
         return this.set({ status: event.status });
       case 'welcome': {
         // The whole truth: nothing from before the reconnect survives it.
         const { me, lobby, queue, game } = event.welcome;
         const open = this.state.table;
         this.starting = null;
+        this.greeted = true;
         let table: RemoteTable | null = null;
         if (game && open && open.gameId === game.start.gameId) {
           open.resync(game.start, game.update);

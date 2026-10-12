@@ -19,7 +19,8 @@ import { render, resetMenuMusic, tuneMenu } from './render';
 import { clearTimer, loadState, prefs, savePrefs, session, stage, ui } from './state';
 import { Tracker } from './tracker';
 
-export { closeOnlineTable, openOnlineTable, showOnlineResult, showPlace } from './actions';
+export { closeOnlineTable, openOnlineTable, showOnlineResult, showPlace, startSoloOnDevice } from './actions';
+export type { DeviceSolo } from './actions';
 export type { OnlineHooks, Place } from './state';
 import type { Place } from './state';
 
@@ -38,6 +39,11 @@ export interface TavernHooks {
   greet?: boolean;
   /** A sheet or the curtain opened or closed. */
   dialog?: (open: boolean) => void;
+  /**
+   * "Play again" after a solo game on this device. A page that sets solo games up itself hands
+   * this in, and the renderer then marks such a game as offline: it is not counted on the server.
+   */
+  soloAgain?: () => void;
 }
 
 /**
@@ -73,6 +79,7 @@ export function mountTavern(app: HTMLElement, fx: HTMLCanvasElement, hooks: Tave
   stage.moved = hooks.moved ?? null;
   stage.pageHome = hooks.pageHome === true;
   stage.dialog = hooks.dialog ?? null;
+  stage.soloAgain = hooks.soloAgain ?? null;
 
   /* ---------- boot ---------- */
   document.body.insertAdjacentHTML('afterbegin', SPRITE);
@@ -112,6 +119,7 @@ export function mountTavern(app: HTMLElement, fx: HTMLCanvasElement, hooks: Tave
     stage.moved = null;
     stage.pageHome = false;
     stage.dialog = null;
+    stage.soloAgain = null;
   };
   mounted = cleanup;
   return cleanup;

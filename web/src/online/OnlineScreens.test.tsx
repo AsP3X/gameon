@@ -798,7 +798,7 @@ describe('playing online', () => {
     await click('#gameon a[href="/skull-king/online"]');
     await settle();
     await click('[aria-label="Back"]');
-    await click('#gameon a[href="/skull-king/solo"]');
+    await click('#gameon a[href="/skull-king/one-screen"]');
     await click('[data-act="start"]');
     expect(ui.screen).toBe('game');
     expect(session.online).toBeNull();

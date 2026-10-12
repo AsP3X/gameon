@@ -501,7 +501,7 @@ describe('Games', () => {
   it('offers the game saved on this device, and continues it at the table', async () => {
     // A solo game against bots, left after the first bid: that is when it is saved.
     await openAt('/skull-king');
-    await clickOn($('#gameon a[href="/skull-king/solo"]') ?? host);
+    await clickOn($('#gameon a[href="/skull-king/one-screen"]') ?? host);
     await clickOn($('[data-act="start"]') ?? host);
     await settle(3000);
     const round = $('#app .g-top')?.textContent;

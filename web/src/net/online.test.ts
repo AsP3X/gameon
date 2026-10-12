@@ -524,6 +524,63 @@ describe('Online', () => {
     expect(wire().sent.at(-1)).not.toHaveProperty('code');
   });
 
+  describe('a solo game', () => {
+    const SOLO = { ...lobby.settings, maxPlayers: 4, pace: 'standard' as const };
+
+    it('waits for the welcome of the connection, then asks, and says what the server answered', async () => {
+      const asked = online.startSolo(SOLO);
+      await tick();
+      // Connected, and not greeted yet: where the player sits is not known, so nothing is asked.
+      expect(wire().sent.filter((m) => m.t === 'solo.start')).toEqual([]);
+      welcome();
+      expect(wire().sent.at(-1)).toMatchObject({ t: 'solo.start', settings: SOLO });
+      ok();
+      expect(await asked).toEqual({ ok: true });
+    });
+
+    it("hands on the server's refusal as it came", async () => {
+      welcome();
+      const asked = online.startSolo(SOLO);
+      wire().say({ t: 'err', re: wire().sent.at(-1)?.id, code: 'VALIDATION', message: 'A table has 2 to 8 seats.' });
+      expect(await asked).toEqual({ ok: false, code: 'VALIDATION', message: 'A table has 2 to 8 seats.' });
+    });
+
+    it('asks for nothing when the welcome already has a seat: the player is told as the server would tell them', async () => {
+      const asked = online.startSolo(SOLO);
+      await tick();
+      welcome({ lobby });
+      expect(await asked).toMatchObject({ ok: false, code: 'ALREADY_SEATED' });
+      expect(wire().sent.filter((m) => m.t === 'solo.start')).toEqual([]);
+
+      const again = online.startSolo(SOLO);
+      welcome({ game });
+      expect(await again).toMatchObject({ ok: false, code: 'ALREADY_SEATED' });
+    });
+
+    it('gives up after the time an action gets, and is done with whatever comes later', async () => {
+      const asked = online.startSolo(SOLO, 8000);
+      await tick(7999);
+      let answered = false;
+      void asked.then(() => (answered = true));
+      await tick(0);
+      expect(answered).toBe(false);
+      await tick(1);
+      expect(await asked).toMatchObject({ ok: false, code: 'TIMEOUT' });
+      // The welcome that arrives now starts nothing.
+      welcome();
+      expect(wire().sent.filter((m) => m.t === 'solo.start')).toEqual([]);
+    });
+
+    it('says the server cannot be reached when the connection is lost as it asks', async () => {
+      welcome();
+      wire().onclose?.(1006);
+      await tick();
+      const asked = online.startSolo(SOLO, 500);
+      await tick(500);
+      expect(await asked).toMatchObject({ ok: false, code: 'TIMEOUT' });
+    });
+  });
+
   describe('the account', () => {
     const me = { ...ME, guest: true, username: null };
     const anne = { ...ME, guest: false, username: 'anne' };

@@ -70,8 +70,8 @@ function nextMove(): Action {
   return { type: 'advance' };
 }
 
-/** Seat 0 is this device's. Seats 1 and 2 are played from somewhere else. */
-function openTable(): void {
+/** Seat 0 is this device's. Seats 1 and 2 are played from somewhere else. `solo` says the table is a solo game on the server. */
+function openTable(solo = false): void {
   state = Engine.create({
     seats: [
       { name: 'You', color: '#1cb0f6', bot: false },
@@ -95,7 +95,15 @@ function openTable(): void {
     schedule: () => {},
     stop: () => {},
   };
-  openOnlineTable(table, { leave, exit, now: () => Date.now(), ranked: false, result: () => null, record });
+  openOnlineTable(table, {
+    leave,
+    exit,
+    now: () => Date.now(),
+    ranked: false,
+    solo,
+    result: () => null,
+    record,
+  });
 }
 
 beforeEach(() => {
@@ -311,6 +319,82 @@ describe('the clock of an online table', () => {
     openTable();
     expect(app.querySelector('.ring, .presence, .sheet-note')).toBeNull();
     expect(app.querySelector('.seat.gone')).toBeNull();
+  });
+});
+
+describe('a solo game on the server', () => {
+  const NOW = 1_700_000_000_000;
+
+  it('says it is saved, next to the round, and nothing of the kind at any other online table', () => {
+    openTable(true);
+    expect(app.querySelector('.g-info .pill.green')?.textContent).toBe('Saved');
+    expect(app.querySelector('.g-note')).toBeNull();
+    closeOnlineTable();
+    openTable();
+    expect(app.querySelector('.g-info .pill.green')).toBeNull();
+  });
+
+  it('draws no ring on the player, whatever the table is waiting on', () => {
+    vi.setSystemTime(NOW);
+    // The end of a round is the one thing a solo table times. It names the player, and still nothing counts down on them.
+    online = { ...present(), deadline: { kind: 'nextRound', seats: [0, 1], at: NOW + 20_000, total: 20_000 } };
+    openTable(true);
+    expect(app.querySelector('.mebar .ring')).toBeNull();
+    closeOnlineTable();
+    openTable();
+    expect(app.querySelector('.mebar .ring')).not.toBeNull();
+  });
+
+  it('asks before leaving in its own words, and leaves through the hook', async () => {
+    openTable(true);
+    click('.g-top [data-act="home"]');
+    expect(app.querySelector('.sheet')?.getAttribute('aria-label')).toBe('Leave this game');
+    expect(text('.sheet h2')).toBe('Leave this game?');
+    expect(text('.sheet p')).toBe('It will not be saved to your stats.');
+    expect(Array.from(app.querySelectorAll('.sheet .btn'), (b) => b.textContent)).toEqual(['Leave', 'Keep playing']);
+    click('.sheet [data-act="closeSheet"]');
+    expect(leave).not.toHaveBeenCalled();
+    click('.g-top [data-act="home"]');
+    click('[data-act="leaveTable"]');
+    expect(leave).toHaveBeenCalledTimes(1);
+    await settle();
+    // The table comes down when the table says it is over, which for a solo game is the `ok` alone.
+    tell(present(), { unlock: true, last: true });
+    await settle();
+    expect(exit).toHaveBeenCalledTimes(1);
+  });
+
+  it('ends with the line that it counted, and with the way home in the place of the record', async () => {
+    openTable(true);
+    for (let i = 0; i < 400 && state.phase !== 'gameOver'; i++) {
+      step(nextMove(), OTHERS);
+      await settle(20);
+    }
+    await settle(5000);
+    expect(ui.screen).toBe('end');
+    expect(text('.end-note .pill.green')).toBe('Saved to your stats');
+    expect(app.querySelector('.end-actions.online')).toBeNull();
+    expect(Array.from(app.querySelectorAll('.end-actions button'), (b) => b.textContent)).toEqual([
+      'Play again',
+      'Home',
+    ]);
+    // "Play again" says so to the page, which sets the next game up. "Home" only leaves.
+    click('[data-act="again"]');
+    expect(exit).toHaveBeenLastCalledWith('again');
+    click('.end-actions [data-act="home"]');
+    expect(exit).toHaveBeenLastCalledWith();
+    expect(exit).toHaveBeenCalledTimes(2);
+  });
+
+  it('has no such line at the end of any other online game', async () => {
+    openTable();
+    for (let i = 0; i < 400 && state.phase !== 'gameOver'; i++) {
+      step(nextMove(), OTHERS);
+      await settle(20);
+    }
+    await settle(5000);
+    expect(ui.screen).toBe('end');
+    expect(app.querySelector('.end-note')).toBeNull();
   });
 });
 

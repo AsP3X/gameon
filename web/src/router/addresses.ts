@@ -1,8 +1,9 @@
 /* The addresses of the page: one for each screen, so a reload, a link and the browser's Back and
    Forward land where the player was (plan item W0).
 
-   Three kinds of page share them: the frame around the game (GameOn: the landing, Games, signing
-   up and in), the online screens, and the screens the legacy renderer draws. Skull King's ranked
+   Four kinds of page share them: the frame around the game (GameOn: the landing, Games, signing
+   up and in), Skull King's own pages (its home and the solo setup), the online screens, and the
+   screens the legacy renderer draws. Skull King's ranked
    page is not built yet (W4). Its address is taken here so nothing else claims it, and until the
    page exists it leads to the nearest one that does (`settle`).
 
@@ -48,10 +49,12 @@ export type Route =
   | { page: 'games' }
   | { page: 'signIn' }
   | { page: 'signUp' }
-  /* The legacy renderer's screens. */
+  /* The legacy renderer's screens. Skull King's home is the page's own, with the renderer under it. */
   | { page: 'home' }
-  /** The new-game screen. Solo and one screen share it until solo has a page of its own (W3). */
+  /** The new-game screen, for a game on one screen. */
   | { page: 'setup' }
+  /** The setup of a solo game: a page of its own (src/skullking). It asks the server for the game. */
+  | { page: 'solo' }
   | { page: 'table' }
   | { page: 'score' }
   /* The online screens. */
@@ -69,13 +72,16 @@ export type LegacyRoute = Extract<Route, { page: LegacyPage }>;
 /** The pages of the frame around the game. They need no connection. */
 export type FramePage = 'landing' | 'games' | 'signIn' | 'signUp';
 export type FrameRoute = Extract<Route, { page: FramePage }>;
+/** The solo setup. It needs a connection only when a game is asked for. */
+export type SoloRoute = Extract<Route, { page: 'solo' }>;
 /** Every other page is one of the online screens. */
-export type OnlineRoute = Exclude<Route, LegacyRoute | FrameRoute>;
+export type OnlineRoute = Exclude<Route, LegacyRoute | FrameRoute | SoloRoute>;
 export const isLegacy = (route: Route): route is LegacyRoute =>
   route.page === 'home' || route.page === 'setup' || route.page === 'table' || route.page === 'score';
 export const isFrame = (route: Route): route is FrameRoute =>
   route.page === 'landing' || route.page === 'games' || route.page === 'signIn' || route.page === 'signUp';
-export const isOnline = (route: Route): route is OnlineRoute => !isLegacy(route) && !isFrame(route);
+export const isOnline = (route: Route): route is OnlineRoute =>
+  !isLegacy(route) && !isFrame(route) && route.page !== 'solo';
 /** The online screens' first page. */
 export const HUB: OnlineRoute = { page: 'online' };
 
@@ -83,7 +89,7 @@ const PAGES: Record<string, Route> = {
   [AT.landing]: { page: 'landing' },
   [AT.games]: { page: 'games' },
   [AT.home]: { page: 'home' },
-  [AT.solo]: { page: 'setup' },
+  [AT.solo]: { page: 'solo' },
   [AT.oneScreen]: { page: 'setup' },
   [AT.table]: { page: 'table' },
   [AT.score]: { page: 'score' },

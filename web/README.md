@@ -25,7 +25,7 @@ Node 22.18+, 24.11+ or 26+. Vite+ warns on other versions.
 | `src/net/`                             | The socket client (`socket.ts`), the REST calls (`api.ts`), the online state the screens read (`online.ts`), the real backend, and the mock server (`mock/`). See [Online](#online).                 |
 | `src/router/`                          | The page's addresses (`addresses.ts`), the router (`router.ts`) and the browser's history behind it (`places.ts`). See [Addresses](#addresses).                                                      |
 | `src/gameon/`                          | GameOn, the frame around the game, in React: the landing, Games, sign-up and sign-in. See [GameOn](#gameon-the-frame-around-the-game).                                                               |
-| `src/skullking/`                       | Skull King's pages inside GameOn, in React. So far its home. See [Skull King's home](#skull-kings-home).                                                                                             |
+| `src/skullking/`                       | Skull King's pages inside GameOn, in React: its home and the solo setup. See [Skull King's home](#skull-kings-home) and [Solo](#solo).                                                               |
 | `src/online/`                          | The online screens, in React: hub, profile, public tables, the quick-play and ranked queue, the ladder, new table, join by code, the table's lobby.                                                  |
 | `src/tableview/`                       | The table renderer, lifted from the legacy build. It owns `#app` and rebuilds it from HTML strings; React never renders inside it. `mountTavern()` is its only entry.                                |
 | `src/sound/`                           | Sound. Every effect is synthesised with Web Audio; the played card and the button press also have recorded takes in `samples/`. The home screen's music is the recordings in `music/`.               |
@@ -39,24 +39,24 @@ Node 22.18+, 24.11+ or 26+. Vite+ warns on other versions.
 Every screen has an address, so a reload, a bookmark and the browser's Back and Forward land where
 the player was. `src/router/addresses.ts` is the whole list.
 
-| Address                         | What is there                                                                     |
-| ------------------------------- | --------------------------------------------------------------------------------- |
-| `/`                             | GameOn's landing.                                                                 |
-| `/games`                        | GameOn's Games.                                                                   |
-| `/sign-up`, `/sign-in`          | Creating an account, signing in. Pages of GameOn.                                 |
-| `/skull-king`                   | Skull King's home, a page of GameOn (`src/skullking`).                            |
-| `/skull-king/solo`              | The new-game screen.                                                              |
-| `/skull-king/one-screen`        | The same new-game screen, until solo has a page of its own.                       |
-| `/skull-king/table`             | The table: an offline game, or a seat on the server. The end of a game is here.   |
-| `/skull-king/score`             | The scoresheet for a game with real cards: its setup, its rounds and its end.     |
-| `/skull-king/online`            | The online hub. A lobby or a queue the server seated the player in is shown here. |
-| `/skull-king/online/new`        | New table, set to private.                                                        |
-| `/skull-king/online/join`       | Join by code.                                                                     |
-| `/skull-king/online/public`     | The public tables.                                                                |
-| `/skull-king/online/public/new` | New table, set to public, reached from the list.                                  |
-| `/ladder`                       | The ladder.                                                                       |
-| `/profile`                      | The player's own profile.                                                         |
-| `/players/{id}`                 | Another player's page. `{id}` is a user id of the server's, and nothing else.     |
+| Address                         | What is there                                                                       |
+| ------------------------------- | ----------------------------------------------------------------------------------- |
+| `/`                             | GameOn's landing.                                                                   |
+| `/games`                        | GameOn's Games.                                                                     |
+| `/sign-up`, `/sign-in`          | Creating an account, signing in. Pages of GameOn.                                   |
+| `/skull-king`                   | Skull King's home, a page of GameOn (`src/skullking`).                              |
+| `/skull-king/solo`              | The solo setup, a page of its own (`src/skullking`). It asks the server for a game. |
+| `/skull-king/one-screen`        | The renderer's new-game screen, for a game on one screen. It asks no server.        |
+| `/skull-king/table`             | The table: an offline game, or a seat on the server. The end of a game is here.     |
+| `/skull-king/score`             | The scoresheet for a game with real cards: its setup, its rounds and its end.       |
+| `/skull-king/online`            | The online hub. A lobby or a queue the server seated the player in is shown here.   |
+| `/skull-king/online/new`        | New table, set to private.                                                          |
+| `/skull-king/online/join`       | Join by code.                                                                       |
+| `/skull-king/online/public`     | The public tables.                                                                  |
+| `/skull-king/online/public/new` | New table, set to public, reached from the list.                                    |
+| `/ladder`                       | The ladder.                                                                         |
+| `/profile`                      | The player's own profile.                                                           |
+| `/players/{id}`                 | Another player's page. `{id}` is a user id of the server's, and nothing else.       |
 
 `/skull-king/ranked` is taken for a page that is not built yet. Until it is, it leads to
 `/skull-king/online`. A path that is nobody's leads to `/skull-king`. In each case the address that
@@ -135,13 +135,44 @@ link to the screen that does.
   alone is offered when the server keeps none, and as a second line under the server's when both
   exist. A lobby or a queue has no panel.
 - **Back to a seat** ("Continue", "Rejoin", "Back to your game") connects and goes to
-  `/skull-king/table`; the `welcome` that follows puts the table back. Nothing sends `solo.start`:
-  that is W3.
+  `/skull-king/table`; the `welcome` that follows puts the table back. The home sends no
+  `solo.start`: the solo setup does.
 - **Ranked** is closed while `Me.cooldownUntil` is ahead of the server's clock. The card says so
   and leads nowhere. No time is drawn.
 - **Without a connection** the home says so, Solo and One screen stay, and Online and Ranked are
   out of reach until the server answers again.
 - **Your stats** and the scoresheet entry are this device's, as the renderer keeps them.
+
+## Solo
+
+Solo is the player alone against bots, on the server (plan item W3). `/skull-king/solo` is
+`src/skullking/Solo.tsx`, as `design/skt.pen` draws it: bots 1 to 7, their skill, the scoring, the
+rounds and the advanced rules. There is no pace to choose, because a solo table has no clock.
+
+- **"Start"** connects, which gives a browser without a session its guest, and sends `solo.start`
+  with `maxPlayers` as the bots plus the player and `pace` as `standard` (`Online.startSolo`). The
+  table arrives as state and takes the setup's place in the history.
+- **What the server refuses starts nothing.** `VALIDATION` is said under the button in the
+  server's words. `ALREADY_SEATED`, or a `welcome` that already has a seat, leads to
+  `/skull-king/table`, where the connection gives the seat back.
+- **The device takes over only when the server cannot be asked:** no answer in the time an action
+  gets (`DISPATCH_TIMEOUT_MS`, 8 seconds), or no connection. The page then hangs up, so nothing the
+  server says later opens a table, and starts the game with the reference engine
+  (`startSoloOnDevice`). A game the server started is never continued on the device.
+- **At the table** a solo game says "Saved" next to the round, draws no ring on the player, and a
+  lost connection says the game waits and no card is played (`TableOverlay`). The device game says
+  "Offline" and that it is not counted. The renderer marks a device game with one player that way
+  wherever the page sets solo up itself (`TavernHooks.soloAgain`), so the parity tests, which mount
+  the renderer alone, see the legacy markup.
+- **Leaving** asks first, in solo's own words. The server answers `game.leave` on a solo table with
+  `ok` and nothing after it, so `RemoteTable` ends the table on that `ok`. The page then says "You
+  left this game." in the table's place.
+- **The ends:** a game the server finished says "Saved to your stats", a device game says it is
+  not counted, and "Play again" leads to the setup, not to the last crew.
+- **The mock** plays solo by the same rules (`src/net/mock/server.ts`): the refusals, the table
+  that stands still while the player has no socket, the leave that is `ok` alone, and one
+  unfinished solo game per player.
+- The last setup is kept on the device (`skullking-tavern.solo.v1`), as a convenience.
 
 ## Online
 

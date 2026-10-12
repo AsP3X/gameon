@@ -19,14 +19,12 @@ import type { IconName } from '../gameon/icons';
 import { savedGame } from '../gameon/saved';
 import type { SavedGame } from '../gameon/saved';
 import { useWho } from '../gameon/who';
+import { LegacyIcon, Player } from './parts';
 import type { Online, OnlineState } from '../net/online';
 import { BackIcon } from '../online/icons';
-import { initialOf } from '../online/parts';
 import type { Me } from '../protocol/generated';
 import { AT } from '../router/addresses';
 import { Sound } from '../sound/sound';
-import { ICON } from '../tableview/art';
-import { cssColor } from '../tableview/dom';
 import { prefs, session, stats } from '../tableview/state';
 
 /** "3 bots", "1 bot". */
@@ -44,26 +42,6 @@ function serverSolo(me: Me | null): ServerSolo | null {
   // An older reply names the table and not the rest: then it is a game like any other.
   if (active.bots == null || active.round == null || active.rounds == null) return null;
   return { bots: active.bots, round: active.round, rounds: active.rounds };
-}
-
-/** An icon of the renderer's own set: markup from a constant of src/tableview/art.ts. */
-function LegacyIcon({ icon }: { icon: keyof typeof ICON }) {
-  return <span className="sk-ic" aria-hidden="true" dangerouslySetInnerHTML={{ __html: ICON[icon] }} />;
-}
-
-/** The player, at the right of the bar: it leads to their profile. */
-function Player({ me }: { me: Me }) {
-  return (
-    <Link to={AT.profile} className="go-chip" label={`${me.user.name}, your profile`}>
-      <span className="avatar sm" style={{ background: cssColor(me.user.color) }} aria-hidden="true">
-        {initialOf(me.user.name)}
-      </span>
-      <span className="go-chip-text wide-only">
-        <b>{me.user.name}</b>
-        <small>{me.rating?.tier ?? me.username ?? 'Guest'}</small>
-      </span>
-    </Link>
-  );
 }
 
 interface JumpProps {

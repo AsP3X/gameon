@@ -9,7 +9,7 @@ describe('the addresses', () => {
     expect(routeOf('/')).toEqual({ page: 'landing' });
     expect(routeOf('/games')).toEqual({ page: 'games' });
     expect(routeOf('/skull-king')).toEqual({ page: 'home' });
-    expect(routeOf('/skull-king/solo')).toEqual({ page: 'setup' });
+    expect(routeOf('/skull-king/solo')).toEqual({ page: 'solo' });
     expect(routeOf('/skull-king/one-screen')).toEqual({ page: 'setup' });
     expect(routeOf('/skull-king/score')).toEqual({ page: 'score' });
     expect(routeOf('/skull-king/table')).toEqual({ page: 'table' });
@@ -66,8 +66,10 @@ describe('the addresses', () => {
         .filter(Boolean)
         .join('+');
     };
-    for (const path of ['/skull-king', '/skull-king/solo', '/skull-king/table', '/skull-king/score'])
+    for (const path of ['/skull-king', '/skull-king/one-screen', '/skull-king/table', '/skull-king/score'])
       expect(kind(path)).toBe('legacy');
+    // The solo setup is none of the three: a page of its own, which connects only to start a game.
+    expect(kind('/skull-king/solo')).toBe('');
     for (const path of ['/', '/games', '/sign-in', '/sign-up']) expect(kind(path)).toBe('frame');
     for (const path of ['/skull-king/online', '/skull-king/online/join', '/ladder', '/profile', `/players/${ID}`])
       expect(kind(path)).toBe('online');

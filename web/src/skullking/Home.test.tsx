@@ -243,7 +243,7 @@ describe('the four ways to play', () => {
     await openAt('/skull-king');
     await click('.sk-way[href="/skull-king/solo"]');
     expect(places.path()).toBe('/skull-king/solo');
-    expect($('#app h2')?.textContent).toBe('New game');
+    expect($('.sk-solo h1')?.textContent).toBe('Solo game');
     expect($('.sk-home')).toBeNull();
     await back();
     expect($('.sk-home')).not.toBeNull();
@@ -280,11 +280,10 @@ describe('the four ways to play', () => {
     expect((await page.rest('GET', '/me')).status).toBe(401);
     expect(sent).toEqual([]);
     expect($('.go-chip')).toBeNull();
-    // Starting a game against bots sends nothing either: it is the device's own until W3.
+    // Neither does the setup of a solo game, until "Start": the home itself starts nothing.
     await click('.sk-way[href="/skull-king/solo"]');
-    await click('[data-act="start"]');
     await settle(3000);
-    expect($('#app .game')).not.toBeNull();
+    expect((await page.rest('GET', '/me')).status).toBe(401);
     expect(sent).toEqual([]);
   });
 

@@ -28,6 +28,12 @@
    it has no forfeit for a ranked seat that was away for most of the game (§5.6): in the mock a
    forfeit is a `game.leave`.
 
+   Solo follows `solo.start` of docs/protocol.md §5 as the server plays it: the player in seat 0,
+   a bot in every other seat, no clock on the player's own bid, play or ability, and one unfinished
+   solo game per player. While the player has no socket the table stands still: no bot plays, no
+   trick is collected, no round goes on. Leaving it is `ok` and then nothing: the game is gone,
+   with no result and no stats.
+
    A browser() is one browser profile: a cookie jar that holds at most one session, the REST calls
    that carry it, and the sockets opened with it. */
 import { Bots, Engine, Rules } from '../../game';
@@ -60,6 +66,7 @@ import type {
   SeatStatus,
   ServerConfig,
   TableColor,
+  TableKind,
   TableMode,
   Timers,
   Welcome,
@@ -260,6 +267,8 @@ interface Game {
   /** The lobby the table came from and goes back to. A table the queue made has none. */
   room: Room | null;
   mode: TableMode;
+  /** Which table it is, where the server says so: only a solo game is named (`game.start.table`). */
+  table: TableKind | null;
   settings: GameSettings;
   state: GameState;
   rev: number;
@@ -564,6 +573,7 @@ export class MockServer {
     if (message.t === 'hello') return this.hello(conn, message);
     if (!conn.greeted) return this.fail(conn, message.id, 'UNAUTHENTICATED', 'Say hello first.');
     if (message.t === 'ping') return this.write(conn, { t: 'ok', re: message.id, serverTime: this.now() });
+    if (message.t === 'solo.start') return this.onSolo(conn, message);
     if (message.t.startsWith('lobby.')) return this.onLobby(conn, message);
     if (message.t.startsWith('game.')) return this.onGame(conn, message);
     if (message.t.startsWith('queue.')) return this.onQueue(conn, message);
@@ -617,7 +627,17 @@ export class MockServer {
     return {
       ...account.me,
       active: account.game
-        ? { kind: 'game', id: account.game.id }
+        ? account.game.table === 'solo'
+          ? {
+              kind: 'game',
+              id: account.game.id,
+              table: 'solo',
+              // The deal the game is at, counted from 1, and the length of its format: not the schedule the deck capped.
+              round: account.game.state.round + 1,
+              rounds: Rules.FORMATS[account.game.settings.format].seq.length,
+              bots: account.game.state.seats.filter((seat) => seat.bot).length,
+            }
+          : { kind: 'game', id: account.game.id }
         : account.room
           ? { kind: 'lobby', id: account.room.lobby.id }
           : account.queued
@@ -1050,7 +1070,14 @@ export class MockServer {
    * Seat the members in their order and deal. A lobby's table tells the lobby first (`lobby.state`
    * with `inGame`); the queue's table has no lobby to tell.
    */
-  private openTable(members: Member[], humans: Account[], s: GameSettings, mode: TableMode, room: Room | null): void {
+  private openTable(
+    members: Member[],
+    humans: Account[],
+    s: GameSettings,
+    mode: TableMode,
+    room: Room | null,
+    table: TableKind | null = null,
+  ): void {
     const used = new Set<string>();
     // A seat's colour is the member's own, unless a seat before it already has it.
     const color = (wanted: TableColor): TableColor => {
@@ -1070,6 +1097,7 @@ export class MockServer {
       id: this.uuid(),
       room,
       mode,
+      table,
       settings: s,
       state: Engine.create({
         seats,
@@ -1118,6 +1146,8 @@ export class MockServer {
       gameId: game.id,
       mode: game.mode,
       lobbyId: game.room ? game.room.lobby.id : null,
+      // Only a solo game is named. Every other table leaves the field out, as the server does.
+      ...(game.table === 'solo' ? { table: game.table } : {}),
       settings: game.settings,
       deck: s.deck,
       schedule: s.schedule,
@@ -1149,6 +1179,22 @@ export class MockServer {
     };
   }
 
+  /**
+   * `solo.start`: the player alone against bots. Refused for a table size the game does not have,
+   * and for a player who already sits somewhere: in a lobby, a queue or a game, a solo game included.
+   */
+  private onSolo(conn: Conn, m: Extract<ClientMessage, { t: 'solo.start' }>): void {
+    const account = conn.account;
+    if (!isSettings(m.settings)) return this.fail(conn, m.id, 'VALIDATION');
+    if (account.room || account.queued || account.game) return this.fail(conn, m.id, 'ALREADY_SEATED');
+    // The pace is stored as standard whatever was sent: a solo table has no clock to scale.
+    const settings: GameSettings = { ...m.settings, pace: 'standard' };
+    const members: Member[] = [{ kind: 'human', user: account.me.user, ready: true, connected: true }];
+    while (members.length < settings.maxPlayers) members.push(this.botFor(members, settings.botLevel));
+    this.write(conn, { t: 'ok', re: m.id });
+    this.openTable(members, [account], settings, 'custom', null, 'solo');
+  }
+
   private onGame(conn: Conn, m: ClientMessage): void {
     const account = conn.account,
       game = account.game,
@@ -1177,6 +1223,14 @@ export class MockServer {
       case 'game.emote':
         return this.fail(conn, m.id, 'VALIDATION', 'The mock server accepts no emotes.');
       case 'game.leave': {
+        // A solo game that is left is gone: `ok`, and nothing after it. No update, no result, no stats.
+        if (game.table === 'solo') {
+          this.disarm(game);
+          this.games.delete(game);
+          account.game = null;
+          this.touch();
+          return this.write(conn, { t: 'ok', re: m.id });
+        }
         // The seat is a bot from this step. The leaver still gets the step's update, and none after it.
         game.status[seat] = 'bot';
         game.players[seat] = null;
@@ -1241,6 +1295,8 @@ export class MockServer {
       prev = game.deadline;
     let next: { kind: Deadline['kind']; seats: Seat[]; ms: number } | null = null;
     if (game.over) next = null;
+    // A solo table has no clock on the player's own move: only the end of a round is timed.
+    else if (game.table === 'solo' && s.phase !== 'roundEnd') next = null;
     else if (s.phase === 'bidding')
       next = { kind: 'bid', seats: humans.filter((i) => s.bids[i] == null), ms: this.timers.bidMs * scale };
     else if (s.phase === 'playing' && s.turn != null && human(s.turn))
@@ -1264,6 +1320,8 @@ export class MockServer {
   /** Start what the table does on its own from here: the bots, the pause after a trick, and the deadline. */
   private arm(game: Game): void {
     this.disarm(game);
+    // A solo table stands still while its player has no socket: nothing is played, collected or timed.
+    if (game.table === 'solo' && !game.players.some((account) => account?.conn)) return;
     const s = game.state,
       bot = (seat: Seat): boolean => game.players[seat] == null,
       later = (ms: number, fn: () => void): void => {
@@ -1455,6 +1513,7 @@ export class MockServer {
         id: g.id,
         lobby: g.room?.lobby.id ?? null,
         mode: g.mode,
+        table: g.table,
         settings: g.settings,
         state: g.state,
         rev: g.rev,
@@ -1493,6 +1552,7 @@ export class MockServer {
         id: string;
         lobby: string | null;
         mode: TableMode;
+        table?: TableKind | null;
         settings: GameSettings;
         state: GameState;
         rev: number;
@@ -1553,6 +1613,7 @@ export class MockServer {
         id: g.id,
         room,
         mode: g.mode,
+        table: g.table ?? null,
         settings: g.settings,
         state: g.state,
         rev: g.rev,

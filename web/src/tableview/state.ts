@@ -230,12 +230,20 @@ export const patchUi = (patch: Partial<Ui>): void => {
 export interface OnlineHooks {
   /** Give the seat up for good. An accepted leave is followed by the table's last update. */
   leave(): Promise<DispatchResult>;
-  /** The table is done with on this device: take it off the screen and go back to the online screens. */
-  exit(): void;
+  /**
+   * The table is done with on this device: take it off the screen and go on from there. `again`
+   * says the player asked for another game, which matters where the next one is set up afresh.
+   */
+  exit(to?: 'again'): void;
   /** The server's clock, in Unix milliseconds: the one every deadline is on. */
   now(): number;
   /** A ranked game: leaving it is a forfeit, and the player is told so before they do it. */
   ranked: boolean;
+  /**
+   * A solo game on the server: the player alone against bots. No clock on their own move, a game
+   * that is saved as it goes, and a leave that ends it without a result.
+   */
+  solo: boolean;
   /**
    * What the server said the game came to (`game.over`), once it has: every seat's place, the seats
    * that forfeited, and in ranked this seat's rating change. null until then.
@@ -296,6 +304,11 @@ export const stage: {
   pageHome: boolean;
   /** Told when a sheet or the curtain opens or closes, so the page can take what is behind it out of reach. */
   dialog: ((open: boolean) => void) | null;
+  /**
+   * "Play again" after a solo game on this device: the page sets the next one up. Where it is set,
+   * a device game with one player is the offline form of solo, and the table and its end say so.
+   */
+  soloAgain: (() => void) | null;
 } = {
   app: null,
   fx: null,
@@ -304,6 +317,7 @@ export const stage: {
   covered: false,
   pageHome: false,
   dialog: null,
+  soloAgain: null,
 };
 
 type Timer = ReturnType<typeof setTimeout>;

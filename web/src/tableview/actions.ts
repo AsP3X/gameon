@@ -3,6 +3,7 @@
    actions) without changing behavior. */
 import { Engine, Rules } from '../game';
 import type { Action, GameState, TableView } from '../game';
+import type { BotLevel, Format, Scoring } from '../protocol/generated';
 import type { AbilityChoice, GameEvent, PlayedAs } from '../protocol/generated';
 import { Sound } from '../sound/sound';
 import type { SoundName } from '../sound/sound';
@@ -199,6 +200,45 @@ function startGame(): void {
     abilities: prefs.abilities,
     level: prefs.level,
     format: prefs.format,
+    seed: (Math.random() * 2 ** 32) >>> 0,
+  });
+  openTable(state);
+  patchUi({ deal: true, lastPct: 0 });
+  go('game');
+}
+/** What a solo game on this device is set up with: how many bots, how well they play, and the rules. */
+export interface DeviceSolo {
+  bots: number;
+  level: BotLevel;
+  scoring: Scoring;
+  format: Format;
+  loot: boolean;
+  kraken: boolean;
+  whale: boolean;
+  abilities: boolean;
+}
+/**
+ * Start a solo game on this device and go to its table: the player and that many bots. It is the
+ * offline form of solo, for when the server cannot be asked. Nothing of it reaches a server.
+ */
+export function startSoloOnDevice(solo: DeviceSolo): void {
+  const seats = [
+    { name: 'You', color: COLORS[0], bot: false },
+    ...Array.from({ length: solo.bots }, (_, i) => ({
+      name: BOT_NAMES[i % BOT_NAMES.length],
+      color: COLORS[(i + 1) % COLORS.length],
+      bot: true,
+    })),
+  ];
+  const state = Engine.create({
+    seats,
+    scoring: solo.scoring,
+    loot: solo.loot,
+    kraken: solo.kraken,
+    whale: solo.whale,
+    abilities: solo.abilities,
+    level: solo.level,
+    format: solo.format,
     seed: (Math.random() * 2 ** 32) >>> 0,
   });
   openTable(state);
@@ -524,7 +564,7 @@ export const ACTIONS: Record<string, ActionFn | undefined> = {
     // this tap, so the theme has to be unlocked here.
     if (session.online) {
       Sound.unlock();
-      return session.online.exit();
+      return session.online.exit('again');
     }
     if (ui.endFrom === 'track') {
       const trk = trkNow();
@@ -536,6 +576,8 @@ export const ACTIONS: Record<string, ActionFn | undefined> = {
       patchUi({ lastPct: 0, open: {} });
       return go('track');
     }
+    // A solo game is set up on a page of its own: the next one starts there, not from the last crew.
+    if (stage.soloAgain && session.table?.localSeats.length === 1) return stage.soloAgain();
     startGame();
   },
   bid() {

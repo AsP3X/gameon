@@ -28,9 +28,20 @@ const COPY: Record<Exclude<LinkStatus, 'online'>, { title: string; text: string;
  * Over the table while the server cannot be heard: what is on the table underneath may be old, so
  * it takes no input until the next `welcome` has replaced it.
  */
-export function TableOverlay({ status, online }: { status: Exclude<LinkStatus, 'online'>; online: Online }) {
+/** A solo game stands still while its player is away: nothing is played for them, and they are told so. */
+const SOLO_AWAY = 'Your game is saved on the server and waits for you. No card is played while you are away.';
+
+export interface TableOverlayProps {
+  status: Exclude<LinkStatus, 'online'>;
+  online: Online;
+  /** The table is a solo game on the server. */
+  solo?: boolean;
+}
+
+export function TableOverlay({ status, online, solo = false }: TableOverlayProps) {
   const copy = COPY[status],
-    text = copy.text || COPY.offline.text,
+    lost = copy.title === COPY.offline.title,
+    text = lost ? (solo ? SOLO_AWAY : COPY.offline.text) : copy.text,
     reload = status === 'unsupported';
   // The table underneath is inert: the keyboard has to be on the one thing that can be done.
   const action = useRef<HTMLButtonElement>(null);

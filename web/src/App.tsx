@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
-import type { LobbyId } from './protocol/generated';
+import { flushSync } from 'react-dom';
+import type { GameSettings, LobbyId } from './protocol/generated';
 import { Api } from './net/api';
 import type { Backend } from './net/api';
 import { appBackend, appMemory, BUILD } from './net/connect';
 import { Online } from './net/online';
-import type { OnlineMemory } from './net/online';
+import type { OnlineMemory, SoloOutcome } from './net/online';
 import { SocketClient } from './net/socket';
 import { GameOn } from './gameon/GameOn';
 import { GameRecord } from './online/GameRecord';
@@ -12,10 +13,19 @@ import { OnlineScreens } from './online/OnlineScreens';
 import { TableOverlay } from './online/TableOverlay';
 import { AT, HUB, isFrame, isLegacy, isOnline, routeOf, settle } from './router/addresses';
 import { SkullKingHome } from './skullking/Home';
+import { SoloLeft, SoloSetup } from './skullking/Solo';
 import { browserPlaces } from './router/places';
 import type { Places } from './router/places';
 import { createRouter } from './router/router';
-import { closeOnlineTable, coverTavern, mountTavern, openOnlineTable, showOnlineResult, showPlace } from './tableview';
+import {
+  closeOnlineTable,
+  coverTavern,
+  mountTavern,
+  openOnlineTable,
+  showOnlineResult,
+  showPlace,
+  startSoloOnDevice,
+} from './tableview';
 
 export interface AppProps {
   /** How the online screens reach a server. Tests hand in a mock server's browser. */
@@ -75,6 +85,8 @@ export function App({ backend = appBackend, memory = appMemory, places }: AppPro
   const [sitting, setSitting] = useState<LobbyId | null>(null);
   /** One of the renderer's sheets is open: over the home the page draws, it is the only thing to reach. */
   const [sheet, setSheet] = useState(false);
+  /** The player left a solo game: the page says so, in the table's place, until they go on. */
+  const [soloLeft, setSoloLeft] = useState(false);
   const table = state.table;
 
   // Forward, or a typed address, can land on one that only leads somewhere.
@@ -89,13 +101,15 @@ export function App({ backend = appBackend, memory = appMemory, places }: AppPro
       pageHome: true,
       greet: routeOf(router.getPath()).page === 'home',
       dialog: setSheet,
+      // The next solo game is set up on the page's own setup, which takes the end screen's place.
+      soloAgain: () => router.go(AT.solo, { replace: true }),
       moved: (place) => {
         const from = routeOf(router.getPath()).page;
         // Back at the home screen is the way back, not a step further on.
         if (place === 'home') router.up(AT.home);
-        else if (place === 'setup') router.go(from === 'setup' ? router.getPath() : AT.solo);
+        else if (place === 'setup') router.go(from === 'setup' ? router.getPath() : AT.oneScreen);
         // A game that starts takes the place of the screen it was set up on: Back from a table is home.
-        else if (place === 'table') router.go(AT.table, { replace: from === 'setup' });
+        else if (place === 'table') router.go(AT.table, { replace: from === 'setup' || from === 'solo' });
         else router.go(AT.score);
       },
     });
@@ -117,11 +131,21 @@ export function App({ backend = appBackend, memory = appMemory, places }: AppPro
   // The server seated this session at a table: play it where every game is played.
   useEffect(() => {
     if (!table) return;
+    const solo = table.kind === 'solo';
     openOnlineTable(table, {
       leave: () => online.leaveTable(),
-      exit: () => online.closeTable(),
+      exit: (to) => {
+        if (!solo) return online.closeTable();
+        // A solo game is nobody's lobby to go back to. One that was left says so in the table's
+        // place. One that was played to its end leads to the next setup, or home.
+        const left = table.hasLeft;
+        if (left) flushSync(() => setSoloLeft(true));
+        online.closeTable();
+        if (!left) router.go(to === 'again' ? AT.solo : AT.home, { replace: true });
+      },
       now: online.serverNow,
       ranked: table.mode === 'ranked',
+      solo,
       result: () => table.result,
       record: () => setRecord(true),
     });
@@ -135,10 +159,15 @@ export function App({ backend = appBackend, memory = appMemory, places }: AppPro
 
   // A seat at a table holds its address: Back does not leave it, the table's own way out does.
   // And when that table is gone, the page is back at the online screens it came from.
+  // A solo game takes the place of the page it was set up on. One that was left has no hub to go to.
   useEffect(() => {
-    if (table) router.go(AT.table);
-    else if (route.page === 'table' && linked) router.go(AT.online, { replace: true });
-  }, [router, route, table, linked]);
+    if (table) router.go(AT.table, { replace: route.page === 'solo' });
+    else if (route.page === 'table' && linked && !soloLeft) router.go(AT.online, { replace: true });
+  }, [router, route, table, linked, soloLeft]);
+  // What is said about a game that was left is said at the table's address, and nowhere else.
+  useEffect(() => {
+    if (soloLeft && route.page !== 'table') setSoloLeft(false);
+  }, [soloLeft, route]);
 
   // The address changed by itself: the renderer shows what belongs there, or there is nothing to
   // show (no game is open or saved) and the page is at home.
@@ -151,23 +180,62 @@ export function App({ backend = appBackend, memory = appMemory, places }: AppPro
 
   // The online screens are up where the address is theirs, and for the moment a closed table's
   // address still stands.
-  const screens = !table && (isOnline(route) || (route.page === 'table' && linked));
+  const screens = !table && !soloLeft && (isOnline(route) || (route.page === 'table' && linked));
   // The frame's page, where the address is one of its own.
   const framed = !table && isFrame(route) ? route : null;
   // They take the renderer's place: its home screen is still there, but not to be seen.
-  const covered = screens || framed != null;
+  const covered = screens || framed != null || soloLeft;
   useEffect(() => coverTavern(covered), [covered]);
-  // Skull King's home: the page's own, with the renderer under it.
-  const atHome = !table && !covered && route.page === 'home';
+  // Skull King's home and the solo setup: the page's own, with the renderer under them for its sheets.
+  const atHome = !table && !covered && route.page === 'home',
+    atSolo = !table && !covered && route.page === 'solo';
+
+  /**
+   * "Start" on the solo setup. The server is asked for the game, and its table arrives as state.
+   * When the server cannot be asked, or does not answer in the time an action gets, the game is
+   * played on this device. A refusal is the server's word and starts nothing anywhere.
+   */
+  const startSolo = async (settings: GameSettings): Promise<SoloOutcome> => {
+    setLinked(true);
+    const answer = await online.startSolo(settings);
+    // The player went somewhere else while it was asked: nothing follows them there.
+    if (answer.ok || routeOf(router.getPath()).page !== 'solo') return answer;
+    if (answer.code === 'ALREADY_SEATED') {
+      // The seat they already have is the server's to give back: the table's address, and `welcome`.
+      router.go(AT.table, { replace: true });
+      return answer;
+    }
+    if (answer.code !== 'TIMEOUT' && answer.code !== 'OFFLINE') return answer;
+    // Nothing of a server game is continued here, and nothing the server says later opens a table.
+    online.close(true);
+    flushSync(() => setLinked(false));
+    startSoloOnDevice({
+      bots: settings.maxPlayers - 1,
+      level: settings.botLevel,
+      scoring: settings.scoring,
+      format: settings.format,
+      loot: settings.loot,
+      kraken: settings.kraken,
+      whale: settings.whale,
+      abilities: settings.abilities,
+    });
+    return { ok: true };
+  };
   // The table is on screen and the server is not there: what it shows may be old.
   const cut = table != null && state.status !== 'online' ? state.status : null;
   // The record is a dialog over the end screen: the table underneath takes no input while it is open.
   const shown = record && table?.result != null;
   return (
     <>
-      <div id="app" ref={app} hidden={covered} data-behind={atHome ? '' : undefined} inert={cut != null || shown}></div>
+      <div
+        id="app"
+        ref={app}
+        hidden={covered}
+        data-behind={atHome || atSolo ? '' : undefined}
+        inert={cut != null || shown}
+      ></div>
       <canvas id="fx" ref={fx} hidden></canvas>
-      {cut && <TableOverlay status={cut} online={online} />}
+      {cut && <TableOverlay status={cut} online={online} solo={table?.kind === 'solo'} />}
       {table && shown && <GameRecord online={online} gameId={table.gameId} onClose={() => setRecord(false)} />}
       {screens && (
         <div id="online">
@@ -195,6 +263,23 @@ export function App({ backend = appBackend, memory = appMemory, places }: AppPro
             setLinked(true);
             router.go(AT.table);
           }}
+        />
+      )}
+      {atSolo && (
+        <SoloSetup
+          online={online}
+          state={state}
+          go={router.go}
+          behind={sheet}
+          onBack={() => router.up(AT.home)}
+          onStart={startSolo}
+        />
+      )}
+      {soloLeft && (
+        <SoloLeft
+          me={state.me}
+          onAgain={() => router.go(AT.solo, { replace: true })}
+          onHome={() => router.go(AT.home, { replace: true })}
         />
       )}
       {framed && (

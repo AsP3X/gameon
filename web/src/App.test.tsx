@@ -55,7 +55,7 @@ describe('App', () => {
     expect(document.querySelectorAll('symbol#ill-back')).toHaveLength(1);
     act(() => {
       document
-        .querySelector('#gameon a[href="/skull-king/solo"]')
+        .querySelector('#gameon a[href="/skull-king/one-screen"]')
         ?.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
     });
     document.querySelector('[data-act="crewAdd"]')?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
