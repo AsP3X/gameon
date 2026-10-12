@@ -397,7 +397,7 @@ async fn a_solo_table_pauses_on_drop_and_an_abandon_writes_nothing(pool: sqlx::P
     assert!(me.contains("\"round\":1"), "{me}");
     assert!(me.contains("\"rounds\":10"), "{me}");
     assert!(me.contains("\"bots\":3"), "{me}");
-    assert!(!me.contains("byMode"), "{me}");
+    assert!(me.contains("\"byMode\""), "{me}");
     let (status, config) = http(port, "GET", "/api/v1/config", "", "").await;
     assert_eq!(status, 200, "{config}");
     assert!(config.contains("\"format\":\"classic\""), "{config}");
@@ -516,7 +516,7 @@ async fn a_finished_solo_game_counts_in_the_headline(pool: sqlx::PgPool) {
     assert_eq!(status, 200, "{me}");
     assert!(me.contains("\"games\":1"), "{me}");
     assert!(me.contains("\"bidsTotal\":5"), "{me}");
-    assert!(!me.contains("byMode"), "{me}");
+    assert!(me.contains("\"byMode\""), "{me}");
     let row: (String, Option<String>) = sqlx::query_as("SELECT mode, table_kind FROM games")
         .fetch_one(&pool)
         .await

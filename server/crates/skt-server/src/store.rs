@@ -27,6 +27,8 @@ pub enum StoreFailure {
     Unauthenticated,
     /// The user id is not in the table.
     NotFound,
+    /// A query limit or cursor is not usable.
+    Validation,
     /// That session already has a password.
     AlreadyRegistered,
 }
@@ -43,8 +45,10 @@ pub struct SavedGame {
     pub settings: String,
     /// Seats as JSON.
     pub seats: String,
-    /// `solo`, or nothing.
+    /// `solo`, `friends`, `public`, `casual`, `ranked`, or nothing.
     pub table_kind: Option<String>,
+    /// When the deal was dealt, in Unix milliseconds.
+    pub started_at: i64,
     /// `seq`, kind, seat, body.
     pub log: Vec<(i32, String, Option<i32>, String)>,
 }
@@ -61,8 +65,10 @@ pub struct OpenWrite {
     pub settings: String,
     /// Seats as JSON.
     pub seats: String,
-    /// `solo`, or nothing. A restart uses this to keep the table paused.
+    /// `solo`, `friends`, `public`, `casual`, `ranked`, or nothing.
     pub table_kind: Option<String>,
+    /// When the deal was dealt, in Unix milliseconds.
+    pub started_at: i64,
     /// New rows only. `seq` is the position in the whole log.
     pub entries: Vec<(i32, String, Option<i32>, String)>,
 }
@@ -318,13 +324,45 @@ impl Store {
             .execute(connection(&mut tx))
             .await
             .map_err(|err| database(&err))?;
-        sqlx::query("INSERT INTO games (id, mode, table_kind) VALUES ($1, $2, $3)")
+        let settings = serde_json::to_string(&game.settings).unwrap_or_else(|_| "{}".to_owned());
+        let started = if game.started_at > 0 {
+            game.started_at
+        } else {
+            identity::unix_now().get()
+        };
+        let season = (game.mode == "ranked").then(|| {
+            i32::try_from(crate::rating::season_at(identity::unix_now().get()).id)
+                .unwrap_or(i32::MAX)
+        });
+        sqlx::query(
+            "INSERT INTO games (id, mode, table_kind, settings, started_at, season_id) VALUES ($1, $2, $3, $4, $5, $6)",
+        )
+        .bind(&game.id)
+        .bind(game.mode)
+        .bind(game.table_kind)
+        .bind(settings)
+        .bind(started)
+        .bind(season)
+        .execute(connection(&mut tx))
+        .await
+        .map_err(|err| database(&err))?;
+        for seat in stored_seats(game) {
+            sqlx::query(
+                "INSERT INTO game_seats (game_id, user_id, seat, total, place, bot, bids_made, bids_total, forfeited) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
+            )
             .bind(&game.id)
-            .bind(game.mode)
-            .bind(game.table_kind)
+            .bind(seat.user_id.as_ref().map(|id| id.as_str().to_owned()))
+            .bind(i32::from(seat.seat))
+            .bind(seat.score)
+            .bind(i32::try_from(seat.place).unwrap_or(i32::MAX))
+            .bind(seat.bot)
+            .bind(i32::try_from(seat.bids_made).unwrap_or(i32::MAX))
+            .bind(seat.bids_total)
+            .bind(seat.forfeited)
             .execute(connection(&mut tx))
             .await
             .map_err(|err| database(&err))?;
+        }
         for (seq, entry) in game.log.iter().enumerate() {
             sqlx::query(
                 "INSERT INTO action_log (game_id, seq, kind, seat, body) VALUES ($1, $2, $3, $4, $5)",
@@ -338,49 +376,14 @@ impl Store {
             .await
             .map_err(|err| database(&err))?;
         }
-        // Human: Profile counters are custom and casual only. Ranked writes skill, not those counters.
-        // Agent: DB INSERT games and game_seats; UPDATE stats only when mode is not ranked; UPSERT ratings for ranked.
+        // Human: The five lines count a seat that was still in the game. Ranked is not a headline number.
+        // Agent: DB UPSERT mode_stats for every still-seated human; UPDATE stats only when mode is not ranked; UPSERT ratings for ranked.
+        write_modes(&mut tx, game).await?;
         if game.mode == "ranked" {
-            for rated in &game.rated {
-                sqlx::query(
-                    "INSERT INTO game_seats (game_id, user_id, seat, total, place) VALUES ($1, $2, $3, $4, $5)",
-                )
-                .bind(&game.id)
-                .bind(rated.user.as_str())
-                .bind(i32::from(rated.seat))
-                .bind(rated.total)
-                .bind(i32::try_from(rated.place).unwrap_or(i32::MAX))
-                .execute(connection(&mut tx))
-                .await
-                .map_err(|err| database(&err))?;
-                let season = i32::try_from(crate::rating::season_at(identity::unix_now().get()).id)
-                    .unwrap_or(i32::MAX);
-                sqlx::query(
-                    "INSERT INTO ratings (user_id, season_id, mu, sigma, games) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (user_id) DO UPDATE SET season_id = EXCLUDED.season_id, mu = EXCLUDED.mu, sigma = EXCLUDED.sigma, games = EXCLUDED.games",
-                )
-                .bind(rated.user.as_str())
-                .bind(season)
-                .bind(rated.after.mu)
-                .bind(rated.after.sigma)
-                .bind(i32::try_from(rated.after.games).unwrap_or(i32::MAX))
-                .execute(connection(&mut tx))
-                .await
-                .map_err(|err| database(&err))?;
-            }
+            write_ratings(&mut tx, game).await?;
         }
         if game.mode != "ranked" {
             for seat in &game.seats {
-                sqlx::query(
-                    "INSERT INTO game_seats (game_id, user_id, seat, total, place) VALUES ($1, $2, $3, $4, $5)",
-                )
-                .bind(&game.id)
-                .bind(seat.user.as_str())
-                .bind(i32::from(seat.seat))
-                .bind(seat.total)
-                .bind(i32::try_from(seat.place).unwrap_or(i32::MAX))
-                .execute(connection(&mut tx))
-                .await
-                .map_err(|err| database(&err))?;
                 sqlx::query(
                     "UPDATE stats SET games = games + 1, wins = wins + $2, bids_made = bids_made + $3, bids_total = bids_total + $4, best_score = CASE WHEN best_score IS NULL THEN $5 ELSE GREATEST(best_score, $5) END WHERE user_id = $1",
                 )
@@ -406,7 +409,7 @@ impl Store {
     pub async fn save_open(&self, game: &OpenWrite) -> Result<(), StoreFailure> {
         let mut tx = self.pool.begin().await.map_err(|err| database(&err))?;
         sqlx::query(
-            "INSERT INTO open_games (id, mode, matchmade, settings, seats, table_kind) VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT (id) DO UPDATE SET settings = EXCLUDED.settings, seats = EXCLUDED.seats, table_kind = EXCLUDED.table_kind",
+            "INSERT INTO open_games (id, mode, matchmade, settings, seats, table_kind, started_at) VALUES ($1, $2, $3, $4, $5, $6, $7) ON CONFLICT (id) DO UPDATE SET settings = EXCLUDED.settings, seats = EXCLUDED.seats, table_kind = EXCLUDED.table_kind, started_at = CASE WHEN open_games.started_at = 0 THEN EXCLUDED.started_at ELSE open_games.started_at END",
         )
         .bind(&game.id)
         .bind(&game.mode)
@@ -414,6 +417,7 @@ impl Store {
         .bind(&game.settings)
         .bind(&game.seats)
         .bind(&game.table_kind)
+        .bind(game.started_at)
         .execute(connection(&mut tx))
         .await
         .map_err(|err| database(&err))?;
@@ -454,14 +458,14 @@ impl Store {
     ///
     /// The read failed.
     pub async fn load_open(&self) -> Result<Vec<SavedGame>, StoreFailure> {
-        let games: Vec<(String, String, bool, String, String, Option<String>)> = sqlx::query_as(
-            "SELECT id, mode, matchmade, settings, seats, table_kind FROM open_games ORDER BY id",
+        let games: Vec<OpenRow> = sqlx::query_as(
+            "SELECT id, mode, matchmade, settings, seats, table_kind, started_at FROM open_games ORDER BY id",
         )
         .fetch_all(&self.pool)
         .await
         .map_err(|err| database(&err))?;
         let mut saved = Vec::new();
-        for (id, mode, matchmade, settings, seats, table_kind) in games {
+        for (id, mode, matchmade, settings, seats, table_kind, started_at) in games {
             let log: Vec<(i32, String, Option<i32>, String)> = sqlx::query_as(
                 "SELECT seq, kind, seat, body FROM open_log WHERE game_id = $1 ORDER BY seq",
             )
@@ -476,6 +480,7 @@ impl Store {
                 settings,
                 seats,
                 table_kind,
+                started_at,
                 log,
             });
         }
@@ -538,7 +543,7 @@ impl Store {
         let skill = self.skill_of(&id).await?;
         Ok(AccountSnap {
             user: User {
-                id: UserId::new(id),
+                id: UserId::new(id.clone()),
                 name,
                 color: parse_color(&color).ok_or(StoreFailure::Database)?,
                 tier: None,
@@ -551,10 +556,132 @@ impl Store {
                 bids_made: u32::try_from(bids_made).unwrap_or(0),
                 bids_total: u32::try_from(bids_total).unwrap_or(0),
                 best_score,
-                by_mode: None,
+                by_mode: Some(self.lines_of(&id).await?),
             },
             skill,
         })
+    }
+
+    async fn lines_of(&self, id: &str) -> Result<skt_protocol::StatsByMode, StoreFailure> {
+        let rows: Vec<(String, i32, i32, i32, i32, Option<i32>)> = sqlx::query_as(
+            "SELECT mode, games, wins, bids_made, bids_total, best_score FROM mode_stats WHERE user_id = $1",
+        )
+        .bind(id)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|err| database(&err))?;
+        let mut lines = skt_protocol::StatsByMode::default();
+        for (mode, games, wins, bids_made, bids_total, best_score) in rows {
+            let line = skt_protocol::ModeLine {
+                games: u32::try_from(games).unwrap_or(0),
+                wins: u32::try_from(wins).unwrap_or(0),
+                bids_made: u32::try_from(bids_made).unwrap_or(0),
+                bids_total: u32::try_from(bids_total).unwrap_or(0),
+                best_score,
+            };
+            match mode.as_str() {
+                "solo" => lines.solo = line,
+                "public" => lines.public = line,
+                "casual" => lines.casual = line,
+                "ranked" => lines.ranked = line,
+                _ => lines.friends = line,
+            }
+        }
+        Ok(lines)
+    }
+
+    /// The caller's finished games, newest first.
+    ///
+    /// # Errors
+    ///
+    /// `limit` is outside 1..=100, `after` is not one of this caller's games, or the read failed.
+    pub async fn game_page(
+        &self,
+        user: &str,
+        limit: i64,
+        after: Option<&str>,
+    ) -> Result<skt_protocol::GamePage, StoreFailure> {
+        if !(1..=100).contains(&limit) {
+            return Err(StoreFailure::Validation);
+        }
+        if let Some(cursor) = after {
+            let known: Option<(i32,)> =
+                sqlx::query_as("SELECT 1 FROM game_seats WHERE game_id = $1 AND user_id = $2")
+                    .bind(cursor)
+                    .bind(user)
+                    .fetch_optional(&self.pool)
+                    .await
+                    .map_err(|err| database(&err))?;
+            if known.is_none() {
+                return Err(StoreFailure::Validation);
+            }
+        }
+        let rows: Vec<FinishedRow> = sqlx::query_as(
+            "SELECT g.id, g.mode, g.table_kind, g.settings, g.started_at, g.season_id, (EXTRACT(EPOCH FROM g.finished_at) * 1000)::bigint FROM games g JOIN game_seats mine ON mine.game_id = g.id AND mine.user_id = $1 WHERE $2::text IS NULL OR (g.finished_at, g.id) < (SELECT finished_at, id FROM games WHERE id = $2) ORDER BY g.finished_at DESC, g.id DESC LIMIT $3",
+        )
+        .bind(user)
+        .bind(after)
+        .bind(limit + 1)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|err| database(&err))?;
+        let cap = usize::try_from(limit).unwrap_or(25);
+        let more = rows.len() > cap;
+        let shown = rows.len().min(cap);
+        let next = more.then(|| skt_protocol::GameId::new(rows[shown - 1].0.clone()));
+        let fetched = rows;
+        let ids: Vec<String> = fetched
+            .iter()
+            .take(shown)
+            .map(|(id, ..)| id.clone())
+            .collect();
+        let seat_rows: Vec<SeatRow> = if ids.is_empty() {
+            Vec::new()
+        } else {
+            sqlx::query_as(
+                "SELECT game_id, user_id, seat, total, place, bot, bids_made, forfeited FROM game_seats WHERE game_id = ANY($1) ORDER BY seat",
+            )
+            .bind(&ids)
+            .fetch_all(&self.pool)
+            .await
+            .map_err(|err| database(&err))?
+        };
+        let games = ids
+            .iter()
+            .filter_map(|id| fetched.iter().find(|(game_id, ..)| game_id == id))
+            .map(
+                |(id, mode, kind, settings, started_at, season_id, ended_at)| {
+                    let parsed = serde_json::from_str(settings)
+                        .unwrap_or_else(|_| skt_protocol::GameSettings::standard());
+                    let seats = seat_rows
+                        .iter()
+                        .filter(|(game_id, ..)| game_id == id)
+                        .map(|(_, user_id, _, total, place, bot, bids_made, forfeited)| {
+                            skt_protocol::FinishedSeat {
+                                user_id: user_id
+                                    .as_ref()
+                                    .map(|value| skt_protocol::UserId::new(value.clone())),
+                                bot: *bot,
+                                place: u32::try_from(*place).unwrap_or(0),
+                                score: *total,
+                                bids_made: u32::try_from(*bids_made).unwrap_or(0),
+                                forfeited: *forfeited,
+                            }
+                        })
+                        .collect();
+                    skt_protocol::FinishedGame {
+                        id: skt_protocol::GameId::new(id.clone()),
+                        table: table_of(mode, kind.as_deref()),
+                        settings: parsed,
+                        started_at: skt_protocol::UnixMs::new(*started_at),
+                        ended_at: skt_protocol::UnixMs::new(*ended_at),
+                        season_id: season_id.and_then(|value| u32::try_from(value).ok()),
+                        seats,
+                    }
+                },
+            )
+            .collect();
+        Ok(skt_protocol::GamePage { games, next })
     }
 
     /// Replace the leave penalty for one account.
@@ -680,6 +807,17 @@ pub struct LadderRow {
     pub games: u32,
 }
 
+type OpenRow = (String, String, bool, String, String, Option<String>, i64);
+type FinishedRow = (
+    String,
+    String,
+    Option<String>,
+    String,
+    i64,
+    Option<i32>,
+    i64,
+);
+type SeatRow = (String, Option<String>, i32, i32, i32, bool, i32, bool);
 type AccountRow = (
     String,
     String,
@@ -700,7 +838,125 @@ fn zero_stats() -> Stats {
         bids_made: 0,
         bids_total: 0,
         best_score: None,
-        by_mode: None,
+        by_mode: Some(skt_protocol::StatsByMode::default()),
+    }
+}
+
+struct StoredSeat {
+    user_id: Option<UserId>,
+    seat: u8,
+    score: i32,
+    place: u32,
+    bot: bool,
+    bids_made: u32,
+    bids_total: i32,
+    forfeited: bool,
+}
+
+async fn write_modes(
+    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    game: &GameReport,
+) -> Result<(), StoreFailure> {
+    let line = crate::world::record_line(game.mode, game.table_kind);
+    for seat in &game.seats {
+        sqlx::query(
+            "INSERT INTO mode_stats (user_id, mode, games, wins, bids_made, bids_total, best_score) VALUES ($1, $2, 1, $3, $4, $5, $6) ON CONFLICT (user_id, mode) DO UPDATE SET games = mode_stats.games + 1, wins = mode_stats.wins + EXCLUDED.wins, bids_made = mode_stats.bids_made + EXCLUDED.bids_made, bids_total = mode_stats.bids_total + EXCLUDED.bids_total, best_score = CASE WHEN mode_stats.best_score IS NULL THEN EXCLUDED.best_score ELSE GREATEST(mode_stats.best_score, EXCLUDED.best_score) END",
+        )
+        .bind(seat.user.as_str())
+        .bind(line)
+        .bind(i32::from(u8::from(seat.win)))
+        .bind(i32::try_from(seat.bids_made).unwrap_or(i32::MAX))
+        .bind(i32::try_from(seat.bids_total).unwrap_or(i32::MAX))
+        .bind(seat.total)
+        .execute(connection(tx))
+        .await
+        .map_err(|err| database(&err))?;
+    }
+    Ok(())
+}
+
+async fn write_ratings(
+    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    game: &GameReport,
+) -> Result<(), StoreFailure> {
+    let season =
+        i32::try_from(crate::rating::season_at(identity::unix_now().get()).id).unwrap_or(i32::MAX);
+    for rated in &game.rated {
+        sqlx::query(
+            "INSERT INTO ratings (user_id, season_id, mu, sigma, games) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (user_id) DO UPDATE SET season_id = EXCLUDED.season_id, mu = EXCLUDED.mu, sigma = EXCLUDED.sigma, games = EXCLUDED.games",
+        )
+        .bind(rated.user.as_str())
+        .bind(season)
+        .bind(rated.after.mu)
+        .bind(rated.after.sigma)
+        .bind(i32::try_from(rated.after.games).unwrap_or(i32::MAX))
+        .execute(connection(tx))
+        .await
+        .map_err(|err| database(&err))?;
+    }
+    Ok(())
+}
+
+fn stored_seats(game: &GameReport) -> Vec<StoredSeat> {
+    if !game.roster.is_empty() {
+        return game
+            .roster
+            .iter()
+            .enumerate()
+            .map(|(index, seat)| StoredSeat {
+                user_id: seat.user_id.clone(),
+                seat: u8::try_from(index).unwrap_or(0),
+                score: seat.score,
+                place: seat.place,
+                bot: seat.bot,
+                bids_made: seat.bids_made,
+                bids_total: 0,
+                forfeited: seat.forfeited,
+            })
+            .collect();
+    }
+    let mut rows: Vec<StoredSeat> = game
+        .seats
+        .iter()
+        .map(|seat| StoredSeat {
+            user_id: Some(seat.user.clone()),
+            seat: seat.seat,
+            score: seat.total,
+            place: seat.place,
+            bot: false,
+            bids_made: seat.bids_made,
+            bids_total: i32::try_from(seat.bids_total).unwrap_or(0),
+            forfeited: false,
+        })
+        .collect();
+    for rated in &game.rated {
+        if rows
+            .iter()
+            .any(|row| row.user_id.as_ref() == Some(&rated.user))
+        {
+            continue;
+        }
+        rows.push(StoredSeat {
+            user_id: Some(rated.user.clone()),
+            seat: rated.seat,
+            score: rated.total,
+            place: rated.place,
+            bot: false,
+            bids_made: 0,
+            bids_total: 0,
+            forfeited: true,
+        });
+    }
+    rows
+}
+
+fn table_of(mode: &str, kind: Option<&str>) -> skt_protocol::TableKind {
+    match crate::world::record_line(mode, kind) {
+        "solo" => skt_protocol::TableKind::Solo,
+        "public" => skt_protocol::TableKind::Public,
+        "casual" => skt_protocol::TableKind::Casual,
+        "ranked" => skt_protocol::TableKind::Ranked,
+        _ => skt_protocol::TableKind::Friends,
     }
 }
 

@@ -212,6 +212,7 @@ impl AppState {
                 settings: serde_json::to_string(&game.settings).unwrap_or_else(|_| "{}".to_owned()),
                 seats: game.seats,
                 table_kind: game.table_kind,
+                started_at: game.started_at,
                 entries: game.entries,
             };
             if store.save_open(&write).await.is_ok() {
@@ -433,11 +434,83 @@ pub async fn profile(
         .clone()
         .ok_or(AppError::new(ErrorCode::Internal))?;
     let snap = store.profile(&id).await.map_err(|err| failure(&err))?;
+    // Human: The ladder already shows this rating. The profile was dropping it.
+    // Agent: READS stored skill; WRITES Profile.rating and user.tier. A season with no finished game stays unrated.
+    let now = crate::world::identity::unix_now().get();
+    let rating = snap.skill.as_ref().and_then(|stored| {
+        let shown = crate::rating::shown(*stored, now);
+        (shown.games > 0).then(|| crate::rating::to_rating(shown))
+    });
+    let mut user = snap.user;
+    user.tier = rating.as_ref().map(|rating| rating.tier.clone());
     Ok(Json(Profile {
-        user: snap.user,
+        user,
         stats: snap.stats,
-        rating: None,
+        rating,
     }))
+}
+
+pub async fn my_games(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    request: Request,
+) -> Result<Json<skt_protocol::GamePage>, AppError> {
+    let token = session_cookie(&headers).ok_or(AppError::new(ErrorCode::Unauthenticated))?;
+    remember(&state, &token).await?;
+    let user = state
+        .world
+        .lock()
+        .await
+        .me(&token)
+        .map_err(AppError::new)?
+        .user
+        .id;
+    let asked = parse_games(request.uri().query().unwrap_or(""))?;
+    let store = state
+        .store
+        .clone()
+        .ok_or(AppError::new(ErrorCode::Internal))?;
+    store
+        .game_page(user.as_str(), asked.limit, asked.after.as_deref())
+        .await
+        .map(Json)
+        .map_err(|err| failure(&err))
+}
+
+struct GamesAsked {
+    limit: i64,
+    after: Option<String>,
+}
+
+fn parse_games(query: &str) -> Result<GamesAsked, AppError> {
+    let mut limit = 25i64;
+    let mut after = None;
+    if query.is_empty() {
+        return Ok(GamesAsked { limit, after });
+    }
+    for pair in query.split('&') {
+        let (key, raw) = pair.split_once('=').unwrap_or((pair, ""));
+        let value = form_decode(raw);
+        match key {
+            "limit" => {
+                let parsed = value
+                    .parse::<i64>()
+                    .map_err(|_| AppError::new(ErrorCode::Validation))?;
+                if !(1..=100).contains(&parsed) {
+                    return Err(AppError::new(ErrorCode::Validation));
+                }
+                limit = parsed;
+            }
+            "after" => {
+                if value.is_empty() {
+                    return Err(AppError::new(ErrorCode::Validation));
+                }
+                after = Some(value);
+            }
+            _ => {}
+        }
+    }
+    Ok(GamesAsked { limit, after })
 }
 
 pub async fn lobbies(
@@ -823,6 +896,7 @@ fn failure(err: &StoreFailure) -> AppError {
         StoreFailure::Unauthenticated => ErrorCode::Unauthenticated,
         StoreFailure::NotFound => ErrorCode::NotFound,
         StoreFailure::AlreadyRegistered => ErrorCode::AlreadyRegistered,
+        StoreFailure::Validation => ErrorCode::Validation,
     })
 }
 
@@ -871,6 +945,7 @@ fn restore_game(game: crate::store::SavedGame) -> Option<crate::world::RestoredG
         mode: game.mode,
         matchmade: game.matchmade,
         table_kind: game.table_kind,
+        started_at: game.started_at,
         settings,
         seats,
         log,

@@ -51,6 +51,9 @@ async fn ladder_pages_hide_usernames_and_reject_a_bad_query(pool: sqlx::PgPool) 
             overs: vec![],
             penalise: vec![],
             log: vec![],
+            settings: skt_protocol::GameSettings::standard(),
+            started_at: 1,
+            roster: vec![],
             rated: vec![rated(&id, 0, 1, 30.0)],
         })
         .await;
@@ -219,6 +222,9 @@ async fn a_far_rating_waits_for_the_window_to_widen(pool: sqlx::PgPool) {
             overs: vec![],
             penalise: vec![],
             log: vec![],
+            settings: skt_protocol::GameSettings::standard(),
+            started_at: 1,
+            roster: vec![],
             rated: vec![rated(&id, 0, 1, 105.0)],
         })
         .await;
@@ -399,6 +405,86 @@ async fn send(socket: &mut Socket, text: &str) {
         .expect("send");
 }
 
+#[sqlx::test(migrations = "../../migrations/postgres")]
+async fn a_solo_game_and_a_ranked_game_fill_the_lines_and_the_list(pool: sqlx::PgPool) {
+    let state = AppState::for_tests(pool, Duration::ZERO, budgets());
+    let port = serve(state.clone()).await;
+    let (cookie, _) = account(port, "Lina").await;
+    let id = me_id(&cookie, port).await;
+    let seat = |total: i32, made: u32, of: u32| crate::world::SeatTally {
+        user: skt_protocol::UserId::new(id.clone()),
+        seat: 0,
+        total,
+        place: 1,
+        win: true,
+        bids_made: made,
+        bids_total: of,
+    };
+    state
+        .record_for_test(crate::world::GameReport {
+            id: "m-solo".to_owned(),
+            mode: "custom",
+            table_kind: Some("solo"),
+            settings: skt_protocol::GameSettings::standard(),
+            started_at: crate::world::identity::unix_now().get(),
+            roster: vec![],
+            seats: vec![seat(5, 1, 2)],
+            rated: vec![],
+            overs: vec![],
+            penalise: vec![],
+            log: vec![],
+        })
+        .await;
+    state
+        .record_for_test(crate::world::GameReport {
+            id: "z-ranked".to_owned(),
+            mode: "ranked",
+            table_kind: Some("ranked"),
+            settings: skt_protocol::GameSettings::standard(),
+            started_at: crate::world::identity::unix_now().get(),
+            roster: vec![],
+            seats: vec![seat(40, 3, 4)],
+            rated: vec![rated(&id, 0, 1, 30.0)],
+            overs: vec![],
+            penalise: vec![],
+            log: vec![],
+        })
+        .await;
+    let (status, _, me) = http(port, "GET", "/api/v1/me", &cookie, "").await;
+    assert_eq!(status, 200, "{me}");
+    assert!(me.contains("\"games\":1"), "{me}");
+    assert!(me.contains("\"bestScore\":5"), "{me}");
+    assert!(me.contains("\"solo\":{\"games\":1"), "{me}");
+    assert!(me.contains("\"ranked\":{\"games\":1"), "{me}");
+    assert!(me.contains("\"bestScore\":40"), "{me}");
+    let (status, _, profile) = http(port, "GET", &format!("/api/v1/users/{id}"), &cookie, "").await;
+    assert_eq!(status, 200, "{profile}");
+    assert!(profile.contains("\"byMode\""), "{profile}");
+    assert!(profile.contains("\"rating\":{"), "{profile}");
+    assert!(!profile.contains("\"tier\":null"), "{profile}");
+    assert!(!profile.contains("\"username\""), "{profile}");
+    let (status, _, page) = http(port, "GET", "/api/v1/me/games?limit=1", &cookie, "").await;
+    assert_eq!(status, 200, "{page}");
+    assert!(page.contains("\"z-ranked\""), "{page}");
+    assert!(page.contains("\"next\":\"z-ranked\""), "{page}");
+    assert!(!page.contains("\"m-solo\""), "{page}");
+    let (status, _, rest) = http(
+        port,
+        "GET",
+        "/api/v1/me/games?limit=1&after=z-ranked",
+        &cookie,
+        "",
+    )
+    .await;
+    assert_eq!(status, 200, "{rest}");
+    assert!(rest.contains("\"m-solo\""), "{rest}");
+    assert!(!rest.contains("\"next\""), "{rest}");
+    let (status, _, missing) = http(port, "GET", "/api/v1/me/games?limit=2", "", "").await;
+    assert_eq!(status, 401, "{missing}");
+    let (status, _, bad) = http(port, "GET", "/api/v1/me/games?limit=0", &cookie, "").await;
+    assert_eq!(status, 400, "{bad}");
+}
+
 async fn read_text(socket: &mut Socket) -> String {
     let frame = socket.next().await.expect("frame").expect("ok");
     frame.into_text().expect("text").to_string()
@@ -417,6 +503,9 @@ async fn a_player_can_read_the_log_of_a_game_they_sat(pool: sqlx::PgPool) {
             id: game.to_owned(),
             mode: "casual",
             table_kind: None,
+            settings: skt_protocol::GameSettings::standard(),
+            started_at: 1,
+            roster: vec![],
             seats: vec![crate::world::SeatTally {
                 user: skt_protocol::UserId::new(id),
                 seat: 0,

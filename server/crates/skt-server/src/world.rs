@@ -435,12 +435,20 @@ impl World {
     ///
     /// A ranked game is stored and does not change these counters. Its rating is a later write.
     pub fn apply_report(&mut self, report: &GameReport) {
-        if report.mode == "ranked" {
-            return;
-        }
+        let line = record_line(report.mode, report.table_kind);
         for seat in &report.seats {
-            self.identity.add_result(
+            if report.mode != "ranked" {
+                self.identity.add_result(
+                    &seat.user,
+                    seat.win,
+                    seat.bids_made,
+                    seat.bids_total,
+                    seat.total,
+                );
+            }
+            self.identity.add_mode(
                 &seat.user,
+                line,
                 seat.win,
                 seat.bids_made,
                 seat.bids_total,
@@ -1592,6 +1600,22 @@ fn send(out: &Outbox, frame: &impl serde::Serialize) {
 /// Two humans have to be seated, in a public lobby and in a private one. A bot
 /// fills a seat and does not count as one of those two. Every human has to be
 /// ready. A dropped socket stays a human.
+/// The `byMode` line for a finished game. Ranked stays out of the headline counters.
+pub(crate) fn record_line(mode: &str, kind: Option<&str>) -> &'static str {
+    match kind {
+        Some("solo") => "solo",
+        Some("friends") => "friends",
+        Some("public") => "public",
+        Some("casual") => "casual",
+        Some("ranked") => "ranked",
+        _ => match mode {
+            "casual" => "casual",
+            "ranked" => "ranked",
+            _ => "friends",
+        },
+    }
+}
+
 fn lobby_can_start(lobby: &Lobby) -> bool {
     let humans = lobby
         .members

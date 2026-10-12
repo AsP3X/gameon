@@ -4,7 +4,9 @@ use std::collections::HashMap;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use sha2::{Digest, Sha256};
-use skt_protocol::{GameId, LobbyId, Rating, Stats, TableColor, UnixMs, User, UserId};
+use skt_protocol::{
+    GameId, LobbyId, ModeLine, Rating, Stats, StatsByMode, TableColor, UnixMs, User, UserId,
+};
 
 use crate::rating::{self, PlayerSkill, StoredSkill};
 
@@ -171,6 +173,30 @@ impl Identity {
                 Some(old) => old.max(total),
             });
         }
+    }
+
+    /// One finished game on a single line. Ranked uses this and not [`Self::add_result`].
+    pub fn add_mode(
+        &mut self,
+        id: &UserId,
+        mode: &str,
+        win: bool,
+        bids_made: u32,
+        bids_total: u32,
+        total: i32,
+    ) {
+        let Some(account) = self.accounts.get_mut(id) else {
+            return;
+        };
+        let lines = account.stats.by_mode.get_or_insert(StatsByMode::default());
+        let line = match mode {
+            "solo" => &mut lines.solo,
+            "public" => &mut lines.public,
+            "casual" => &mut lines.casual,
+            "ranked" => &mut lines.ranked,
+            _ => &mut lines.friends,
+        };
+        bump_line(line, win, bids_made, bids_total, total);
     }
 
     pub fn revoke(&mut self, token: &str) {
@@ -374,8 +400,18 @@ fn empty_stats() -> Stats {
         bids_made: 0,
         bids_total: 0,
         best_score: None,
-        by_mode: None,
+        by_mode: Some(StatsByMode::default()),
     }
+}
+
+fn bump_line(line: &mut ModeLine, win: bool, bids_made: u32, bids_total: u32, total: i32) {
+    line.games = line.games.saturating_add(1);
+    if win {
+        line.wins = line.wins.saturating_add(1);
+    }
+    line.bids_made = line.bids_made.saturating_add(bids_made);
+    line.bids_total = line.bids_total.saturating_add(bids_total);
+    line.best_score = Some(line.best_score.map_or(total, |old| old.max(total)));
 }
 
 pub fn unix_now() -> UnixMs {

@@ -82,6 +82,12 @@ pub struct GameReport {
     pub penalise: Vec<UserId>,
     /// Deals and accepted actions, in order.
     pub log: Vec<LogEntry>,
+    /// The rules the table opened with.
+    pub settings: skt_protocol::GameSettings,
+    /// When the deal was dealt, in Unix milliseconds.
+    pub started_at: i64,
+    /// Every seat, including bots and forfeits. Empty in a test that only has `seats`.
+    pub roster: Vec<skt_protocol::FinishedSeat>,
 }
 
 /// Steps of one running game that still need to be stored.
@@ -100,8 +106,10 @@ pub struct OpenDelta {
     pub entries: Vec<(i32, String, Option<i32>, String)>,
     /// Log lines stored once these rows are written.
     pub stored: usize,
-    /// `solo`, or nothing. A restart uses this to keep the table paused.
+    /// `solo`, `friends`, `public`, `casual`, `ranked`, or nothing.
     pub table_kind: Option<String>,
+    /// When the deal was dealt, in Unix milliseconds.
+    pub started_at: i64,
 }
 
 /// A seat as it is written into `open_games`.
@@ -121,8 +129,10 @@ pub struct RestoredGame {
     pub mode: String,
     /// Quick play and ranked have no lobby.
     pub matchmade: bool,
-    /// `solo`, or nothing.
+    /// `solo`, `friends`, `public`, `casual`, `ranked`, or nothing.
     pub table_kind: Option<String>,
+    /// When the deal was dealt, in Unix milliseconds. Zero when the row predates the column.
+    pub started_at: i64,
     /// The rules the table opened with.
     pub settings: skt_protocol::GameSettings,
     /// Seats in order.
@@ -172,9 +182,11 @@ struct Running {
     /// Quick play and ranked have no lobby to reopen.
     matchmade: bool,
     mode: TableMode,
-    /// Solo, or nothing until a later package names the other tables.
+    /// Which of the five tables this is.
     kind: Option<TableKind>,
     settings: skt_protocol::GameSettings,
+    /// When the deal was dealt, in Unix milliseconds.
+    started_at: i64,
     state: GameState,
     seats: Vec<SeatPlay>,
     status: Vec<SeatStatus>,
@@ -274,10 +286,23 @@ impl Tables {
             return Vec::new();
         };
         let matchmade = matches!(open_as, OpenAs::Match);
-        let kind = match open_as {
-            OpenAs::Solo => Some(TableKind::Solo),
-            OpenAs::Lobby | OpenAs::Match => None,
-        };
+        let kind = Some(match open_as {
+            OpenAs::Solo => TableKind::Solo,
+            OpenAs::Lobby => {
+                if lobby.visibility == skt_protocol::Visibility::Public {
+                    TableKind::Public
+                } else {
+                    TableKind::Friends
+                }
+            }
+            OpenAs::Match => {
+                if lobby.mode == TableMode::Ranked {
+                    TableKind::Ranked
+                } else {
+                    TableKind::Casual
+                }
+            }
+        });
         let mode = if matchmade {
             lobby.mode
         } else {
@@ -291,6 +316,7 @@ impl Tables {
             mode,
             kind,
             settings: lobby.settings,
+            started_at: super::identity::unix_now().get(),
             state,
             seats,
             status,
@@ -448,6 +474,7 @@ impl Tables {
                     entries,
                     stored: running.log.len(),
                     table_kind: running.kind.map(|kind| kind_name(kind).to_owned()),
+                    started_at: running.started_at,
                 }
             })
             .collect()
@@ -500,7 +527,7 @@ impl Tables {
             .collect::<Vec<_>>();
         let stored = log.len();
         let id = GameId::new(game.id);
-        let kind = (game.table_kind.as_deref() == Some("solo")).then_some(TableKind::Solo);
+        let kind = game.table_kind.as_deref().and_then(table_kind_of);
         let status = seats
             .iter()
             .map(|seat| {
@@ -518,6 +545,11 @@ impl Tables {
             mode: mode_of(&game.mode),
             kind,
             settings: game.settings,
+            started_at: if game.started_at > 0 {
+                game.started_at
+            } else {
+                super::identity::unix_now().get()
+            },
             state,
             seats,
             status,
@@ -1439,6 +1471,9 @@ impl Running {
             overs,
             penalise: self.away_penalties(&forfeits),
             log: std::mem::take(&mut self.log),
+            settings: self.settings,
+            started_at: self.started_at,
+            roster: self.roster(&totals, &places, &forfeits, &scores),
         });
     }
 
@@ -1453,6 +1488,36 @@ impl Running {
                 *count = count.saturating_add(1);
             }
         }
+    }
+
+    fn roster(
+        &self,
+        totals: &[i32],
+        places: &[u32],
+        forfeits: &[Seat],
+        scores: &[Vec<skt_engine::Score>],
+    ) -> Vec<skt_protocol::FinishedSeat> {
+        (0..self.players())
+            .map(|index| {
+                let play = &self.seats[index];
+                let bot = play.user.is_none() || play.started_bot;
+                let made = u32::try_from(
+                    scores
+                        .iter()
+                        .filter(|row| row.get(index).is_some_and(|score| score.hit))
+                        .count(),
+                )
+                .unwrap_or(0);
+                skt_protocol::FinishedSeat {
+                    user_id: if bot { None } else { play.user.clone() },
+                    bot,
+                    place: places.get(index).copied().unwrap_or(0),
+                    score: totals.get(index).copied().unwrap_or(0),
+                    bids_made: made,
+                    forfeited: forfeits.iter().any(|seat| seat.index() == index),
+                }
+            })
+            .collect()
     }
 
     fn closed(&self, index: usize) -> bool {
@@ -1680,6 +1745,17 @@ fn mode_name(mode: TableMode) -> &'static str {
         TableMode::Casual => "casual",
         TableMode::Ranked => "ranked",
     }
+}
+
+fn table_kind_of(name: &str) -> Option<TableKind> {
+    Some(match name {
+        "solo" => TableKind::Solo,
+        "friends" => TableKind::Friends,
+        "public" => TableKind::Public,
+        "casual" => TableKind::Casual,
+        "ranked" => TableKind::Ranked,
+        _ => return None,
+    })
 }
 
 fn kind_name(kind: TableKind) -> &'static str {

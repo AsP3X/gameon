@@ -27,8 +27,8 @@ use axum::routing::{get, post};
 use skt_protocol::{ErrorBody, ErrorCode, ErrorObject, Health};
 
 use http_api::{
-    config, game_log, guest, ladder, lobbies, login, logout, me, metrics, patch_me, profile,
-    register, socket,
+    config, game_log, guest, ladder, lobbies, login, logout, me, metrics, my_games, patch_me,
+    profile, register, socket,
 };
 
 /// Routes mounted at `/api/v1`.
@@ -62,6 +62,10 @@ pub fn router(state: AppState) -> Router {
             get(profile).fallback(method_not_allowed),
         )
         .route("/api/v1/lobbies", get(lobbies).fallback(method_not_allowed))
+        .route(
+            "/api/v1/me/games",
+            get(my_games).fallback(method_not_allowed),
+        )
         .route("/api/v1/ladder", get(ladder).fallback(method_not_allowed))
         .route(
             "/api/v1/games/{id}/log",
