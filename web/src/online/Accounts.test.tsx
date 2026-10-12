@@ -1,13 +1,14 @@
 // @vitest-environment jsdom
 /* Accounts, the public tables and quick play, on the whole page against the mock server: what a
-   player clicks and types, and what the screens say back. The mock's own answers are checked frame
+   player clicks and types, and what the screens say back. The sign-up and sign-in pages have their
+   own tests in src/gameon/GameOn.test.tsx; here they are reached from the profile. The mock's own answers are checked frame
    by frame in src/net/mock/accounts.test.ts. */
 import { act, StrictMode, useState, useSyncExternalStore } from 'react';
 import { createRoot } from 'react-dom/client';
 import type { Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 import { App } from '../App';
-import { AT, HUB, isLegacy, routeOf } from '../router/addresses';
+import { AT, HUB, isOnline, routeOf } from '../router/addresses';
 import { memoryPlaces } from '../router/places';
 import type { MemoryPlaces } from '../router/places';
 import { createRouter } from '../router/router';
@@ -78,7 +79,7 @@ async function type(selector: string, value: string): Promise<void> {
 }
 /** Send the form on screen, as Enter in a field does. */
 async function submit(): Promise<void> {
-  const form = $('#online form');
+  const form = $('#gameon form') ?? $('#online form');
   if (!form) throw new Error('No form on screen');
   await act(async () => {
     form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
@@ -103,6 +104,12 @@ async function openHub(): Promise<void> {
   await settle();
 }
 const me = async (): Promise<Me> => (await page.rest('GET', '/me')).body as Me;
+/** The browser's Back. */
+const back = (): Promise<void> =>
+  act(async () => {
+    places.back();
+    await vi.advanceTimersByTimeAsync(0);
+  });
 /** Another player, from a browser of their own. */
 async function someone(): Promise<{ socket: RawClient; browser: Backend }> {
   const browser = server.browser();
@@ -126,7 +133,7 @@ async function signUp(username: string, password: string, repeat = password): Pr
 }
 
 beforeEach(() => {
-  places = memoryPlaces();
+  places = memoryPlaces('/skull-king');
   vi.useFakeTimers();
   vi.spyOn(Math, 'random').mockImplementation(seeded(21));
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
@@ -171,111 +178,69 @@ describe('the hub', () => {
 });
 
 describe('an account', () => {
-  it('turns the guest into an account that keeps its user id, and says a forgotten password is gone for good', async () => {
+  it('turns the guest into an account on the sign-up page, and comes back to a hub that is still connected', async () => {
     await openHub();
     const guest = await me();
     await press('Profile');
     expect($('#online h2')?.textContent).toBe('Your profile');
     expect(texts('#online .who .pill')).toEqual(['Guest']);
+    // Signing up is a page of the frame (src/gameon). It leaves the connection as it is.
     await press('Create an account');
-    expect($('#online h2')?.textContent).toBe('Create an account');
-    expect($('#online .notice.gold')?.textContent).toBe(
-      'Keep your password safeThere is no email and no reset. A forgotten password cannot be recovered.',
-    );
-    // There is a username and a password, twice. No email.
-    expect(Array.from(document.querySelectorAll('#online input'), (i) => i.getAttribute('type'))).toEqual([
-      'text',
-      'password',
-      'password',
-    ]);
-    expect(button('Create account').disabled).toBe(true);
-
+    expect(places.path()).toBe('/sign-up');
+    expect($('#gameon h1')?.textContent).toBe('Create your account');
     await signUp('Anne_Bonny', 'three sheets');
+    await settle();
+    const now = await me();
+    expect(now).toMatchObject({ guest: false, username: 'Anne_Bonny' });
+    // A guest who was already playing stays who they are, the name included.
+    expect(now.user).toEqual(guest.user);
+    expect(places.path()).toBe('/games');
+
+    // Back is the profile the player came from, and it knows the account.
+    await back();
     expect($('#online h2')?.textContent).toBe('Your profile');
     expect(texts('#online .who .pill')).toEqual(['@Anne_Bonny']);
     expect($('#online [aria-label="Account"] p')?.textContent).toBe('Signed in as @Anne_Bonny.');
-    const now = await me();
-    expect(now).toMatchObject({ guest: false, username: 'Anne_Bonny' });
-    expect(now.user).toEqual(guest.user);
     await click('[aria-label="Back"]');
     expect($('#online .identity small')?.textContent).toBe('Playing as @Anne_Bonny');
     expect(texts('#online .pill')).toEqual(['Connected']);
   });
 
-  it('says so under the field when the username is taken or has the wrong shape, and when the passwords differ', async () => {
-    await existingAccount('anne_bonny', 'three sheets', 'Anne');
-    await openHub();
-    await press('Profile');
-    await press('Create an account');
-
-    await signUp('ANNE_BONNY', 'secret');
-    expect($('#signup-username-help')?.textContent).toBe('That username is taken. Try another.');
-    expect($('#signup-username')?.getAttribute('aria-invalid')).toBe('true');
-    expect($('#online h2')?.textContent).toBe('Create an account');
-
-    // Typing again takes the error away.
-    await type('#signup-username', 'a b');
-    expect($('#signup-username-help')?.textContent).toBe(
-      '3 to 16 letters, digits or underscores. You sign in with it.',
-    );
-    await submit();
-    expect($('#signup-username-help')?.textContent).toBe(
-      "That username can't be used. Use 3 to 16 letters, digits or underscores.",
-    );
-
-    await signUp('calico', 'secret', 'secrex');
-    expect($('#signup-repeat-help')?.textContent).toBe('The two passwords are not the same.');
-    expect($('#signup-repeat')?.getAttribute('aria-invalid')).toBe('true');
-    expect((await me()).guest).toBe(true);
-  });
-
-  it('never keeps the password or a token where the page could read it back', async () => {
-    await openHub();
-    await press('Profile');
-    await press('Create an account');
-    await signUp('calico', 'a very secret password');
-    expect((await me()).username).toBe('calico');
-    expect(JSON.stringify(Object.entries(localStorage))).not.toContain('secret');
-    expect(sessionStorage).toHaveLength(0);
-    expect(location.href).not.toContain('secret');
-    expect(document.cookie).toBe('');
-    expect(document.body.innerHTML).not.toContain('a very secret password');
-  });
-
-  it('refuses a wrong password and stays the guest; the right one makes the page that account', async () => {
+  it('signs in from the profile, and connects again as that account', async () => {
     const anne = await existingAccount('anne_bonny', 'three sheets', 'Anne');
     await openHub();
     const guest = await me();
     await press('Profile');
     await press('Sign in');
-    expect($('#online h2')?.textContent).toBe('Sign in');
-    expect(texts('#online p.muted')).toEqual([
-      'Signing in switches to that account. This guest and its stats are left behind.',
-    ]);
+    expect(places.path()).toBe('/sign-in');
+    expect($('#gameon h1')?.textContent).toBe('Welcome back');
     await type('#signin-username', 'anne_bonny');
     await type('#signin-password', 'two sheets');
     await submit();
-    expect($('#online [role="alert"]')?.textContent).toBe('Wrong username or password.');
+    expect($('#gameon [role="alert"]')?.textContent).toBe('Wrong username or password.');
     expect((await me()).user.id).toBe(guest.user.id);
-    expect(button('Sign in').disabled).toBe(false);
 
     await type('#signin-password', 'three sheets');
-    expect($('#online [role="alert"]')).toBeNull();
     await submit();
     await settle();
-    expect($('#online h2')?.textContent).toBe('Play online');
+    expect((await me()).user.id).toBe(anne.user.id);
+    expect(places.path()).toBe('/games');
+    // The connection that was up was made again with the new session.
+    await back();
+    await settle();
+    expect(texts('#online .who .pill')).toEqual(['@anne_bonny']);
+    await click('[aria-label="Back"]');
     expect($('#online .identity b')?.textContent).toBe('Anne');
     expect($('#online .identity small')?.textContent).toBe('Playing as @anne_bonny');
     expect(texts('#online .pill')).toEqual(['Connected']);
-    expect((await me()).user.id).toBe(anne.user.id);
   });
 
   it('signs out to the home screen, and whoever plays online next is a new guest', async () => {
+    await page.rest('POST', '/auth/guest');
+    await page.rest('POST', '/auth/register', { username: 'calico', password: 'secret' });
+    const calico = await me();
     await openHub();
     await press('Profile');
-    await press('Create an account');
-    await signUp('calico', 'secret');
-    const calico = await me();
     await press('Sign out');
     expect($('#online')).toBeNull();
     expect($('#app')?.hidden).toBe(false);
@@ -561,7 +526,7 @@ describe('the hub, when the server refuses quick play', () => {
         <OnlineScreens
           online={online}
           state={state}
-          route={isLegacy(route) ? HUB : route}
+          route={isOnline(route) ? route : HUB}
           go={router.go}
           up={router.up}
           onExit={onExit}

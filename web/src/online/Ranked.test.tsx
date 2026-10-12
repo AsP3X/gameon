@@ -8,7 +8,7 @@ import { createRoot } from 'react-dom/client';
 import type { Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 import { App } from '../App';
-import { AT, HUB, isLegacy, routeOf } from '../router/addresses';
+import { AT, HUB, isOnline, routeOf } from '../router/addresses';
 import { memoryPlaces } from '../router/places';
 import type { MemoryPlaces } from '../router/places';
 import { createRouter } from '../router/router';
@@ -135,7 +135,7 @@ async function threeMore(): Promise<RawClient[]> {
 }
 
 beforeEach(() => {
-  places = memoryPlaces();
+  places = memoryPlaces('/skull-king');
   vi.useFakeTimers();
   vi.setSystemTime(NOW);
   vi.spyOn(Math, 'random').mockImplementation(seeded(21));
@@ -174,10 +174,13 @@ describe('ranked, for a guest', () => {
     ]);
     // There is no way to ask from here, so nothing was asked.
     expect(sentOf('queue.join')).toEqual([]);
+    // The account is made on the frame's page. The browser's Back is the way back to the hub.
     await press('Create an account');
-    expect($('#online h2')?.textContent).toBe('Create an account');
-    await click('[aria-label="Back"]');
-    await click('[aria-label="Back"]');
+    expect($('#gameon h1')?.textContent).toBe('Create your account');
+    await act(async () => {
+      places.back();
+      await vi.advanceTimersByTimeAsync(0);
+    });
     await press('Ladder');
     expect($('#online h2')?.textContent).toBe('Ladder');
     // The season is the server's: its name as sent, and its days, the last one being the day before `endsAt`.
@@ -444,7 +447,7 @@ describe('the ladder, a page at a time', () => {
         <OnlineScreens
           online={online}
           state={state}
-          route={isLegacy(route) ? HUB : route}
+          route={isOnline(route) ? route : HUB}
           go={router.go}
           up={router.up}
           onExit={() => {}}

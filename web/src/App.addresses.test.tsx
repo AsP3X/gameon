@@ -16,7 +16,7 @@ let places: MemoryPlaces;
 
 const $ = (selector: string): HTMLElement | null => document.querySelector<HTMLElement>(selector);
 /** Open the page at an address, as a typed address or a link from somewhere else does. */
-function open(at = '/'): void {
+function open(at = '/skull-king'): void {
   places = memoryPlaces(at);
   load();
 }
@@ -70,14 +70,29 @@ afterEach(() => {
 });
 
 describe('where the page opens', () => {
-  it("opens the front door on Skull King's home, in the place of the address that was typed", () => {
+  it("opens the front door on GameOn's landing, and Games at its own address, with the renderer out of sight", () => {
+    // The frame asks who the visitor is. Nobody answers here, and its pages are up all the same.
+    vi.stubGlobal('fetch', () => Promise.reject(new Error('No server in this test')));
     open('/');
-    expect(screen()).toBe('home');
-    expect(places.entries()).toEqual({ paths: ['/skull-king'], at: 0 });
+    expect($('#gameon h1')?.textContent).toBe('Game night, switched on.');
+    expect($('#app')?.hidden).toBe(true);
+    expect(places.entries()).toEqual({ paths: ['/'], at: 0 });
+    close();
+    open('/games');
+    expect($('#gameon h1')?.textContent).toBe('Games');
+    expect($('#app')?.hidden).toBe(true);
+    expect(places.entries()).toEqual({ paths: ['/games'], at: 0 });
   });
 
-  it("leads the addresses that have no page yet, and any that are nobody's, to the home screen", () => {
-    for (const at of ['/games', '/nowhere', '/skull-king/', '/index.html']) {
+  it("opens Skull King's home at its address, with no frame around it", () => {
+    open('/skull-king');
+    expect(screen()).toBe('home');
+    expect($('#app')?.hidden).toBe(false);
+    expect($('#gameon')).toBeNull();
+  });
+
+  it("leads any address that is nobody's to Skull King's home", () => {
+    for (const at of ['/nowhere', '/skull-king/', '/index.html']) {
       open(at);
       expect(screen()).toBe('home');
       expect(places.entries()).toEqual({ paths: ['/skull-king'], at: 0 });

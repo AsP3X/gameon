@@ -77,7 +77,8 @@ const comeIn = async (): Promise<void> => {
 
 describe('the built page as an app', () => {
   it('names a manifest with icons that are there', async () => {
-    await page.goto(url);
+    // Where the installed app opens: Skull King's home, not the landing around it.
+    await page.goto(`${url}/skull-king`);
     const href = await page.locator('link[rel="manifest"]').getAttribute('href');
     expect(href).toBe('/manifest.json');
     const manifest = (await (await fetch(url + href)).json()) as {
@@ -86,7 +87,7 @@ describe('the built page as an app', () => {
       start_url: string;
       icons: { src: string; sizes: string; type: string; purpose: string }[];
     };
-    expect(manifest).toMatchObject({ name: 'Skull King Tavern', display: 'standalone', start_url: '/' });
+    expect(manifest).toMatchObject({ name: 'Skull King Tavern', display: 'standalone', start_url: '/skull-king' });
     expect(manifest.icons.map((icon) => `${icon.sizes} ${icon.purpose}`)).toEqual([
       '192x192 any',
       '512x512 any',
@@ -151,9 +152,16 @@ describe('the built page as an app', () => {
     expect(new URL(page.url()).pathname).toBe('/skull-king/score');
     await page.goto(`${url}/skull-king/online/join`);
     await page.getByRole('heading', { name: 'Join a table' }).waitFor();
-    // An address that only leads somewhere is replaced by where it leads.
+    // The frame around the game is in the kept page too, and says that nobody answers.
     await page.goto(`${url}/games`);
-    await page.locator('.home .logo').waitFor();
-    expect(new URL(page.url()).pathname).toBe('/skull-king');
+    await page.getByRole('heading', { name: 'Games', exact: true }).waitFor();
+    await page.getByText('Not connected. Trying again…').waitFor();
+    expect(new URL(page.url()).pathname).toBe('/games');
+    await page.goto(url);
+    await page.getByRole('heading', { name: 'Game night, switched on.' }).waitFor();
+    // An address that only leads somewhere is replaced by where it leads.
+    await page.goto(`${url}/skull-king/ranked`);
+    await page.getByRole('heading', { name: 'Play online' }).waitFor();
+    expect(new URL(page.url()).pathname).toBe('/skull-king/online');
   });
 });

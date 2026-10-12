@@ -15,7 +15,7 @@ let root: Root | null = null;
 let places: MemoryPlaces;
 
 beforeEach(() => {
-  places = memoryPlaces();
+  places = memoryPlaces('/skull-king');
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
   vi.stubGlobal('matchMedia', (query: string) => ({ matches: true, media: query }));
   vi.stubGlobal('scrollTo', () => {});

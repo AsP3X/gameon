@@ -1,14 +1,16 @@
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import type { LobbyId } from './protocol/generated';
 import { Api } from './net/api';
 import type { Backend } from './net/api';
 import { appBackend, appMemory, BUILD } from './net/connect';
 import { Online } from './net/online';
 import type { OnlineMemory } from './net/online';
 import { SocketClient } from './net/socket';
+import { GameOn } from './gameon/GameOn';
 import { GameRecord } from './online/GameRecord';
 import { OnlineScreens } from './online/OnlineScreens';
 import { TableOverlay } from './online/TableOverlay';
-import { AT, HUB, isLegacy, routeOf, settle } from './router/addresses';
+import { AT, HUB, isFrame, isLegacy, isOnline, routeOf, settle } from './router/addresses';
 import { browserPlaces } from './router/places';
 import type { Places } from './router/places';
 import { createRouter } from './router/router';
@@ -24,13 +26,17 @@ export interface AppProps {
 }
 
 /**
- * The page: the legacy renderer and, next to it, the online screens. Which of them is up, and which
- * screen of it, is the page's address (src/router/addresses.ts).
+ * The page: the legacy renderer and, next to it, the frame around the game and the online screens.
+ * Which of the three is up, and which screen of it, is the page's address (src/router/addresses.ts).
  *
  * React renders #app and #fx once and never looks inside them: the legacy renderer owns #app (it
- * rebuilds it from HTML strings) and draws confetti on #fx. Home, the offline modes and the game
- * table live there. The addresses under "online" are React's; an online game is played back at the
- * renderer's table, with the server on the other side of it.
+ * rebuilds it from HTML strings) and draws confetti on #fx. Skull King's home, the offline modes and
+ * the game table live there. The frame (GameOn: the landing, Games, signing up and in) and the
+ * online screens are React's; an online game is played back at the renderer's table, with the
+ * server on the other side of it.
+ *
+ * The frame needs no connection and leaves the one there is alone: it is made at the online
+ * screens and given up at the renderer's own.
  *
  * The address and the renderer follow each other. A tap in the renderer that goes to another screen
  * moves the address (`moved`). An address that changed by itself, by Back, Forward, a reload or a
@@ -51,7 +57,7 @@ export function App({ backend = appBackend, memory = appMemory, places }: AppPro
     // An address without a page of its own leads to one, and a device that was seated comes back
     // online wherever it opens: the address says so before anything is drawn.
     const at = settle(made.getPath());
-    made.go(online.wasSeated && isLegacy(routeOf(at)) ? AT.online : at, { replace: true });
+    made.go(online.wasSeated && !isOnline(routeOf(at)) ? AT.online : at, { replace: true });
     return made;
   });
   const path = useSyncExternalStore(router.subscribe, router.getPath);
@@ -60,6 +66,8 @@ export function App({ backend = appBackend, memory = appMemory, places }: AppPro
   /** The page is in its online part: connected, or trying to be. */
   const [linked, setLinked] = useState(() => online.wasSeated);
   const [record, setRecord] = useState(false);
+  /** The public table the player asked to sit down at from Games. The public list does the asking. */
+  const [sitting, setSitting] = useState<LobbyId | null>(null);
   const table = state.table;
 
   // Forward, or a typed address, can land on one that only leads somewhere.
@@ -84,12 +92,12 @@ export function App({ backend = appBackend, memory = appMemory, places }: AppPro
   }, [router]);
 
   // The link follows the address: up at the online screens, given up at the renderer's own.
-  // The table is on both sides, and leaves the link as it is.
+  // The table is on both sides, and leaves the link as it is. So does the frame.
   useEffect(() => {
-    if (!isLegacy(route)) {
+    if (isOnline(route)) {
       online.open();
       setLinked(true);
-    } else if (route.page !== 'table' && linked) {
+    } else if (isLegacy(route) && route.page !== 'table' && linked) {
       online.close(true);
       setLinked(false);
     }
@@ -133,16 +141,19 @@ export function App({ backend = appBackend, memory = appMemory, places }: AppPro
 
   // The online screens are up where the address is theirs, and for the moment a closed table's
   // address still stands.
-  const screens = !table && (!isLegacy(route) || (route.page === 'table' && linked));
+  const screens = !table && (isOnline(route) || (route.page === 'table' && linked));
+  // The frame's page, where the address is one of its own.
+  const framed = !table && isFrame(route) ? route : null;
   // They take the renderer's place: its home screen is still there, but not to be seen.
-  useEffect(() => coverTavern(screens), [screens]);
+  const covered = screens || framed != null;
+  useEffect(() => coverTavern(covered), [covered]);
   // The table is on screen and the server is not there: what it shows may be old.
   const cut = table != null && state.status !== 'online' ? state.status : null;
   // The record is a dialog over the end screen: the table underneath takes no input while it is open.
   const shown = record && table?.result != null;
   return (
     <>
-      <div id="app" ref={app} hidden={screens} inert={cut != null || shown}></div>
+      <div id="app" ref={app} hidden={covered} inert={cut != null || shown}></div>
       <canvas id="fx" ref={fx} hidden></canvas>
       {cut && <TableOverlay status={cut} online={online} />}
       {table && shown && <GameRecord online={online} gameId={table.gameId} onClose={() => setRecord(false)} />}
@@ -151,12 +162,26 @@ export function App({ backend = appBackend, memory = appMemory, places }: AppPro
           <OnlineScreens
             online={online}
             state={state}
-            route={isLegacy(route) ? HUB : route}
+            route={isOnline(route) ? route : HUB}
             go={router.go}
             up={router.up}
             onExit={() => router.up(AT.home)}
+            sit={sitting}
+            onSat={() => setSitting(null)}
           />
         </div>
+      )}
+      {framed && (
+        <GameOn
+          online={online}
+          state={state}
+          route={framed}
+          go={router.go}
+          onJoin={(id) => {
+            setSitting(id);
+            router.go(AT.publicTables);
+          }}
+        />
       )}
     </>
   );

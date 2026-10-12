@@ -8,6 +8,9 @@
    session, so the answer's `Me` is taken as it is. Logging in replaces the session and logging out
    ends it: the socket of the old one is given up, and what was known about it with it.
 
+   The pages around the game (src/gameon) show who the player is without a connection: `identify`
+   asks over REST, and `me` is then known while the status is still `idle`.
+
    The screens read it with subscribe() and getState(), which is what React's useSyncExternalStore
    wants: getState() returns the same object until something changed.
 
@@ -101,6 +104,9 @@ export interface OnlineMemory {
   save(remembered: Remembered): void;
 }
 
+/** What `identify` learned: the server knows this browser, it does not, or it could not be asked. */
+export type Identity = 'known' | 'nobody' | 'failed';
+
 /** The answer to an intent. `ok` says the server accepted it; what it changed arrives as state. */
 export type Outcome = { ok: true } | { ok: false; code: ErrorCode | 'OFFLINE'; message: string };
 
@@ -127,6 +133,10 @@ export class Online {
   private readonly played: Map<GameId, Played>;
   private readonly memory: OnlineMemory | null;
   private seated: boolean;
+  /** The guest this page made so that a sign-up had a session to upgrade, until that sign-up went through. */
+  private fresh: UserId | null = null;
+  /** The question `identify` has out, and whether it may make a guest. */
+  private identifying: { create: boolean; answer: Promise<Identity> } | null = null;
 
   constructor(client: SocketClient, api: Api, memory: OnlineMemory | null = null) {
     this.client = client;
@@ -192,6 +202,68 @@ export class Online {
 
   /* ---------- the account ---------- */
 
+  /**
+   * Who this browser is to the server, asked over REST: the pages around the game show it without
+   * a connection. A browser with no session stays one (`GET /me`), unless `create` says the player
+   * is on their way in: then it gets a guest (`POST /auth/guest`), as a connection would give it.
+   */
+  identify(create = false): Promise<Identity> {
+    const asked = this.identifying;
+    // One question at a time: two that both made a guest would leave the page with one and the cookie with the other.
+    if (asked) return asked.create || !create ? asked.answer : asked.answer.then(() => this.identify(true));
+    const answer = this.whoAmI(create).finally(() => {
+      this.identifying = null;
+    });
+    this.identifying = { create, answer };
+    return answer;
+  }
+
+  private async whoAmI(create: boolean): Promise<Identity> {
+    if (!this.state.config) void this.loadConfig();
+    const before = this.state.me?.user.id ?? null,
+      r = create ? await this.api.guest() : await this.api.me();
+    // A login or a `welcome` that arrived in between knows better than this answer.
+    const same = (this.state.me?.user.id ?? null) === before;
+    if (r.ok) {
+      if (same) this.set({ me: r.value });
+      return 'known';
+    }
+    if (r.code !== 'UNAUTHENTICATED') return 'failed';
+    // The session this page remembered is gone, and no connection says otherwise.
+    if (same && before != null && this.state.status === 'idle') this.set({ me: null });
+    return 'nobody';
+  }
+
+  /**
+   * Sign up from a page that asks for no display name (docs/handover/075, the answer to 064).
+   * `register` upgrades the guest of the session, so a browser without one gets a guest first, and
+   * the account made of that guest takes the username as its name: it was never offered another.
+   * A guest who was there before keeps the name they play under.
+   */
+  async signUp(credentials: Credentials): Promise<Outcome> {
+    if (!this.state.me) {
+      const who = await this.api.me();
+      if (who.ok) this.set({ me: who.value });
+      else if (who.code !== 'UNAUTHENTICATED') return who;
+      else {
+        const made = await this.api.guest();
+        if (!made.ok) return made;
+        this.fresh = made.value.user.id;
+        this.set({ me: made.value });
+      }
+    }
+    const r = await this.api.register(credentials);
+    if (!r.ok) return r;
+    this.set({ me: r.value });
+    if (this.fresh === r.value.user.id) {
+      this.fresh = null;
+      // The account exists either way. A name that could not be set is changed on the profile.
+      const named = await this.api.patchMe({ name: credentials.username });
+      if (named.ok) this.set({ me: named.value });
+    }
+    return { ok: true };
+  }
+
   /** Give this guest a username and a password. The player stays who they are. */
   async register(credentials: Credentials): Promise<Outcome> {
     const r = await this.api.register(credentials);
@@ -199,13 +271,18 @@ export class Online {
     return outcome(r);
   }
 
-  /** Become that account. The session changes, so the connection is made again with the new one. */
+  /**
+   * Become that account. The session changes, so a connection that was up is made again with the
+   * new one. A page that had none (the sign-in page of the frame) still has none afterwards.
+   */
   async login(credentials: Credentials): Promise<Outcome> {
     const r = await this.api.login(credentials);
     if (!r.ok) return r;
+    const linked = this.state.status !== 'idle';
     this.close();
+    this.fresh = null;
     this.set({ me: r.value });
-    this.open();
+    if (linked) this.open();
     return { ok: true };
   }
 

@@ -1,7 +1,7 @@
 /* The public tables: the open lobbies anyone may sit down at (`GET /lobbies`). The list is what the
    server said when it was asked; nothing pushes changes to it, so it is asked again on Refresh and
    after a table turned out to be full, started or gone. */
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Online } from '../net/online';
 import type { LobbyId, LobbySummary } from '../protocol/generated';
 import { Sound } from '../sound/sound';
@@ -17,9 +17,13 @@ export interface PublicTablesProps {
   onBack: () => void;
   /** To the "New table" screen, set to public. */
   onCreate: () => void;
+  /** A table the player asked to sit down at before this list was up. It is asked for once connected. */
+  sit?: LobbyId | null;
+  /** That table has been asked for: it is not asked for again. */
+  onSat?: () => void;
 }
 
-export function PublicTables({ online, live, onBack, onCreate }: PublicTablesProps) {
+export function PublicTables({ online, live, onBack, onCreate, sit = null, onSat }: PublicTablesProps) {
   const [list, setList] = useState<List>({ state: 'loading' });
   const [round, setRound] = useState(0);
   const [joining, setJoining] = useState<LobbyId | null>(null);
@@ -42,19 +46,33 @@ export function PublicTables({ online, live, onBack, onCreate }: PublicTablesPro
     setList({ state: 'loading' });
     setRound((n) => n + 1);
   };
-  const join = (id: LobbyId): void => {
-    Sound.play('confirm');
-    setJoining(id);
-    setError(null);
-    void online.joinPublicLobby(id).then((r) => {
-      setJoining(null);
-      if (r.ok) return;
-      // By id there is no code to check: a table that cannot be found has closed since the list was read.
-      setError(r.code === 'LOBBY_NOT_FOUND' ? 'That table is gone.' : failureText(r));
-      // The list was wrong about that table, so it is read again; the row stays until the answer is in.
-      if (r.code === 'LOBBY_NOT_FOUND' || r.code === 'LOBBY_FULL' || r.code === 'LOBBY_STARTED') setRound((n) => n + 1);
-    });
-  };
+  const join = useCallback(
+    (id: LobbyId): void => {
+      Sound.play('confirm');
+      setJoining(id);
+      setError(null);
+      void online.joinPublicLobby(id).then((r) => {
+        setJoining(null);
+        if (r.ok) return;
+        // By id there is no code to check: a table that cannot be found has closed since the list was read.
+        setError(r.code === 'LOBBY_NOT_FOUND' ? 'That table is gone.' : failureText(r));
+        // The list was wrong about that table, so it is read again; the row stays until the answer is in.
+        if (r.code === 'LOBBY_NOT_FOUND' || r.code === 'LOBBY_FULL' || r.code === 'LOBBY_STARTED')
+          setRound((n) => n + 1);
+      });
+    },
+    [online],
+  );
+  /** The table that was asked for on the player's behalf: once, however often the effect runs. */
+  const sat = useRef<LobbyId | null>(null);
+
+  // Asked from Games, which has no connection: the answer, a seat or why not, is shown here.
+  useEffect(() => {
+    if (!live || sit == null || sat.current === sit) return;
+    sat.current = sit;
+    onSat?.();
+    join(sit);
+  }, [live, sit, onSat, join]);
 
   return (
     <>

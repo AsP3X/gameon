@@ -1,5 +1,6 @@
-/* The online screens: the hub, the profile and the account, the public tables, the quick-play queue,
-   a new table, joining by code, and the table's lobby. React draws them
+/* The online screens: the hub, the profile, the public tables, the quick-play queue,
+   a new table, joining by code, and the table's lobby. Signing up and in are pages of the frame
+   (src/gameon). React draws them
    next to the legacy renderer's #app; the game itself is still played there, at the same table the
    offline modes use. Everything shown is what the server said (src/net/online.ts): a tap asks, and
    the screen changes when the answer or the next state arrives. */
@@ -12,7 +13,6 @@ import { cssColor, whole } from '../tableview/dom';
 import type { LobbyId } from '../protocol/generated';
 import { AT, playerAt } from '../router/addresses';
 import type { OnlineRoute } from '../router/addresses';
-import { SignIn, SignUp } from './Account';
 import { failureText, ordinal } from './copy';
 import { LobbyRoom } from './LobbyRoom';
 import { Head, initialOf } from './parts';
@@ -300,9 +300,13 @@ export interface OnlineScreensProps {
   up: (parent: string) => void;
   /** Back from the hub: to the home screen. */
   onExit: () => void;
+  /** A public table the player asked for before the list was up (Games): the list sits them down. */
+  sit?: LobbyId | null;
+  /** That table has been asked for. */
+  onSat?: () => void;
 }
 
-export function OnlineScreens({ online, state, route, go, up, onExit }: OnlineScreensProps) {
+export function OnlineScreens({ online, state, route, go, up, onExit, sit, onSat }: OnlineScreensProps) {
   /** The rules, open on top of a lobby. They belong to that lobby and are gone with it. */
   const [rules, setRules] = useState<LobbyId | null>(null);
   const { lobby, me, queue } = state,
@@ -385,7 +389,16 @@ export function OnlineScreens({ online, state, route, go, up, onExit }: OnlineSc
       />
     );
   if (route.page === 'publicTables')
-    return <PublicTables online={online} live={live} onBack={hub} onCreate={() => go(AT.newPublicTable)} />;
+    return (
+      <PublicTables
+        online={online}
+        live={live}
+        onBack={hub}
+        onCreate={() => go(AT.newPublicTable)}
+        sit={sit ?? null}
+        onSat={onSat}
+      />
+    );
   if (route.page === 'ladder')
     return <LadderScreen online={online} me={me?.user.id ?? null} live={live} onBack={hub} />;
   if (me && route.page === 'profile')
@@ -400,31 +413,6 @@ export function OnlineScreens({ online, state, route, go, up, onExit }: OnlineSc
         onSignUp={() => go(AT.signUp)}
         onSignIn={() => go(AT.signIn)}
         onSignedOut={onExit}
-      />
-    );
-  if (me && route.page === 'signUp')
-    return (
-      <SignUp
-        live={live}
-        onBack={() => up(AT.profile)}
-        onSubmit={async (credentials) => {
-          const r = await online.register(credentials);
-          if (r.ok) up(AT.profile);
-          return r;
-        }}
-      />
-    );
-  if (route.page === 'signIn')
-    return (
-      <SignIn
-        live={live}
-        guest={me?.guest ?? true}
-        onBack={() => up(AT.profile)}
-        onSubmit={async (credentials) => {
-          const r = await online.login(credentials);
-          if (r.ok) hub();
-          return r;
-        }}
       />
     );
   return <Hub online={online} state={state} onExit={onExit} go={go} />;

@@ -27,6 +27,8 @@
   --gold: #ffc800;
   --gold-d: #e5a400;
   --gold-bg: #fff5d3;
+  /* What is written on gold, in both themes: the legacy build's own value for its gold button. */
+  --gold-ink: #4b3800;
   --orange: #ff9600;
   --purple: #ce82ff;
   --bone: #fffaf0;

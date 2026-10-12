@@ -57,6 +57,10 @@ export class Api {
   me(): Promise<ApiResult<Me>> {
     return this.call('GET', '/me');
   }
+  /** The player of this browser's session. A browser without one gets a new guest and its session. */
+  guest(): Promise<ApiResult<Me>> {
+    return this.call('POST', '/auth/guest');
+  }
   /** Upgrades the guest of this session in place: the same user, now with a login. */
   register(credentials: Credentials): Promise<ApiResult<Me>> {
     return this.call('POST', '/auth/register', credentials);

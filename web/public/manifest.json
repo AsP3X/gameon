@@ -3,7 +3,7 @@
   "short_name": "Skull King",
   "description": "The trick-taking pirate card game: solo against bots, around one phone, or online.",
   "id": "/",
-  "start_url": "/",
+  "start_url": "/skull-king",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",

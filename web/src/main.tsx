@@ -9,6 +9,7 @@ import '@fontsource/pirata-one/400.css';
 import './styles/tokens.css';
 import './styles/tavern.css';
 import './styles/online.css';
+import './styles/gameon.css';
 import './styles/responsive.css';
 import { App } from './App';
 import { registerWorker } from './pwa';

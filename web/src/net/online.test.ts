@@ -573,6 +573,16 @@ describe('Online', () => {
       expect(online.getState()).toMatchObject({ status: 'online', lobby: null });
     });
 
+    it('makes no connection after a login when there was none: the pages around the game have none', async () => {
+      await tick();
+      online.close();
+      answers['POST /auth/login'] = { status: 200, body: anne };
+      expect(await online.login(credentials)).toEqual({ ok: true });
+      await tick();
+      expect(online.getState()).toMatchObject({ status: 'idle', me: anne });
+      expect(wires).toHaveLength(1);
+    });
+
     it('keeps the connection when a login is refused', async () => {
       welcome({ lobby });
       answers['POST /auth/login'] = {
@@ -582,6 +592,92 @@ describe('Online', () => {
       expect(await online.login(credentials)).toMatchObject({ ok: false, code: 'INVALID_CREDENTIALS' });
       expect(online.getState()).toMatchObject({ status: 'online', lobby });
       expect(wires).toHaveLength(1);
+    });
+
+    describe('without a connection', () => {
+      const guest = { ...anne, guest: true, username: null };
+      const nobody = { status: 401, body: { error: { code: 'UNAUTHENTICATED', message: 'No session.' } } };
+      beforeEach(async () => {
+        await tick();
+        online.close();
+        asked.length = 0;
+      });
+
+      it('learns who this browser is over REST, and leaves a browser nobody knows as it is', async () => {
+        answers['GET /me'] = nobody;
+        expect(await online.identify()).toBe('nobody');
+        expect(online.getState()).toMatchObject({ status: 'idle', me: null });
+        // No guest was asked for: only `create` does that.
+        expect(asked).not.toContain('POST /auth/guest');
+
+        answers['GET /me'] = { status: 200, body: anne };
+        expect(await online.identify()).toBe('known');
+        expect(online.getState()).toMatchObject({ status: 'idle', me: anne });
+        expect(wires).toHaveLength(1);
+      });
+
+      it('asks for a guest when the player is on their way in, and says when the server cannot be asked', async () => {
+        expect(await online.identify(true)).toBe('failed');
+        answers['POST /auth/guest'] = { status: 200, body: guest };
+        expect(await online.identify(true)).toBe('known');
+        expect(online.getState().me).toEqual(guest);
+      });
+
+      it('asks one question at a time: two that both made a guest would make two', async () => {
+        answers['POST /auth/guest'] = { status: 200, body: guest };
+        const both = Promise.all([online.identify(true), online.identify(true), online.identify()]);
+        expect(await both).toEqual(['known', 'known', 'known']);
+        expect(asked.filter((call) => call === 'POST /auth/guest')).toHaveLength(1);
+        expect(asked).not.toContain('GET /me');
+      });
+
+      it('forgets a player whose session is gone', async () => {
+        answers['GET /me'] = { status: 200, body: anne };
+        await online.identify();
+        answers['GET /me'] = nobody;
+        expect(await online.identify()).toBe('nobody');
+        expect(online.getState().me).toBeNull();
+      });
+
+      it('signs up a browser nobody knew: a guest first, then the account, named after its username', async () => {
+        answers['GET /me'] = nobody;
+        answers['POST /auth/guest'] = { status: 200, body: guest };
+        answers['POST /auth/register'] = { status: 200, body: { ...anne, user: guest.user } };
+        answers['PATCH /me'] = { status: 200, body: anne };
+        expect(await online.signUp(credentials)).toEqual({ ok: true });
+        expect(asked).toEqual(['GET /me', 'POST /auth/guest', 'POST /auth/register', 'PATCH /me']);
+        expect(online.getState().me).toEqual(anne);
+      });
+
+      it('signs up a guest who was already there without touching the name they play under', async () => {
+        answers['GET /me'] = { status: 200, body: guest };
+        answers['POST /auth/register'] = { status: 200, body: anne };
+        expect(await online.signUp(credentials)).toEqual({ ok: true });
+        expect(asked).toEqual(['GET /me', 'POST /auth/register']);
+      });
+
+      it('still names the account when the first username was refused and the second went through', async () => {
+        answers['GET /me'] = nobody;
+        answers['POST /auth/guest'] = { status: 200, body: guest };
+        answers['POST /auth/register'] = {
+          status: 409,
+          body: { error: { code: 'USERNAME_TAKEN', message: 'Taken.' } },
+        };
+        expect(await online.signUp(credentials)).toMatchObject({ ok: false, code: 'USERNAME_TAKEN' });
+        expect(online.getState().me).toEqual(guest);
+        answers['POST /auth/register'] = { status: 200, body: anne };
+        answers['PATCH /me'] = { status: 200, body: anne };
+        expect(await online.signUp(credentials)).toEqual({ ok: true });
+        expect(asked.at(-1)).toBe('PATCH /me');
+      });
+
+      it('has made the account even when the name could not be set', async () => {
+        answers['GET /me'] = nobody;
+        answers['POST /auth/guest'] = { status: 200, body: guest };
+        answers['POST /auth/register'] = { status: 200, body: anne };
+        expect(await online.signUp(credentials)).toEqual({ ok: true });
+        expect(online.getState().me).toEqual(anne);
+      });
     });
 
     it('hangs up and forgets everything after a logout, also when the session was already gone', async () => {

@@ -53,7 +53,8 @@ export class Player {
         ws.send(m);
       });
     });
-    await page.goto(url);
+    // Skull King's home: the front door of the address is GameOn's landing (src/gameon).
+    await page.goto(new URL('/skull-king', url).href);
     await player.comeIn();
     return player;
   }

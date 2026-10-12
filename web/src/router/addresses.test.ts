@@ -1,11 +1,13 @@
 /* The address table: which page each address shows, and where an address leads that has none. */
 import { describe, expect, it } from 'vite-plus/test';
-import { AT, isLegacy, playerAt, routeOf, settle } from './addresses';
+import { AT, isFrame, isLegacy, isOnline, playerAt, routeOf, settle } from './addresses';
 
 const ID = '018f6b4a-6a2e-7c3a-8b1d-9e0f1a2b3c4d';
 
 describe('the addresses', () => {
   it('has one page for every address of the plan that is built', () => {
+    expect(routeOf('/')).toEqual({ page: 'landing' });
+    expect(routeOf('/games')).toEqual({ page: 'games' });
     expect(routeOf('/skull-king')).toEqual({ page: 'home' });
     expect(routeOf('/skull-king/solo')).toEqual({ page: 'setup' });
     expect(routeOf('/skull-king/one-screen')).toEqual({ page: 'setup' });
@@ -24,14 +26,11 @@ describe('the addresses', () => {
   });
 
   it('keeps an address that has a page, and both addresses of the new-game screen', () => {
-    for (const at of Object.values(AT).filter((a) => a !== AT.landing && a !== AT.games && a !== AT.ranked))
-      expect(settle(at)).toBe(at);
+    for (const at of Object.values(AT).filter((a) => a !== AT.ranked)) expect(settle(at)).toBe(at);
     expect(settle(`/players/${ID}`)).toBe(`/players/${ID}`);
   });
 
   it('leads an address whose page is not built yet to the nearest one that is', () => {
-    expect(settle('/')).toBe('/skull-king');
-    expect(settle('/games')).toBe('/skull-king');
     expect(settle('/skull-king/ranked')).toBe('/skull-king/online');
   });
 
@@ -39,6 +38,7 @@ describe('the addresses', () => {
     expect(settle('/nowhere')).toBe('/skull-king');
     expect(settle('/skull-king/online/public/')).toBe('/skull-king/online/public');
     expect(settle('/skull-king/')).toBe('/skull-king');
+    expect(settle('/games/')).toBe('/games');
     expect(routeOf('/skull-king/table/7')).toEqual({ page: 'home' });
   });
 
@@ -59,15 +59,17 @@ describe('the addresses', () => {
     expect(settle(`/players/${ID}/more`)).toBe('/skull-king');
   });
 
-  it("tells the renderer's pages from the online screens", () => {
-    expect(
-      ['/skull-king', '/skull-king/solo', '/skull-king/table', '/skull-king/score'].map((p) => isLegacy(routeOf(p))),
-    ).toEqual([true, true, true, true]);
-    expect(['/skull-king/online', '/ladder', '/profile', `/players/${ID}`].map((p) => isLegacy(routeOf(p)))).toEqual([
-      false,
-      false,
-      false,
-      false,
-    ]);
+  it("tells the renderer's pages, the frame's and the online screens apart", () => {
+    const kind = (path: string): string => {
+      const route = routeOf(path);
+      return [isLegacy(route) && 'legacy', isFrame(route) && 'frame', isOnline(route) && 'online']
+        .filter(Boolean)
+        .join('+');
+    };
+    for (const path of ['/skull-king', '/skull-king/solo', '/skull-king/table', '/skull-king/score'])
+      expect(kind(path)).toBe('legacy');
+    for (const path of ['/', '/games', '/sign-in', '/sign-up']) expect(kind(path)).toBe('frame');
+    for (const path of ['/skull-king/online', '/skull-king/online/join', '/ladder', '/profile', `/players/${ID}`])
+      expect(kind(path)).toBe('online');
   });
 });

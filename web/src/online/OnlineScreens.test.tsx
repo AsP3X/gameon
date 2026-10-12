@@ -109,7 +109,7 @@ async function createTable(): Promise<void> {
 }
 
 beforeEach(() => {
-  places = memoryPlaces();
+  places = memoryPlaces('/skull-king');
   vi.useFakeTimers();
   vi.spyOn(Math, 'random').mockImplementation(seeded(21));
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
@@ -691,7 +691,7 @@ describe('playing online', () => {
       await settle();
       closePage();
       // Another tab, or the installed app opened again: nobody is seated, so nothing connects by itself.
-      places = memoryPlaces();
+      places = memoryPlaces('/skull-king');
       await renderApp(server.transport('this-page'));
       await settle();
       expect(places.path()).toBe('/skull-king');
@@ -776,7 +776,7 @@ describe('playing online', () => {
       await settle(120_000);
 
       // Not seated any more: a page opened afresh, at the front door, waits to be asked.
-      places = memoryPlaces();
+      places = memoryPlaces('/skull-king');
       await renderApp(server.transport('this-page'));
       expect($('#online')).toBeNull();
       await click('[data-act="online"]');
@@ -841,12 +841,6 @@ describe('the addresses of the online screens', () => {
     closePage();
     await openAt('/profile');
     expect($('#online h2')?.textContent).toBe('Your profile');
-    closePage();
-    await openAt('/sign-up');
-    expect($('#online h2')?.textContent).toBe('Create an account');
-    closePage();
-    await openAt('/sign-in');
-    expect($('#online h2')?.textContent).toBe('Sign in');
   });
 
   it('leads the ranked page, which is not built yet, to the hub that has its section', async () => {
@@ -857,7 +851,7 @@ describe('the addresses of the online screens', () => {
   });
 
   it('moves the address with every page, and Back is the way the player came', async () => {
-    await openAt('/');
+    await openAt('/skull-king');
     await click('[data-act="online"]');
     await settle();
     await press('Create a table');
@@ -885,7 +879,7 @@ describe('the addresses of the online screens', () => {
   });
 
   it("follows the browser's Back and Forward between the hub, a page of it and the home screen, and hangs up at home", async () => {
-    await openAt('/');
+    await openAt('/skull-king');
     await click('[data-act="online"]');
     await settle();
     await press('Join with a code');

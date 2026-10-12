@@ -1,0 +1,371 @@
+/* The landing: what GameOn is, the one game that is live, the ranked season, and the games that are
+   announced. It is the page a visitor with no session sees, and it gives them none: it asks the
+   server who they are and nothing more. The season is the server's (`GET /config`). The three at
+   the top of the ladder are shown when the ladder can be read, which takes a session. */
+import { useEffect, useRef, useState } from 'react';
+import type { Online } from '../net/online';
+import type { LadderEntry, Season } from '../protocol/generated';
+import { initialOf } from '../online/parts';
+import { AT } from '../router/addresses';
+import { cssColor, reduced, whole } from '../tableview/dom';
+import { CardFan, IconKey, Mascot, SkullKingKey } from './art';
+import { KIND_NAME, SHELVES, showsSkullKing, soonOn, TIERS } from './catalog';
+import type { Shelf, SoonGame } from './catalog';
+import { accountOf, Footer, Link, Nav, useTitle } from './Frame';
+import type { Who } from './Frame';
+import { Icon } from './icons';
+
+/** The podium has three steps: with fewer players on the ladder there is none. */
+const PODIUM = 3;
+
+export function Shelves({ shelf, onPick }: { shelf: Shelf; onPick: (shelf: Shelf) => void }) {
+  return (
+    <div className="go-shelves" role="group" aria-label="Kind of game">
+      {SHELVES.map(([value, name]) => (
+        <button key={value} type="button" aria-pressed={shelf === value} onClick={() => onPick(value)}>
+          {name}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/** A game that is announced: a card on a wide page, one line on a narrow one. */
+export function SoonTile({ game, line = false }: { game: SoonGame; line?: boolean }) {
+  return (
+    <li className="go-soon">
+      <span className="go-soon-top">
+        <IconKey icon={game.icon} tone={game.tone} />
+        <span className="pill soft wide-only caps">Soon</span>
+      </span>
+      <b>{game.name}</b>
+      {line && <p className="wide-only">{game.line}</p>}
+      <small className="wide-only">
+        {game.players} · {KIND_NAME[game.kind]}
+      </small>
+      <span className="go-sr narrow-only">, coming soon</span>
+    </li>
+  );
+}
+
+function Podium({ top }: { top: LadderEntry[] }) {
+  return (
+    <ol className="go-podium" aria-label="The top of the ladder">
+      {top.map((entry) => (
+        <li key={entry.user.id} className={`place-${entry.rank}`}>
+          {entry.rank === 1 && (
+            <span className="go-crown">
+              <Icon name="crown" />
+            </span>
+          )}
+          <span className="avatar" style={{ background: cssColor(entry.user.color) }} aria-hidden="true">
+            {initialOf(entry.user.name)}
+          </span>
+          <b>{entry.user.name}</b>
+          <span className={`pill wide-only ${entry.rank === 1 ? 'gold' : 'soft'}`}>{entry.rating.tier}</span>
+          <small className="narrow-only">Rating {whole(entry.rating.value)}</small>
+          <span className="go-step">
+            <b>
+              <span className="go-sr">Place </span>
+              {entry.rank}
+            </b>
+            <small className="wide-only">Rating {whole(entry.rating.value)}</small>
+          </span>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
+export interface LandingProps {
+  online: Online;
+  who: Who;
+  /** The live season, null when the server has none, undefined until it has said. */
+  season: Season | null | undefined;
+}
+
+export function Landing({ online, who, season }: LandingProps) {
+  const title = useTitle('GameOn · Game night, switched on');
+  const ways = useRef<HTMLHeadingElement>(null);
+  const [shelf, setShelf] = useState<Shelf>('all');
+  const [top, setTop] = useState<LadderEntry[] | null>(null);
+  const account = accountOf(who),
+    session = who.is === 'player',
+    soon = soonOn(shelf);
+
+  // The ladder needs a session. A visitor has none, and the landing does not make one for this.
+  useEffect(() => {
+    if (!session) return;
+    let stale = false;
+    void online.ladder().then((r) => {
+      if (!stale && r.ok && r.value.entries.length >= PODIUM) setTop(r.value.entries.slice(0, PODIUM));
+    });
+    return () => {
+      stale = true;
+    };
+  }, [online, session]);
+
+  const toWays = (): void => {
+    ways.current?.scrollIntoView?.({ behavior: reduced() ? 'auto' : 'smooth', block: 'start' });
+    ways.current?.focus({ preventScroll: true });
+  };
+
+  return (
+    <>
+      <Nav page="landing" who={who} onWays={toWays} />
+      <main>
+        <section className="go-hero">
+          <div className="go-in">
+            <div className="go-hero-copy">
+              <span className="pill green wide-only">First game live: Skull King</span>
+              <h1 tabIndex={-1} ref={title}>
+                Game night, <span className="go-accent">switched on.</span>
+              </h1>
+              <p className="go-lead wide-only">
+                Card and board games in your browser. Play alone against bots, pass one phone around the table, or sit
+                down online with friends.
+              </p>
+              <p className="go-lead narrow-only">Card and board games in your browser. Play alone or with friends.</p>
+              <div className="go-actions wide-only">
+                <Link to={AT.home} className="btn go-btn">
+                  Play Skull King
+                </Link>
+                <Link to={AT.games} className="btn ghost go-btn">
+                  Browse the games
+                </Link>
+              </div>
+              <ul className="go-facts wide-only">
+                {['Free to play', 'No download', 'No account needed'].map((fact) => (
+                  <li key={fact}>
+                    <Icon name="check" />
+                    {fact}
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div className="go-featured wide-only">
+              <div className="go-featured-head">
+                <span className="go-sk-name">
+                  <Mascot />
+                  <span className="logo">
+                    Skull <span>King</span>
+                  </span>
+                </span>
+                <span className="pill gold caps">Featured game</span>
+              </div>
+              <CardFan />
+              <div className="go-featured-foot">
+                <b>The pirate trick-taking game</b>
+                <span className="go-pills">
+                  {['2–8 players', 'Solo', 'One screen', 'Online'].map((fact) => (
+                    <span className="pill soft" key={fact}>
+                      {fact}
+                    </span>
+                  ))}
+                </span>
+              </div>
+            </div>
+            <div className="go-game narrow-only">
+              <div className="go-game-art">
+                <CardFan />
+              </div>
+              <div className="go-game-info">
+                <div className="go-game-title">
+                  <SkullKingKey />
+                  <span className="go-game-name">
+                    <b>Skull King</b>
+                    <small>2–8 players · 30 min</small>
+                  </span>
+                  <span className="pill green caps">Live</span>
+                </div>
+                <p>The pirate trick-taking game. Bid your tricks, then hit that number exactly.</p>
+                <Link to={AT.home} className="btn go-btn full" label="Play Skull King now">
+                  Play now
+                </Link>
+                <small className="go-game-facts">Free · No download · No account needed</small>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {season !== null && (
+          <section className="go-ranked" aria-labelledby="go-ranked-title">
+            <div className="go-in">
+              <div className="go-ranked-panel">
+                <div className="go-ranked-top">
+                  <div className="go-ranked-copy">
+                    <p className="go-season">
+                      {season && <span className="pill gold caps">Season {season.name}</span>}
+                      <span className="go-eyebrow">Ranked</span>
+                    </p>
+                    <h2 id="go-ranked-title">The ranked season is on</h2>
+                    <p className="go-ranked-text wide-only">
+                      Play five placement games to get your tier, then climb from Deckhand to Skull King. You queue
+                      alone, no table seats a bot, and walking out counts as a loss.
+                    </p>
+                    <p className="go-ranked-text narrow-only">Climb from Deckhand to Skull King.</p>
+                  </div>
+                  {top && <Podium top={top} />}
+                  <div className="go-ranked-actions">
+                    <Link to={account ? AT.ranked : AT.signUp} className="btn blue go-btn">
+                      Find a ranked game
+                    </Link>
+                    <Link to={AT.ladder} className="btn ghost go-btn wide-only">
+                      See the ladder
+                    </Link>
+                  </div>
+                  <p className="go-ranked-foot">
+                    {!account && (
+                      <span>
+                        <span className="wide-only">Ranked needs a free account.</span>
+                        <span className="narrow-only">Needs a free account</span>
+                      </span>
+                    )}
+                    <Link to={AT.ladder} className="go-text-link narrow-only">
+                      See the ladder
+                      <Icon name="chevronRight" />
+                    </Link>
+                  </p>
+                </div>
+                <div className="go-tiers wide-only">
+                  <span className="go-eyebrow" id="go-tiers-label">
+                    Seven tiers
+                  </span>
+                  <ol aria-labelledby="go-tiers-label">
+                    {TIERS.map((tier, i) => (
+                      <li key={tier}>
+                        {i > 0 && <Icon name="chevronRight" />}
+                        <span className={i === TIERS.length - 1 ? 'go-tier top' : 'go-tier'}>
+                          {i === TIERS.length - 1 && <Icon name="crown" />}
+                          {tier}
+                        </span>
+                      </li>
+                    ))}
+                  </ol>
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
+
+        <section className="go-ways" aria-labelledby="go-ways-title">
+          <div className="go-in">
+            <p className="go-eyebrow wide-only">Alone or together</p>
+            <h2 id="go-ways-title" tabIndex={-1} ref={ways}>
+              <span className="wide-only">Three ways to sit down</span>
+              <span className="narrow-only">Three ways to play</span>
+            </h2>
+            <ul className="go-ways-list">
+              <li>
+                <IconKey icon="bot" tone="blue" />
+                <span>
+                  <b>Solo</b>
+                  <p className="wide-only">
+                    Play against bots whenever you have ten minutes. Your game is saved on your device, so you can close
+                    the tab and pick it up later.
+                  </p>
+                  <p className="narrow-only">Against bots, any time. Works offline.</p>
+                  <span className="pill blue wide-only caps">Works offline</span>
+                </span>
+              </li>
+              <li>
+                <IconKey icon="smartphone" tone="gold" />
+                <span>
+                  <b>One screen</b>
+                  <p className="wide-only">
+                    Pass one phone around or gather round a tablet. A curtain hides each hand between turns, so nobody
+                    peeks.
+                  </p>
+                  <p className="narrow-only">Pass one phone around the table.</p>
+                  <span className="pill gold wide-only caps">2–8 players</span>
+                </span>
+              </li>
+              <li>
+                <IconKey icon="globe" tone="green" />
+                <span>
+                  <b>Online</b>
+                  <p className="wide-only">
+                    Open a private table and share the code, join a public table, or queue alone for a ranked game.
+                  </p>
+                  <p className="narrow-only">With friends, at a public table, or ranked.</p>
+                  <span className="pill green wide-only caps">Friends · Public · Ranked</span>
+                </span>
+              </li>
+            </ul>
+          </div>
+        </section>
+
+        <section className="go-shelf" aria-labelledby="go-shelf-title">
+          <div className="go-in">
+            <div className="go-shelf-head">
+              <div>
+                <p className="go-eyebrow green wide-only">The collection</p>
+                <h2 id="go-shelf-title">
+                  <span className="wide-only">Pick a game</span>
+                  <span className="narrow-only">More games on the way</span>
+                </h2>
+                <p className="go-sub narrow-only">Skull King is the first. These are in the works.</p>
+              </div>
+              <span className="wide-only">
+                <Shelves shelf={shelf} onPick={setShelf} />
+              </span>
+            </div>
+            {showsSkullKing(shelf) && (
+              <div className="go-pick wide-only">
+                <div className="go-pick-info">
+                  <div className="go-game-title">
+                    <SkullKingKey />
+                    <span className="go-game-name">
+                      <b>Skull King</b>
+                      <span className="pill green caps">Live now</span>
+                    </span>
+                  </div>
+                  <p>
+                    Bid how many tricks you will win, then hit that number exactly. Pirates, mermaids and the Skull King
+                    himself get in the way.
+                  </p>
+                  <span className="go-pills">
+                    {['2–8 players', 'Cards', 'About 30 min', 'Ranked ladder'].map((fact) => (
+                      <span className="pill soft" key={fact}>
+                        {fact}
+                      </span>
+                    ))}
+                  </span>
+                  <div className="go-actions">
+                    <Link to={AT.home} className="btn go-btn" label="Play Skull King now">
+                      Play now
+                    </Link>
+                  </div>
+                </div>
+                <div className="go-pick-art">
+                  <CardFan trio />
+                </div>
+              </div>
+            )}
+            <ul className="go-soon-list" aria-label="Coming soon">
+              {soon.map((game) => (
+                <SoonTile key={game.name} game={game} line />
+              ))}
+            </ul>
+          </div>
+        </section>
+
+        <section className="go-cta wide-only" aria-labelledby="go-cta-title">
+          <div className="go-in">
+            <div className="go-cta-panel">
+              <Mascot />
+              <div className="go-cta-text">
+                <h2 id="go-cta-title">Pull up a chair.</h2>
+                <p>Your first hand is one tap away. No download, no account.</p>
+              </div>
+              <Link to={AT.home} className="btn go-btn">
+                Play Skull King
+              </Link>
+            </div>
+          </div>
+        </section>
+      </main>
+      <Footer page="landing" who={who} />
+    </>
+  );
+}

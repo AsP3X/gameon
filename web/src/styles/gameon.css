@@ -1,0 +1,1779 @@
+/* The frame around the game (src/gameon): the landing, Games, and signing up and in, as
+   design/gameon.pen draws them. The pages are React's and sit next to #app, which is hidden while
+   they show. They reuse the buttons, pills, avatars, cards and the mascot of tavern.css; what is
+   here is only what those pages add. Tokens only.
+
+   One layout for a phone and one for a wide window. A piece that only one of them has carries
+   `narrow-only` or `wide-only`; the other never shows it, to the eye or to a screen reader. */
+#gameon {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+}
+#gameon main {
+  flex: 1;
+}
+#gameon a {
+  text-decoration: none;
+}
+#gameon a:focus-visible {
+  outline: 3px solid var(--blue);
+  outline-offset: 2px;
+}
+#gameon ul,
+#gameon ol,
+#gameon dl {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+@media (max-width: 999.98px) {
+  #gameon .wide-only {
+    display: none !important;
+  }
+}
+@media (min-width: 1000px) {
+  #gameon .narrow-only {
+    display: none !important;
+  }
+}
+/* Said, not shown. */
+.go-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+/* The column every section keeps to: 1120 px of content on a wide window. */
+.go-in {
+  width: 100%;
+  max-width: 1184px;
+  margin-inline: auto;
+  padding-inline: 20px;
+}
+.go-icon {
+  width: 1em;
+  height: 1em;
+  flex: none;
+}
+
+/* ---------- links and buttons ---------- */
+/* A button of tavern.css that is as wide as its label, and may be a link. */
+.go-btn {
+  width: auto;
+  white-space: nowrap;
+}
+.go-btn.full {
+  width: 100%;
+}
+.go-btn.small {
+  min-height: 44px;
+  padding-block: 8px;
+  box-shadow: 0 3px 0 var(--line);
+}
+.go-btn.small:active {
+  transform: translateY(3px);
+}
+#gameon .go-text-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  min-height: 44px;
+  font-size: 14px;
+  font-weight: 900;
+  color: var(--blue-ink);
+}
+.go-text-link .go-icon {
+  width: 16px;
+  height: 16px;
+}
+.go-eyebrow {
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--blue-ink);
+}
+.go-eyebrow.green {
+  color: var(--green-ink);
+}
+.go-sub {
+  font-size: 15px;
+  color: var(--muted);
+}
+#gameon .pill.caps {
+  text-transform: uppercase;
+}
+.go-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* ---------- the bar at the top ---------- */
+.go-nav {
+  border-bottom: 2px solid var(--line);
+}
+.go-nav .go-in {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-block: 10px 12px;
+}
+.go-nav-left,
+.go-nav-right,
+.go-links {
+  display: flex;
+  align-items: center;
+}
+.go-nav-left {
+  gap: 48px;
+  min-width: 0;
+}
+.go-nav-right {
+  gap: 12px;
+  flex: none;
+}
+.go-links {
+  gap: 32px;
+}
+.go-home {
+  display: inline-flex;
+  padding-block: 2px;
+  border-radius: 10px;
+}
+.go-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 11px;
+}
+.go-mark {
+  width: 40px;
+  height: 40px;
+}
+.go-wordmark {
+  width: 123px;
+  height: 22px;
+}
+#gameon .go-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: none;
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+#gameon .go-link.on,
+#gameon .go-link:hover {
+  color: var(--fg);
+}
+.go-nav .go-btn {
+  min-height: 44px;
+  padding-block: 10px;
+}
+.go-switch {
+  margin-right: 4px;
+  font-size: 15px;
+  color: var(--muted);
+}
+#gameon .go-nav .go-text-link {
+  font-size: 15px;
+}
+#gameon .go-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  border-radius: 99px;
+  color: var(--fg);
+}
+.go-avatar {
+  width: 44px;
+  height: 44px;
+  font-size: 18px;
+}
+.go-chip-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
+.go-chip-text b {
+  font-size: 15px;
+  font-weight: 900;
+}
+.go-chip-text small {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--muted);
+}
+.go-chip-more {
+  display: inline-flex;
+  color: var(--muted);
+}
+
+/* ---------- keys, the mascot, the cards ---------- */
+/* A key is the tile an icon sits on. --k is its side; the lower edge is the key's own shadow. */
+.go-key {
+  --k: 46px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: var(--k);
+  height: var(--k);
+  border-radius: calc(var(--k) * 0.28);
+  color: var(--white);
+  box-shadow: inset 0 calc(var(--k) * -0.075) 0 color-mix(in srgb, var(--c-sk) 18%, transparent);
+}
+.go-key .go-icon {
+  width: 50%;
+  height: 50%;
+  margin-bottom: 6%;
+}
+.go-key.blue {
+  background: var(--blue);
+}
+.go-key.gold {
+  background: var(--gold);
+  color: var(--gold-ink);
+}
+.go-key.green {
+  background: var(--green);
+}
+.go-key.purple {
+  background: var(--purple);
+}
+.go-key.red {
+  background: var(--red);
+}
+.go-key.kraken {
+  background: var(--c-kraken);
+}
+#gameon .mascot {
+  animation: none;
+}
+.go-key.sk .mascot {
+  width: 92%;
+  height: 92%;
+  margin-top: -8%;
+}
+.go-mascot {
+  --m: 64px;
+  flex: none;
+  display: inline-flex;
+}
+.go-mascot .mascot {
+  width: var(--m);
+  height: var(--m);
+}
+/* --fan-w is the width of one card. The hand is five cards, each a little further round. */
+.go-fan {
+  --fan-w: 74px;
+  display: flex;
+  justify-content: center;
+  padding-block: calc(var(--fan-w) * 0.16);
+}
+.go-fan .card {
+  --w: var(--fan-w);
+}
+.go-fan > div + div {
+  margin-left: calc(var(--fan-w) * -0.32);
+}
+.go-fan > div:nth-child(1) {
+  transform: translateY(6%) rotate(-16deg);
+}
+.go-fan > div:nth-child(2) {
+  transform: translateY(1.5%) rotate(-8deg);
+}
+.go-fan > div:nth-child(4) {
+  transform: translateY(1.5%) rotate(8deg);
+}
+.go-fan > div:nth-child(5) {
+  transform: translateY(6%) rotate(16deg);
+}
+/* Three cards, the middle one in front. */
+.go-fan.trio > div + div {
+  margin-left: calc(var(--fan-w) * -0.42);
+}
+.go-fan.trio > div:nth-child(1) {
+  transform: translateY(4%) rotate(-11deg);
+}
+.go-fan.trio > div:nth-child(2) {
+  position: relative;
+  z-index: 1;
+  transform: none;
+}
+.go-fan.trio > div:nth-child(3) {
+  transform: translateY(4%) rotate(11deg);
+}
+
+/* ---------- the landing: the top ---------- */
+.go-hero {
+  padding-block: 28px;
+}
+.go-hero .go-in,
+.go-hero-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.go-hero-copy {
+  align-items: flex-start;
+}
+.go-hero h1 {
+  font-size: 40px;
+  line-height: 1.08;
+  letter-spacing: -0.015em;
+}
+.go-accent {
+  display: block;
+  color: var(--green-ink);
+}
+.go-lead {
+  font-size: 17px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+.go-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  padding-block: 4px;
+}
+.go-actions .go-btn {
+  flex: 1;
+}
+.go-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 24px;
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--muted);
+}
+.go-facts li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.go-facts .go-icon {
+  width: 18px;
+  height: 18px;
+  color: var(--green-ink);
+}
+.go-featured {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 20px;
+  min-height: 540px;
+  padding: 28px;
+  border: 2px solid var(--line);
+  border-radius: 28px;
+  background: var(--felt);
+}
+.go-featured-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.go-sk-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+.go-sk-name .logo {
+  font-size: 38px;
+  line-height: 1;
+}
+/* The hand fills its card at 1440 px and gets smaller with the window, so it never leaves it. */
+.go-featured .go-fan {
+  --fan-w: clamp(84px, 8.6vw, 124px);
+}
+.go-featured-foot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+.go-featured-foot b {
+  font-size: 16px;
+  font-weight: 800;
+}
+.go-featured .pill.soft,
+.go-podium .pill.soft {
+  background: var(--card);
+}
+
+/* ---------- a game on its card: the landing on a phone, and Games ---------- */
+.go-game {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 2px solid var(--line);
+  border-radius: 22px;
+  background: var(--card);
+  box-shadow: 0 4px 0 var(--line);
+}
+.go-game-art {
+  display: grid;
+  place-items: center;
+  min-height: 176px;
+  border-bottom: 2px solid var(--line);
+  background: var(--felt);
+}
+.go-game-info {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px;
+}
+.go-game-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.go-game-title .go-key {
+  --k: 52px;
+}
+.go-game-name {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.go-game-name b {
+  font-size: 22px;
+  font-weight: 900;
+  line-height: 1.15;
+}
+.go-game-name small,
+.go-soon small {
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.065em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.go-game-info > p {
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+.go-game-facts {
+  text-align: center;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--muted);
+}
+.go-modes {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+#gameon .go-mode {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 56px;
+  padding: 6px 8px;
+  border: 2px solid var(--line);
+  border-radius: 16px;
+  background: var(--bg);
+  box-shadow: 0 3px 0 var(--line);
+  color: var(--fg);
+  transition:
+    transform 0.06s,
+    box-shadow 0.06s;
+}
+#gameon .go-mode:active {
+  transform: translateY(3px);
+  box-shadow: 0 0 0 transparent;
+}
+.go-mode .go-key {
+  --k: 36px;
+}
+.go-mode b {
+  display: block;
+  font-size: 15px;
+  font-weight: 900;
+  line-height: 1.2;
+}
+.go-mode small {
+  display: block;
+  font-size: 13px;
+  line-height: 1.3;
+  color: var(--muted);
+}
+
+/* ---------- the landing: the ranked season ---------- */
+.go-ranked {
+  padding-bottom: 32px;
+}
+.go-ranked-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px 18px 10px;
+  border-radius: 22px;
+  background: var(--blue-bg);
+}
+.go-ranked-top,
+.go-ranked-copy {
+  display: flex;
+  flex-direction: column;
+}
+.go-ranked-top {
+  gap: 16px;
+}
+.go-ranked-copy {
+  gap: 8px;
+}
+.go-season {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.go-ranked h2 {
+  font-size: 24px;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+}
+.go-ranked-text {
+  font-size: 15px;
+  color: var(--blue-ink);
+}
+.go-ranked-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  padding-top: 6px;
+}
+.go-ranked-actions .go-btn {
+  flex: 1;
+}
+.go-ranked-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 44px;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--blue-ink);
+}
+.go-ranked-foot .go-text-link {
+  margin-left: auto;
+}
+.go-podium {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
+.go-podium li {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+}
+.go-podium .place-2 {
+  order: 1;
+}
+.go-podium .place-1 {
+  order: 2;
+}
+.go-podium .place-3 {
+  order: 3;
+}
+.go-crown {
+  display: inline-flex;
+  font-size: 20px;
+  color: var(--gold-d);
+}
+.go-podium .avatar {
+  width: 42px;
+  height: 42px;
+  font-size: 17px;
+}
+.go-podium .place-1 .avatar {
+  width: 50px;
+  height: 50px;
+  font-size: 21px;
+}
+.go-podium li > b {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 15px;
+  font-weight: 900;
+  line-height: 1.2;
+}
+.go-podium li > small {
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.055em;
+  text-transform: uppercase;
+  color: var(--blue-ink);
+}
+.go-step {
+  width: 100%;
+  height: 48px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--line);
+  border-radius: 12px;
+  background: var(--card);
+  box-shadow: 0 3px 0 var(--line);
+}
+.place-1 .go-step {
+  height: 64px;
+}
+.place-3 .go-step {
+  height: 36px;
+}
+.go-step b {
+  font-size: 20px;
+  font-weight: 900;
+  line-height: 1.05;
+}
+.place-1 .go-step b {
+  font-size: 26px;
+}
+.go-step small {
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.065em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.go-tiers {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding-top: 24px;
+  border-top: 2px solid var(--line);
+}
+.go-tiers ol {
+  flex: 1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.go-tiers li {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--blue-ink);
+}
+.go-tiers li > .go-icon {
+  width: 16px;
+  height: 16px;
+}
+.go-tier {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  border-radius: 99px;
+  background: var(--card);
+  font-size: 13px;
+  font-weight: 900;
+  color: var(--fg);
+}
+.go-tier.top {
+  background: var(--gold);
+  color: var(--gold-ink);
+}
+.go-tier .go-icon {
+  width: 16px;
+  height: 16px;
+}
+
+/* ---------- the landing: ways to play, the shelf, the last word ---------- */
+.go-ways {
+  padding-block: 8px 36px;
+}
+.go-ways h2,
+.go-shelf h2 {
+  font-size: 24px;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+}
+.go-ways h2 {
+  margin-bottom: 18px;
+}
+.go-ways-list {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.go-ways-list li {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.go-ways-list li > span:last-child {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.go-ways-list b {
+  font-size: 17px;
+  font-weight: 900;
+  line-height: 1.25;
+}
+.go-ways-list p {
+  font-size: 15px;
+  color: var(--muted);
+}
+.go-shelf {
+  padding-block: 32px;
+  border-block: 2px solid var(--line);
+  background: var(--soft);
+}
+.go-shelf .go-in {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.go-shelf-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+}
+.go-shelf-head > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.go-shelves {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.go-shelves button {
+  min-height: 44px;
+  padding: 0 18px;
+  border: 2px solid var(--line);
+  border-radius: 99px;
+  background: var(--bg);
+  font-size: 14px;
+  font-weight: 900;
+  color: var(--muted);
+}
+.go-shelves button[aria-pressed='true'] {
+  border-color: var(--green-bg);
+  background: var(--green-bg);
+  color: var(--green-ink);
+}
+.go-soon-list {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.go-soon {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 60px;
+  padding: 8px 10px;
+  border: 2px solid var(--line);
+  border-radius: 16px;
+  background: var(--card);
+}
+.go-soon-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+.go-soon .go-key {
+  --k: 38px;
+}
+.go-soon b {
+  font-size: 14px;
+  font-weight: 900;
+  line-height: 1.2;
+}
+.go-soon p {
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+.go-pick {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 440px);
+  overflow: hidden;
+  border: 2px solid var(--line);
+  border-radius: 24px;
+  background: var(--card);
+  box-shadow: 0 4px 0 var(--line);
+}
+.go-pick-info {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 20px;
+  padding: 40px;
+}
+.go-pick .go-game-title {
+  gap: 16px;
+}
+.go-pick .go-key {
+  --k: 72px;
+}
+.go-pick .go-game-name {
+  align-items: flex-start;
+  gap: 6px;
+}
+.go-pick .go-game-name b {
+  font-size: 30px;
+  line-height: 1.1;
+}
+.go-pick-info > p {
+  font-size: 17px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+.go-pick .go-actions .go-btn {
+  flex: none;
+  min-width: 200px;
+}
+.go-pick-art {
+  --fan-w: 150px;
+  display: grid;
+  place-items: center;
+  min-height: 356px;
+  border-left: 2px solid var(--line);
+  background: var(--felt);
+}
+.go-pick-art .go-fan {
+  --fan-w: 150px;
+}
+.go-cta {
+  padding-block: 80px 96px;
+}
+.go-cta-panel {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 44px 56px;
+  border-radius: 28px;
+  background: var(--green-bg);
+}
+.go-cta .go-mascot {
+  --m: 104px;
+}
+.go-cta-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.go-cta h2 {
+  font-size: 38px;
+  line-height: 1.15;
+  letter-spacing: -0.015em;
+}
+.go-cta p {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--green-ink);
+}
+.go-cta .go-btn {
+  min-width: 240px;
+}
+
+/* ---------- the footer ---------- */
+.go-foot {
+  border-top: 2px solid var(--line);
+}
+.go-foot .go-in {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 16px 12px;
+  padding-block: 24px 28px;
+}
+.go-foot .go-home {
+  grid-area: 1 / 1;
+  justify-self: start;
+}
+.go-copy {
+  grid-area: 1 / 2;
+  font-size: 13px;
+  color: var(--muted);
+}
+.go-foot-links {
+  grid-area: 2 / 1 / auto / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 28px;
+}
+#gameon .go-foot-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--muted);
+}
+#gameon .go-foot-link:hover {
+  color: var(--fg);
+}
+
+/* ---------- Games ---------- */
+.go-games {
+  padding-block: 24px 32px;
+}
+.go-games .go-in,
+.go-columns,
+.go-page-head {
+  display: flex;
+  flex-direction: column;
+}
+.go-games .go-in,
+.go-columns {
+  gap: 20px;
+}
+.go-page-head {
+  gap: 14px;
+}
+.go-games h1 {
+  font-size: 32px;
+  line-height: 1.1;
+  letter-spacing: -0.012em;
+}
+.go-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: var(--soft);
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--muted);
+}
+.go-banner .go-icon {
+  width: 18px;
+  height: 18px;
+}
+/* On a phone the two columns are one, in the order the page is read. */
+.go-main,
+.go-rail {
+  display: contents;
+}
+.go-jump {
+  order: 1;
+}
+.go-games .go-game {
+  order: 2;
+}
+.go-seat {
+  order: 3;
+}
+.go-tables {
+  order: 4;
+}
+.go-soon-block {
+  order: 5;
+}
+.go-jump {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 14px 12px;
+  padding: 16px;
+  border-radius: 20px;
+  background: var(--green-bg);
+}
+.go-jump .go-key {
+  --k: 48px;
+}
+.go-jump .go-btn {
+  grid-column: 1 / -1;
+}
+.go-jump-text {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.go-jump-text small {
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--green-ink);
+}
+.go-jump-text b {
+  font-size: 17px;
+  font-weight: 900;
+  line-height: 1.25;
+}
+.go-jump-text span {
+  font-size: 14px;
+  line-height: 1.35;
+  color: var(--green-ink);
+}
+.go-seat,
+.go-tables {
+  border: 2px solid var(--line);
+  border-radius: 20px;
+  background: var(--card);
+}
+.go-seat {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px;
+}
+.go-seat-who {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.go-seat-who > span:last-child {
+  min-width: 0;
+}
+.go-seat-who .avatar {
+  width: 56px;
+  height: 56px;
+  font-size: 24px;
+}
+.go-seat-who b,
+.go-table-text b,
+.go-seat-who small,
+.go-table-text small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.go-seat-who b {
+  font-size: 20px;
+  font-weight: 900;
+  line-height: 1.2;
+}
+.go-seat-who small,
+.go-table-text small {
+  font-size: 13px;
+  line-height: 1.3;
+  color: var(--muted);
+}
+.go-seat > p,
+.go-tables-note p {
+  font-size: 15px;
+  color: var(--muted);
+}
+.go-seat .go-seat-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.085em;
+  text-transform: uppercase;
+}
+.go-seat-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+.go-seat-stats div {
+  min-height: 66px;
+  display: flex;
+  flex-direction: column-reverse;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--line);
+  border-radius: 14px;
+}
+.go-seat-stats dd {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 900;
+  line-height: 1.25;
+}
+.go-seat-stats dd.word {
+  font-size: 16px;
+}
+.go-seat-stats dt {
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.go-tables {
+  overflow: hidden;
+}
+.go-tables-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 54px;
+  padding: 10px 16px;
+  background: var(--soft);
+}
+.go-tables h2 {
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.085em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.go-tables li,
+.go-tables-foot,
+.go-tables-note,
+.go-tables-wait span {
+  border-top: 2px solid var(--line);
+}
+.go-tables li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px 14px 16px;
+}
+/* The list says who hosts a table, not which colour they play in. */
+.go-tables .avatar.plain {
+  background: var(--soft);
+  color: var(--muted);
+  box-shadow: inset 0 -4px 0 var(--line);
+}
+.go-table-text {
+  flex: 1;
+  min-width: 0;
+}
+.go-table-text b {
+  font-size: 16px;
+  font-weight: 800;
+  line-height: 1.3;
+}
+.go-tables-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0 12px;
+  min-height: 52px;
+  padding-inline: 16px;
+}
+.go-tables-note {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 18px 16px;
+}
+#gameon .go-tables-note .alert {
+  color: var(--red-ink);
+}
+/* Two rows that are not there yet: an avatar and two lines each. */
+.go-tables-wait span {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+}
+.go-tables-wait span::before {
+  content: '';
+  flex: none;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: var(--soft);
+}
+.go-tables-wait span::after {
+  content: '';
+  width: 140px;
+  height: 34px;
+  background:
+    linear-gradient(var(--soft), var(--soft)) top left / 100% 12px no-repeat,
+    linear-gradient(var(--soft), var(--soft)) bottom left / 68% 12px no-repeat;
+}
+.go-soon-block {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-top: 8px;
+}
+.go-soon-block h2 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 22px;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+}
+
+/* ---------- signing up and in ---------- */
+.go-account {
+  padding-block: 24px;
+}
+.go-account form {
+  width: 100%;
+  max-width: 440px;
+  margin-inline: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.go-form-head {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.go-account h1 {
+  font-size: 28px;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+}
+.go-form-head p {
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+.go-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.go-field label {
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+/* The field that has the keyboard is the one with the blue edge. */
+#gameon .go-field input {
+  width: 100%;
+  min-height: 48px;
+  padding: 10px 12px;
+  border: 2px solid var(--line);
+  border-radius: 12px;
+  outline: none;
+  background: var(--soft);
+  font: inherit;
+  font-weight: 800;
+  color: var(--fg);
+}
+#gameon .go-field input:focus {
+  border-color: var(--blue);
+  background: var(--bg);
+}
+#gameon .go-field input[aria-invalid='true'] {
+  border-color: var(--red);
+  background: var(--bg);
+}
+.go-field p,
+.go-form-note,
+.go-keep p,
+.go-send p {
+  font-size: 14px;
+  color: var(--muted);
+}
+#gameon .go-field .alert,
+#gameon .go-send .alert {
+  color: var(--red-ink);
+}
+.go-keep {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px;
+  border-radius: 16px;
+  background: var(--gold-bg);
+}
+.go-keep b {
+  font-weight: 900;
+}
+.go-send {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 2px;
+}
+.go-send p {
+  text-align: center;
+}
+.go-guest {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0 6px;
+  min-height: 44px;
+  font-size: 15px;
+  color: var(--muted);
+}
+#gameon .go-guest .go-text-link {
+  font-size: 15px;
+}
+.go-brand {
+  --fan-w: 110px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 56px;
+  min-height: 736px;
+  padding: 44px;
+  border: 2px solid var(--line);
+  border-radius: 28px;
+  background: var(--felt);
+}
+.go-brand .go-fan {
+  --fan-w: 110px;
+}
+.go-brand-text {
+  width: 100%;
+  max-width: 520px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 14px;
+}
+.go-brand h2 {
+  font-size: 24px;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+}
+.go-brand h2.big {
+  font-size: 32px;
+  line-height: 1.15;
+  letter-spacing: -0.012em;
+}
+.go-brand-text > p {
+  font-size: 17px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+.go-benefits {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding-top: 6px;
+}
+.go-benefits li {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.go-benefits b {
+  display: block;
+  font-size: 17px;
+  font-weight: 900;
+  line-height: 1.25;
+}
+.go-benefits p {
+  font-size: 15px;
+  color: var(--muted);
+}
+
+/* ---------- a wide window ---------- */
+@media (min-width: 1000px) {
+  .go-in {
+    padding-inline: 32px;
+  }
+  .go-eyebrow {
+    font-size: 13px;
+  }
+  .go-sub {
+    font-size: 17px;
+  }
+  #gameon .go-text-link {
+    font-size: 15px;
+  }
+  .go-nav .go-in {
+    min-height: 82px;
+    padding-block: 12px;
+  }
+  .go-nav .go-btn {
+    min-height: 52px;
+    padding: 14px 30px;
+  }
+  .go-nav-right {
+    padding-bottom: 4px;
+  }
+  #gameon .go-chip {
+    min-height: 52px;
+    padding: 0 14px 0 6px;
+    border: 2px solid var(--line);
+    background: var(--bg);
+  }
+  .go-avatar {
+    width: 40px;
+    height: 40px;
+    font-size: 17px;
+  }
+
+  .go-hero {
+    padding-block: 72px 64px;
+  }
+  .go-hero .go-in {
+    display: grid;
+    grid-template-columns: minmax(0, 500px) minmax(0, 564px);
+    align-items: center;
+    justify-content: space-between;
+    gap: 56px;
+  }
+  .go-hero-copy {
+    gap: 28px;
+  }
+  .go-hero h1 {
+    font-size: clamp(52px, 5vw, 68px);
+  }
+  .go-lead {
+    font-size: 20px;
+  }
+  .go-actions .go-btn {
+    flex: none;
+  }
+
+  .go-ranked {
+    padding-bottom: 96px;
+  }
+  .go-ranked-panel {
+    gap: 36px;
+    padding: 44px 56px 36px;
+    border-radius: 28px;
+  }
+  .go-ranked-top {
+    display: grid;
+    grid-template-columns: minmax(0, 512px) minmax(0, 440px);
+    align-items: end;
+    justify-content: space-between;
+    gap: 18px 56px;
+  }
+  .go-ranked-copy {
+    gap: 18px;
+  }
+  .go-ranked-copy,
+  .go-ranked-actions,
+  .go-ranked-foot {
+    grid-column: 1;
+  }
+  .go-podium {
+    grid-column: 2;
+    grid-row: 1 / span 3;
+    gap: 12px;
+  }
+  .go-ranked h2,
+  .go-ways h2,
+  .go-shelf h2 {
+    font-size: 40px;
+    line-height: 1.15;
+    letter-spacing: -0.012em;
+  }
+  .go-ranked-text {
+    font-size: 17px;
+    line-height: 1.5;
+  }
+  .go-ranked-actions .go-btn {
+    flex: none;
+  }
+  .go-ranked-foot {
+    min-height: 0;
+  }
+  .go-podium li {
+    gap: 8px;
+  }
+  .go-crown {
+    font-size: 28px;
+  }
+  .go-podium .avatar {
+    width: 56px;
+    height: 56px;
+    font-size: 23px;
+  }
+  .go-podium .place-1 .avatar {
+    width: 68px;
+    height: 68px;
+    font-size: 28px;
+  }
+  .go-podium li > b {
+    font-size: 17px;
+  }
+  .go-step {
+    height: 96px;
+    border-radius: 16px;
+    box-shadow: 0 4px 0 var(--line);
+  }
+  .place-1 .go-step {
+    height: 128px;
+  }
+  .place-3 .go-step {
+    height: 76px;
+  }
+  .go-step b {
+    font-size: 30px;
+  }
+  .place-1 .go-step b {
+    font-size: 40px;
+  }
+
+  .go-ways {
+    padding-block: 96px;
+    border-top: 2px solid var(--line);
+  }
+  .go-ways h2 {
+    margin-block: 10px 48px;
+  }
+  .go-ways-list {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 48px;
+  }
+  .go-ways-list li {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+  .go-ways-list .go-key {
+    --k: 64px;
+  }
+  .go-ways-list li > span:last-child {
+    align-items: flex-start;
+    gap: 16px;
+  }
+  .go-ways-list b {
+    font-size: 24px;
+    line-height: 1.2;
+  }
+  .go-ways-list p {
+    font-size: 17px;
+    line-height: 1.5;
+  }
+
+  .go-shelf {
+    padding-block: 96px;
+    border-bottom: 0;
+  }
+  .go-shelf .go-in {
+    gap: 36px;
+  }
+  .go-shelf-head > div {
+    gap: 10px;
+  }
+  .go-soon-list {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 24px;
+  }
+  .go-soon {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 14px;
+    padding: 24px;
+    border-radius: 20px;
+  }
+  .go-soon .go-key {
+    --k: 56px;
+  }
+  .go-soon b {
+    font-size: 21px;
+  }
+
+  .go-foot .go-in {
+    display: flex;
+    justify-content: space-between;
+    padding-block: 36px;
+  }
+  .go-copy {
+    font-size: 14px;
+  }
+
+  .go-games {
+    padding-block: 44px 80px;
+  }
+  .go-games .go-in {
+    gap: 36px;
+  }
+  .go-page-head {
+    flex-direction: row;
+    align-items: flex-end;
+    justify-content: space-between;
+  }
+  .go-page-head > div:first-child {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .go-page-head .go-shelves {
+    flex: none;
+  }
+  .go-games h1 {
+    font-size: 44px;
+    letter-spacing: -0.014em;
+  }
+  .go-columns {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 340px;
+    align-items: start;
+    gap: 32px;
+  }
+  .go-main,
+  .go-rail {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    min-width: 0;
+  }
+  .go-jump {
+    display: flex;
+    gap: 16px;
+    padding: 20px;
+  }
+  .go-jump .go-key {
+    --k: 56px;
+  }
+  .go-jump-text {
+    flex: 1;
+  }
+  .go-jump-text b {
+    font-size: 19px;
+  }
+  .go-jump-text span {
+    font-size: 15px;
+  }
+  .go-jump .go-btn {
+    min-width: 170px;
+  }
+  .go-games .go-game {
+    border-radius: 24px;
+  }
+  .go-games .go-game-art {
+    min-height: 216px;
+  }
+  .go-games .go-fan {
+    --fan-w: 99px;
+  }
+  .go-games .go-game-info {
+    gap: 20px;
+    padding: 28px;
+  }
+  .go-games .go-game-title {
+    gap: 16px;
+  }
+  .go-games .go-game-title .go-key {
+    --k: 64px;
+  }
+  .go-games .go-game-name {
+    gap: 3px;
+  }
+  .go-games .go-game-name b {
+    font-size: 28px;
+    line-height: 1.1;
+  }
+  .go-games .go-game-info > p {
+    font-size: 17px;
+  }
+  .go-modes {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+  }
+  #gameon .go-mode {
+    flex-direction: column;
+    align-items: flex-start;
+    min-height: 115px;
+    padding: 14px;
+  }
+  .go-mode .go-key {
+    --k: 40px;
+  }
+  .go-mode b {
+    font-size: 16px;
+    line-height: 1.25;
+  }
+  .go-games .go-actions .go-btn {
+    min-width: 200px;
+  }
+  .go-tables-head,
+  .go-tables-foot,
+  .go-tables-note {
+    padding-inline: 20px;
+  }
+  .go-tables li {
+    padding-left: 20px;
+  }
+  .go-soon-block {
+    padding-top: 12px;
+  }
+  .go-soon-block h2 {
+    font-size: 24px;
+  }
+  .go-games .go-soon-list {
+    gap: 16px;
+  }
+  .go-games .go-soon {
+    gap: 12px;
+    padding: 18px;
+    border-radius: 18px;
+  }
+  .go-games .go-soon .go-key {
+    --k: 48px;
+  }
+  .go-games .go-soon b {
+    font-size: 18px;
+  }
+
+  .go-account {
+    padding-block: 40px;
+  }
+  .go-account .go-in {
+    display: grid;
+    grid-template-columns: minmax(0, 440px) minmax(0, 608px);
+    align-items: center;
+    justify-content: space-between;
+    gap: 72px;
+  }
+  .go-account form {
+    gap: 20px;
+    margin-inline: 0;
+  }
+  .go-form-head {
+    gap: 6px;
+  }
+  .go-account h1 {
+    font-size: 36px;
+    letter-spacing: -0.011em;
+  }
+  .go-form-head p {
+    font-size: 17px;
+  }
+  .go-keep {
+    padding: 16px;
+  }
+}
+
+/* ---------- room to spare ---------- */
+@media (min-width: 1200px) {
+  .go-hero .go-actions .go-btn,
+  .go-ranked-actions .go-btn {
+    padding-inline: 28px;
+  }
+}
