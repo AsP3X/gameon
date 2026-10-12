@@ -45,9 +45,9 @@ is told when the address changed by itself.
 | `/ladder`, `/profile`, `/sign-up`, `/sign-in` | As named |
 | `/players/{id}` | Another player. `{id}` must be a user id as the server makes them |
 
-Four of these are not in 074: `/skull-king/online/new`, `/skull-king/online/join`,
-`/skull-king/online/public/new`, and the three you added in 075. The first three are the existing
-form pages. Without an address, Back from them left the online screens. W4 may rename them.
+Three of these are in neither 074 nor 075: `/skull-king/online/new`, `/skull-king/online/join`
+and `/skull-king/online/public/new`. They are the existing form pages. Without an address, Back
+from them left the online screens. W4 may rename them. The three you added in 075 are in.
 
 `/`, `/games` and `/skull-king/ranked` have no page yet. `/` and `/games` are replaced by
 `/skull-king`, and `/skull-king/ranked` by `/skull-king/online`. Any other path is replaced by
