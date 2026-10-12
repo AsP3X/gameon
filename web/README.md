@@ -181,8 +181,9 @@ them with the place of each one's loop (`TUNES`), fetches them at startup and ha
 came to the mixer together (`Sound.tunes()`). The renderer asks for the music with `Sound.music()`
 on every redraw (`tuneMenu` in `tableview/render.ts`): it plays while the home screen is what the
 player looks at, and stops under a setup screen, a table, the online screens (`coverTavern`, called
-by `App.tsx`) and a tab in the background. It starts with the first tap or key, because a browser
-plays nothing before that. "Sound effects" off silences it; the volume slider moves it with
+by `App.tsx`) and a tab in the background. It starts on the first gesture the browser accepts, because a browser plays
+nothing before that. On iOS that is the end of a tap or a click, not the pointer
+going down, so the page keeps trying until the audio context is running. "Sound effects" off silences it; the volume slider moves it with
 everything else. The synthesiser has no recipe for it: a tune that cannot be fetched or decoded is
 left out, and with none the menu is quiet. `sound.test.ts`, `music.test.ts`, `tavern.test.ts` and
 `OnlineScreens.test.tsx` cover it.

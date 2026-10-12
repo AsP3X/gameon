@@ -634,6 +634,9 @@ function syncMusic(): void {
   // Without an audio graph nothing plays: it is built on the first tap, and unlock() comes back here.
   const r = rig;
   if (!r) return;
+  // A source started while the context is suspended is thrown away, and iOS does
+  // not play it when the context later runs. Wait until it is running.
+  if (next && r.ctx.state !== 'running') return;
   const t = r.ctx.currentTime;
   if (next && tune) {
     const s = r.ctx.createBufferSource(),
@@ -708,12 +711,28 @@ export const Sound = {
     musicWanted = false;
     syncMusic();
   },
-  /** Audio may only start after a user gesture; this unlocks it on the first tap. */
-  unlock(): void {
+  /**
+   * Audio may only start after a user gesture. Call this from one.
+   * True when the graph is running, or this browser has no Web Audio.
+   * False while the context is still suspended: the caller must try again
+   * on the next gesture. iOS ignores the pointer going down, so one try is
+   * not enough.
+   */
+  unlock(): boolean {
     const r = boot();
-    if (r && r.ctx.state === 'suspended') void r.ctx.resume();
-    if (prefs.ambience && !prefs.muted) ambience(true);
+    if (!r) return true;
+    if (r.ctx.state === 'suspended') {
+      // No await before resume: it has to be called in the gesture itself.
+      // Sources started before it finishes are discarded, so start them after.
+      void r.ctx.resume().then(() => {
+        if (prefs.ambience && !prefs.muted) ambience(true);
+        syncMusic();
+      });
+    } else if (prefs.ambience && !prefs.muted) {
+      ambience(true);
+    }
     syncMusic();
+    return r.ctx.state === 'running';
   },
   /**
    * Give a sound recorded takes to play in place of its recipe: encoded audio files, as fetched.

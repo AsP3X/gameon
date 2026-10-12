@@ -334,11 +334,22 @@ export function listen(): () => void {
   window.addEventListener('pointermove', onSwipeMove, { signal });
   window.addEventListener('pointerup', (e) => endSwipe(e, false), { signal });
   window.addEventListener('pointercancel', (e) => endSwipe(e, true), { signal });
-  window.addEventListener('pointerdown', () => Sound.unlock(), { once: true, capture: true, signal });
-  // A finger going down does not unlock audio everywhere; lifting it does, and so does a key. The
-  // menu music has no button press to wait for, so it starts on whichever comes first.
-  window.addEventListener('pointerup', () => Sound.unlock(), { once: true, capture: true, signal });
-  window.addEventListener('keydown', () => Sound.unlock(), { once: true, capture: true, signal });
+  // iOS does not count a pointer event as a gesture for audio. A tap's end and a
+  // click do. Keep listening until the context is actually running: the first
+  // event is often the one iOS ignores.
+  const unlockAudio = (): void => {
+    if (!Sound.unlock()) return;
+    window.removeEventListener('pointerdown', unlockAudio, true);
+    window.removeEventListener('pointerup', unlockAudio, true);
+    window.removeEventListener('touchend', unlockAudio, true);
+    window.removeEventListener('click', unlockAudio, true);
+    window.removeEventListener('keydown', unlockAudio, true);
+  };
+  window.addEventListener('pointerdown', unlockAudio, { capture: true, signal });
+  window.addEventListener('pointerup', unlockAudio, { capture: true, signal });
+  window.addEventListener('touchend', unlockAudio, { capture: true, signal });
+  window.addEventListener('click', unlockAudio, { capture: true, signal });
+  window.addEventListener('keydown', unlockAudio, { capture: true, signal });
   document.addEventListener('visibilitychange', tuneMenu, { signal });
   document.addEventListener('input', onVolumeInput, { signal });
   document.addEventListener('change', onVolumeChange, { signal });

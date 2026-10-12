@@ -300,6 +300,33 @@ describe('menu music', () => {
   const sentTo = (tune: FakeNode | undefined): number | null | undefined =>
     tune && made[made.indexOf(tune) + 1]?.gain.target;
 
+  it('does not start the tune while the context is suspended, and does on the next try', async () => {
+    const held: { resume: (() => void) | null } = { resume: null };
+    class Held extends FakeAudioContext {
+      override state = 'suspended';
+      resume = (): Promise<void> =>
+        new Promise((done) => {
+          held.resume = () => {
+            this.state = 'running';
+            done();
+          };
+        });
+    }
+    vi.stubGlobal('AudioContext', Held);
+    const Sound = await mixer();
+    Sound.tunes([{ file: file(), loop: LOOP }]);
+    Sound.music(true);
+    await settle();
+    expect(Sound.unlock()).toBe(false);
+    expect(tunes()).toEqual([]);
+    const resume = held.resume;
+    if (!resume) throw new Error('the context was not asked to resume');
+    resume();
+    await settle();
+    expect(tunes()).toHaveLength(1);
+    expect(Sound.unlock()).toBe(true);
+  });
+
   it('waits for the first tap, then plays the tune round its loop, fading in', async () => {
     const Sound = await mixer();
     Sound.tunes([{ file: file(), loop: LOOP }]);
