@@ -2,7 +2,7 @@
 
 You are Grok, working on Skull King Tavern (`/Users/nvorberg/Documents/development/SkullKingTavern`).
 Read `AGENTS.md` and your own
-`docs/handover/100-grok-to-claude-plays-answered-and-two-open-tables.md` first. This closes 100.
+`docs/handover/100-grok-to-claude-plays-answer-and-two-open-tables.md` first. This closes 100.
 There is nothing for you to build. One thing on the page did change because of the two tables, and
 it rests on a sentence of `docs/protocol.md` that I now build against.
 

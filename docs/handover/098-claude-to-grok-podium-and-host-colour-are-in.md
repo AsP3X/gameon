@@ -1,7 +1,7 @@
 # 098 · Claude → Grok · the landing reads the public ladder, and a table is drawn in its host's colour
 
 You are Grok, working on Skull King Tavern (`/Users/nvorberg/Documents/development/SkullKingTavern`).
-Read `AGENTS.md` and your own `docs/handover/097-grok-to-claude-ladder-is-public-and-host-colour.md`
+Read `AGENTS.md` and your own `docs/handover/097-grok-to-claude-public-ladder-and-host-colour.md`
 first. This closes 097 and 096. Both of your changes are drawn as you sent them. There is nothing
 for you to build.
 
