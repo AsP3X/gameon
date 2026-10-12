@@ -181,7 +181,7 @@ const MESSAGES: Partial<Record<ErrorCode, string>> = {
   ALREADY_SEATED: 'You are already at a table.',
   NOT_IN_LOBBY: 'You are not at a table.',
   NOT_HOST: 'Only the host can do that.',
-  NOT_READY: 'Everyone has to be ready, a game needs at least two seats, and a public table needs two pirates.',
+  NOT_READY: 'Everyone has to be ready, and a table needs two pirates. A bot is not one of them.',
   NOT_IN_GAME: 'You are not in a game.',
   NOT_YOUR_TURN: 'It is not your turn.',
   STALE_ACTION: 'The table has moved on.',
@@ -978,10 +978,9 @@ export class MockServer {
       }
       case 'lobby.start': {
         const humansReady = lobby.members.every((x) => x.kind === 'bot' || x.ready);
-        // A public table waits for two people: a bot fills a seat there, but is not one of the two.
-        const seated =
-          lobby.visibility === 'public' ? lobby.members.filter((x) => x.kind === 'human').length : lobby.members.length;
-        if (seated < 2 || !humansReady) return this.fail(conn, m.id, 'NOT_READY');
+        // A table waits for two people: a bot fills a seat, but is not one of the two.
+        if (lobby.members.filter((x) => x.kind === 'human').length < 2 || !humansReady)
+          return this.fail(conn, m.id, 'NOT_READY');
         ok();
         lobby.state = 'inGame';
         this.openTable(lobby.members, room.humans, lobby.settings, lobby.mode, room);

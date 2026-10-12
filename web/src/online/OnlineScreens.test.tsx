@@ -161,7 +161,7 @@ describe('playing online', () => {
     expect(wanted()).toBe(true);
   });
 
-  it('creates a private table, adds a bot, readies, starts and bids once at the table', async () => {
+  it('creates a private table, waits for a second pirate, starts with a bot in the third seat and bids', async () => {
     await renderApp();
     await createTable();
 
@@ -175,19 +175,33 @@ describe('playing online', () => {
       'Up to 3 pirates · Normal bots · Standard pace · No extra cards',
     );
     expect($('#online [aria-label="Rules"] b')?.textContent).toBe("Skull King's scoring · Swift-n-Salty");
-    expect($('#online .foot-hint')?.textContent).toBe('A game needs two pirates. Add a bot or share the code.');
+    const waiting = 'The table can start once a second pirate sits down. Share the code.';
+    expect($('#online .foot-hint')?.textContent).toBe(waiting);
     expect(button('Start game').disabled).toBe(true);
 
+    // A bot takes a seat, but it is not the second pirate: ready or not, the host cannot start.
     await press('Add a bot');
     expect(texts('#online .member small')).toEqual(['Host · you', 'Bot · Normal']);
     expect($('#online [aria-label="Crew"] .label')?.textContent).toBe('Crew · 2 of 3');
-    expect($('#online .foot-hint')?.textContent).toBe('Say you are ready, then start the game.');
+    expect($('#online .foot-hint')?.textContent).toBe(waiting);
     expect(button('Start game').disabled).toBe(true);
-
     await press("I'm ready");
     expect(texts('#online .member .pill')).toEqual(['Ready']);
-    expect($('#online .foot-hint')?.textContent).toBe('Everyone is ready. Start when you like.');
     expect(button('Not ready')).toBeDefined();
+    expect($('#online .foot-hint')?.textContent).toBe(waiting);
+    expect(button('Start game').disabled).toBe(true);
+
+    // Somebody sits down: the table waits for them to be ready, and then the host may start.
+    const friend = await connectRaw(server.transport());
+    await settle();
+    friend.send({ t: 'lobby.join', code: $('#online .code')?.textContent ?? '' });
+    await settle();
+    expect(texts('#online .member small')).toEqual(['Host · you', 'Bot · Normal', 'Guest']);
+    expect($('#online .foot-hint')?.textContent).toMatch(/^Waiting for Guest \d{4} to be ready\.$/);
+    expect(button('Start game').disabled).toBe(true);
+    friend.send({ t: 'lobby.ready', ready: true });
+    await settle();
+    expect($('#online .foot-hint')?.textContent).toBe('Everyone is ready. Start when you like.');
 
     await press('Start game');
     // The game is played at the renderer's table: the online screens step aside.
@@ -196,16 +210,19 @@ describe('playing online', () => {
     expect(ui.screen).toBe('game');
     expect(session.table?.localSeats).toEqual([0]);
     expect(document.querySelectorAll('#app .hand .hslot')).toHaveLength(5);
-    expect(texts('#app .seat .sname')).toEqual(['Anne']);
+    expect(texts('#app .seat .sname').map((n) => n.replace(/\d/g, '#'))).toEqual(['Anne', 'Guest ####']);
     expect($('#app .bidsheet')).not.toBeNull();
-    // The bid is on the server's clock: a ring around this seat, none around the bot, who has none.
+    // The bid is on the server's clock: a ring around each person, none around the bot, who has none.
     expect($('#app .mebar .ring')?.getAttribute('style')).toContain('--left:3000ms');
-    expect($('#app .seat .ring')).toBeNull();
+    expect(document.querySelectorAll('#app .seat .ring')).toHaveLength(1);
 
     $('#bid')?.dispatchEvent(new KeyboardEvent('keydown', { key: '2', bubbles: true, cancelable: true }));
     await click('[data-act="bid"]');
     expect(tableView().bids[0]).toBe(2);
     expect(ui.waiting).toBe(false);
+    expect($('#app .mebar .ring')).toBeNull();
+    friend.send({ t: 'game.bid', at: { round: 0, trick: 0 }, bid: 0 });
+    await settle();
     expect($('#app .ring')).toBeNull(); // nobody is waited for on a clock now
     // The bot bids on the server's clock, and the bids are turned over for everyone at once.
     await settle(1500);
@@ -591,15 +608,19 @@ describe('playing online', () => {
       await renderApp(server.transport('this-page'));
       await settle();
     }
-    /** A game of this page and one bot, with this seat's bid already in. */
+    /** A game of this page and a friend on a connection of their own, with both bids already in. */
     async function midHand(): Promise<void> {
       await renderApp(server.transport('this-page'));
       await createTable();
-      await press('Add a bot');
+      const friend = await connectRaw(server.transport('the-friend'));
+      await settle();
+      friend.send({ t: 'lobby.join', code: $('#online .code')?.textContent ?? '' });
+      friend.send({ t: 'lobby.ready', ready: true });
       await press("I'm ready");
       await press('Start game');
       $('#bid')?.dispatchEvent(new KeyboardEvent('keydown', { key: '2', bubbles: true, cancelable: true }));
       await click('[data-act="bid"]');
+      friend.send({ t: 'game.bid', at: { round: 0, trick: 0 }, bid: 0 });
       await settle(1500);
       expect(tableView().phase).toBe('playing');
     }
@@ -617,8 +638,8 @@ describe('playing online', () => {
       const after = tableView();
       expect({ hand: after.hand, bids: after.bids, trick: after.trick, round: after.round }).toEqual(sent);
       expect(document.querySelectorAll('#app .hand .hslot')).toHaveLength(after.hand.length);
-      // The seat is online again, and the table goes on from here.
-      expect(after.online?.status).toEqual(['online', 'bot']);
+      // The seat is online again, the friend's page is still gone, and the table goes on from here.
+      expect(after.online?.status).toEqual(['online', 'offline']);
       expect($('.table-overlay')).toBeNull();
       await settle(2000);
       const later = tableView();

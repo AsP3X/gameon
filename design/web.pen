@@ -164065,6 +164065,146 @@
         },
         {
           "type": "frame",
+          "id": "T7e0t",
+          "name": "State · Table (public) · waiting for a second pirate",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 8,
+          "children": [
+            {
+              "type": "text",
+              "id": "B4xKn",
+              "name": "TABLE (PUBLIC) · ONE PIRATE AND A BOT",
+              "fill": "$faint",
+              "content": "TABLE (PUBLIC) · ONE PIRATE AND A BOT",
+              "lineHeight": 1.4,
+              "fontFamily": "$f-ui",
+              "fontSize": 11,
+              "fontWeight": "800",
+              "letterSpacing": 0.88
+            },
+            {
+              "type": "text",
+              "id": "PUFvF",
+              "name": "Hint",
+              "fill": "$muted",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "A public table can start once a second pirate sits down.",
+              "lineHeight": 1.4,
+              "textAlign": "center",
+              "fontFamily": "$f-ui",
+              "fontSize": 14,
+              "fontWeight": "700"
+            },
+            {
+              "type": "frame",
+              "id": "LIue9",
+              "name": "Buttons",
+              "width": "fill_container",
+              "gap": 12,
+              "alignItems": "center",
+              "children": [
+                {
+                  "id": "P31wU",
+                  "type": "ref",
+                  "ref": "h9ic3",
+                  "name": "Not ready",
+                  "width": "fill_container",
+                  "descendants": {
+                    "s5ytI": {
+                      "content": "NOT READY"
+                    }
+                  }
+                },
+                {
+                  "id": "ILCrQ",
+                  "type": "ref",
+                  "ref": "ELQqO",
+                  "name": "Start game",
+                  "width": "fill_container",
+                  "descendants": {
+                    "iZ2T9": {
+                      "content": "START GAME"
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "IwLBD",
+          "name": "State · Table (private) · waiting for a second pirate",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 8,
+          "children": [
+            {
+              "type": "text",
+              "id": "rpNoy",
+              "name": "TABLE (PRIVATE) · ONE PIRATE AND A BOT",
+              "fill": "$faint",
+              "content": "TABLE (PRIVATE) · ONE PIRATE AND A BOT",
+              "lineHeight": 1.4,
+              "fontFamily": "$f-ui",
+              "fontSize": 11,
+              "fontWeight": "800",
+              "letterSpacing": 0.88
+            },
+            {
+              "type": "text",
+              "id": "wL5sP",
+              "name": "Hint",
+              "fill": "$muted",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "The table can start once a second pirate sits down. Share the code.",
+              "lineHeight": 1.4,
+              "textAlign": "center",
+              "fontFamily": "$f-ui",
+              "fontSize": 14,
+              "fontWeight": "700"
+            },
+            {
+              "type": "frame",
+              "id": "ISWbB",
+              "name": "Buttons",
+              "width": "fill_container",
+              "gap": 12,
+              "alignItems": "center",
+              "children": [
+                {
+                  "id": "yVTHY",
+                  "type": "ref",
+                  "ref": "h9ic3",
+                  "name": "Not ready",
+                  "width": "fill_container",
+                  "descendants": {
+                    "s5ytI": {
+                      "content": "NOT READY"
+                    }
+                  }
+                },
+                {
+                  "id": "CmlmJ",
+                  "type": "ref",
+                  "ref": "ELQqO",
+                  "name": "Start game",
+                  "width": "fill_container",
+                  "descendants": {
+                    "iZ2T9": {
+                      "content": "START GAME"
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
           "id": "GhVip",
           "name": "State · Hub · quick play refused",
           "width": "fill_container",
@@ -164984,6 +165124,146 @@
               "fontFamily": "$f-ui",
               "fontSize": 14,
               "fontWeight": "700"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "O3ZRX",
+          "name": "State · Table (public) · waiting for a second pirate",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 8,
+          "children": [
+            {
+              "type": "text",
+              "id": "uE8PC",
+              "name": "TABLE (PUBLIC) · ONE PIRATE AND A BOT",
+              "fill": "$faint",
+              "content": "TABLE (PUBLIC) · ONE PIRATE AND A BOT",
+              "lineHeight": 1.4,
+              "fontFamily": "$f-ui",
+              "fontSize": 11,
+              "fontWeight": "800",
+              "letterSpacing": 0.88
+            },
+            {
+              "type": "text",
+              "id": "szc24",
+              "name": "Hint",
+              "fill": "$muted",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "A public table can start once a second pirate sits down.",
+              "lineHeight": 1.4,
+              "textAlign": "center",
+              "fontFamily": "$f-ui",
+              "fontSize": 14,
+              "fontWeight": "700"
+            },
+            {
+              "type": "frame",
+              "id": "Pwqag",
+              "name": "Buttons",
+              "width": "fill_container",
+              "gap": 12,
+              "alignItems": "center",
+              "children": [
+                {
+                  "id": "ZPDg7",
+                  "type": "ref",
+                  "ref": "h9ic3",
+                  "name": "Not ready",
+                  "width": "fill_container",
+                  "descendants": {
+                    "s5ytI": {
+                      "content": "NOT READY"
+                    }
+                  }
+                },
+                {
+                  "id": "E02TKN",
+                  "type": "ref",
+                  "ref": "ELQqO",
+                  "name": "Start game",
+                  "width": "fill_container",
+                  "descendants": {
+                    "iZ2T9": {
+                      "content": "START GAME"
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "R2H3Ld",
+          "name": "State · Table (private) · waiting for a second pirate",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 8,
+          "children": [
+            {
+              "type": "text",
+              "id": "UL6AK",
+              "name": "TABLE (PRIVATE) · ONE PIRATE AND A BOT",
+              "fill": "$faint",
+              "content": "TABLE (PRIVATE) · ONE PIRATE AND A BOT",
+              "lineHeight": 1.4,
+              "fontFamily": "$f-ui",
+              "fontSize": 11,
+              "fontWeight": "800",
+              "letterSpacing": 0.88
+            },
+            {
+              "type": "text",
+              "id": "R5gzv",
+              "name": "Hint",
+              "fill": "$muted",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "The table can start once a second pirate sits down. Share the code.",
+              "lineHeight": 1.4,
+              "textAlign": "center",
+              "fontFamily": "$f-ui",
+              "fontSize": 14,
+              "fontWeight": "700"
+            },
+            {
+              "type": "frame",
+              "id": "Kwj6W",
+              "name": "Buttons",
+              "width": "fill_container",
+              "gap": 12,
+              "alignItems": "center",
+              "children": [
+                {
+                  "id": "VmmbF",
+                  "type": "ref",
+                  "ref": "h9ic3",
+                  "name": "Not ready",
+                  "width": "fill_container",
+                  "descendants": {
+                    "s5ytI": {
+                      "content": "NOT READY"
+                    }
+                  }
+                },
+                {
+                  "id": "j0VRd",
+                  "type": "ref",
+                  "ref": "ELQqO",
+                  "name": "Start game",
+                  "width": "fill_container",
+                  "descendants": {
+                    "iZ2T9": {
+                      "content": "START GAME"
+                    }
+                  }
+                }
+              ]
             }
           ]
         },
@@ -394427,7 +394707,7 @@
                                   "children": [
                                     {
                                       "type": "frame",
-                                      "id": "U8Mc3",
+                                      "id": "ITkWd",
                                       "x": 1.180112345078669,
                                       "y": -0.827480623499099,
                                       "name": "Card",
@@ -401452,7 +401732,7 @@
                                                 },
                                                 {
                                                   "type": "path",
-                                                  "id": "PEObT",
+                                                  "id": "D1HMzl",
                                                   "x": 30.950397949218747,
                                                   "y": 26.188798828125,
                                                   "geometry": "M0 1.86l0-1.86m1.86 1.86l0-1.86m1.86 1.86l0-1.86",

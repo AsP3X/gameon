@@ -85,7 +85,9 @@ Node 22.18+, 24.11+ or 26+. Vite+ warns on other versions.
   server runs Weng-Lin the mock moves a rating by a fixed step per place, and it seats the first
   four in the ranked queue with no skill window. It has no emotes, no away detection and no bot
   takeover after the grace period, and every page has a mock of its own: two tabs cannot meet in
-  one lobby or one queue, so a ranked table never forms under `?mock`. Behind `?mock` it keeps its
+  one lobby or one queue, so a ranked table never forms under `?mock`, and a lobby never starts
+  there either: it needs two people, and a bot is not one of them. Casual quick play, which fills
+  the open seats with bots, is the way to a table under `?mock`. Behind `?mock` it keeps its
   state in sessionStorage and comes back with it after a reload, with every seat offline, as a
   server would find them.
 - The real backend (`src/net/transport.ts`) asks `POST /api/v1/auth/guest` for a session once,

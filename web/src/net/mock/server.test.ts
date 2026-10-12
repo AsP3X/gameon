@@ -173,6 +173,22 @@ describe('a server with a store', () => {
   const make = (store: ReturnType<typeof memory>, seed = 5): MockServer =>
     new MockServer({ random: seeded(seed), timers: { ...FAST, bidMs: 5000 }, bot: { minMs: 40, maxMs: 80 }, store });
 
+  /** A started private table: this page hosts, somebody else sat down, and a bot has the third seat. */
+  async function hosted(): Promise<RawClient> {
+    const page = await connect(server.transport('this-page'));
+    page.send({ t: 'lobby.create', visibility: 'private', settings: SETTINGS });
+    await flush();
+    const other = await connect();
+    other.send({ t: 'lobby.join', code: last(page, 'ok').lobby?.code });
+    other.send({ t: 'lobby.ready', ready: true });
+    page.send({ t: 'lobby.addBot' });
+    page.send({ t: 'lobby.ready', ready: true });
+    await flush();
+    page.send({ t: 'lobby.start' });
+    await flush();
+    return page;
+  }
+
   it('is the same player for the same session, and somebody else without one', async () => {
     server = make(memory());
     const first = await connect(server.transport('this-page')),
@@ -186,14 +202,8 @@ describe('a server with a store', () => {
   it('finds the table where it was after it is made anew: the seat offline, the hand and the clock as they were', async () => {
     const store = memory();
     server = make(store);
-    const page = await connect(server.transport('this-page'));
-    page.send({ t: 'lobby.create', visibility: 'private', settings: SETTINGS });
-    page.send({ t: 'lobby.addBot' });
-    page.send({ t: 'lobby.ready', ready: true });
-    await flush();
-    page.send({ t: 'lobby.start' });
-    await flush();
-    await until(() => view(page).bids[1] === -1, 'the bot bids');
+    const page = await hosted();
+    await until(() => view(page).bids[2] === -1, 'the bot bids');
     const before = last(page, 'game.update'),
       start = last(page, 'game.start');
     await flush();
@@ -213,18 +223,18 @@ describe('a server with a store', () => {
     const snapshot = welcome.game?.update;
     expect(snapshot?.view).toEqual(before.view);
     expect(snapshot?.events).toEqual([]);
-    // The reload was a drop: one step for the seat going offline, and the clock ran on.
-    expect(snapshot?.rev).toBe(before.rev + 1);
-    expect(snapshot?.table).toEqual({ ...before.table, status: ['offline', 'bot'] });
+    // The reload was a drop: one step for each seat going offline, and the clock ran on.
+    expect(snapshot?.rev).toBe(before.rev + 2);
+    expect(snapshot?.table).toEqual({ ...before.table, status: ['offline', 'offline', 'bot'] });
     // Coming back is a step again, written after the welcome.
     expect(back.frames.at(-1)).toMatchObject({
       t: 'game.update',
-      rev: before.rev + 2,
+      rev: before.rev + 3,
       events: [{ type: 'seatStatus', seat: 0, status: 'online' }],
-      table: { status: ['online', 'bot'] },
+      table: { status: ['online', 'offline', 'bot'] },
     });
 
-    // And the table goes on: a bid lands, and the bots play.
+    // And the table goes on: a bid lands, the bot bids, and the clock bids for the seat nobody came back to.
     const bid = back.send({ t: 'game.bid', at: at(back), bid: 1 });
     await until(() => view(back).phase !== 'bidding', 'the bids are in');
     expect(answer(back, bid).reply.t).toBe('ok');
@@ -234,13 +244,7 @@ describe('a server with a store', () => {
   it('plays for a seat whose deadline passed while nobody was there', async () => {
     const store = memory();
     server = make(store);
-    const page = await connect(server.transport('this-page'));
-    page.send({ t: 'lobby.create', visibility: 'private', settings: SETTINGS });
-    page.send({ t: 'lobby.addBot' });
-    page.send({ t: 'lobby.ready', ready: true });
-    await flush();
-    page.send({ t: 'lobby.start' });
-    await flush();
+    const page = await hosted();
     expect(view(page).bids[0]).toBeNull();
 
     server.shutDown();
@@ -339,32 +343,29 @@ describe('lobbies', () => {
     expect(await code(late, { t: 'lobby.join', code: table })).toBe('LOBBY_STARTED');
   });
 
-  it('starts a public table only with two people at it, and a private one with the host and a bot', async () => {
-    const host = await connect(),
-      guest = await connect(),
-      alone = await connect();
-    expect(await code(host, { t: 'lobby.create', visibility: 'public', settings: SETTINGS })).toBe('ok');
-    const table = last(host, 'ok').lobby?.code;
-    expect(await code(host, { t: 'lobby.addBot' })).toBe('ok');
-    expect(await code(host, { t: 'lobby.ready', ready: true })).toBe('ok');
-    // Two seats, and every human ready: the bot is not the second person a public table waits for.
-    const refused = host.send({ t: 'lobby.start' });
-    await flush();
-    expect(answer(host, refused).reply).toMatchObject({ t: 'err', code: 'NOT_READY' });
-    expect(lobbyOf(host)).toMatchObject({ state: 'open', gameId: null });
-    expect(framesOf(host, 'game.start')).toEqual([]);
+  it('starts a table only with two people at it, public or private: a bot is not the second', async () => {
+    for (const visibility of ['public', 'private'] as const) {
+      const host = await connect(),
+        guest = await connect();
+      expect(await code(host, { t: 'lobby.create', visibility, settings: SETTINGS })).toBe('ok');
+      const table = last(host, 'ok').lobby?.code;
+      expect(await code(host, { t: 'lobby.addBot' })).toBe('ok');
+      expect(await code(host, { t: 'lobby.ready', ready: true })).toBe('ok');
+      // Two seats, and every human ready: the bot is not the second person a table waits for.
+      const refused = host.send({ t: 'lobby.start' });
+      await flush();
+      expect(answer(host, refused).reply).toMatchObject({ t: 'err', code: 'NOT_READY' });
+      expect(lobbyOf(host)).toMatchObject({ visibility, state: 'open', gameId: null });
+      expect(framesOf(host, 'game.start')).toEqual([]);
 
-    expect(await code(guest, { t: 'lobby.join', code: table })).toBe('ok');
-    expect(await code(host, { t: 'lobby.start' })).toBe('NOT_READY'); // the second human is not ready
-    expect(await code(guest, { t: 'lobby.ready', ready: true })).toBe('ok');
-    expect(await code(host, { t: 'lobby.start' })).toBe('ok');
-    expect(lobbyOf(guest).state).toBe('inGame');
-
-    // A private table is as it was: two seats are enough, and one of them may be a bot.
-    expect(await code(alone, { t: 'lobby.create', visibility: 'private', settings: SETTINGS })).toBe('ok');
-    expect(await code(alone, { t: 'lobby.addBot' })).toBe('ok');
-    expect(await code(alone, { t: 'lobby.ready', ready: true })).toBe('ok');
-    expect(await code(alone, { t: 'lobby.start' })).toBe('ok');
+      expect(await code(guest, { t: 'lobby.join', code: table })).toBe('ok');
+      expect(await code(host, { t: 'lobby.start' })).toBe('NOT_READY'); // the second human is not ready
+      expect(await code(guest, { t: 'lobby.ready', ready: true })).toBe('ok');
+      // Two people and a bot: the table starts, and the bot has its seat.
+      expect(await code(host, { t: 'lobby.start' })).toBe('ok');
+      expect(lobbyOf(guest).state).toBe('inGame');
+      expect(last(guest, 'game.update').table.status).toEqual(['online', 'bot', 'online']);
+    }
   });
 
   it('makes the next human host when the host leaves, and tells a kicked player why', async () => {
@@ -633,6 +634,10 @@ describe('the table', () => {
     host.send({ t: 'lobby.create', visibility: 'private', settings: SETTINGS });
     host.send({ t: 'lobby.addBot' });
     host.send({ t: 'lobby.ready', ready: true });
+    await flush();
+    const other = await connect();
+    other.send({ t: 'lobby.join', code: lobbyOf(host).code });
+    other.send({ t: 'lobby.ready', ready: true });
     await flush();
     host.send({ t: 'lobby.start' });
     await flush();
