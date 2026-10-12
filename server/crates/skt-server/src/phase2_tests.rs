@@ -315,6 +315,62 @@ async fn a_casual_queue_starts_a_game_and_a_guest_cannot_play_ranked(pool: sqlx:
 }
 
 #[sqlx::test(migrations = "../../migrations/postgres")]
+async fn a_table_without_bots_refuses_add_bot_and_one_without_the_field_seats_one(
+    pool: sqlx::PgPool,
+) {
+    let state = AppState::for_tests(pool, Duration::ZERO, budgets());
+    let port = serve(state).await;
+    let settings = r#"{"maxPlayers":4,"scoring":"classic","format":"classic","loot":false,"kraken":false,"whale":false,"abilities":false,"botLevel":"normal","pace":"standard"}"#;
+    let (cookie, _) = guest(port).await;
+    let mut host = open_socket(port, &cookie).await;
+    greet(&mut host).await;
+    send(
+        &mut host,
+        &format!(
+            r#"{{"t":"lobby.create","id":2,"visibility":"public","settings":{settings},"allowBots":false}}"#
+        ),
+    )
+    .await;
+    let created = read_text(&mut host).await;
+    assert!(created.contains("\"allowBots\":false"), "{created}");
+    let (status, _, list) = http(port, "GET", "/api/v1/lobbies", &cookie, "").await;
+    assert_eq!(status, 200, "{list}");
+    assert!(list.contains("\"allowBots\":false"), "{list}");
+    send(&mut host, r#"{"t":"lobby.addBot","id":3}"#).await;
+    let refused = read_text(&mut host).await;
+    assert!(refused.contains("BOTS_DISABLED"), "{refused}");
+    assert!(
+        refused.contains("This table does not seat bots."),
+        "{refused}"
+    );
+    let mut again = open_socket(port, &cookie).await;
+    send(
+        &mut again,
+        r#"{"t":"hello","id":1,"protocol":1,"build":"test"}"#,
+    )
+    .await;
+    let _ = read_text(&mut again).await;
+    let welcome = read_text(&mut again).await;
+    assert!(welcome.contains("\"allowBots\":false"), "{welcome}");
+
+    let (open_cookie, _) = guest(port).await;
+    let mut open = open_socket(port, &open_cookie).await;
+    greet(&mut open).await;
+    send(
+        &mut open,
+        &format!(r#"{{"t":"lobby.create","id":2,"visibility":"private","settings":{settings}}}"#),
+    )
+    .await;
+    let plain = read_text(&mut open).await;
+    assert!(!plain.contains("allowBots"), "{plain}");
+    send(&mut open, r#"{"t":"lobby.addBot","id":3}"#).await;
+    let seated = read_text(&mut open).await;
+    assert!(seated.contains("\"kind\":\"bot\""), "{seated}");
+    let added = read_text(&mut open).await;
+    assert!(added.contains("\"t\":\"ok\""), "{added}");
+}
+
+#[sqlx::test(migrations = "../../migrations/postgres")]
 async fn two_missed_deadlines_mark_the_seat_away(pool: sqlx::PgPool) {
     let state = AppState::for_tests(pool, Duration::ZERO, budgets());
     let port = serve(state.clone()).await;

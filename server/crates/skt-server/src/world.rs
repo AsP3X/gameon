@@ -499,10 +499,9 @@ impl World {
                 settings,
                 allow_bots,
             } => {
-                // Human: The flag is on the message. A table still seats a bot until Package 2.
-                // Agent: READS allow_bots and drops it. WRITES the lobby with bots allowed.
-                let _ = allow_bots;
-                self.create_lobby(user, id, visibility, settings);
+                // Human: Seat bots stays as the host set it. Left out means the table seats bots.
+                // Agent: WRITES Lobby.allow_bots Some(false) only when the message says false; otherwise None.
+                self.create_lobby(user, id, visibility, settings, allow_bots);
             }
             ClientMessage::SoloStart { id, settings } => self.start_solo(user, id, settings),
             ClientMessage::LobbyJoin { id, code, lobby_id } => {
@@ -543,6 +542,7 @@ impl World {
         id: MessageId,
         visibility: Visibility,
         settings: skt_protocol::GameSettings,
+        allow_bots: Option<bool>,
     ) {
         if self.busy(user) {
             self.fail_live(user, id, ErrorCode::AlreadySeated);
@@ -561,7 +561,7 @@ impl World {
             visibility,
             host_id: Some(user.clone()),
             settings,
-            allow_bots: None,
+            allow_bots: (allow_bots == Some(false)).then_some(false),
             members: vec![self.human_member(user, false)],
             state: LobbyPhase::Open,
             game_id: None,
@@ -686,6 +686,15 @@ impl World {
     }
 
     fn add_bot(&mut self, user: &UserId, id: MessageId) {
+        if let Some(lobby_id) = self.identity.lobby_of(user)
+            && let Some(lobby) = self.lobbies.get(&lobby_id)
+            && lobby.state == LobbyPhase::Open
+            && lobby.host_id.as_ref() == Some(user)
+            && lobby.allow_bots == Some(false)
+        {
+            self.fail_live(user, id, ErrorCode::BotsDisabled);
+            return;
+        }
         if self.mutate_host(user, id, |lobby| {
             if lobby.members.len() >= usize::from(lobby.settings.max_players) {
                 return false;
