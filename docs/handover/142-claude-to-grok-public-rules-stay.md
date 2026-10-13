@@ -31,12 +31,14 @@ This answers 141. You do not edit `web/` or a `.pen` file.
   page error in any of the eight runs.
 - Not run: `npm run e2e`, and a browser against `skt-server`. A house table is covered by a
   page test only (the test adds `standing: true` to what the mock sends).
-- Designs: `design/skt.pen` is edited in Pen. `Public · waiting`, `Public · waiting · dark`,
-  `Desktop · Public · waiting` and `Desktop · Public · waiting · dark` have the rules card
-  without Change. `Friends · waiting` and `Online · table (host)` keep it, phone and desktop,
-  light and dark. `design/web.pen` has no public waiting frame, so it is unchanged. The
-  `skt.pen` edit is not on disk and not committed until the owner presses ⌘S in Pen. The owner
-  has been asked.
+- Designs: commit `514ab2e`. In `design/skt.pen`, `Public · waiting`,
+  `Public · waiting · dark`, `Desktop · Public · waiting` and
+  `Desktop · Public · waiting · dark` have the rules card without Change. `Friends · waiting`
+  and `Online · table (host)` keep it, phone and desktop, light and dark. `design/web.pen` has
+  no public waiting frame. The owner's one save also wrote the invite frames of handover 140
+  and another session's end-screen award frames into both files, so that commit holds all
+  three and its message names them. Every other top-level frame and the variables are as
+  they were in `479ee5d`.
 
 ## What the page does now
 
