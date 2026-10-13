@@ -1,23 +1,33 @@
-# 145 · Claude → Grok · the page and the mock resign as the server does
+# 146 · Claude → Grok · the page and the mock resign as the server does
 
 You are Grok, working on Skull King Tavern (`/Users/nvorberg/Documents/development/SkullKingTavern`).
-Read `AGENTS.md`, then `docs/handover/144-grok-to-claude-leave-is-a-resign.md`, then this file.
-You do not edit `web/` or `design/`.
+Read `AGENTS.md`, then `docs/handover/144-grok-to-claude-leave-is-a-resign.md` and your own
+`docs/handover/145-grok-to-claude-leave-answers.md`, then this file. You do not edit `web/` or
+`design/`.
 
 ## State
 
-- Branch `dev`, commit `a288974` (`TASK: Treat a leave as a resign in the mock and on the leave sheet.`),
-  on top of your `1af9a24` and `7be5fcd`. Not pushed.
-- The web gate from `web/`, on the tree of that commit:
+- Branch `dev`. Not pushed.
+  - `a288974` (`TASK: Treat a leave as a resign in the mock and on the leave sheet.`): the code.
+  - `34c3394` (`TASK: Save the leave-sheet designs for a resign and a cancelled game.`):
+    `design/web.pen` and `design/skt.pen`. Outside the leave frames and the seat states frame,
+    both files hash the same as before.
+- The web gate from `web/`, on the tree of `a288974`:
   - `npm run check`: all 156 files correctly formatted, no warnings, lint errors or type errors in 144 files.
   - `npm test` (`vp test run`): 52 files, 775 tests passed.
   - `npm run build`: built.
-- The leave sheet and the mock now match `1af9a24`. **No further server work is needed for this package.**
+- The leave sheet and the mock match `1af9a24`, and answers 1 and 2 of your handover 145.
+  **No further server work is needed for this package.**
 - Nothing in `server/`, `docs/protocol.md`, `web/src/protocol/generated/` or `fixtures/` changed.
   `protocol` stays 1.
-- Not on disk yet: the design. The new sheet copy and the last-person frames are in `design/web.pen`
-  and `design/skt.pen` inside the running Pen app. They are committed after the owner saves both
-  files. No code depends on that commit.
+- Your handover 145 (`eb46d23`) was committed while this package was being built from 144. The
+  owner had not passed it to me, so two of its tasks are **not done** and wait for the owner's word:
+  - Answer 3, the device entry: `web/src/net/online.ts` still keeps the `played` entry of a game
+    this leave cancelled, and of a solo game that was left. Nothing reads it afterwards.
+  - Answer 4, the Bot tag: `presenceTag` still has the branch for `bot` on a person's seat, and the
+    seat states frame still draws it. The server cannot trigger it.
+- This file was first committed as `145-claude-to-grok-leave-is-a-resign.md` in `a138abd`, as 144
+  asked. It is 146 now, because your note took 145.
 
 ## What the web half does now
 
@@ -49,9 +59,11 @@ You do not edit `web/` or `design/`.
    - Ranked, last person: "You are the only person left at this table, so the game ends here with
      no place and no rating change. The cooldown before your next ranked game still starts."
    - Solo is unchanged: "It will not be saved to your stats."
-3. **Presence.** `Out` is drawn for a resign and for a kick. No new status. The table comes down on
-   the one `game.update` that answers the leave, whether the game goes on or was cancelled. Solo
-   still ends on `ok` alone.
+3. **Presence.** `Out` is drawn for a resign and for a kick. No new status. The table comes down
+   on the one `game.update` that answers the leave, whether the game goes on or was cancelled.
+   Solo still ends on `ok` alone. The leaver of a table that is not ranked is sent `game.over`
+   with `forfeited: []` when the others finish, as your answer 1 says. A lobby whose last person
+   resigned is deleted with the game, as your answer 2 says.
 4. **Tests** added or changed in `web/src/net/mock/server.test.ts`, `accounts.test.ts`,
    `ranked.test.ts`, `web/src/table/remoteTable.test.ts`, `web/src/net/online.test.ts`,
    `web/src/tableview/online.test.ts`, `web/src/online/Ranked.test.tsx` and
@@ -59,16 +71,13 @@ You do not edit `web/` or `design/`.
 
 ## Your task
 
-Nothing has to be built. Two things to read and answer only if the server differs:
+Nothing has to be built. One thing to read:
 
-1. **`bot` on a person's seat.** From `world/table.rs` I see `SeatStatus::Bot` only on seats that
-   were bots at the deal. The page still draws a `Bot` tag on a seat that started as a person and
-   later has status `bot`. If the server never sends that, say so, and I remove the tag and its
-   design frame. If any path still sends it, name the path.
-2. **A stale sentence in `docs/protocol.md` §4**, in the `Me.cooldownUntil` paragraph: "A bot that
+1. **A stale sentence in `docs/protocol.md` §4**, in the `Me.cooldownUntil` paragraph: "A bot that
    takes a seat after the disconnect grace is not a forfeit and does not start a cooldown." §5.5
-   says no bot takes a seat after a drop. `Timers.disconnectGraceMs` is still in the config too.
-   Remove or reword the sentence if you agree. I did not edit the doc.
+   says no bot takes a seat after a drop, and your answer 4 says nothing turns a person's seat into
+   `bot`. `Timers.disconnectGraceMs` is still in the config too. Remove or reword the sentence if
+   you agree. I did not edit the doc.
 
 If the server does anything other than what "What the web half does now" lists, that is a
 difference to report.
@@ -83,14 +92,14 @@ difference to report.
 
 ## Done when
 
-- You have checked points 1 and 2 against the server. No command has to pass for that.
+- You have read point 1. No command has to pass for that.
 - If you change `docs/protocol.md` or the server: from `server/`, `cargo fmt --check`,
   `cargo clippy --all-targets -- -D warnings` and `cargo test --workspace` pass.
 
 ## Report back
 
 Only if you changed something or found a difference: write
-`docs/handover/146-grok-to-claude-<slug>.md` and print the same text in one code block. Name your
-commit and what the gate printed, answer point 1 with yes or no, and say what you did about point
-2. That handover must itself be a paste-ready prompt for Claude. If nothing differs and nothing
-changed, this package is closed and no return handover is needed.
+`docs/handover/147-grok-to-claude-<slug>.md` and print the same text in one code block. Name your
+commit and what the gate printed, and say what you did about point 1. That handover must itself be
+a paste-ready prompt for Claude. If nothing differs and nothing changed, this package is closed
+and no return handover is needed.
