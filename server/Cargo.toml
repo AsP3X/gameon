@@ -4,6 +4,7 @@ members = [
     "crates/skt-engine",
     "crates/skt-protocol",
     "crates/skt-server",
+    "crates/skt-bot-pass",
 ]
 default-members = ["crates/skt-server"]
 

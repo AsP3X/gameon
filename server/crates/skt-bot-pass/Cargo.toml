@@ -1,0 +1,19 @@
+[package]
+name = "skt-bot-pass"
+description = "Terminal pass of bot-versus-bot Skull King games"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+[[bin]]
+name = "bot-pass"
+path = "src/main.rs"
+
+[dependencies]
+crossterm = { version = "0.29", default-features = false }
+ctrlc = "3.5"
+skt-engine = { path = "../skt-engine" }
+thiserror.workspace = true
+
+[lints]
+workspace = true
