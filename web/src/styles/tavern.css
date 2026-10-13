@@ -2498,6 +2498,12 @@ tr:last-child td {
     -webkit-box-orient: vertical;
   }
 }
+/* The narrowest phones: room for the longest award's name on one line. */
+@media (max-width: 374px) {
+  .award {
+    padding-inline: 6px;
+  }
+}
 /* A third row of awards: on a phone its lines stay single until the screen is tall enough for two. */
 @media (min-height: 721px) and (max-height: 799px) and (max-width: 1023px) {
   .awards:has(.award:nth-child(5)) .award small {

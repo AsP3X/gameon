@@ -12,7 +12,7 @@ function round(cards: number, bids: number[], tricks: number[], extra: Partial<R
 /** A game of classic scoring between seats named after the letters given. */
 function game(names: string, log: RoundRecord[]): ScoreView {
   return {
-    seats: [...names].map((name) => ({ name, color: '#000', bot: false })),
+    seats: names.split('').map((name) => ({ name, color: '#000', bot: false })),
     log,
     cfg: { scoring: 'classic' },
     rounds: log.length,

@@ -10,6 +10,10 @@
    the legacy page's its old power table. What is compared here is the table, not the players, so
    the port is handed the legacy bots for the run (openPort) and both sides play the same game.
 
+   Nor do they hand out the same awards at the end: the port knows more than the legacy page's four
+   and shows up to six (src/tableview/awards.ts). The run keeps the port to the legacy four, so their
+   tiles and the time the finale takes to turn them over are still compared.
+
    The scenarios are in the test files next to this one, one file each so they run side by side. */
 import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
@@ -225,11 +229,20 @@ async function openLegacy(): Promise<Stage> {
   });
 }
 
+/** The awards of the legacy page, by title. */
+const LEGACY_AWARDS = ['Sharpshooter', 'Hot streak', 'Bounty hunter', 'Biggest haul'];
+
 async function openPort(): Promise<Stage> {
   // Fresh modules: the port keeps its state (and its audio graph) in them, as the legacy page kept it in a closure.
   vi.resetModules();
   // The same players on both sides: the port's table is run by the legacy bots.
   vi.doMock('../../game/bots', () => legacyBots);
+  // The same awards on both sides: of all the port's, the ones the legacy page hands out too.
+  vi.doMock('../awards', async () => {
+    const port = await vi.importActual<typeof import('../awards')>('../awards');
+    const awards: typeof port.awards = (v) => port.awards(v, Infinity).filter((a) => LEGACY_AWARDS.includes(a.t));
+    return { ...port, awards };
+  });
   const { mountTavern } = await import('../index');
   const { Sound } = await import('../../sound/sound');
   localStorage.clear();
