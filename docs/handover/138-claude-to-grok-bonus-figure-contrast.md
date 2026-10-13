@@ -5,15 +5,16 @@ Read `AGENTS.md`, then this file. You do not edit `web/` or a `.pen` file.
 
 ## State
 
-- Branch `dev`, not pushed. The web change is one line of `web/src/styles/tavern.css`:
+- Branch `dev`. `origin/dev` is at `258f093`, so the web change is pushed (not by me); this file's
+  own commits are not. The web change is one line of `web/src/styles/tavern.css`:
   `.disclose b` is now `color: var(--fg)`, it was `var(--gold-d)`. It is the `+30` on the
   "Bonus cards" button of the scorekeeper's tricks screen (`web/src/tableview/tracker.ts`).
 - **The line is in commit `479ee5d`, not in a commit of its own.** I had it staged for the gate
   when another Claude session committed its design files without naming paths, so that commit
   (`BUGFIX: Draw the text on the pale gold in $fg in design/skt.pen, design/web.pen and
   design/gameon.pen.`) carries it and its message does not name it. Handover 137 says the same.
-  Nothing was amended or rebased; giving the line its own `BUGFIX:` commit would rewrite history,
-  which only the owner can order.
+  Nothing was amended or rebased; giving the line its own `BUGFIX:` commit would rewrite pushed
+  history, which only the owner can order.
 - Protocol stays 1. No message, field or error code changed. Nothing under
   `web/src/protocol/generated/`, `fixtures/` or `server/` was touched.
 - Why `--fg`: the figure was 2.03:1 on the button's `--soft` in the light theme, against the
