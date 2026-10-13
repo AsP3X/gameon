@@ -23,6 +23,16 @@ export const ICON = {
   chest:
     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"><path d="M3 10a5 5 0 015-5h8a5 5 0 015 5v9H3z"/><path d="M3 11h18M10 11v3h4v-3"/></svg>',
   wave: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M2 10c2.5-3 5-3 7.5 0s5 3 7.5 0 3.5-2 5-1M2 16c2.5-3 5-3 7.5 0s5 3 7.5 0 3.5-2 5-1"/></svg>',
+  skull:
+    '<svg viewBox="0 0 24 24"><path fill="currentColor" fill-rule="evenodd" d="M12 2a8 8 0 00-8 8c0 2.6 1.2 4.7 3 6v3a1 1 0 001 1h8a1 1 0 001-1v-3c1.8-1.3 3-3.4 3-6a8 8 0 00-8-8zM6.9 10.5a2.1 2.1 0 104.2 0 2.1 2.1 0 10-4.2 0zm6 0a2.1 2.1 0 104.2 0 2.1 2.1 0 10-4.2 0zM12 13.6l-1.4 2.6h2.8z"/></svg>',
+  hook: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path fill="currentColor" stroke-width="1.6" d="M9.5 3h7l-1 4.5h-5z"/><path d="M13 8v6a4.5 4.5 0 01-9 0v-2.5"/></svg>',
+  flag: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 21V4h12l-3.5 4.5L18 13H6"/></svg>',
+  ghost:
+    '<svg viewBox="0 0 24 24"><path fill="currentColor" fill-rule="evenodd" d="M5 21V10a7 7 0 0114 0v11l-2.33-2-2.33 2L12 19l-2.34 2-2.33-2zM7.7 10.5a1.8 1.8 0 103.6 0 1.8 1.8 0 10-3.6 0zm5 0a1.8 1.8 0 103.6 0 1.8 1.8 0 10-3.6 0z"/></svg>',
+  stack:
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="7.5" width="11" height="13.5" rx="2"/><path d="M9 4.5a2 2 0 012-2h7.5a2 2 0 012 2v10a2 2 0 01-2 2H18"/></svg>',
+  anchor:
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="2.2"/><path d="M12 7.2V21M8 11.5h8M4 14a8 8 0 0016 0"/></svg>',
   flame:
     '<svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 2c1 4 6 6.5 6 12a6 6 0 01-12 0c0-3 1.5-5 3-6 0 2 1 3.5 2.5 4C11 9 10.5 5 12 2z"/><path fill="#ffc800" d="M12 13c.6 2 3 2.6 3 5a3 3 0 01-6 0c0-1.6 1-2.6 1.6-3 .2 1 .8 1.6 1.4 1.8-.4-1.4-.6-2.6 0-3.8z"/></svg>',
 };

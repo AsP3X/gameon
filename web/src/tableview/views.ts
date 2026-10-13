@@ -8,6 +8,7 @@ import { clamp, fill } from '../game/util';
 import type { AbilityUsed, Card, CardId, GameResult, RatingChange, Seat } from '../protocol/generated';
 import { avatar, cardBack, cardHTML, ICON, mascot } from './art';
 import type { FaceCard } from './art';
+import { awards } from './awards';
 import { pileSize } from './deal';
 import { esc, initial, sgn, toneOf, whole } from './dom';
 import { layout, tapWord } from './layout';
@@ -760,62 +761,6 @@ export function soundSheet(): string {
   </div></div>`;
 }
 /* --- end of game --- */
-interface Award {
-  c: string;
-  i: string;
-  t: string;
-  d: string;
-}
-interface SeatRecord {
-  hits: number;
-  bonus: number;
-  best: number;
-  long: number;
-  cur: number;
-}
-function awards(v: ScoreView): Award[] {
-  const n = v.seats.length,
-    stat: SeatRecord[] = v.seats.map(() => ({ hits: 0, bonus: 0, best: -Infinity, long: 0, cur: 0 }));
-  v.log
-    .filter((R) => R.done)
-    .forEach((R) => {
-      for (let i = 0; i < n; i++) {
-        const s = scored(v.cfg, R, i),
-          x = stat[i];
-        if (!s) continue;
-        if (s.hit) {
-          x.hits++;
-          x.cur++;
-          x.long = Math.max(x.long, x.cur);
-        } else x.cur = 0;
-        x.bonus += s.bonus;
-        x.best = Math.max(x.best, s.total);
-      }
-    });
-  const top = (f: (x: SeatRecord) => number, min = 0): { v: number; who: string } | null => {
-    const m = Math.max(...stat.map(f));
-    return m > min
-      ? {
-          v: m,
-          who: stat
-            .map((x, i) => (f(x) === m ? esc(v.seats[i].name) : null))
-            .filter(Boolean)
-            .join(' & '),
-        }
-      : null;
-  };
-  const A: Award[] = [];
-  let a: ReturnType<typeof top>;
-  if ((a = top((x) => x.hits)))
-    A.push({ c: 'var(--green)', i: ICON.target, t: 'Sharpshooter', d: `${a.who} · ${a.v} bids made` });
-  if ((a = top((x) => x.long, 1)))
-    A.push({ c: 'var(--orange)', i: ICON.wave, t: 'Hot streak', d: `${a.who} · ${a.v} in a row` });
-  if ((a = top((x) => x.bonus)))
-    A.push({ c: 'var(--gold-d)', i: ICON.chest, t: 'Bounty hunter', d: `${a.who} · ${a.v} bonus points` });
-  if ((a = top((x) => x.best)))
-    A.push({ c: 'var(--blue)', i: ICON.crown, t: 'Biggest haul', d: `${a.who} · ${sgn(a.v)} in one round` });
-  return A;
-}
 /** One seat on the end screen: its points, where it finished, and whether it gave the game up. */
 export interface Standing {
   i: Seat;
@@ -848,6 +793,15 @@ export function movesStandings(result: GameResult): boolean {
     told = standings(tot, result);
   return drawn.some((x, k) => x.i !== told[k].i || x.rank !== told[k].rank || x.forfeit !== told[k].forfeit);
 }
+/** The award tiles of the end screen, as many as there is room for. */
+export function awardTiles(v: ScoreView, room?: number): string {
+  return awards(v, room)
+    .map(
+      (a) =>
+        `<div class="award"><span class="badge" style="background:${a.c}">${a.i}</span><div class="grow" style="min-width:0"><b>${a.t}</b><small>${a.d}</small></div></div>`,
+    )
+    .join('');
+}
 /** One screen, no scrolling. Rendered in its pre-reveal state; playFinale() uncovers it step by step. */
 export function endView(): string {
   const v = scoreView(),
@@ -875,12 +829,7 @@ export function endView(): string {
       <span class="grow pname">${esc(p.name)}</span>${x.forfeit ? '<span class="pill soft">Forfeit</span>' : ''}<b class="num" data-final="${x.t}">${shown(x.t)}</b></li>`;
     })
     .join('');
-  const aw = awards(v)
-    .map(
-      (a) =>
-        `<div class="award"><span class="badge" style="background:${a.c}">${a.i}</span><div class="grow" style="min-width:0"><b>${a.t}</b><small>${a.d}</small></div></div>`,
-    )
-    .join('');
+  const aw = awardTiles(v);
   return `<div class="end ${done ? 'done' : ''}" data-act="skipFinale">
     <div class="end-top"><button class="icon-btn" data-act="home" aria-label="Home">${ICON.x}</button><span class="label">Final scores</span><button class="icon-btn" data-act="board" aria-label="Scoreboard">${ICON.table}</button></div>
     <div class="end-mid">

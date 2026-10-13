@@ -15,7 +15,7 @@ import { $, reduced } from './dom';
 import type { ActionFn } from './dom';
 import { layout } from './layout';
 import { banner, collectTrick, finale, finishFinale, playFinale } from './motion';
-import { armMenuMusic, follow, go, render } from './render';
+import { armMenuMusic, fitAwards, follow, go, render } from './render';
 import {
   BOT_NAMES,
   clearTimer,
@@ -294,6 +294,7 @@ export function showOnlineResult(): void {
   if (!result.rating || !line) return;
   line.innerHTML = ratingLine(result.rating);
   line.hidden = false;
+  fitAwards();
 }
 /** Take the online table off the screen. The home screen is what is left underneath. */
 export function closeOnlineTable(): void {

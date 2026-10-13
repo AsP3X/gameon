@@ -3,9 +3,9 @@
    jsdom has no matchMedia, no Web Audio and no vibration. The renderer already does without the
    last two; matchMedia is stubbed here, answering "reduce motion", so nothing waits on an animation. */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test';
-import { Bots, Engine } from '../game';
+import { Bots, Engine, Rules } from '../game';
 import type { GameState } from '../game';
-import type { Seat } from '../protocol/generated';
+import type { RoundRecord, Seat } from '../protocol/generated';
 import { DISPATCH_TIMEOUT_MS } from '../table/table';
 import type { DispatchResult, Table, TableListener } from '../table/table';
 import { Sound } from '../sound/sound';
@@ -721,5 +721,56 @@ describe('local seats', () => {
     expect(app.querySelector('.hand.myturn')).toBeNull();
     expect(app.querySelector('.status')?.textContent).toBe('Remy is thinking…');
     expect([...asked]).toEqual([0]);
+  });
+});
+
+describe('the awards on the end screen', () => {
+  /** A finished round for four seats. */
+  const round = (cards: number, bids: number[], tricks: number[], extra: Partial<RoundRecord> = {}): RoundRecord => ({
+    ...Rules.newRecord(4, cards),
+    bids,
+    tricks,
+    done: true,
+    ...extra,
+  });
+  /** A scoresheet that earned all ten: more than the screen shows. */
+  function showEnd(): void {
+    const log = [
+      round(3, [1, 0, 1, 1], [1, 0, 2, 0], { b14: [1, 0, 0, 0] }),
+      round(4, [1, 0, 0, 2], [1, 0, 3, 0], { sm: 0 }),
+      round(5, [3, 0, 1, 1], [3, 0, 2, 0], { ps: [2, 0, 0, 0] }),
+      round(6, [1, 1, 1, 5], [1, 1, 4, 0]),
+    ];
+    session.view = {
+      seats: ['Ada', 'Bo', 'Cy', 'Dee'].map((name) => ({ name, color: '#000', bot: false })),
+      log,
+      cfg: { scoring: 'classic' },
+      rounds: log.length,
+      me: 0,
+    };
+    ui.finaleDone = true;
+    go('end');
+  }
+  const titles = (): (string | null)[] => all('.award b').map((b) => b.textContent);
+
+  it('are six when the screen holds them', () => {
+    mount();
+    showEnd();
+    expect(titles()).toEqual([
+      'Sharpshooter',
+      'Hot streak',
+      'Bounty hunter',
+      'Biggest haul',
+      'Plunderer',
+      'Walk the plank',
+    ]);
+  });
+
+  it('are four on a screen that six would make scroll, and still one for every seat', () => {
+    mount();
+    vi.spyOn(Element.prototype, 'scrollHeight', 'get').mockReturnValue(700);
+    vi.spyOn(Element.prototype, 'clientHeight', 'get').mockReturnValue(640);
+    showEnd();
+    expect(titles()).toEqual(['Sharpshooter', 'Hot streak', 'Plunderer', 'Walk the plank']);
   });
 });

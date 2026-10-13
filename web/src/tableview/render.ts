@@ -2,13 +2,15 @@
    motion that connects the old picture to the new one.
    Ported from the legacy build (legacy/Skull King Tavern.html, section 13) without changing behavior. */
 import { Sound } from '../sound/sound';
+import { AWARDS_TIGHT } from './awards';
 import { endDeal, paintDeal, startDeal } from './deal';
-import { $ } from './dom';
+import { $, $$ } from './dom';
 import { animateBar, countUp, flip, snapshot } from './motion';
-import { clearTimer, patchUi, placeNow, stage, tableView, ui } from './state';
+import { clearTimer, patchUi, placeNow, scoreView, stage, tableView, ui } from './state';
 import type { Screen, Sheet } from './state';
 import { trackScreen, trkResultsSheet, trkSetupView, trkView } from './tracker';
 import {
+  awardTiles,
   boardSheet,
   curtainView,
   endView,
@@ -135,6 +137,19 @@ function keepFocus(app: HTMLElement, before: (() => HTMLElement | null) | null):
   back?.()?.focus({ preventScroll: true });
 }
 
+/**
+ * The end screen is one screen without scrolling. Six awards and everything else on it are more
+ * than a small phone holds: then it keeps four. Tiles the finale has turned over stay turned over.
+ */
+export function fitAwards(): void {
+  const end = $('.end'),
+    box = $('.awards');
+  if (!end || !box || end.scrollHeight <= end.clientHeight) return;
+  const turned = $('.award.in', box) != null;
+  box.innerHTML = awardTiles(scoreView(), AWARDS_TIGHT);
+  if (turned) $$('.award', box).forEach((tile) => tile.classList.add('in'));
+}
+
 export function render(): void {
   const app = stage.app;
   if (!app) return; // unmounted: a late timer or a finished animation has nothing to draw on
@@ -159,6 +174,7 @@ export function render(): void {
   const before = focused(app);
   app.innerHTML = html;
   keepFocus(app, before);
+  if (ui.screen === 'end') fitAwards();
   paintDeal();
   flip(snap);
   animateBar();
