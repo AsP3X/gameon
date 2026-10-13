@@ -85,6 +85,7 @@ import type { Backend, RestResponse } from '../api';
 import { PROTOCOL } from '../messages';
 import type { ServerMessage } from '../messages';
 import type { Transport, Wire } from '../socket';
+import { QUEUE_FILL_MS } from '../timing';
 
 const COLORS: TableColor[] = ['#1cb0f6', '#ff9600', '#ce82ff', '#ff4b4b', '#58cc02', '#e5a400', '#2b70c9', '#ff5fbf'];
 const BOT_NAMES = ['Anne', 'Calico', 'Morgan', 'Ching', 'Kidd', 'Grace', 'Bart', 'Rackham'];
@@ -229,7 +230,7 @@ export interface MockOptions {
   timers?: Partial<Timers>;
   /** How long a bot seat waits before it moves, so people can follow. */
   bot?: { minMs: number; maxMs: number };
-  /** How long the casual queue waits for a full table before bots take the open seats. The protocol names no time. */
+  /** How long the casual queue waits for a full table before bots take the open seats. §5.4 says 10000 ms. */
   queueFillMs?: number;
   /** Where the server keeps its state between two lives. Without one it forgets everything. */
   store?: MockStore;
@@ -374,6 +375,8 @@ export class MockServer {
   /** The two queues, each in the order its players joined. */
   private readonly queues: Record<QueueMode, Account[]> = { casual: [], ranked: [] };
   private queueTimer: Timer | null = null;
+  /** When that timer fires: `QueueStatus.fillsAt` for everyone waiting in the casual queue. */
+  private queueFillsAt: number | null = null;
   private ids = 0;
   private down = false;
   private saving = false;
@@ -384,7 +387,7 @@ export class MockServer {
     random = Math.random,
     timers = {},
     bot = { minMs: 800, maxMs: 1500 },
-    queueFillMs = 6000,
+    queueFillMs = QUEUE_FILL_MS,
     store,
   }: MockOptions = {}) {
     this.now = now;
@@ -458,8 +461,7 @@ export class MockServer {
   shutDown(): void {
     this.down = true;
     this.ended = true;
-    if (this.queueTimer != null) clearTimeout(this.queueTimer);
-    this.queueTimer = null;
+    this.fillNever();
     this.games.forEach((game) => this.disarm(game));
     this.conns.forEach((conn) => {
       conn.open = false;
@@ -910,20 +912,37 @@ export class MockServer {
     const queue = this.queues[mode];
     account.queued = { mode, since: this.now() };
     queue.push(account);
+    // Only the casual queue gives up waiting: a ranked table never starts with a bot. The wait runs
+    // from the moment the line stopped being empty, and a later joiner does not start it again.
+    if (mode === 'casual' && this.queueTimer == null) this.fillLater();
     this.write(conn, { t: 'ok', re: m.id, queue: this.queueStatus(account) });
     this.pushQueue(mode, account);
     if (queue.length >= STANDARD.maxPlayers) this.seatQueue(mode);
-    // Only the casual queue gives up waiting: a ranked table never starts with a bot.
-    else if (mode === 'casual') this.queueTimer ??= setTimeout(() => this.seatQueue('casual'), this.queueFillMs);
+  }
+
+  private fillLater(): void {
+    this.queueFillsAt = this.now() + this.queueFillMs;
+    this.queueTimer = setTimeout(() => this.seatQueue('casual'), this.queueFillMs);
+  }
+
+  private fillNever(): void {
+    if (this.queueTimer != null) clearTimeout(this.queueTimer);
+    this.queueTimer = null;
+    this.queueFillsAt = null;
   }
 
   private queueStatus(account: Account): QueueStatus {
-    const mode = account.queued?.mode ?? 'casual';
+    const mode = account.queued?.mode ?? 'casual',
+      found = this.queues[mode].length;
     return {
       mode,
       since: account.queued?.since ?? this.now(),
-      found: this.queues[mode].length,
+      found,
       needed: STANDARD.maxPlayers,
+      // Said to the casual queue while it waits. Four already waiting are a table, with nothing to wait for.
+      ...(mode === 'casual' && this.queueFillsAt != null && found < STANDARD.maxPlayers
+        ? { fillsAt: this.queueFillsAt }
+        : {}),
     };
   }
 
@@ -941,10 +960,7 @@ export class MockServer {
     account.queued = null;
     queue.splice(queue.indexOf(account), 1);
     this.pushQueue(mode);
-    if (mode === 'casual' && !queue.length && this.queueTimer != null) {
-      clearTimeout(this.queueTimer);
-      this.queueTimer = null;
-    }
+    if (mode === 'casual' && !queue.length) this.fillNever();
   }
 
   /**
@@ -954,10 +970,7 @@ export class MockServer {
    */
   private seatQueue(mode: QueueMode): void {
     const queue = this.queues[mode];
-    if (mode === 'casual') {
-      if (this.queueTimer != null) clearTimeout(this.queueTimer);
-      this.queueTimer = null;
-    }
+    if (mode === 'casual') this.fillNever();
     const humans = queue.splice(0, STANDARD.maxPlayers);
     if (!humans.length) return;
     humans.forEach((a) => {
@@ -967,8 +980,8 @@ export class MockServer {
     while (members.length < STANDARD.maxPlayers) members.push(this.botFor(members, STANDARD.botLevel));
     this.openTable(members, humans, STANDARD, mode, null);
     if (queue.length) {
+      if (mode === 'casual') this.fillLater();
       this.pushQueue(mode);
-      if (mode === 'casual') this.queueTimer = setTimeout(() => this.seatQueue('casual'), this.queueFillMs);
     }
   }
 

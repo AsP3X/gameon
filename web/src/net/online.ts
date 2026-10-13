@@ -87,9 +87,20 @@ export interface OnlineState {
   /** The quick-play queue the player waits in. */
   queue: QueueStatus | null;
   table: RemoteTable | null;
+  /**
+   * The quick-play queue that ended in `table`, when bots took seats there: the page shows them
+   * sitting down before it shows the table. null once that has been shown (`boarded()`).
+   */
+  boarding: Boarding | null;
   notice: Notice | null;
   /** What the server said about itself (`GET /config`): the quick-play rules are in it. null until it answered. */
   config: ServerConfig | null;
+}
+
+/** The last picture of a quick-play queue: what the server last said of it, and which seats of its table are bots. */
+export interface Boarding {
+  queue: QueueStatus;
+  bots: boolean[];
 }
 
 /** What a page leaves behind for the next one. Plain JSON. */
@@ -123,6 +134,7 @@ const EMPTY: OnlineState = {
   lobby: null,
   queue: null,
   table: null,
+  boarding: null,
   notice: null,
   config: null,
 };
@@ -397,6 +409,11 @@ export class Online {
     return this.ask({ t: 'queue.leave' });
   }
 
+  /** The queue's last picture has been shown, or there is nowhere to show it: the table is next. */
+  boarded = (): void => {
+    if (this.state.boarding) this.set({ boarding: null });
+  };
+
   /* ---------- solo ---------- */
 
   /**
@@ -463,7 +480,7 @@ export class Online {
     if (left && table.mode === 'ranked') void this.refreshMe();
     this.remember();
     table.dispose();
-    this.set({ table: null, lobby: left ? null : this.state.lobby });
+    this.set({ table: null, boarding: null, lobby: left ? null : this.state.lobby });
   }
 
   dismissNotice(): void {
@@ -509,7 +526,7 @@ export class Online {
           open?.dispose();
           if (game) table = this.seat(game.start, game.update, false);
         }
-        return this.set({ status: 'online', me, lobby, queue, table });
+        return this.set({ status: 'online', me, lobby, queue, table, boarding: null });
       }
       case 'reply': {
         if (event.reply.t !== 'ok') return;
@@ -538,7 +555,14 @@ export class Online {
             this.starting = null;
             this.state.table?.dispose();
             // A table the queue made is where the queue ends: no `queue.status` says so.
-            return this.set({ table: this.seat(start, m, true), queue: null });
+            const queue = this.state.queue,
+              bots = start.seats.map((seat) => seat.bot);
+            const boarding = queue?.mode === 'casual' && start.mode === 'casual' && bots.includes(true);
+            return this.set({
+              table: this.seat(start, m, true),
+              queue: null,
+              boarding: boarding ? { queue, bots } : null,
+            });
           }
           case 'game.over':
             return this.gameOver(m);

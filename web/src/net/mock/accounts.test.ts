@@ -404,28 +404,47 @@ describe('the casual queue', () => {
 
   it('answers the joiner with the queue and tells those already waiting, and the same when one leaves', async () => {
     vi.setSystemTime(1_700_000_000_000);
+    // The wait runs from the moment the line stopped being empty, and it is the same time for everyone in it.
+    const FILLS_AT = 1_700_000_000_000 + QUEUE_FILL_MS;
     const a = await (await guest()).connect();
     const joined = await ask(a, { t: 'queue.join', mode: 'casual' });
     expect(joined).toEqual({
       t: 'ok',
       re: expect.any(Number),
-      queue: { mode: 'casual', since: 1_700_000_000_000, found: 1, needed: 4 },
+      queue: { mode: 'casual', since: 1_700_000_000_000, found: 1, needed: 4, fillsAt: FILLS_AT },
     });
     expect(framesOf(a, 'queue.status')).toEqual([]);
     await vi.advanceTimersByTimeAsync(1000);
     const b = await queued();
     // The one who was waiting hears of it as a push; the joiner's reply already said so.
     expect(framesOf(a, 'queue.status')).toEqual([
-      { t: 'queue.status', queue: { mode: 'casual', since: 1_700_000_000_000, found: 2, needed: 4 } },
+      {
+        t: 'queue.status',
+        queue: { mode: 'casual', since: 1_700_000_000_000, found: 2, needed: 4, fillsAt: FILLS_AT },
+      },
     ]);
     expect(framesOf(b, 'queue.status')).toEqual([]);
-    expect(last(b, 'ok').queue).toEqual({ mode: 'casual', since: 1_700_000_001_000, found: 2, needed: 4 });
+    // The one who joined a second later has that second less to wait, not the whole time again.
+    expect(last(b, 'ok').queue).toEqual({
+      mode: 'casual',
+      since: 1_700_000_001_000,
+      found: 2,
+      needed: 4,
+      fillsAt: FILLS_AT,
+    });
 
     expect(await ask(b, { t: 'queue.leave' })).toEqual({ t: 'ok', re: expect.any(Number) });
     expect(last(a, 'queue.status').queue.found).toBe(1);
     expect(framesOf(b, 'queue.status')).toEqual([]);
     // Leaving a queue one is not in is `ok` too.
     expect(await ask(b, { t: 'queue.leave' })).toMatchObject({ t: 'ok' });
+
+    // A line that was empty starts its wait again with the next one who joins.
+    expect(await ask(a, { t: 'queue.leave' })).toMatchObject({ t: 'ok' });
+    await vi.advanceTimersByTimeAsync(2000);
+    expect(await ask(b, { t: 'queue.join', mode: 'casual' })).toMatchObject({
+      queue: { found: 1, fillsAt: 1_700_000_003_000 + QUEUE_FILL_MS },
+    });
   });
 
   it('keeps the place across a reconnect: the next welcome carries the queue', async () => {
@@ -468,6 +487,10 @@ describe('the casual queue', () => {
     for (const p of players) expect(last(p, 'game.start').seats.every((s) => !s.bot)).toBe(true);
     // The fourth joiner's reply still names the queue they were in for a moment.
     expect(last(players[3], 'ok').queue).toMatchObject({ found: 4, needed: 4 });
+    // Four are a table: there is nothing left to wait for, and no time is named.
+    expect(last(players[2], 'ok').queue?.fillsAt).toEqual(expect.any(Number));
+    expect(last(players[3], 'ok').queue).not.toHaveProperty('fillsAt');
+    expect(last(players[0], 'queue.status').queue).not.toHaveProperty('fillsAt');
   });
 
   it('tells a guest who asks for ranked ACCOUNT_REQUIRED, seated or not', async () => {

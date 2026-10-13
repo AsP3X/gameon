@@ -16,3 +16,19 @@ export function useAhead(online: Online, until: number | null): boolean {
   }, [left]);
   return left > 0;
 }
+
+/**
+ * The whole seconds left until a time the server named, on the server's clock, looked at again
+ * when the next one begins. 0 once the time has come.
+ */
+export function useSecondsLeft(online: Online, until: number): number {
+  const [, setTick] = useState(0);
+  const seconds = Math.max(0, Math.ceil((until - online.serverNow()) / 1000));
+  useEffect(() => {
+    if (seconds === 0) return;
+    const left = until - online.serverNow();
+    const timer = setTimeout(() => setTick((n) => n + 1), left - (seconds - 1) * 1000 + 20);
+    return () => clearTimeout(timer);
+  }, [online, until, seconds]);
+  return seconds;
+}

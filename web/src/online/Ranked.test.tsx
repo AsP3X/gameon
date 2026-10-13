@@ -18,6 +18,7 @@ import { MockServer } from '../net/mock/server';
 import type { Wire } from '../net/socket';
 import type { Me } from '../protocol/generated';
 import { session, ui } from '../tableview/state';
+import { BOARDING_MS } from './Queue';
 
 function seeded(seed: number): () => number {
   let a = seed >>> 0;
@@ -394,7 +395,7 @@ describe('ranked, for an account', () => {
   it('keeps the casual leave sheet as it was', async () => {
     await openAt('/skull-king/online', 'anne_login');
     await press('Quick play');
-    await settle(4000);
+    await settle(4000 + BOARDING_MS);
     expect(ui.screen).toBe('game');
     await click('#app .g-top [data-act="home"]');
     expect($('#app .sheet h2')?.textContent).toBe('Leave the table?');

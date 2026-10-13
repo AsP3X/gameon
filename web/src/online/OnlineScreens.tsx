@@ -379,6 +379,17 @@ export function OnlineScreens({ online, state, route, go, up, onExit, sit, onSat
       />
     );
   }
+  // A quick-play table that bots filled: the queue's last picture, for the moment before the table.
+  if (state.boarding)
+    return (
+      <QueueScreen
+        online={online}
+        queue={state.boarding.queue}
+        boarded={state.boarding.bots}
+        live={live}
+        rules={state.config?.standard ?? null}
+      />
+    );
   if (queue) return <QueueScreen online={online} queue={queue} live={live} rules={state.config?.standard ?? null} />;
   if (route.page === 'ranked')
     return (

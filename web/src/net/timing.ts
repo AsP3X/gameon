@@ -11,6 +11,11 @@ export const STANDARD_TIMERS: Timers = {
   roundEndMs: 20_000,
   disconnectGraceMs: 60_000,
 };
+/**
+ * How long quick play waits before bots take the open seats (§5.4). The server says when that is
+ * (`QueueStatus.fillsAt`); this is the length the queue's ring is drawn against.
+ */
+export const QUEUE_FILL_MS = 10_000;
 /** `pace` scales the bid, the play and the ability clock. The pause after a round is the same for all. */
 export const PACE_SCALE: Record<Pace, number> = { relaxed: 2, standard: 1, fast: 0.5 };
 

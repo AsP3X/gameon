@@ -33,6 +33,7 @@ const NOTHING: OnlineState = {
   lobby: null,
   queue: null,
   table: null,
+  boarding: null,
   notice: null,
   config: null,
 };
@@ -500,6 +501,55 @@ describe('Online', () => {
     wire().say(game.update);
     expect(online.getState().queue).toBeNull();
     expect(online.getState().table?.gameId).toBe(game.start.gameId);
+  });
+
+  it('keeps the last picture of a quick-play queue that bots filled until the page has shown it', () => {
+    const status: QueueStatus = { mode: 'casual', since: 5, found: 2, needed: 4, fillsAt: 10_005 };
+    const bots = [false, false, true, true];
+    const start = {
+      ...game.start,
+      mode: 'casual',
+      seats: bots.map((bot, i) => ({ ...game.start.seats[i % game.start.seats.length], bot })),
+    };
+    welcome({ queue: status });
+    wire().say(start);
+    expect(online.getState().boarding).toBeNull();
+    wire().say(game.update);
+    // The table is there at once, and hears its updates. What is held back is only the showing of it.
+    expect(online.getState()).toMatchObject({ queue: null, boarding: { queue: status, bots } });
+    expect(online.getState().table?.gameId).toBe(start.gameId);
+    online.boarded();
+    expect(online.getState().boarding).toBeNull();
+    expect(online.getState().table?.gameId).toBe(start.gameId);
+    const n = changes;
+    online.boarded();
+    expect(changes).toBe(n);
+  });
+
+  it.each([
+    ['four pirates', 'casual', false],
+    ['a ranked table', 'ranked', true],
+  ] as const)('has no such picture for %s', (_, mode, bot) => {
+    welcome({ queue: { mode, since: 5, found: 4, needed: 4 } });
+    wire().say({ ...game.start, mode, seats: game.start.seats.map((seat) => ({ ...seat, bot })) });
+    wire().say(game.update);
+    expect(online.getState()).toMatchObject({ queue: null, boarding: null });
+    expect(online.getState().table).not.toBeNull();
+  });
+
+  it('drops that picture when the welcome of a new socket brings the table back, and when the table is closed', async () => {
+    const seats = game.start.seats.map((seat) => ({ ...seat, bot: true }));
+    welcome({ queue: { mode: 'casual', since: 5, found: 1, needed: 4 } });
+    wire().say({ ...game.start, mode: 'casual', seats });
+    wire().say(game.update);
+    expect(online.getState().boarding).not.toBeNull();
+    wire().onclose?.(1006);
+    await tick(500);
+    welcome({ game });
+    expect(online.getState().boarding).toBeNull();
+    expect(online.getState().table).not.toBeNull();
+    online.closeTable();
+    expect(online.getState()).toMatchObject({ table: null, boarding: null });
   });
 
   it('gives a result that arrives at the open table to the table, and makes no notice of it: also a forfeit for being away', () => {

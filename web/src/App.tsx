@@ -10,6 +10,7 @@ import { SocketClient } from './net/socket';
 import { GameOn } from './gameon/GameOn';
 import { GameRecord } from './online/GameRecord';
 import { OnlineScreens } from './online/OnlineScreens';
+import { BOARDING_MS } from './online/Queue';
 import { TableOverlay } from './online/TableOverlay';
 import { AT, HUB, isFrame, isLegacy, isOnline, routeOf, settle } from './router/addresses';
 import { SkullKingHome } from './skullking/Home';
@@ -88,7 +89,17 @@ export function App({ backend = appBackend, memory = appMemory, places }: AppPro
   const [sheet, setSheet] = useState(false);
   /** The player left a solo game: the page says so, in the table's place, until they go on. */
   const [soloLeft, setSoloLeft] = useState(false);
-  const table = state.table;
+  // A quick-play table that bots filled is held back for a moment: the online screens show the
+  // queue's last picture first, the bots sitting down. Away from those screens there is nothing to show.
+  const boarding = state.boarding != null && state.table != null && isOnline(route);
+  const table = boarding ? null : state.table;
+
+  useEffect(() => {
+    if (!state.boarding) return;
+    if (!boarding) return online.boarded();
+    const timer = setTimeout(online.boarded, BOARDING_MS);
+    return () => clearTimeout(timer);
+  }, [online, state.boarding, boarding]);
 
   // Forward, or a typed address, can land on one that only leads somewhere.
   useEffect(() => {

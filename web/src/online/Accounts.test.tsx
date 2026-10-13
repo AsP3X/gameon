@@ -24,6 +24,7 @@ import type { Wire } from '../net/socket';
 import type { GameSettings, LobbyList, Me } from '../protocol/generated';
 import { session, ui } from '../tableview/state';
 import { OnlineScreens } from './OnlineScreens';
+import { BOARDING_MS } from './Queue';
 
 function seeded(seed: number): () => number {
   let a = seed >>> 0;
@@ -495,15 +496,43 @@ describe('quick play', () => {
     expect($('#online .searching [role="status"]')?.textContent).toBe('1 of 4 found');
     expect(document.querySelectorAll('#online .queue-seat')).toHaveLength(4);
     expect(document.querySelectorAll('#online .queue-seat.found')).toHaveLength(1);
-    // The rules are the server's standard ruleset, and no waiting time is promised.
+    // The rules are the server's standard ruleset.
     expect(texts('#online .plate b')).toEqual(["Skull King's scoring · Classic"]);
-    expect($('#online')?.textContent).not.toMatch(/\d+\s*(s|sec|seconds|minutes?)\b/);
+    // The wait the server named is drawn twice: a ring around every open seat, and a coin with the seconds.
+    const rings = (): SVGElement[] =>
+      Array.from(document.querySelectorAll<SVGElement>('#online .queue-seat .queue-ring'));
+    expect(rings()).toHaveLength(3);
+    expect($('#online .queue-coin')?.textContent).toBe(String(QUEUE_FILL_MS / 1000));
+    expect($('#online .searching h3')?.textContent).toBe('Looking for pirates…');
+    expect(texts('#online .sections > p.muted')).toEqual([
+      'Bots take the open seats when the ring closes. With four pirates the game starts at once.',
+    ]);
+    // Nothing of it is read out each second: the count of pirates is the only live text.
+    expect($('#online .queue-seats')?.getAttribute('aria-hidden')).toBe('true');
+    expect($('#online .queue-coin')?.getAttribute('aria-hidden')).toBe('true');
 
+    // The coin flips to the next number when its second begins.
+    await settle(1100);
+    expect($('#online .queue-coin .now')?.textContent).toBe(String(QUEUE_FILL_MS / 1000 - 1));
+    expect($('#online .queue-coin .was')?.textContent).toBe(String(QUEUE_FILL_MS / 1000));
+    expect($('#online .queue-coin .coin')?.className).toBe('coin flip');
+
+    const before = rings();
     const other = await someone();
     other.socket.send({ t: 'queue.join', mode: 'casual' });
     await settle();
     expect($('#online .searching [role="status"]')?.textContent).toBe('2 of 4 found');
     expect(document.querySelectorAll('#online .queue-seat.found')).toHaveLength(2);
+    // The seat that filled pops; the one that was there from the start does not.
+    expect(texts('#online .queue-seat.pop')).toHaveLength(1);
+    expect(document.querySelectorAll('#online .queue-seat')[0].className).toBe('queue-seat found');
+    // The rings of the seats still open are the ones that were running: the wait did not start again.
+    expect(rings()).toEqual(before.slice(1));
+    expect(rings().map((ring) => ring.style.getPropertyValue('--left'))).toEqual([
+      `${QUEUE_FILL_MS}ms`,
+      `${QUEUE_FILL_MS}ms`,
+    ]);
+    expect($('#online .queue-coin .now')?.textContent).toBe(String(QUEUE_FILL_MS / 1000 - 1));
 
     await press('Leave the queue');
     expect($('#online h1, #online h2')?.textContent).toBe('Online');
@@ -515,6 +544,28 @@ describe('quick play', () => {
     await openHub();
     await press('Quick play');
     await settle(QUEUE_FILL_MS);
+    // The server started the game. The queue's last picture stands for a moment: the bots sit down.
+    expect(ui.screen).not.toBe('game');
+    expect($('#online .searching h3')?.textContent).toBe('All aboard!');
+    expect($('#online .searching [role="status"]')?.textContent).toBe('1 pirate, 3 bots');
+    expect(
+      Array.from(document.querySelectorAll<HTMLElement>('#online .queue-seat'), (seat) => [
+        seat.className,
+        seat.style.getPropertyValue('--nth'),
+      ]),
+    ).toEqual([
+      ['queue-seat found', ''],
+      ['queue-seat bot', '0'],
+      ['queue-seat bot', '1'],
+      ['queue-seat bot', '2'],
+    ]);
+    expect(document.querySelectorAll('#online .queue-ring')).toHaveLength(0);
+    // The coin has left, and its place is kept. There is no queue to leave any more.
+    expect($('#online .queue-coin')?.className).toBe('queue-coin gone');
+    expect(button('Leave the queue').disabled).toBe(true);
+    await settle(BOARDING_MS - 50);
+    expect(ui.screen).not.toBe('game');
+    await settle(50);
     expect(ui.screen).toBe('game');
     expect($('#online')).toBeNull();
     expect(session.table?.localSeats).toEqual([0]);
@@ -549,9 +600,13 @@ describe('quick play', () => {
   it('keeps the queue screen through a dropped connection, and takes the place the server still has', async () => {
     await openHub();
     await press('Quick play');
+    expect(document.querySelectorAll('#online .queue-ring')).toHaveLength(3);
     server.drop(true);
     await settle();
     expect($('#online h1, #online h2')?.textContent).toBe('Quick play');
+    // What the page shows may be old now: the wait is not drawn until the server is heard again.
+    expect(document.querySelectorAll('#online .queue-ring')).toHaveLength(0);
+    expect($('#online .queue-coin')).toBeNull();
     expect($('#online .notice')?.textContent).toBe(
       'Connection lostTrying again. If your place is gone, you can look for a game again.',
     );
@@ -562,73 +617,165 @@ describe('quick play', () => {
     expect($('#online .notice')).toBeNull();
     expect($('#online .searching [role="status"]')?.textContent).toBe('1 of 4 found');
     expect(button('Leave the queue').disabled).toBe(false);
+    // The rings are back where the clock is by now: not where they were, and not at the start.
+    const left = Array.from(document.querySelectorAll<SVGElement>('#online .queue-ring'), (ring) =>
+      parseInt(ring.style.getPropertyValue('--left'), 10),
+    );
+    expect(left).toHaveLength(3);
+    expect(new Set(left).size).toBe(1);
+    expect(left[0]).toBeLessThan(QUEUE_FILL_MS);
+    expect(left[0]).toBeGreaterThanOrEqual(QUEUE_FILL_MS - 1000);
   });
 });
 
-/* The hub against frames written by hand: what it says when the server refuses the queue. With the
-   mock the page cannot get there by clicking, because a seated player is never shown the hub. */
-describe('the hub, when the server refuses quick play', () => {
-  /** The online screens alone, with addresses of their own: no page around them. */
-  function Hub({ online, onExit }: { online: Online; onExit: () => void }) {
-    const state = useSyncExternalStore(online.subscribe, online.getState);
-    const [router] = useState(() => createRouter(memoryPlaces(AT.online)));
-    const route = routeOf(useSyncExternalStore(router.subscribe, router.getPath));
-    return (
-      <div id="online">
-        <OnlineScreens
-          online={online}
-          state={state}
-          route={isOnline(route) ? route : HUB}
-          go={router.go}
-          up={router.up}
-          onExit={onExit}
-        />
-      </div>
-    );
-  }
+/* The online screens against frames written by hand: what the hub says when the server refuses the
+   queue, and what the queue draws of the wait. With the mock the page cannot get to the first by
+   clicking, because a seated player is never shown the hub, and the mock's clock and the page's are one. */
 
+/** The online screens alone, with addresses of their own: no page around them. */
+function Hub({ online, onExit }: { online: Online; onExit: () => void }) {
+  const state = useSyncExternalStore(online.subscribe, online.getState);
+  const [router] = useState(() => createRouter(memoryPlaces(AT.online)));
+  const route = routeOf(useSyncExternalStore(router.subscribe, router.getPath));
+  return (
+    <div id="online">
+      <OnlineScreens
+        online={online}
+        state={state}
+        route={isOnline(route) ? route : HUB}
+        go={router.go}
+        up={router.up}
+        onExit={onExit}
+      />
+    </div>
+  );
+}
+
+interface Wired {
+  online: Online;
+  sent: { t: string; id: number }[];
+  /** A frame from the server. */
+  say: (frame: object) => Promise<void>;
+}
+/** Those screens on a wire the test holds, after a `welcome` that carries this queue. */
+async function wired(queue: object | null = null): Promise<Wired> {
+  const sent: Wired['sent'] = [];
+  const wire: Wire = {
+    send: (data) => void sent.push(JSON.parse(data) as { t: string; id: number }),
+    close: () => {},
+    onmessage: null,
+    onclose: null,
+  };
+  const say = (frame: object): Promise<void> =>
+    act(async () => {
+      wire.onmessage?.(JSON.stringify(frame));
+      await vi.advanceTimersByTimeAsync(0);
+    });
+  const online = new Online(
+    new SocketClient({ transport: () => Promise.resolve(wire), build: 'test' }),
+    new Api(() => Promise.reject(new Error('This test has no REST'))),
+  );
+  online.open();
+  root = createRoot(host);
+  await act(async () => {
+    root?.render(<Hub online={online} onExit={() => {}} />);
+    await vi.advanceTimersByTimeAsync(0);
+  });
+  const guest = (await server.browser().rest('POST', '/auth/guest')).body;
+  await say({ t: 'ok', re: sent[0].id });
+  await say({ t: 'welcome', me: guest, serverTime: Date.now(), lobby: null, queue, game: null });
+  return { online, sent, say };
+}
+
+describe('the hub, when the server refuses quick play', () => {
   it('shows the refusal under the button and stays on the hub', async () => {
-    const sent: { t: string; id: number }[] = [];
-    const wire: Wire = {
-      send: (data) => void sent.push(JSON.parse(data) as { t: string; id: number }),
-      close: () => {},
-      onmessage: null,
-      onclose: null,
-    };
-    const say = (frame: object): void => wire.onmessage?.(JSON.stringify(frame));
-    const online = new Online(
-      new SocketClient({ transport: () => Promise.resolve(wire), build: 'test' }),
-      new Api(() => Promise.reject(new Error('This test has no REST'))),
-    );
-    online.open();
-    root = createRoot(host);
-    await act(async () => {
-      root?.render(<Hub online={online} onExit={() => {}} />);
-      await vi.advanceTimersByTimeAsync(0);
-    });
-    const guest = (await server.browser().rest('POST', '/auth/guest')).body;
-    await act(async () => {
-      say({ t: 'ok', re: sent[0].id });
-      say({ t: 'welcome', me: guest, serverTime: Date.now(), lobby: null, queue: null, game: null });
-      await vi.advanceTimersByTimeAsync(0);
-    });
+    const { online, sent, say } = await wired();
     await press('Quick play');
     expect(sent.at(-1)).toMatchObject({ t: 'queue.join', mode: 'casual' });
-    await act(async () => {
-      say({ t: 'err', re: sent.at(-1)?.id, code: 'ALREADY_SEATED', message: 'The user is seated elsewhere.' });
-      await vi.advanceTimersByTimeAsync(0);
-    });
+    await say({ t: 'err', re: sent.at(-1)?.id, code: 'ALREADY_SEATED', message: 'The user is seated elsewhere.' });
     expect($('#online [role="alert"]')?.textContent).toBe('You are already at a table.');
     expect($('#online h1, #online h2')?.textContent).toBe('Online');
     expect(button('Quick play').disabled).toBe(false);
 
     // A code this client has no words for shows what the server said: that is what `message` is for.
     await press('Quick play');
-    await act(async () => {
-      say({ t: 'err', re: sent.at(-1)?.id, code: 'INTERNAL', message: 'Something went wrong.' });
-      await vi.advanceTimersByTimeAsync(0);
-    });
+    await say({ t: 'err', re: sent.at(-1)?.id, code: 'INTERNAL', message: 'Something went wrong.' });
     expect($('#online [role="alert"]')?.textContent).toBe('Something went wrong.');
+    online.dispose();
+  });
+});
+
+describe('the quick-play wait, frame by frame', () => {
+  const ring = (): string[] =>
+    Array.from(document.querySelectorAll<SVGElement>('#online .queue-ring'), (el) =>
+      ['--open', '--left', '--ticks'].map((name) => el.style.getPropertyValue(name)).join(' '),
+    );
+  const waiting = (found: number, extra: object = {}): object => ({
+    mode: 'casual',
+    since: Date.now(),
+    found,
+    needed: 4,
+    ...extra,
+  });
+
+  it('opens on the time that is left for a player who arrives late, not on a fresh ten seconds', async () => {
+    const { online } = await wired(waiting(2, { fillsAt: Date.now() + 5400 }));
+    expect($('#online .searching [role="status"]')?.textContent).toBe('2 of 4 found');
+    // 4.6 of the ten seconds are gone: the ring is that far closed, and has 5.4 seconds to go.
+    expect(ring()).toEqual(['54.0 5400ms 6', '54.0 5400ms 6']);
+    expect($('#online .queue-coin')?.textContent).toBe('6');
+    // Nothing flips in on the first picture, and nobody popped into a seat.
+    expect($('#online .queue-coin .coin')?.className).toBe('coin');
+    expect(document.querySelectorAll('#online .queue-seat.pop')).toHaveLength(0);
+    online.dispose();
+  });
+
+  it('counts down to the closed ring and waits there for the server', async () => {
+    const { online, say } = await wired(waiting(1, { fillsAt: Date.now() + 2500 }));
+    expect($('#online .queue-coin')?.textContent).toBe('3');
+    await settle(600);
+    expect($('#online .queue-coin .now')?.textContent).toBe('2');
+    await settle(1000);
+    expect($('#online .queue-coin .now')?.textContent).toBe('1');
+    expect($('#online .searching h3')?.textContent).toBe('Looking for pirates…');
+    await settle(1000);
+    expect($('#online .queue-coin .now')?.textContent).toBe('0');
+    expect($('#online .searching h3')?.textContent).toBe('Setting the table…');
+    // The seats are the server's to fill: the page shows no bot it was not told of.
+    expect(document.querySelectorAll('#online .queue-seat.bot')).toHaveLength(0);
+    expect(document.querySelectorAll('#online .queue-seat.timed')).toHaveLength(3);
+    expect(button('Leave the queue').disabled).toBe(false);
+    await settle(5000);
+    expect($('#online .queue-coin .now')?.textContent).toBe('0');
+
+    // A pirate who gave up their seat: it is open again, with a ring where the clock is, which is closed.
+    await say({ t: 'queue.status', queue: waiting(2, { fillsAt: Date.now() - 7100 }) });
+    await say({ t: 'queue.status', queue: waiting(1, { fillsAt: Date.now() - 7100 }) });
+    expect(ring()).toEqual(Array(3).fill('0.0 0ms 1'));
+    online.dispose();
+  });
+
+  it('draws no wait the server did not name, and none for ranked', async () => {
+    const { online, say } = await wired(waiting(3));
+    expect(ring()).toEqual([]);
+    expect($('#online .queue-coin')).toBeNull();
+    expect(texts('#online .queue-seat')).toEqual(['', '', '', '?']);
+    expect(texts('#online .sections > p.muted')).toEqual([
+      'The game starts by itself when the table is full. Open seats are filled with bots.',
+    ]);
+    // Four are a table: the server names no time any more, and the wait is off the screen.
+    await say({ t: 'queue.status', queue: waiting(3, { fillsAt: Date.now() + 4000 }) });
+    expect(ring()).toHaveLength(1);
+    await say({ t: 'queue.status', queue: waiting(4) });
+    expect(ring()).toEqual([]);
+    expect($('#online .queue-coin')).toBeNull();
+    expect(document.querySelectorAll('#online .queue-seat.found')).toHaveLength(4);
+
+    // Ranked has no fill time. A frame that names one anyway draws nothing.
+    await say({ t: 'queue.status', queue: waiting(3, { mode: 'ranked', fillsAt: Date.now() + 4000 }) });
+    expect($('#online h1, #online h2')?.textContent).toBe('Ranked');
+    expect(ring()).toEqual([]);
+    expect($('#online .queue-coin')).toBeNull();
     online.dispose();
   });
 });

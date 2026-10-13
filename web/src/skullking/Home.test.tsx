@@ -580,7 +580,8 @@ describe('the way back into a game', () => {
     await openAt('/skull-king/online');
     await click('#online button.sk-way');
     expect($('#online h1, #online h2')?.textContent).toBe('Quick play');
-    await settle(QUEUE_FILL_MS + 500);
+    // The table opens a moment after the server made it: the bots are shown sitting down first.
+    await settle(QUEUE_FILL_MS + 1000);
     expect($('#app .game')).not.toBeNull();
     closePage();
 
