@@ -437614,6 +437614,28 @@
                       }
                     }
                   ]
+                },
+                {
+                  "type": "frame",
+                  "id": "o8o31",
+                  "name": "Forget this game",
+                  "width": "fill_container",
+                  "height": 44,
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "WZ6P3",
+                      "name": "Forget this game",
+                      "fill": "$green-ink",
+                      "content": "Forget this game",
+                      "lineHeight": 1.35,
+                      "fontFamily": "$f-ui",
+                      "fontSize": 14,
+                      "fontWeight": "800"
+                    }
+                  ]
                 }
               ]
             }
@@ -437705,6 +437727,26 @@
                           "name": "Device game",
                           "fill": "$green-ink",
                           "content": "Round 2 of 10 · offline, on this device only",
+                          "lineHeight": 1.35,
+                          "fontFamily": "$f-ui",
+                          "fontSize": 14,
+                          "fontWeight": "800"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "XBU9S",
+                      "name": "Forget this game",
+                      "height": 44,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "hj96y",
+                          "name": "Forget this game",
+                          "fill": "$green-ink",
+                          "content": "Forget this game",
                           "lineHeight": 1.35,
                           "fontFamily": "$f-ui",
                           "fontSize": 14,
@@ -437840,6 +437882,159 @@
                           "content": "CONTINUE"
                         }
                       }
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "VrdpC",
+                  "name": "Forget this game",
+                  "width": "fill_container",
+                  "height": 44,
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "bEvTA",
+                      "name": "Forget this game",
+                      "fill": "$green-ink",
+                      "content": "Forget this game",
+                      "lineHeight": 1.35,
+                      "fontFamily": "$f-ui",
+                      "fontSize": 14,
+                      "fontWeight": "800"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "V9TAs",
+          "name": "State · Forget this game · asked",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 14,
+          "children": [
+            {
+              "type": "text",
+              "id": "aLVzY",
+              "fill": "$faint",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "STATE · FORGET THIS GAME · THE PAGE ASKS FIRST",
+              "lineHeight": 1.4,
+              "fontFamily": "$f-ui",
+              "fontSize": 12,
+              "fontWeight": "900",
+              "letterSpacing": 1
+            },
+            {
+              "type": "frame",
+              "id": "MGR2v",
+              "name": "Overlay",
+              "width": "fill_container",
+              "fill": "#000000a6",
+              "cornerRadius": 16,
+              "layout": "vertical",
+              "padding": 24,
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "BQuUR",
+                  "name": "Card",
+                  "width": "fill_container",
+                  "fill": "$bg",
+                  "cornerRadius": 22,
+                  "layout": "vertical",
+                  "gap": 10,
+                  "padding": [
+                    22,
+                    18,
+                    20,
+                    18
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "v5v7sb",
+                      "name": "Title",
+                      "fill": "$fg",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Forget this game?",
+                      "lineHeight": 1.4,
+                      "fontFamily": "$f-ui",
+                      "fontSize": 22,
+                      "fontWeight": "900",
+                      "letterSpacing": -0.22
+                    },
+                    {
+                      "type": "text",
+                      "id": "BbAxl",
+                      "name": "Text",
+                      "fill": "$fg",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "It is only on this device.",
+                      "lineHeight": 1.4,
+                      "fontFamily": "$f-ui",
+                      "fontSize": 16,
+                      "fontWeight": "700"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "XQyeK",
+                      "name": "Actions",
+                      "width": "fill_container",
+                      "gap": 12,
+                      "padding": [
+                        6,
+                        0,
+                        4,
+                        0
+                      ],
+                      "children": [
+                        {
+                          "id": "yC6Wb",
+                          "type": "ref",
+                          "ref": "h9ic3",
+                          "name": "Keep it",
+                          "width": "fill_container",
+                          "descendants": {
+                            "s5ytI": {
+                              "content": "KEEP IT"
+                            }
+                          }
+                        },
+                        {
+                          "id": "zWwVc",
+                          "type": "ref",
+                          "ref": "kMpaU",
+                          "name": "Forget",
+                          "width": "fill_container",
+                          "fill": "$red",
+                          "effect": {
+                            "type": "shadow",
+                            "shadowType": "outer",
+                            "color": "$red-d",
+                            "offset": {
+                              "x": 0,
+                              "y": 4
+                            }
+                          },
+                          "descendants": {
+                            "K2spjd": {
+                              "content": "FORGET"
+                            }
+                          }
+                        }
+                      ]
                     }
                   ]
                 }
@@ -528626,6 +528821,28 @@
                       }
                     }
                   ]
+                },
+                {
+                  "type": "frame",
+                  "id": "lkP0U",
+                  "name": "Forget this game",
+                  "width": "fill_container",
+                  "height": 44,
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "fZdr5",
+                      "name": "Forget this game",
+                      "fill": "$green-ink",
+                      "content": "Forget this game",
+                      "lineHeight": 1.35,
+                      "fontFamily": "$f-ui",
+                      "fontSize": 14,
+                      "fontWeight": "800"
+                    }
+                  ]
                 }
               ]
             }
@@ -528717,6 +528934,26 @@
                           "name": "Device game",
                           "fill": "$green-ink",
                           "content": "Round 2 of 10 · offline, on this device only",
+                          "lineHeight": 1.35,
+                          "fontFamily": "$f-ui",
+                          "fontSize": 14,
+                          "fontWeight": "800"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "e5vfHS",
+                      "name": "Forget this game",
+                      "height": 44,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "pHDjv",
+                          "name": "Forget this game",
+                          "fill": "$green-ink",
+                          "content": "Forget this game",
                           "lineHeight": 1.35,
                           "fontFamily": "$f-ui",
                           "fontSize": 14,
@@ -528852,6 +529089,159 @@
                           "content": "CONTINUE"
                         }
                       }
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "yHYRa",
+                  "name": "Forget this game",
+                  "width": "fill_container",
+                  "height": 44,
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "tiZix",
+                      "name": "Forget this game",
+                      "fill": "$green-ink",
+                      "content": "Forget this game",
+                      "lineHeight": 1.35,
+                      "fontFamily": "$f-ui",
+                      "fontSize": 14,
+                      "fontWeight": "800"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "OQyUv",
+          "name": "State · Forget this game · asked",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 14,
+          "children": [
+            {
+              "type": "text",
+              "id": "k6Zhbp",
+              "fill": "$faint",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "STATE · FORGET THIS GAME · THE PAGE ASKS FIRST",
+              "lineHeight": 1.4,
+              "fontFamily": "$f-ui",
+              "fontSize": 12,
+              "fontWeight": "900",
+              "letterSpacing": 1
+            },
+            {
+              "type": "frame",
+              "id": "lnyvv",
+              "name": "Overlay",
+              "width": "fill_container",
+              "fill": "#000000a6",
+              "cornerRadius": 16,
+              "layout": "vertical",
+              "padding": 24,
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "TVthO",
+                  "name": "Card",
+                  "width": "fill_container",
+                  "fill": "$bg",
+                  "cornerRadius": 22,
+                  "layout": "vertical",
+                  "gap": 10,
+                  "padding": [
+                    22,
+                    18,
+                    20,
+                    18
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "hGcs2",
+                      "name": "Title",
+                      "fill": "$fg",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Forget this game?",
+                      "lineHeight": 1.4,
+                      "fontFamily": "$f-ui",
+                      "fontSize": 22,
+                      "fontWeight": "900",
+                      "letterSpacing": -0.22
+                    },
+                    {
+                      "type": "text",
+                      "id": "RIaiS",
+                      "name": "Text",
+                      "fill": "$fg",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "It is only on this device.",
+                      "lineHeight": 1.4,
+                      "fontFamily": "$f-ui",
+                      "fontSize": 16,
+                      "fontWeight": "700"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "o5Mwq",
+                      "name": "Actions",
+                      "width": "fill_container",
+                      "gap": 12,
+                      "padding": [
+                        6,
+                        0,
+                        4,
+                        0
+                      ],
+                      "children": [
+                        {
+                          "id": "VJI2k",
+                          "type": "ref",
+                          "ref": "h9ic3",
+                          "name": "Keep it",
+                          "width": "fill_container",
+                          "descendants": {
+                            "s5ytI": {
+                              "content": "KEEP IT"
+                            }
+                          }
+                        },
+                        {
+                          "id": "Z2VMVr",
+                          "type": "ref",
+                          "ref": "kMpaU",
+                          "name": "Forget",
+                          "width": "fill_container",
+                          "fill": "$red",
+                          "effect": {
+                            "type": "shadow",
+                            "shadowType": "outer",
+                            "color": "$red-d",
+                            "offset": {
+                              "x": 0,
+                              "y": 4
+                            }
+                          },
+                          "descendants": {
+                            "K2spjd": {
+                              "content": "FORGET"
+                            }
+                          }
+                        }
+                      ]
                     }
                   ]
                 }
