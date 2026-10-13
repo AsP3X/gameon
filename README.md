@@ -168,7 +168,10 @@ Three ideas hold the system together:
   intents and renders the view it is given. The full rule is
   [`docs/agent-rules/server-authority.md`](docs/agent-rules/server-authority.md).
 - **State leaves the engine only as a per-seat view.** `GameState` cannot be serialised. A seat
-  never receives another hand, an unrevealed bid, the pile or the deck order.
+  never receives another hand, an unrevealed bid, or the deck order. While a Seer ability is open,
+  that seat's view includes the undealt pile. While a Smuggler choice is open, that seat's view
+  includes the cards it drew. Other seats receive neither, and both leave the view when the
+  ability closes.
 - **One `Table` interface, two implementations.** The table renderer does not know whether it is
   talking to `LocalTable` (the engine in the page) or `RemoteTable` (the socket).
 
@@ -185,9 +188,15 @@ sequenceDiagram
     S-->>A: ok
     S-->>A: game.update with A's own view
     S-->>O: game.update with each seat's own view
-  else rejected
+  else seated in a live game, and rejected
     S-->>A: err NOT_YOUR_TURN, STALE_ACTION or ILLEGAL_MOVE
-    Note over S: A rejected intent changes nothing for anyone.
+    Note over S: The intent changes nothing for anyone.
+  else the table has already finished
+    Note over S: No ok and no err. Nothing changes.
+  else the player has no seat
+    S-->>A: err NOT_IN_GAME
+  else the engine returns a broken step
+    S-->>A: err INTERNAL
   end
 ```
 
@@ -295,7 +304,8 @@ pointed at.
 | `--report PATH` | `target/bot-pass/` | Where the report is written. |
 | `--replay SUITE INDEX` | | Plays one game again. `SUITE` is `easy`, `normal`, `hard` or `mixed`. |
 
-It exits 0 when every game finishes and 1 when a game faults or the pass is stopped.
+It exits 0 when every game finishes, 1 when a game faults or the pass is stopped, and 2 when an
+argument is wrong or the terminal or the Ctrl-C handler cannot be set up.
 
 ### Ports
 
@@ -360,15 +370,15 @@ defaults and a comment for every key. `.env` is never committed.
 
 | Key | Default | Meaning |
 | --- | ------- | ------- |
-| `PROXY_MODE` | `local` | `local` publishes host ports. `npm` publishes none and joins `proxy-network` for Nginx Proxy Manager. |
+| `PROXY_MODE` | `local` | `local` publishes host ports. `npm` publishes none. The API and the page join `proxy-network` for Nginx Proxy Manager. Postgres stays on `skt-internal`. |
 | `API_PORT` | `8080` | Host port of the API. `local` mode only. |
 | `WEB_PORT` | `8081` | Host port of the page. `local` mode only. |
 | `POSTGRES_PORT` | `5432` | Host port of Postgres on `127.0.0.1`. `local` mode only. |
 | `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB` | `skt` | Applied only when the data directory is first created. |
 | `DATABASE_URL` | `postgres://skt:skt@127.0.0.1:5432/skt` | For a server started with `cargo run`. Compose builds its own. |
 | `SKT_PUBLIC_ORIGIN` | empty | The page's origin when it is not `http://localhost` or `http://127.0.0.1`. No path. Example: `https://tavern.example`. |
-| `SKT_SECURE_COOKIE` | empty | `1` when the page is served over https. |
-| `SKT_TRUSTED_PROXIES` | empty (`172.16.0.0/12` in Compose) | Addresses and CIDRs that may set `X-Forwarded-For`. Without it, players behind one proxy share one rate-limit budget. |
+| `SKT_SECURE_COOKIE` | empty | `1`, `true`, `TRUE`, or `True` when the page is served over https. Adds `Secure` to the session cookie. |
+| `SKT_TRUSTED_PROXIES` | empty (`172.16.0.0/12` in Compose) | Addresses and CIDRs that may set `X-Forwarded-For`, and `X-Real-IP` when that chain yields no untrusted address. Empty ignores both headers, so callers behind one TCP peer share its address. The shared budget is register and login only: 5 registrations and 10 logins a minute. |
 | `SKT_DATA_DIR` | unset | A folder for Postgres' files instead of the named volume `skt_pg_data`. |
 | `SKT_NETWORKS_POSTGRES`, `SKT_NETWORKS_API`, `SKT_NETWORKS_WEB` | unset | Extra Docker networks for each container. `skt-internal` is always attached. |
 | `RUST_LOG` | `info` | `error`, `warn`, `info`, `debug`, `trace`, `off`, or a filter such as `skt_server=debug`. `debug` and `trace` also log one line per HTTP request. |
@@ -382,7 +392,9 @@ defaults and a comment for every key. `.env` is never committed.
 `skt-server` reads `HOST` (default `127.0.0.1`), `PORT` (default `8080`), `DATABASE_URL`
 (required), `RUST_LOG`, `RUST_LOG_FORMAT`, `SKT_PUBLIC_ORIGIN`, `SKT_SECURE_COOKIE` and
 `SKT_TRUSTED_PROXIES`. State-changing requests and the socket upgrade are checked against an
-`Origin` allow-list: local pages on any port, plus `SKT_PUBLIC_ORIGIN`.
+`Origin` allow-list: `http://localhost` and `http://127.0.0.1`, with a port or without one, plus
+an exact match of `SKT_PUBLIC_ORIGIN` after a trailing slash is removed. A request with no
+`Origin` header is rejected. `https://localhost` is rejected.
 
 ### The client's dev tooling
 
@@ -423,8 +435,9 @@ with all capabilities dropped.
 | `./deploy.sh --setup` | Open the setup screen again, starting from the current `.env`. |
 | `./deploy.sh --status` | URLs and the container table. |
 | `./deploy.sh --ps` | The container table only. |
-| `./deploy.sh --logs [svc…]` | Follow logs: all, or `api`, `web`. |
-| `./deploy.sh --restart [svc]` | Restart everything, or the named service. |
+| `./deploy.sh --logs [svc…]` | Follow logs: all, or `postgres`, `api`, `web`. |
+| `./deploy.sh --restart [svc…]` | Restart everything, or one or more of `postgres`, `api`, `web`. |
+| `./deploy.sh --yes` | Skip a confirmation. The factory reset proceeds without typing `reset`, and `--migrate` copies without its yes prompt. |
 | `./deploy.sh --rebuild` | Rebuild the images, then start. |
 | `./deploy.sh --down` | Stop and remove the containers. The database and `.env` stay. |
 | `./deploy.sh --backup` | Write a Postgres dump to `backups/`. |
@@ -435,18 +448,21 @@ with all capabilities dropped.
 
 > [!CAUTION]
 > `./deploy.sh --reset` and `./deploy.sh --down --volumes` are a factory reset: they delete the
-> database (accounts, ratings, game records) and `.env`. Run `./deploy.sh --backup` first.
+> database (accounts, ratings, game records) and `.env`. They ask you to type `reset` first.
+> `--yes` skips that prompt. With no terminal and no `--yes`, nothing is deleted. Run
+> `./deploy.sh --backup` first.
 
 ### Three ways to expose it
 
 | Mode | How | Result |
 | ---- | --- | ------ |
 | **This machine** | `PROXY_MODE=local` (the default) | Host ports for the page, the API and Postgres. |
-| **Nginx Proxy Manager** | `PROXY_MODE=npm` | No host ports. Point a proxy host at `http://skt-web:80`, turn websockets on, set `SKT_PUBLIC_ORIGIN` and `SKT_SECURE_COOKIE=1`. |
+| **Nginx Proxy Manager** | `PROXY_MODE=npm` | No host ports. Point a proxy host at `http://skt-web:80`, turn websockets on, and set `SKT_PUBLIC_ORIGIN`. Set `SKT_SECURE_COOKIE=1` when that origin is https. |
 | **TLS in the stack** | `docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build` | nginx on 80 and 443 with the certificate at `deploy/certs/fullchain.pem` and the key at `deploy/certs/privkey.pem`. Port 80 redirects to https. |
 
-A deploy sends SIGTERM. The API finishes writing the open games and exits, and the next start
-replays them.
+Docker stop sends SIGTERM. The API finishes writing the open games and exits, and the next start
+replays them. `./deploy.sh` leaves a container it does not recreate running. Stop, restart, and a
+recreate send the signal.
 
 ## Tests and quality gates
 
