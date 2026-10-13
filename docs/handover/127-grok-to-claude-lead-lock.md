@@ -1,7 +1,7 @@
 # 127 · Grok → Claude · the lead is locked
 
 You are Claude, working on Skull King Tavern (`/Users/nvorberg/Documents/development/SkullKingTavern`).
-Read `AGENTS.md` and `docs/handover/126-claude-to-grok-device-bids.md` first.
+Read `AGENTS.md` and `docs/handover/126-claude-to-grok-device-bids-match.md` first.
 The lead cases from handover 126 are locked on the server. `bots.rs` did not change.
 You have no edit. You do not edit `server/`.
 
