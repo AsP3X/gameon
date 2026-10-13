@@ -81,6 +81,20 @@ describe('bots: the bid', () => {
     expect(Bots.bid(at(state, 'normal'), 0, () => 0.5)).toBe(0);
   });
 
+  it('bids the tricks a hand is likely to win on Normal, whatever the roll', () => {
+    const rest = [3, 4, 5, 6, 7];
+    const normal = (hand: CardId[], other: CardId[], roll: number): number =>
+      Bots.bid(at(dealt([hand, other], 1), 'normal'), 0, () => roll);
+    for (const roll of [0, 0.5, 0.99]) {
+      // Two pirates.
+      expect(normal([61, 62, 0, 1, 2], rest, roll)).toBeGreaterThanOrEqual(2);
+      // Black 14, black 13 and a side 14.
+      expect(normal([55, 54, 27, 0, 1], rest, roll)).toBeGreaterThanOrEqual(2);
+      // Five low cards.
+      expect(normal([0, 1, 2, 3, 4], [5, 6, 7, 8, 9], roll)).toBe(0);
+    }
+  });
+
   it('draws no number on Normal and Hard', () => {
     const state = dealt(
       [
@@ -110,6 +124,17 @@ describe('bots: the card', () => {
     );
     expect(chosen(state, 0, 'normal', 0.99)).not.toBe(67);
     expect(chosen(state, 0, 'easy', 0)).toBe(67);
+  });
+
+  it('leads a high number it bid on though something unseen beats it, and not a middling one', () => {
+    const leading = (hand: CardId[]): GameState => bidAll(dealt([hand, [4, 5, 6, 7, 8]], 1), [1, 0]);
+    // Black 11, yellow 13: below the stopper line, and still the trick the bid counts on.
+    expect(chosen(leading([52, 0, 1, 2, 3]), 0, 'normal', 0.99)).toBe(52);
+    expect(chosen(leading([26, 0, 1, 2, 3]), 0, 'normal', 0.99)).toBe(26);
+    expect(chosen(leading([26, 0, 1, 2, 3]), 0, 'hard', 0.99)).toBe(26);
+    // Black 9, yellow 12: no take at all, so the cheapest card goes.
+    expect(chosen(leading([50, 0, 1, 2, 3]), 0, 'normal', 0.99)).toBe(0);
+    expect(chosen(leading([25, 0, 1, 2, 3]), 0, 'normal', 0.99)).toBe(0);
   });
 
   it('Krakens a trick Normal does not need, where Easy takes it', () => {

@@ -2,10 +2,10 @@
    (server/crates/skt-engine/src/bots.rs), ported onto this engine so an offline table plays the way
    an online one does.
 
-   The plan: count the tricks the hand can really win, bid that, then win what the bid still needs and
-   duck the rest. Normal plays the plan on every card. Easy plays it too, and slips the way a beginner
-   does. Hard plays the card Normal would, unless another card of the same kind leans on the next
-   seat's bid without touching its own.
+   The plan: bid the tricks the hand is likely to win, then win what the bid still needs and duck the
+   rest, cashing only the tricks nothing left can beat. Normal plays the plan on every card. Easy
+   plays it too, and slips the way a beginner does. Hard plays the card Normal would, unless another
+   card of the same kind leans on the next seat's bid without touching its own.
 
    A bot decides from what its seat can see: view(state, seat), the plays everybody saw this round,
    and the pile if the Seer showed it to this seat. It never reads another hand or the rest of the pile. */
@@ -124,6 +124,10 @@ function targetTakes(need: number, left: number, rascal: boolean): number {
   return left;
 }
 
+/** The cards that take no trick whatever is led. */
+const duckCount = (hand: CardId[], deck: Card[]): number =>
+  hand.filter((id) => ['escape', 'loot', 'kraken'].includes(deck[id].kind)).length;
+
 function planOf(v: TableView, read: Read): Plan {
   const mine = bidOf(v, v.me);
   const need = mine == null ? 0 : mine - v.won[v.me];
@@ -135,7 +139,7 @@ function planOf(v: TableView, read: Read): Plan {
     left,
     target: targetTakes(need, left, read.rascal),
     sure: sureCount(v.hand, v.deck, read),
-    ducks: v.hand.filter((id) => ['escape', 'loot', 'kraken'].includes(v.deck[id].kind)).length,
+    ducks: duckCount(v.hand, v.deck),
     doomed: read.rascal && (need <= -2 || need > left + 1),
     neighborNeed: theirs == null ? null : theirs - v.won[read.neighbor],
     neighborChances: v.handCounts[read.neighbor] + (played ? 1 : 0),
@@ -194,6 +198,46 @@ function sureCount(hand: CardId[], deck: Card[], read: Read): number {
     if (mermaids === 0 || (read.level === 'hard' && mermaids <= 1 && read.players <= 3)) tricks++;
   }
   return Math.min(tricks + trumpTricks(cards, read) + sideTricks(cards, read), hand.length);
+}
+
+/* ---------- valuing the hand for the bid ---------- */
+
+/** Tenths of a trick per black rank at a four-player table. A rank that is not listed adds nothing. */
+const BLACK_TENTHS: Partial<Record<number, number>> = { 14: 10, 13: 8, 12: 7, 11: 5, 10: 4, 9: 2, 8: 1 };
+/** The same for a side suit. */
+const SIDE_TENTHS: Partial<Record<number, number>> = { 14: 6, 13: 4, 12: 2, 11: 1, 10: 1 };
+
+/** Tenths of a trick at a four-player table, before the table size scales it. */
+function rawTenths(c: Card): number {
+  switch (c.kind) {
+    case 'pirate':
+    case 'tigress':
+    case 'sk':
+      return 10;
+    case 'mermaid':
+      return 6;
+    case 'num':
+      return (c.suit === 'black' ? BLACK_TENTHS : SIDE_TENTHS)[c.rank] ?? 0;
+    default:
+      return 0;
+  }
+}
+
+/**
+ * Tenths of a trick this card adds to the bid. A short table makes the same card worth more, and no
+ * card adds more than one trick.
+ */
+function cardTenths(c: Card, players: number): number {
+  const raw = rawTenths(c);
+  // A pirate or the Tigress wins the trick it is played in, at any table size.
+  if (c.kind === 'pirate' || c.kind === 'tigress') return raw;
+  return Math.min(10, Math.floor((raw * 4) / players));
+}
+
+/** The tricks a regular player would bid from this hand. A card can be worth bidding before it is safe to cash. */
+function likelyBid(cards: Card[], players: number): number {
+  const tenths = cards.reduce((sum, c) => sum + cardTenths(c, players), 0);
+  return clamp(Math.floor((tenths + 5) / 10), 0, cards.length);
 }
 
 /* ---------- ranking the legal plays ---------- */
@@ -281,9 +325,13 @@ function threatened(v: TableView, o: PlayChoice, rivals: Seat[], read: Read): bo
   );
 }
 
-function kindOf(leading: boolean, note: Note, wins: boolean, threat: boolean): Kind {
+/** A number high enough to bid, below the stopper line. */
+const contested = (c: Card): boolean => c.kind === 'num' && c.rank >= (c.suit === 'black' ? 10 : 13);
+
+function kindOf(leading: boolean, c: Card, note: Note, wins: boolean, threat: boolean): Kind {
   if (note === 'escape' || note === 'kraken' || note === 'whale') return 'duck';
-  if (leading) return !threat ? 'safe' : note === 'stopper' ? 'risky' : 'duck';
+  // A black 10 or a side 13 is a trick worth bidding, so a threatened one is still a take.
+  if (leading) return !threat ? 'safe' : note === 'stopper' || contested(c) ? 'risky' : 'duck';
   return !wins ? 'duck' : threat ? 'risky' : 'safe';
 }
 
@@ -322,7 +370,7 @@ function rank(v: TableView, o: PlayChoice, read: Read, plan: Plan): Opt {
   const rivals = rivalsOf(v);
   const leading = !v.trick.plays.length;
   const wins = !leading && Rules.resolveTrick(withPlay(v, o), v.deck).winner === v.me;
-  const kind = kindOf(leading, note, wins, rivals.length > 0 && threatened(v, o, rivals, read));
+  const kind = kindOf(leading, c, note, wins, rivals.length > 0 && threatened(v, o, rivals, read));
   const rest = v.hand.slice();
   rest.splice(rest.indexOf(o.card), 1);
   const sure = plan.sure > sureCount(rest, v.deck, read);
@@ -400,10 +448,9 @@ export function bid(s: GameState, seat: Seat, rng: Rng = Math.random): number {
   const sight = sightOf(s, seat);
   const { v } = sight;
   const read = readOf(sight);
-  const plan = planOf(v, read);
   const cards = v.hand.map((id) => v.deck[id]);
-  let tricks = plan.sure;
-  if (tricks === 0 && plan.ducks === 0 && cards.some((c) => rankIn(c, 'black') >= 12)) tricks = 1;
+  let tricks = likelyBid(cards, read.players);
+  if (tricks === 0 && duckCount(v.hand, v.deck) === 0 && cards.some((c) => rankIn(c, 'black') >= 12)) tricks = 1;
   if (read.level === 'easy') {
     const slip = rng();
     if (slip < 0.5) {
