@@ -455,6 +455,64 @@ describe('lobbies', () => {
     expect(last(guest, 'game.update').table.status).toEqual(['online', 'online']);
   });
 
+  it('keeps the rules a public table opened with, for its host and for a guest, and writes nothing', async () => {
+    const browser = server.browser();
+    await browser.rest('POST', '/auth/guest');
+    const host = await connect(),
+      guest = await connect(),
+      nobody = await connect();
+    const other = { ...SETTINGS, scoring: 'rascal', format: 'brawl', loot: true } as const;
+    // The settings are read before the table is: a table nobody could sit at is not valid, seated or not.
+    expect(await code(nobody, { t: 'lobby.settings', settings: { ...other, maxPlayers: 9 } })).toBe('VALIDATION');
+    expect(await code(nobody, { t: 'lobby.settings', settings: other })).toBe('NOT_IN_LOBBY');
+
+    // The table is asked for with its rules once, and that is accepted.
+    expect(await code(host, { t: 'lobby.create', visibility: 'public', settings: SETTINGS })).toBe('ok');
+    const id = ((await browser.rest('GET', '/lobbies')).body as LobbyList).lobbies[0].id;
+    expect(await code(guest, { t: 'lobby.join', lobbyId: id })).toBe('ok');
+    expect(await code(host, { t: 'lobby.ready', ready: true })).toBe('ok');
+    expect(await code(guest, { t: 'lobby.ready', ready: true })).toBe('ok');
+    const before = lobbyOf(guest),
+      told = framesOf(guest, 'lobby.state').length;
+
+    const refused = host.send({ t: 'lobby.settings', settings: other });
+    await flush();
+    expect(answer(host, refused)).toEqual({
+      reply: { t: 'err', re: refused, code: 'RULES_LOCKED', message: 'A public table keeps its rules.' },
+      next: undefined,
+    });
+    expect(await code(guest, { t: 'lobby.settings', settings: other })).toBe('RULES_LOCKED');
+    // The rules it already has are refused as any others are.
+    expect(await code(host, { t: 'lobby.settings', settings: SETTINGS })).toBe('RULES_LOCKED');
+    expect(await code(host, { t: 'lobby.settings', settings: { ...other, maxPlayers: 9 } })).toBe('VALIDATION');
+    // The rules and both ready flags are what they were, and nobody was sent the table again.
+    expect(framesOf(guest, 'lobby.state')).toHaveLength(told);
+    expect(lobbyOf(host)).toEqual(before);
+    expect(before.settings).toEqual(SETTINGS);
+    expect(before.members.map((m) => m.kind === 'human' && m.ready)).toEqual([true, true]);
+
+    // Once it has started, that is what it says, to both.
+    expect(await code(host, { t: 'lobby.start' })).toBe('ok');
+    expect(await code(host, { t: 'lobby.settings', settings: other })).toBe('LOBBY_STARTED');
+    expect(await code(guest, { t: 'lobby.settings', settings: other })).toBe('LOBBY_STARTED');
+  });
+
+  it('changes the rules of a private table for its host only, and clears every ready', async () => {
+    const host = await connect(),
+      guest = await connect();
+    const other = { ...SETTINGS, scoring: 'rascal', format: 'brawl', loot: true } as const;
+    expect(await code(host, { t: 'lobby.create', visibility: 'private', settings: SETTINGS })).toBe('ok');
+    expect(await code(guest, { t: 'lobby.join', code: last(host, 'ok').lobby?.code })).toBe('ok');
+    expect(await code(host, { t: 'lobby.ready', ready: true })).toBe('ok');
+    expect(await code(guest, { t: 'lobby.ready', ready: true })).toBe('ok');
+
+    expect(await code(guest, { t: 'lobby.settings', settings: other })).toBe('NOT_HOST');
+    expect(lobbyOf(guest).settings).toEqual(SETTINGS);
+    expect(await code(host, { t: 'lobby.settings', settings: other })).toBe('ok');
+    expect(lobbyOf(guest).settings).toEqual(other);
+    expect(lobbyOf(guest).members.map((m) => m.kind === 'human' && m.ready)).toEqual([false, false]);
+  });
+
   it('seats bots at a table that did not say, or said yes, and takes no other word for it', async () => {
     const browser = server.browser();
     await browser.rest('POST', '/auth/guest');

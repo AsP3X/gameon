@@ -20,6 +20,7 @@ const COPY: Partial<Record<Failure['code'], string>> = {
   ALREADY_REGISTERED: 'This pirate already has an account.',
   ACCOUNT_REQUIRED: 'Ranked needs a free account.',
   BOTS_DISABLED: 'This table does not seat bots.',
+  RULES_LOCKED: 'A public table keeps its rules.',
   // The server's message for this carries no time. `Me.cooldownUntil` does, and the page draws none.
   // A forfeit is a ranked game that was left, one the player lost their seat in by missing two turns
   // while offline, or one they were away from for most of its rounds.

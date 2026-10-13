@@ -261,7 +261,8 @@ export function LobbyRoom({ online, go, lobby, me, status, notice, onRules, onPl
                 <b>{rules.title}</b>
                 <small>{rules.detail}</small>
               </span>
-              {host && open && (
+              {/* A public table keeps the rules it opened with (RULES_LOCKED): only a private one offers the form. */}
+              {host && open && !listed && (
                 <button
                   type="button"
                   className="mini"

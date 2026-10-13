@@ -303,6 +303,44 @@ describe('a new table', () => {
   it('says what the server says when a bot is refused all the same', () => {
     expect(failureText({ ok: false, code: 'BOTS_DISABLED', message: 'x' })).toBe('This table does not seat bots.');
   });
+
+  it.each([
+    { door: 'friends', at: '/skull-king/online/new', submit: 'Open table', standing: false, change: true },
+    { door: 'public', at: '/skull-king/online/public/new', submit: 'List table', standing: false, change: false },
+    { door: 'the house', at: '/skull-king/online/public/new', submit: 'List table', standing: true, change: false },
+  ])(
+    'of $door shows its rules while it waits, and offers to change them only when it is private',
+    async ({ at, submit, standing, change }) => {
+      house = standing;
+      await openAt(at);
+      await press('Rascal');
+      await press(submit);
+      await press("I'm ready");
+      // The rules the table opened with are on the plate, for a public table as for a private one.
+      expect($('#online .on-rules b')?.textContent).toBe('Classic · 10 rounds');
+      expect($('#online .on-rules small')?.textContent).toBe('Rascal scoring');
+      expect(texts('#online .on-rules button')).toEqual(change ? ['Change'] : []);
+      expect(texts('#online button')).toContain('Start');
+      if (!change) {
+        // A public table keeps them: the host has nothing to open the form with, and nothing is asked of the server.
+        expect($('#online h1, #online h2')?.textContent).toBe('Public table');
+        expect(sentOf('lobby.settings')).toEqual([]);
+        return;
+      }
+      await press('Change');
+      expect($('#online h1, #online h2')?.textContent).toBe('Table rules');
+      await press('Kraken');
+      await press('Save rules');
+      expect(sentOf('lobby.settings')).toMatchObject([{ settings: { scoring: 'rascal', kraken: true } }]);
+      expect($('#online .on-rules small')?.textContent).toBe('Rascal scoring · Kraken');
+      // New rules clear the host's ready.
+      expect(texts('#online .member .pill')).toEqual(['Not ready']);
+    },
+  );
+
+  it('says a public table keeps its rules when the server refuses a change all the same', () => {
+    expect(failureText({ ok: false, code: 'RULES_LOCKED', message: 'x' })).toBe('A public table keeps its rules.');
+  });
 });
 
 describe('the public list', () => {

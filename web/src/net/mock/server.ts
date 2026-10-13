@@ -211,6 +211,7 @@ const MESSAGES: Partial<Record<ErrorCode, string>> = {
   LOBBY_NOT_FOUND: 'No table has that code.',
   LOBBY_FULL: 'That table is full.',
   BOTS_DISABLED: 'This table does not seat bots.',
+  RULES_LOCKED: 'A public table keeps its rules.',
   LOBBY_STARTED: 'That game has already started.',
   ALREADY_SEATED: 'You are already at a table.',
   NOT_IN_LOBBY: 'You are not at a table.',
@@ -1031,6 +1032,8 @@ export class MockServer {
       ok(found.lobby);
       return this.pushLobby(found);
     }
+    // The server reads the settings before it looks at the table.
+    if (m.t === 'lobby.settings' && !isSettings(m.settings)) return this.fail(conn, m.id, 'VALIDATION');
     if (!room) return this.fail(conn, m.id, 'NOT_IN_LOBBY');
     const lobby = room.lobby,
       host = lobby.hostId === account.me.user.id,
@@ -1047,6 +1050,12 @@ export class MockServer {
       ok();
       return this.pushLobby(room);
     }
+    // A public table keeps the rules it opened with, for the host as for a guest: nothing is written and
+    // nobody is told. A table that has started says so before it asks who the host is.
+    if (m.t === 'lobby.settings') {
+      if (lobby.state !== 'open') return this.fail(conn, m.id, 'LOBBY_STARTED');
+      if (lobby.visibility === 'public') return this.fail(conn, m.id, 'RULES_LOCKED');
+    }
     // Everything below is the host's.
     if (
       m.t !== 'lobby.settings' &&
@@ -1060,8 +1069,7 @@ export class MockServer {
     if (lobby.state !== 'open') return this.fail(conn, m.id, 'LOBBY_STARTED');
     switch (m.t) {
       case 'lobby.settings':
-        if (!isSettings(m.settings) || m.settings.maxPlayers < lobby.members.length)
-          return this.fail(conn, m.id, 'VALIDATION');
+        if (m.settings.maxPlayers < lobby.members.length) return this.fail(conn, m.id, 'VALIDATION');
         lobby.settings = { ...m.settings };
         lobby.members.forEach((x) => {
           if (x.kind === 'human') x.ready = false;

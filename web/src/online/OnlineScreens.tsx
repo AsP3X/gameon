@@ -354,7 +354,8 @@ export function OnlineScreens({ online, state, route, go, up, onExit, sit, onSat
 
   if (lobby && me) {
     const back = (): void => setRules(null);
-    if (rules === lobby.id && lobby.hostId === me.user.id && lobby.state === 'open')
+    // A public table keeps its rules, so it never opens the form, whatever `rules` still holds.
+    if (rules === lobby.id && lobby.hostId === me.user.id && lobby.state === 'open' && lobby.visibility === 'private')
       return (
         <SettingsForm
           go={go}
