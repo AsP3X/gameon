@@ -236,16 +236,21 @@ async fn the_public_list_hides_private_lobbies_and_usernames(pool: sqlx::PgPool)
     .await;
     let created = read_text(&mut socket).await;
     assert!(created.contains("\"visibility\":\"private\""));
+    let private_id = created
+        .split("\"lobby\":{\"id\":\"")
+        .nth(1)
+        .and_then(|rest| rest.split('"').next())
+        .expect("lobby id");
     let (status, _, list) = http(port, "GET", "/api/v1/lobbies", &cookie, "").await;
     assert_eq!(status, 200, "{list}");
-    assert!(!list.contains("swift"), "{list}");
+    assert!(!list.contains(private_id), "{list}");
     assert!(!list.contains("Cara"), "{list}");
     assert_eq!(
         list.matches("\"hostName\":\"Open table\"").count(),
-        2,
+        5,
         "{list}"
     );
-    assert_eq!(list.matches("\"format\":\"classic\"").count(), 2, "{list}");
+    assert_one_of_each_format(&list);
 }
 
 #[sqlx::test(migrations = "../../migrations/postgres")]
@@ -254,13 +259,10 @@ async fn a_full_house_table_starts_and_a_new_one_takes_its_place(pool: sqlx::PgP
     let port = serve(state).await;
     let (cookie, _) = guest(port).await;
     let (_, _, list) = http(port, "GET", "/api/v1/lobbies", &cookie, "").await;
-    let table = list
-        .split("\"id\":\"")
-        .nth(1)
-        .unwrap()
-        .split('"')
-        .next()
-        .unwrap();
+    let before = listed_ids(&list);
+    assert_eq!(before.len(), 5, "{list}");
+    assert_one_of_each_format(&list);
+    let table = before[0].to_owned();
     let mut sockets = Vec::new();
     for index in 0..4 {
         let (cookie, _) = guest(port).await;
@@ -281,15 +283,114 @@ async fn a_full_house_table_starts_and_a_new_one_takes_its_place(pool: sqlx::PgP
                 .expect("frame");
             if frame.contains("\"t\":\"game.start\"") {
                 saw_start = true;
-                assert!(frame.contains(table), "{frame}");
+                assert!(frame.contains(&table), "{frame}");
                 break;
             }
         }
     }
     assert!(saw_start);
     let (_, _, after) = http(port, "GET", "/api/v1/lobbies", &cookie, "").await;
-    assert!(!after.contains(table), "{after}");
-    assert_eq!(after.matches("\"players\":0").count(), 2, "{after}");
+    assert!(!after.contains(&table), "{after}");
+    let after_ids = listed_ids(&after);
+    assert_eq!(after_ids.len(), 5, "{after}");
+    assert_eq!(after_ids[..4], before[1..], "{after}");
+    assert_one_of_each_format(&after);
+    assert_eq!(after.matches("\"players\":0").count(), 5, "{after}");
+}
+
+#[sqlx::test(migrations = "../../migrations/postgres")]
+async fn sitting_at_a_house_table_does_not_open_a_second_of_that_format(pool: sqlx::PgPool) {
+    let state = AppState::for_tests(pool, Duration::ZERO, budgets());
+    let port = serve(state).await;
+    let (cookie, _) = guest(port).await;
+    let (_, _, list) = http(port, "GET", "/api/v1/lobbies", &cookie, "").await;
+    let before = listed_ids(&list);
+    assert_eq!(before.len(), 5, "{list}");
+    let mut socket = open_socket(port, &cookie).await;
+    greet(&mut socket).await;
+    send(
+        &mut socket,
+        &format!(r#"{{"t":"lobby.join","id":1,"lobbyId":"{}"}}"#, before[0]),
+    )
+    .await;
+    let joined = read_text(&mut socket).await;
+    assert!(joined.contains("\"t\":\"ok\""), "{joined}");
+    let (_, _, after) = http(port, "GET", "/api/v1/lobbies", &cookie, "").await;
+    assert_eq!(listed_ids(&after), before, "{after}");
+    assert_one_of_each_format(&after);
+    assert_eq!(after.matches("\"players\":0").count(), 4, "{after}");
+    assert_eq!(after.matches("\"players\":1").count(), 1, "{after}");
+}
+
+#[sqlx::test(migrations = "../../migrations/postgres")]
+async fn changing_a_house_table_off_its_format_opens_a_fresh_one(pool: sqlx::PgPool) {
+    let state = AppState::for_tests(pool, Duration::ZERO, budgets());
+    let port = serve(state).await;
+    let (cookie, _) = guest(port).await;
+    let (_, _, list) = http(port, "GET", "/api/v1/lobbies", &cookie, "").await;
+    let before = listed_ids(&list);
+    assert_eq!(before.len(), 5, "{list}");
+    let classic = &before[0];
+    let mut socket = open_socket(port, &cookie).await;
+    greet(&mut socket).await;
+    send(
+        &mut socket,
+        &format!(r#"{{"t":"lobby.join","id":1,"lobbyId":"{classic}"}}"#),
+    )
+    .await;
+    let joined = read_text(&mut socket).await;
+    assert!(joined.contains("\"t\":\"ok\""), "{joined}");
+    send(
+        &mut socket,
+        r#"{"t":"lobby.settings","id":2,"settings":{"maxPlayers":4,"scoring":"classic","format":"brawl","loot":false,"kraken":false,"whale":false,"abilities":false,"botLevel":"normal","pace":"standard"}}"#,
+    )
+    .await;
+    let mut saw_ok = false;
+    for _ in 0..4 {
+        let frame = read_text(&mut socket).await;
+        if frame.contains("\"t\":\"ok\"") {
+            saw_ok = true;
+            break;
+        }
+        assert!(!frame.contains("\"t\":\"err\""), "{frame}");
+    }
+    assert!(saw_ok);
+    let (_, _, after) = http(port, "GET", "/api/v1/lobbies", &cookie, "").await;
+    let after_ids = listed_ids(&after);
+    assert_eq!(after_ids.len(), 6, "{after}");
+    assert!(after_ids.contains(classic), "{after}");
+    assert!(before.iter().all(|id| after_ids.contains(id)), "{after}");
+    assert_eq!(
+        after.matches("\"format\":\"classic\"").count(),
+        1,
+        "{after}"
+    );
+    assert_eq!(after.matches("\"format\":\"brawl\"").count(), 2, "{after}");
+    assert_eq!(after.matches("\"format\":\"swift\"").count(), 1, "{after}");
+    assert_eq!(after.matches("\"format\":\"even\"").count(), 1, "{after}");
+    assert_eq!(after.matches("\"format\":\"whirl\"").count(), 1, "{after}");
+    assert_eq!(
+        after.matches("\"hostName\":\"Open table\"").count(),
+        5,
+        "{after}"
+    );
+}
+
+fn listed_ids(list: &str) -> Vec<&str> {
+    list.split("\"id\":\"")
+        .skip(1)
+        .filter_map(|rest| rest.split('"').next())
+        .collect()
+}
+
+fn assert_one_of_each_format(list: &str) {
+    for format in ["classic", "brawl", "swift", "even", "whirl"] {
+        assert_eq!(
+            list.matches(&format!("\"format\":\"{format}\"")).count(),
+            1,
+            "{format} in {list}"
+        );
+    }
 }
 
 #[sqlx::test(migrations = "../../migrations/postgres")]

@@ -23,6 +23,7 @@ pub(crate) use table::SeatTally;
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::time::{Duration, Instant};
 
+use skt_engine::Format;
 use skt_protocol::{
     Active, ClientMessage, ErrMessage, ErrTag, ErrorCode, GameId, Lobby, LobbyClosed,
     LobbyClosedTag, LobbyId, LobbyList, LobbyPhase, LobbyStatePush, LobbyStateTag, LobbySummary,
@@ -56,7 +57,7 @@ pub struct World {
     codes: HashMap<String, LobbyId>,
     /// Public-list order. Oldest first.
     opened: Vec<LobbyId>,
-    /// Standing public tables. Two of them stay open and not full.
+    /// Standing public tables. One of each format stays open with a free seat.
     house: Vec<LobbyId>,
     /// House tables whose game has started. They leave the list when that game ends.
     house_started: HashSet<LobbyId>,
@@ -75,6 +76,15 @@ pub struct World {
     parties: Vec<RecentParty>,
     now: Instant,
 }
+
+/// Standing public tables, in the order an empty tavern lists them.
+const HOUSE_FORMATS: [Format; 5] = [
+    Format::Classic,
+    Format::Brawl,
+    Format::Swift,
+    Format::Even,
+    Format::Whirl,
+];
 
 /// Humans who started a private lobby together.
 struct RecentParty {
@@ -695,6 +705,9 @@ impl World {
             }
             true
         }) {
+            // Human: Moving a standing table onto another format leaves the old one with nobody waiting, so a fresh table of that format opens.
+            // Agent: CALLS ensure_house_tables after the host's settings are stored. WRITES a lobby only for a format that has no open house table with a free seat.
+            self.ensure_house_tables();
             self.ok(user, id, None, false);
         }
     }
@@ -979,28 +992,33 @@ impl World {
         self.push_lobby(&snapshot);
     }
 
-    /// Keep two public tables open, with the standard rules, and room to join.
+    /// Keep one public table with a free seat for each format.
+    ///
+    /// Human: An empty tavern lists Classic, Brawl, Swift, Even and Whirl, in that order.
+    /// Each is four players, classic scoring, no extra cards, and seats bots. Sitting down
+    /// does not open a second table of that format. Filling one, or the host changing its
+    /// format, opens a fresh empty table of the format that no longer has a free seat.
+    /// Agent: READS house lobbies' state, member count and settings.format; WRITES one lobby
+    /// per missing format. Other settings are `GameSettings::standard()`. Does not read hands or bids.
     pub(crate) fn ensure_house_tables(&mut self) {
         self.house.retain(|id| self.lobbies.contains_key(id));
-        let mut open = self
-            .house
-            .iter()
-            .filter(|id| {
-                self.lobbies.get(*id).is_some_and(|lobby| {
+        for format in HOUSE_FORMATS {
+            let covered = self.house.iter().any(|id| {
+                self.lobbies.get(id).is_some_and(|lobby| {
                     lobby.state == LobbyPhase::Open
                         && lobby.members.len() < usize::from(lobby.settings.max_players)
+                        && lobby.settings.format == format
                 })
-            })
-            .count();
-        while open < 2 {
-            let id = self.spawn_house_table();
-            self.house.push(id);
-            open += 1;
+            });
+            if !covered {
+                let id = self.spawn_house_table(format);
+                self.house.push(id);
+            }
         }
     }
 
-    /// One empty public table. The first person to sit down becomes its host.
-    fn spawn_house_table(&mut self) -> LobbyId {
+    /// One empty public table of `format`. The first person to sit down becomes its host.
+    fn spawn_house_table(&mut self, format: Format) -> LobbyId {
         let lobby_id = LobbyId::new(identity::uuid());
         let code = self.fresh_code();
         let lobby = Lobby {
@@ -1009,7 +1027,10 @@ impl World {
             mode: TableMode::Custom,
             visibility: Visibility::Public,
             host_id: None,
-            settings: skt_protocol::GameSettings::standard(),
+            settings: skt_protocol::GameSettings {
+                format,
+                ..skt_protocol::GameSettings::standard()
+            },
             allow_bots: None,
             members: Vec::new(),
             state: LobbyPhase::Open,
