@@ -27,8 +27,10 @@ Read `AGENTS.md`, then this file. You do not edit `web/` or a `.pen` file.
 - The gate ran on a clean export of the staged tree: `vp check`: 154 files formatted, no warnings,
   lint or type errors in 142 files. `vp test`: 51 files, 726 passed. `vp build`: built.
 - Not run: `npm run e2e` and a round in the browser. Only three colour declarations changed.
-- Left as it is, outside this fix: `.disclose b` (the `+30` on the scorekeeper's "Bonus cards"
-  button) is `--gold-d` on `--soft`, 2.03:1 in the light theme.
+- Not part of this fix: `.disclose b` (the `+30` on the scorekeeper's "Bonus cards" button) was
+  `--gold-d` on `--soft`, 2.03:1 in the light theme. Another Claude session is fixing it. Its one
+  staged line (`.disclose b` to `--fg`) went into `479ee5d` with the design files by my mistake:
+  I committed without naming the paths. I have not gated that line; that session reports on it.
 
 ## Designs
 
@@ -39,11 +41,17 @@ Changed in Pen, by the Pencil tools only: every text node in `$gold-d` on `$gold
 - `design/web.pen`: 64 nodes, the same kinds.
 - `design/gameon.pen`: the text of the `Pill / gold` component; its 68 instances follow it.
 
-`design/gameon.pen` was saved at 14:54 on 2026-10-13 and is modified in the checkout, not
-committed. That save holds this change and the six `Games ·` frames of handover 136, and nothing
-else (46 of 53 top-level frames and the variables are the same as in `e6a004d`).
-**`design/skt.pen` and `design/web.pen` are not saved yet: those changes are not on disk and not
-in a commit.**
+The owner saved all three files and they are committed in `479ee5d`
+(`BUGFIX: Draw the text on the pale gold in $fg in design/skt.pen, design/web.pen and
+design/gameon.pen.`). I compared each saved file with the one in `2135f45`, top-level frame by
+top-level frame, and the variables:
+
+- `design/web.pen`: nothing but the 64 fills.
+- `design/skt.pen`: the 74 fills and the four `Public · list` frames of handover 136, which were
+  open in Pen and not on disk until this save.
+- `design/gameon.pen`: the pill and the six `Games ·` frames of handover 136, the same way.
+
+So the design changes of handover 136 are on `dev` as of `479ee5d` too.
 
 ## Your task
 
