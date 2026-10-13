@@ -25,7 +25,7 @@ first, the fixtures are regenerated, and then the port follows. A fixture is nev
 | --------- | ----------- |
 | `shuffle` with `mulberry32` inside `startRound`; the seed is in the state | The engine takes each round's card order from a `DealSource` passed in. The server's source is an OS-seeded CSPRNG; the test source replays a fixture. No seed in the state. |
 | First dealer drawn from the same RNG in `create` | The first dealer is an argument. |
-| Bots call `Math.random()` and read `state` | Bots take an RNG argument and a seat's `EngineView` plus the static deck and settings. They cannot see `GameState`. |
+| Bots call `Math.random()` and read `state`. The legacy formula is a power table plus noise | Bots take an RNG argument, one seat's `EngineView`, the static deck, the table rules, the face-up plays, and that seat's own Seer peek. They cannot see `GameState`. Easy, Normal, and Hard are the policy in `bots.rs`: a beginner who sometimes slips, a regular who plays a makeable bid, and that same regular leaning on the next seat without giving up their own bid |
 | `view()` includes `seats`, `cfg`, `deck` | `EngineView` leaves them out; the server sends them once in `game.start`. |
 | `reduce` returns `{error: string}` | A typed rejection: `NotYourTurn`, `IllegalMove`, `BidOutOfRange` (table in §5). |
 | `cfg.cannonball` in `scoreSeat` | Not ported. It is a scorekeeper-only option. |

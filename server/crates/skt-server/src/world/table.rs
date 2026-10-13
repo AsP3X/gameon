@@ -3,7 +3,7 @@
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
 
-use skt_engine::{BotLevel, Expansions, GameState, Phase, Ruleset, Seat};
+use skt_engine::{BotLevel, BotSight, Expansions, GameState, Phase, Ruleset, Seat};
 use skt_protocol::{
     ClientMessage, Deadline, DeadlineKind, EngineView, ErrMessage, ErrTag, ErrorCode,
     GameEmotePush, GameEmoteTag, GameEvent, GameId, GameOver, GameOverTag, GameResult, GameStart,
@@ -1263,8 +1263,52 @@ impl Running {
         }
     }
 
-    // Human: A bot, a takeover, or a missed deadline plays from that seat's own view.
-    // Agent: READS EngineView for `seat` and the deck; WRITES one engine step; never serialises GameState.
+    fn bot_sight(&self, seat: Seat) -> Option<BotSight<'_>> {
+        let peeked = self.state.seer_memory(seat).ok()?;
+        Some(BotSight {
+            plays: self.state.shown_plays(),
+            peeked,
+        })
+    }
+
+    fn bot_bid(
+        &self,
+        seat: Seat,
+        view: &skt_engine::EngineView,
+        rules: Ruleset,
+        level: BotLevel,
+        rng: &mut impl skt_engine::Rng,
+    ) -> Option<u8> {
+        let sight = self.bot_sight(seat)?;
+        skt_engine::choose_bid(view, self.state.deck(), rules, level, sight, rng).ok()
+    }
+
+    fn bot_play(
+        &self,
+        seat: Seat,
+        view: &skt_engine::EngineView,
+        rules: Ruleset,
+        level: BotLevel,
+        rng: &mut impl skt_engine::Rng,
+    ) -> Option<(skt_engine::CardId, Option<skt_engine::PlayedAs>)> {
+        let sight = self.bot_sight(seat)?;
+        skt_engine::choose_play(view, self.state.deck(), rules, level, sight, rng).ok()
+    }
+
+    fn bot_ability(
+        &self,
+        seat: Seat,
+        view: &skt_engine::EngineView,
+        rules: Ruleset,
+        level: BotLevel,
+        rng: &mut impl skt_engine::Rng,
+    ) -> Option<skt_engine::AbilityChoice> {
+        let sight = self.bot_sight(seat)?;
+        skt_engine::choose_ability(view, self.state.deck(), rules, level, sight, rng).ok()
+    }
+
+    // Human: A bot, a takeover, or a missed deadline plays from that seat's own view, the cards everyone has seen, and the pile only if this seat was the Seer.
+    // Agent: READS EngineView for `seat`, deck, rules, shown plays, peeked[seat]; WRITES one engine step; never serialises GameState or another seat's peek.
     fn apply_auto(
         &mut self,
         seat: Seat,
@@ -1280,13 +1324,12 @@ impl Running {
         } else {
             BotLevel::Normal
         };
+        let rules = self.state.rules();
         let seat_no = u8::try_from(seat.index()).ok();
         let mut rng = OsRandom;
         let played = match view.phase {
             Phase::Bidding => {
-                let Some(bid) =
-                    skt_engine::choose_bid(&view, self.state.deck(), level, &mut rng).ok()
-                else {
+                let Some(bid) = self.bot_bid(seat, &view, rules, level, &mut rng) else {
                     return false;
                 };
                 let events = self.state.bid(seat, i64::from(bid)).ok();
@@ -1296,8 +1339,7 @@ impl Running {
                 events
             }
             Phase::Playing => {
-                let Some((card, played_as)) =
-                    skt_engine::choose_play(&view, self.state.deck(), level, &mut rng).ok()
+                let Some((card, played_as)) = self.bot_play(seat, &view, rules, level, &mut rng)
                 else {
                     return false;
                 };
@@ -1308,8 +1350,7 @@ impl Running {
                 events
             }
             Phase::Ability => {
-                let Some(choice) = skt_engine::choose_ability(&view, self.state.deck(), level).ok()
-                else {
+                let Some(choice) = self.bot_ability(seat, &view, rules, level, &mut rng) else {
                     return false;
                 };
                 let events = self.state.ability(seat, &choice).ok();

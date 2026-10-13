@@ -54,6 +54,10 @@ pub struct GameState {
     pub(crate) giant_seat: Option<Seat>,
     pub(crate) giant_used: bool,
     pub(crate) log: Vec<RoundRecord>,
+    /// Face-up plays this round, in order, with the Tigress declaration. Public.
+    pub(crate) round_plays: Vec<Play>,
+    /// The pile each seat was shown by the Seer this round. Empty for every other seat.
+    pub(crate) peeked: Vec<Vec<CardId>>,
 }
 
 impl GameState {
@@ -101,6 +105,8 @@ impl GameState {
             giant_seat: None,
             giant_used: false,
             log: Vec::new(),
+            round_plays: Vec::new(),
+            peeked: vec![Vec::new(); usize::from(players)],
         };
         state
             .start_round(deals, true)
@@ -231,6 +237,32 @@ impl GameState {
         self.rules
     }
 
+    /// Face-up plays this round, in order. The Tigress declaration is kept.
+    ///
+    /// Every seat saw these plays. Hidden cards are not in here.
+    #[must_use]
+    pub fn shown_plays(&self) -> &[Play] {
+        &self.round_plays
+    }
+
+    /// Cards the Seer showed `seat` this round.
+    ///
+    /// Empty until that seat plays the Seer, and empty for every other seat.
+    /// The list is the pile as it stood when the ability opened. It is not written
+    /// onto a view.
+    ///
+    /// # Errors
+    ///
+    /// [`StepError::Broken`] when `seat` is not at this table.
+    pub fn seer_memory(&self, seat: Seat) -> Result<&[CardId], StepError> {
+        // Human: The Seer's look at the pile stays with that seat after the ability closes, and no other seat receives it.
+        // Agent: READS peeked[seat]; RETURNS that seat's copy of the pile; other seats get an empty slice; never writes a view or an event.
+        self.peeked
+            .get(seat.checked(self.players)?)
+            .map(Vec::as_slice)
+            .ok_or(StepError::Broken)
+    }
+
     /// What the table is waiting for.
     #[must_use]
     pub const fn phase(&self) -> Phase {
@@ -335,6 +367,7 @@ impl GameState {
             played_as: tigress_as,
         };
         self.trick.plays.push(play);
+        self.round_plays.push(play);
         self.played.push(card);
         let mut events = vec![GameEvent::CardPlayed {
             seat,
@@ -616,12 +649,9 @@ impl GameState {
                 None,
             );
         } else if ability == Some(Ability::Seer) && !round_over && !self.pile.is_empty() {
-            self.start_ability(
-                &mut events,
-                Ability::Seer,
-                winner.ok_or(StepError::Broken)?,
-                None,
-            );
+            let seat = winner.ok_or(StepError::Broken)?;
+            self.remember_peek(seat)?;
+            self.start_ability(&mut events, Ability::Seer, seat, None);
         } else {
             events.extend(self.after_trick()?);
         }
@@ -684,6 +714,15 @@ impl GameState {
         Ok(vec![GameEvent::RoundEnded { round }])
     }
 
+    fn remember_peek(&mut self, seat: Seat) -> Result<(), StepError> {
+        // Human: Remember the pile this seat was just shown, so a later bid or play can use it. No other seat can read the list.
+        // Agent: READS pile and seat; WRITES peeked[seat]; does not write a view, an event, or another seat's list.
+        let index = seat.checked(self.players)?;
+        let memory = self.peeked.get_mut(index).ok_or(StepError::Broken)?;
+        memory.clone_from(&self.pile);
+        Ok(())
+    }
+
     fn start_ability(
         &mut self,
         events: &mut Vec<GameEvent>,
@@ -707,6 +746,10 @@ impl GameState {
         self.apply_deal(&order, cards)?;
         let players = usize::from(self.players);
         self.played.clear();
+        self.round_plays.clear();
+        for memory in &mut self.peeked {
+            memory.clear();
+        }
         self.bids = vec![None; players];
         self.won = vec![0; players];
         self.trick = Trick {

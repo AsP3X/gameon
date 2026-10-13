@@ -15,7 +15,7 @@ mod rng;
 mod rules;
 mod score;
 
-pub use bots::{choose_ability, choose_bid, choose_play};
+pub use bots::{BotSight, choose_ability, choose_bid, choose_play};
 pub use card::{Card, build_deck, is_legal, lead_suit, legal_cards, resolve_trick};
 pub use error::{CreateError, Rejection, StepError};
 pub use game::{DealSource, GameState};

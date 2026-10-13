@@ -50,11 +50,12 @@ impl Format {
 #[serde(rename_all = "camelCase")]
 #[ts(rename_all = "camelCase", export_to = "BotLevel.ts")]
 pub enum BotLevel {
-    /// Noisy bids, and sometimes a random legal card.
+    /// Knows the game. Miscounts a mermaid or a high side card on some hands, and
+    /// sometimes plays the card a beginner would.
     Easy,
-    /// The static power table, scaled by how many rivals are still to play.
+    /// Counts a makeable bid and plays it. Does not throw a stopper, an escape, or the Kraken away.
     Normal,
-    /// Power from the cards this seat has not seen.
+    /// The same plan as Normal. When that plan leaves a choice, leans on the next seat's bid.
     Hard,
 }
 
