@@ -1,3 +1,4 @@
+import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { readdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -57,6 +58,31 @@ function precache(): Plugin {
   };
 }
 
+/**
+ * How many test files run at once on this machine. The slow tests are whole games rendered into
+ * jsdom: all work and no waiting, against a timeout on the wall clock. Vitest runs one file on every
+ * core but one, and on Apple silicon half of those cores or more are efficiency cores, where such a
+ * test takes three to five times as long and runs out of its time. So a Mac runs as many files as it
+ * has performance cores; the whole suite is no slower for it. Anywhere else the cores are alike, and
+ * Vitest's own count stands.
+ */
+function testWorkers(): number | undefined {
+  if (process.platform !== 'darwin') return undefined;
+  try {
+    const cores = Number.parseInt(
+      execFileSync('/usr/sbin/sysctl', ['-n', 'hw.perflevel0.logicalcpu'], {
+        encoding: 'utf8',
+        stdio: ['ignore', 'pipe', 'ignore'],
+      }),
+      10,
+    );
+    return cores > 0 ? cores : undefined;
+  } catch {
+    // An Intel Mac has no such levels: its cores are alike.
+    return undefined;
+  }
+}
+
 export default defineConfig({
   plugins: [react(), precache()],
   build: {
@@ -77,7 +103,7 @@ export default defineConfig({
   },
   test: e2e
     ? { include: ['e2e/**/*.e2e.ts'], testTimeout: 600_000, hookTimeout: 120_000, fileParallelism: false }
-    : { include: ['src/**/*.test.ts', 'src/**/*.test.tsx'] },
+    : { include: ['src/**/*.test.ts', 'src/**/*.test.tsx'], maxWorkers: testWorkers() },
   lint: {
     ignorePatterns: generated,
     options: { typeAware: true, typeCheck: true },

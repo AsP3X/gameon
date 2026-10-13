@@ -25,6 +25,7 @@ import type { GameSettings, LobbyList, Me } from '../protocol/generated';
 import { session, ui } from '../tableview/state';
 import { OnlineScreens } from './OnlineScreens';
 import { BOARDING_MS } from './Queue';
+import { endSteps, step } from './steps';
 
 function seeded(seed: number): () => number {
   let a = seed >>> 0;
@@ -50,7 +51,7 @@ let page: Backend;
 const $ = (selector: string): HTMLElement | null => document.querySelector<HTMLElement>(selector);
 const texts = (selector: string): string[] =>
   Array.from(document.querySelectorAll<HTMLElement>(selector), (el) => el.textContent ?? '');
-const settle = (ms = 0): Promise<void> => act(() => vi.advanceTimersByTimeAsync(ms).then(() => {}));
+const settle = (ms = 0): Promise<void> => step(() => {}, ms);
 const button = (label: string): HTMLButtonElement => {
   const all = Array.from(document.querySelectorAll('button'));
   const el = all.find((b) => b.textContent === label) ?? all.find((b) => b.textContent?.startsWith(label));
@@ -59,10 +60,7 @@ const button = (label: string): HTMLButtonElement => {
 };
 async function clickOn(el: HTMLElement, what: string): Promise<void> {
   if (el instanceof HTMLButtonElement && el.disabled) throw new Error(`${what} is disabled`);
-  await act(async () => {
-    el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
-    await vi.advanceTimersByTimeAsync(0);
-  });
+  await step(() => el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true })));
 }
 async function click(selector: string): Promise<void> {
   const el = $(selector);
@@ -73,31 +71,26 @@ const press = (label: string): Promise<void> => clickOn(button(label), `"${label
 async function type(selector: string, value: string): Promise<void> {
   const input = document.querySelector<HTMLInputElement>(selector);
   if (!input) throw new Error(`Nothing to type into: ${selector}`);
-  await act(async () => {
+  await step(() => {
     Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set?.call(input, value);
     input.dispatchEvent(new Event('input', { bubbles: true }));
-    await vi.advanceTimersByTimeAsync(0);
   });
 }
 /** Send the form on screen, as Enter in a field does. */
 async function submit(): Promise<void> {
   const form = $('#gameon form') ?? $('#online form');
   if (!form) throw new Error('No form on screen');
-  await act(async () => {
-    form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
-    await vi.advanceTimersByTimeAsync(0);
-  });
+  await step(() => form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })));
 }
 async function renderApp(): Promise<void> {
   root = createRoot(host);
-  await act(async () => {
+  await step(() =>
     root?.render(
       <StrictMode>
         <App backend={page} places={places} />
       </StrictMode>,
-    );
-    await vi.advanceTimersByTimeAsync(0);
-  });
+    ),
+  );
 }
 /** From the home screen to the hub, connected. */
 async function openHub(): Promise<void> {
@@ -107,11 +100,7 @@ async function openHub(): Promise<void> {
 }
 const me = async (): Promise<Me> => (await page.rest('GET', '/me')).body as Me;
 /** The browser's Back. */
-const back = (): Promise<void> =>
-  act(async () => {
-    places.back();
-    await vi.advanceTimersByTimeAsync(0);
-  });
+const back = (): Promise<void> => step(() => places.back());
 /** Another player, from a browser of their own. */
 async function someone(): Promise<{ socket: RawClient; browser: Backend }> {
   const browser = server.browser();
@@ -153,7 +142,8 @@ beforeEach(() => {
   page = server.browser();
 });
 
-afterEach(() => {
+afterEach(async () => {
+  await endSteps();
   if (root) act(() => root?.unmount());
   root = null;
   vi.useRealTimers();
@@ -540,6 +530,9 @@ describe('quick play', () => {
     expect((await me()).active).toBeNull();
   });
 
+  // A whole game on the page: two seconds of work on a free core and no waiting at all, so how long
+  // it takes is how busy the machine is. The runner's five seconds are for tests of milliseconds,
+  // and this one passed them by luck: it has a minute.
   it('opens the table when the queue has made one, plays it to the end, and counts it on the profile', async () => {
     await openHub();
     await press('Quick play');
@@ -595,7 +588,7 @@ describe('quick play', () => {
     ]);
     expect($('#gameon .go-best > b')?.textContent).toBe(String(mine.stats.bestScore).replace('-', '−'));
     expect(texts('#gameon .go-played li .go-played-what b')).toEqual(['Casual']);
-  });
+  }, 60_000);
 
   it('keeps the queue screen through a dropped connection, and takes the place the server still has', async () => {
     await openHub();
@@ -666,21 +659,14 @@ async function wired(queue: object | null = null): Promise<Wired> {
     onmessage: null,
     onclose: null,
   };
-  const say = (frame: object): Promise<void> =>
-    act(async () => {
-      wire.onmessage?.(JSON.stringify(frame));
-      await vi.advanceTimersByTimeAsync(0);
-    });
+  const say = (frame: object): Promise<void> => step(() => wire.onmessage?.(JSON.stringify(frame)));
   const online = new Online(
     new SocketClient({ transport: () => Promise.resolve(wire), build: 'test' }),
     new Api(() => Promise.reject(new Error('This test has no REST'))),
   );
   online.open();
   root = createRoot(host);
-  await act(async () => {
-    root?.render(<Hub online={online} onExit={() => {}} />);
-    await vi.advanceTimersByTimeAsync(0);
-  });
+  await step(() => root?.render(<Hub online={online} onExit={() => {}} />));
   const guest = (await server.browser().rest('POST', '/auth/guest')).body;
   await say({ t: 'ok', re: sent[0].id });
   await say({ t: 'welcome', me: guest, serverTime: Date.now(), lobby: null, queue, game: null });

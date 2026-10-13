@@ -19,6 +19,7 @@ import type { Wire } from '../net/socket';
 import type { Me } from '../protocol/generated';
 import { session, ui } from '../tableview/state';
 import { BOARDING_MS } from './Queue';
+import { endSteps, step } from './steps';
 
 function seeded(seed: number): () => number {
   let a = seed >>> 0;
@@ -47,7 +48,7 @@ let sent: { t: string; mode?: string }[];
 const $ = (selector: string): HTMLElement | null => document.querySelector<HTMLElement>(selector);
 const texts = (selector: string): string[] =>
   Array.from(document.querySelectorAll<HTMLElement>(selector), (el) => el.textContent ?? '');
-const settle = (ms = 0): Promise<void> => act(() => vi.advanceTimersByTimeAsync(ms).then(() => {}));
+const settle = (ms = 0): Promise<void> => step(() => {}, ms);
 const button = (label: string): HTMLButtonElement => {
   const all = Array.from(document.querySelectorAll('button'));
   const el = all.find((b) => b.textContent === label) ?? all.find((b) => b.textContent?.startsWith(label));
@@ -56,10 +57,7 @@ const button = (label: string): HTMLButtonElement => {
 };
 async function clickOn(el: HTMLElement, what: string): Promise<void> {
   if (el instanceof HTMLButtonElement && el.disabled) throw new Error(`${what} is disabled`);
-  await act(async () => {
-    el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
-    await vi.advanceTimersByTimeAsync(0);
-  });
+  await step(() => el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true })));
 }
 async function click(selector: string): Promise<void> {
   const el = $(selector);
@@ -104,25 +102,23 @@ async function openAt(at: string, username?: string): Promise<void> {
   if (username) await register(page, username, 'Anne');
   places = memoryPlaces(at);
   root = createRoot(host);
-  await act(async () => {
+  await step(() =>
     root?.render(
       <StrictMode>
         <App backend={page} places={places} />
       </StrictMode>,
-    );
-    await vi.advanceTimersByTimeAsync(0);
-  });
+    ),
+  );
   await settle();
 }
 /** The ranked page, as its address opens it. */
 const openRanked = (username?: string): Promise<void> => openAt('/skull-king/ranked', username);
 /** To another address of the running page, as a link there would lead: a new entry, and the page reads it. */
 async function visit(path: string): Promise<void> {
-  await act(async () => {
+  await step(() => {
     places.push(path, null);
     places.back();
     places.forward();
-    await vi.advanceTimersByTimeAsync(0);
   });
   await settle();
 }
@@ -167,7 +163,8 @@ beforeEach(() => {
   page = recording(server.browser());
 });
 
-afterEach(() => {
+afterEach(async () => {
+  await endSteps();
   if (root) act(() => root?.unmount());
   root = null;
   vi.useRealTimers();
@@ -194,10 +191,7 @@ describe('ranked, for a guest', () => {
     // The account is made on the frame's page. The browser's Back is the way back to ranked.
     await press('Sign up');
     expect($('#gameon h1')?.textContent).toBe('Create your account');
-    await act(async () => {
-      places.back();
-      await vi.advanceTimersByTimeAsync(0);
-    });
+    await step(() => places.back());
     expect($('#online h1')?.textContent).toBe('Ranked');
 
     // The ladder is a page of the frame (src/gameon/Ladder.test.tsx). The season on it is the server's.
@@ -355,6 +349,9 @@ describe('ranked, for an account', () => {
     expect($('#online h1, #online h2')?.textContent).toBe('Ranked');
   });
 
+  // A whole game on the page: two seconds of work on a free core and no waiting at all, so how long
+  // it takes is how busy the machine is. The runner's five seconds are for tests of milliseconds,
+  // and this one passed them by luck: it has a minute.
   it('ranks the end screen by the places the server sent: a seat that forfeited is last and marked, whatever it scored', async () => {
     await openRanked('anne_login');
     await press('Find a ranked game');
@@ -390,7 +387,7 @@ describe('ranked, for an account', () => {
     expect($('#online h1, #online h2')?.textContent).toBe('Online');
     expect($('#online .notice.gold')).toBeNull();
     expect((await me()).cooldownUntil).toBeNull();
-  });
+  }, 60_000);
 
   it('keeps the casual leave sheet as it was', async () => {
     await openAt('/skull-king/online', 'anne_login');
@@ -408,6 +405,7 @@ describe('ranked, for an account', () => {
     expect(button('Find a ranked game').disabled).toBe(false);
   });
 
+  // A whole game again: a minute, as above.
   it('shows what the game did to the rating on the end screen, on the ranked page, on the profile and on the ladder', async () => {
     await openRanked('anne_login');
     await press('Find a ranked game');
@@ -452,10 +450,7 @@ describe('ranked, for an account', () => {
     // Escape closes it too, like the table's own sheets.
     await click('[data-act="record"]');
     await settle();
-    await act(async () => {
-      $('#record')?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
-      await vi.advanceTimersByTimeAsync(0);
-    });
+    await step(() => $('#record')?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })));
     expect($('#record')).toBeNull();
 
     await click('[data-act="again"]');
@@ -498,5 +493,5 @@ describe('ranked, for an account', () => {
     // The ladder is public players: nobody's login name is on it.
     expect($('#gameon')?.textContent).not.toMatch(/_login/);
     expect($('#gameon .go-more')).toBeNull();
-  });
+  }, 60_000);
 });

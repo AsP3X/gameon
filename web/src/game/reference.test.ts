@@ -82,7 +82,10 @@ describe('reference: the legacy build', () => {
     }
   });
 
-  it('plays whole bot games identically, decision by decision', () => {
+  // 36 games, and both engines' whole state compared after each of some 3000 moves: two seconds of
+  // work on a free core, and several times that on a busy machine. The runner's five seconds are
+  // not for this.
+  it('plays whole bot games identically, decision by decision', { timeout: 60_000 }, () => {
     let decisions = 0;
     for (let game = 0; game < 36; game++) {
       const mine = seeded(1000 + game);
