@@ -615,6 +615,9 @@ Restated from `docs/agent-rules/server-authority.md`, because it is part of the 
   `pending.drawn` only for the Smuggler's own seat.
 - No deck order, seed or RNG state. `deck` in `game.start` is the card list in canonical order,
   identical for every game with the same settings.
+- The table may show a face-down stack, a shuffle, and a clockwise deal. It draws those from
+  `dealer`, `cards`, `handCounts`, the receiver's own `hand`, and the length of `deck` in
+  `game.start`. The permutation, the pile order, and any seed stay unsent.
 - `rating` in `game.over` is the receiver's own. Other players' new ratings come from their profiles.
 
 ## 7. Samples

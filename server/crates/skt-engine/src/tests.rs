@@ -502,7 +502,7 @@ fn loot_bonus_requires_both_seats_to_hit() {
 #[test]
 fn easy_bid_stays_inside_the_hand_and_overbids_a_mermaid() {
     let hands = vec![vec![68, 12, 0, 1, 2], vec![3, 4, 5, 6, 7]];
-    let game = dealt(hands, 1, false, Expansions::none());
+    let game = dealt(&hands, 1, false, Expansions::none());
     let view = game.view(Seat::from_index(0)).expect("view");
     let sight = sight_of(&game, Seat::from_index(0));
     let normal = choose_bid(
@@ -540,7 +540,7 @@ fn easy_bid_stays_inside_the_hand_and_overbids_a_mermaid() {
 #[test]
 fn normal_bids_zero_on_a_hand_of_escapes() {
     let hands = vec![vec![56, 57, 58, 59, 60], vec![0, 1, 2, 3, 4]];
-    let game = dealt(hands, 1, false, Expansions::none());
+    let game = dealt(&hands, 1, false, Expansions::none());
     let view = game.view(Seat::from_index(0)).expect("view");
     let bid = choose_bid(
         &view,
@@ -571,7 +571,35 @@ fn unknown_seat_is_not_your_turn() {
     assert_eq!(error, StepError::Rejected(Rejection::NotYourTurn));
 }
 
-fn dealt(hands: Vec<Vec<u8>>, dealer: u8, abilities: bool, expansions: Expansions) -> GameState {
+/// Even, two seats. The first round deals two cards, so the front of a known order is the hands
+/// and the first undealt card is 4.
+#[test]
+fn deal_gives_each_seat_a_slice_and_the_suffix_is_the_pile() {
+    let expansions = Expansions::none();
+    let order = deal_hands(expansions, &[vec![0, 1], vec![2, 3]]);
+    let mut deals = Scripted {
+        rounds: vec![order.clone()],
+    };
+    let game = GameState::create(
+        Ruleset::new(Scoring::Classic, Format::Even, expansions, false),
+        2,
+        Seat::from_index(0),
+        &mut deals,
+    )
+    .expect("create");
+    let cards = |ids: [u8; 2]| ids.map(CardId::from_index).to_vec();
+    assert_eq!(game.hands, vec![cards([0, 1]), cards([2, 3])]);
+    assert_eq!(game.pile.as_slice(), &order[4..]);
+    assert_eq!(game.pile.first().copied(), Some(CardId::from_index(4)));
+    let view = game.view(Seat::from_index(0)).expect("view");
+    assert_eq!(view.hand, cards([0, 1]));
+    assert!(!view.hand.contains(&CardId::from_index(2)));
+    assert!(!view.played.contains(&CardId::from_index(2)));
+    assert!(!view.legal.contains(&CardId::from_index(2)));
+    assert!(view.pending.is_none());
+}
+
+fn dealt(hands: &[Vec<u8>], dealer: u8, abilities: bool, expansions: Expansions) -> GameState {
     let players = u8::try_from(hands.len()).expect("players");
     let order = deal_hands(expansions, &hands);
     let mut deals = Scripted {
@@ -623,7 +651,7 @@ fn chosen_card(game: &GameState, seat: u8, level: BotLevel, roll: f64) -> u8 {
 #[test]
 fn normal_does_not_lead_the_skull_king_and_easy_sometimes_does() {
     let hands = vec![vec![67, 55, 0, 1, 2], vec![3, 4, 5, 6, 7]];
-    let mut game = dealt(hands, 1, false, Expansions::none());
+    let mut game = dealt(&hands, 1, false, Expansions::none());
     bid_seats(&mut game, &[1, 0]);
     assert_ne!(chosen_card(&game, 0, BotLevel::Normal, 0.99), 67);
     assert_eq!(chosen_card(&game, 0, BotLevel::Easy, 0.0), 67);
@@ -637,7 +665,7 @@ fn normal_krakens_instead_of_taking_a_trick_it_does_not_need() {
         whale: false,
     };
     let hands = vec![vec![67, 61, 70, 55, 68], vec![23, 0, 1, 2, 3]];
-    let mut game = dealt(hands, 0, false, expansions);
+    let mut game = dealt(&hands, 0, false, expansions);
     bid_seats(&mut game, &[0, 1]);
     play_id(&mut game, 1, 23);
     assert_eq!(chosen_card(&game, 0, BotLevel::Normal, 0.99), 70);
@@ -651,7 +679,7 @@ fn hard_does_not_take_a_trick_to_sink_the_next_seat() {
         vec![18, 0, 1, 2, 3],
         vec![17, 4, 5, 6, 7],
     ];
-    let mut game = dealt(hands, 0, false, Expansions::none());
+    let mut game = dealt(&hands, 0, false, Expansions::none());
     bid_seats(&mut game, &[0, 5, 0]);
     play_id(&mut game, 1, 18);
     play_id(&mut game, 2, 17);
@@ -671,7 +699,7 @@ fn hard_krakens_the_trick_the_next_seat_must_win() {
         vec![67, 0, 1, 2, 3],
         vec![4, 5, 6, 7, 8],
     ];
-    let mut game = dealt(hands, 0, false, expansions);
+    let mut game = dealt(&hands, 0, false, expansions);
     bid_seats(&mut game, &[0, 5, 0]);
     play_id(&mut game, 1, 67);
     play_id(&mut game, 2, 4);
@@ -686,7 +714,7 @@ fn hard_gives_the_next_seat_a_trick_that_busts_a_zero() {
         vec![13, 0, 1, 2, 3],
         vec![43, 27, 28, 29, 30],
     ];
-    let mut game = dealt(hands, 0, false, Expansions::all());
+    let mut game = dealt(&hands, 0, false, Expansions::all());
     bid_seats(&mut game, &[0, 0, 1]);
     play_id(&mut game, 1, 13);
     play_id(&mut game, 2, 43);
@@ -706,7 +734,7 @@ fn hard_lets_the_next_seat_keep_a_trick_that_busts_a_zero() {
         vec![13, 0, 1, 2, 3],
         vec![4, 5, 6, 7, 8],
     ];
-    let mut game = dealt(hands, 0, false, expansions);
+    let mut game = dealt(&hands, 0, false, expansions);
     bid_seats(&mut game, &[0, 0, 0]);
     play_id(&mut game, 1, 13);
     play_id(&mut game, 2, 4);
@@ -729,7 +757,7 @@ fn normal_smuggler_keeps_the_cards_it_needs_and_easy_sometimes_throws_them() {
 /// Swift, abilities on, the three-card hands the device test uses. The pile starts at green 4.
 fn smuggler_table(bid: u8) -> GameState {
     let mut game = dealt(
-        vec![vec![0, 1, 2], vec![62, 67, 56]],
+        &[vec![0, 1, 2], vec![62, 67, 56]],
         0,
         true,
         Expansions::none(),
@@ -850,7 +878,7 @@ fn each_level_finishes_a_game() {
             &mut deals,
         )
         .expect("create");
-        let mut rng = Seq(0x51E5_0000 | u64::from(level_bit(level)));
+        let mut rng = Seq(0x51E5_0000 | level_bit(level));
         let mut guard = 0u32;
         loop {
             guard += 1;
