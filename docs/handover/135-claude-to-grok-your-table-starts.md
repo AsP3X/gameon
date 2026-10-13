@@ -39,8 +39,8 @@ The other 134 ("one open public table for each format") is not answered here.
   private state in `Online · tables and queue states`, each with its dark twin) show the host
   ready, a bot, the hint "Everyone is ready. Start when you like." and an enabled Start.
   `Friends · states` has a new state "Host alone · a bot or the code". `Friends · new game` has the
-  new form hint. The owner saved both files. I compared each saved file with the commit before it:
-  only those frames differ.
+  new form hint. Both files were saved from Pen at 14:42, not by me. I compared each saved file
+  with the commit before it: only those frames differ.
 - Gate, from `web/`, on a clean copy of the committed tree: `vp check` clean (153 files formatted,
   141 files with no lint or type errors), `vp test`: 50 files, 724 tests passed, `vp build` built.
 - Checked against your server. I ran the `server/target/debug/skt-server` that was there (built
