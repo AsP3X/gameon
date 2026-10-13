@@ -404,6 +404,11 @@ together with the pinned hash in the fixture generator.
   loaded, and for good if they cannot be.
 - The home screen has music ([Menu music](#menu-music)). The legacy page had none. It follows the
   "Sound effects" switch and the volume slider; there is no control of its own.
+- The first touch unlocks audio on both: it builds the graph and brings the sea in if that is
+  switched on. The legacy page listened for the first `pointerdown` and no more. The port also
+  takes a `pointerup` or a `keydown`, and listens until the graph runs (`listen` in
+  `tableview/events.ts`): a finger going down is not the gesture in every browser. It does not
+  start the theme. The sound scenario in `tableview/parity/` begins with that press.
 - States the legacy code could not reach but would have crashed on (no pending ability, no last
   trick) render nothing instead.
 - The bid at the table is a slider on a sheet that rises from the bottom edge (`bidSheet` in

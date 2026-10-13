@@ -315,6 +315,9 @@ function onVolumeChange(e: Event): void {
   if (e.target instanceof Element && e.target.id === 'vol') Sound.play('tick', 3);
 }
 
+/** What a browser may take for the gesture that lets a page play sound. */
+const UNLOCKS = ['pointerdown', 'pointerup', 'keydown'] as const;
+
 /**
  * Register every listener, in the legacy order. The returned function removes them all and drops
  * what they had pending (the resize debounce, a sheet that was sliding away, a drag).
@@ -336,6 +339,15 @@ export function listen(): () => void {
   window.addEventListener('pointermove', onSwipeMove, { signal });
   window.addEventListener('pointerup', (e) => endSwipe(e, false), { signal });
   window.addEventListener('pointercancel', (e) => endSwipe(e, true), { signal });
+  // The first touch unlocks audio, as on the legacy page: it builds the graph and brings the sea in
+  // if that is switched on. A finger going down is not the gesture everywhere; lifting it is, and
+  // so is a key. So this listens until the graph runs. It does not start the theme: that is asked
+  // for by the welcome's close and nothing before it (armMenuMusic in render.ts).
+  const unlockAudio = (): void => {
+    if (!Sound.unlock()) return;
+    for (const type of UNLOCKS) window.removeEventListener(type, unlockAudio, true);
+  };
+  for (const type of UNLOCKS) window.addEventListener(type, unlockAudio, { capture: true, signal });
   document.addEventListener('visibilitychange', tuneMenu, { signal });
   document.addEventListener('input', onVolumeInput, { signal });
   document.addEventListener('change', onVolumeChange, { signal });

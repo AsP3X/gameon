@@ -289,6 +289,30 @@ describe('mountTavern', () => {
     expect(app.querySelector('img')).toBeNull();
   });
 
+  it('unlocks audio on the first touch, and on the next ones until the graph runs, without asking for the theme', () => {
+    const unlock = vi.spyOn(Sound, 'unlock').mockReturnValue(false); // a finger going down is not the gesture everywhere
+    const music = vi.spyOn(Sound, 'music');
+    mount();
+    expect(unlock).not.toHaveBeenCalled();
+    pointer('pointerdown', 10);
+    expect(unlock).toHaveBeenCalledTimes(1);
+    unlock.mockReturnValue(true);
+    pointer('pointerup', 10);
+    expect(unlock).toHaveBeenCalledTimes(2);
+    pointer('pointerdown', 10);
+    pointer('pointerup', 10);
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab' }));
+    expect(unlock).toHaveBeenCalledTimes(2);
+    expect(music.mock.calls.filter(([on]) => on)).toEqual([]);
+  });
+
+  it('unlocks audio for a player who only uses the keyboard', () => {
+    const unlock = vi.spyOn(Sound, 'unlock');
+    mount();
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab' }));
+    expect(unlock).toHaveBeenCalledTimes(1);
+  });
+
   it('unlocks the theme in the tap that leaves a game for the home screen', () => {
     const unlock = vi.spyOn(Sound, 'unlock');
     mount();
