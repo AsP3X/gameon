@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from 'vite-plus/test';
-import { layout, tapWord } from './layout';
+import { hasMouse, layout, tapWord } from './layout';
+import { soundSheet } from './views';
 
 /** A laid-out document `width` px wide whose media queries answer for that width. */
 function viewport(width: number, fine = false): void {
@@ -41,5 +42,47 @@ describe('layout', () => {
     expect(tapWord()).toBe('Tap');
     viewport(1440, true);
     expect(tapWord()).toBe('Click');
+  });
+});
+
+describe('the vibration switch of the sound sheet', () => {
+  const buzzes = (): void => {
+    Object.defineProperty(navigator, 'vibrate', { configurable: true, value: () => true });
+  };
+  afterEach(() => {
+    Reflect.deleteProperty(navigator, 'vibrate');
+  });
+
+  it('is offered on a device that can buzz and has no mouse, at any width', () => {
+    buzzes();
+    viewport(390);
+    expect(soundSheet()).toContain('data-k="haptics"');
+    viewport(1280);
+    expect(soundSheet()).toContain('data-k="haptics"');
+  });
+
+  it('is not offered where there is a mouse, however narrow the window', () => {
+    // A desk's browser has `navigator.vibrate` as well, and it does nothing there.
+    buzzes();
+    viewport(1440, true);
+    expect(hasMouse()).toBe(true);
+    expect(soundSheet()).not.toContain('data-k="haptics"');
+    viewport(390, true);
+    expect(soundSheet()).not.toContain('data-k="haptics"');
+    // The other two switches are still there.
+    expect(soundSheet()).toContain('data-k="sfx"');
+    expect(soundSheet()).toContain('data-k="ambience"');
+  });
+
+  it('is not offered where the browser cannot buzz', () => {
+    viewport(390);
+    expect(soundSheet()).not.toContain('data-k="haptics"');
+  });
+
+  it('stays in a document that has no width, whatever matchMedia says', () => {
+    buzzes();
+    vi.stubGlobal('matchMedia', (query: string) => ({ media: query, matches: true }));
+    expect(hasMouse()).toBe(false);
+    expect(soundSheet()).toContain('data-k="haptics"');
   });
 });

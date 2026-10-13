@@ -22,8 +22,17 @@ export function layout(): Layout {
   return atLeast(DESK) ? 'desk' : atLeast(TABLET) ? 'tablet' : 'phone';
 }
 
+/**
+ * The device is worked with a mouse or a trackpad: a desk or a laptop. It is asked of the device,
+ * not of the window's width, so a narrow window on a desk still has one. A document that has not
+ * been laid out has none, like a phone.
+ */
+export function hasMouse(): boolean {
+  return document.documentElement.clientWidth > 0 && matchMedia('(hover: hover) and (pointer: fine)').matches;
+}
+
 /** "Click" where there is a mouse and room for one, "Tap" everywhere else. */
 export function tapWord(): 'Tap' | 'Click' {
   if (layout() === 'phone') return 'Tap';
-  return matchMedia('(hover: hover) and (pointer: fine)').matches ? 'Click' : 'Tap';
+  return hasMouse() ? 'Click' : 'Tap';
 }

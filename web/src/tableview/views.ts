@@ -11,7 +11,7 @@ import type { FaceCard } from './art';
 import { awards } from './awards';
 import { pileSize } from './deal';
 import { esc, initial, sgn, toneOf, whole } from './dom';
-import { layout, tapWord } from './layout';
+import { hasMouse, layout, tapWord } from './layout';
 import {
   COLORS,
   handHidden,
@@ -765,7 +765,8 @@ export function welcomeSheet(): string {
 }
 export function soundSheet(): string {
   const vol = Math.round((prefs.volume == null ? 0.8 : prefs.volume) * 100),
-    canBuzz = typeof navigator.vibrate === 'function';
+    // A desk's browser has `navigator.vibrate` too, and nothing that buzzes: no switch for it there.
+    canBuzz = typeof navigator.vibrate === 'function' && !hasMouse();
   const tg = (k: string, on: boolean, t: string, d: string): string =>
     `<button class="toggle" data-act="sndToggle" data-k="${k}" aria-pressed="${on}"><span class="grow">${t}<small>${d}</small></span><span class="switch"></span></button>`;
   return `<div class="sheet-scrim" data-act="closeSheet"></div><div class="sheet" role="dialog" aria-label="Sound settings"><div class="in">
