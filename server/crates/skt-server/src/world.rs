@@ -791,9 +791,9 @@ impl World {
             self.fail_live(user, id, code);
             return;
         }
-        // Human: No lobby opens until two people are seated. A bot is not a person.
-        // Agent: READS lobby.members; RETURNS NOT_READY when fewer than two humans
-        // are seated or a human is not ready. Ignores visibility and connected.
+        // Human: Your table starts when you say so. A public table still waits for two people.
+        // Agent: READS lobby via lobby_can_start; RETURNS NOT_READY when that is false.
+        // A private lobby opens only from this call. connected is not read.
         if !lobby_can_start(&lobby) {
             self.fail_live(user, id, ErrorCode::NotReady);
             return;
@@ -1626,11 +1626,6 @@ fn send(out: &Outbox, frame: &impl serde::Serialize) {
     }
 }
 
-/// Whether `lobby.start` may open the table.
-///
-/// Two humans have to be seated, in a public lobby and in a private one. A bot
-/// fills a seat and does not count as one of those two. Every human has to be
-/// ready. A dropped socket stays a human.
 /// The `byMode` line for a finished game. Ranked stays out of the headline counters.
 pub(crate) fn record_line(mode: &str, kind: Option<&str>) -> &'static str {
     match kind {
@@ -1647,6 +1642,10 @@ pub(crate) fn record_line(mode: &str, kind: Option<&str>) -> &'static str {
     }
 }
 
+// Human: Your table starts when you say so, once two seats are taken. A public table waits for two people.
+// Agent: READS visibility and members; RETURNS false when a human is not ready, a private lobby has
+// fewer than two members, or a public lobby has fewer than two humans. A bot is a member and not a
+// human. connected is not read.
 fn lobby_can_start(lobby: &Lobby) -> bool {
     let humans = lobby
         .members
@@ -1657,7 +1656,13 @@ fn lobby_can_start(lobby: &Lobby) -> bool {
         Member::Bot { .. } => true,
         Member::Human { ready, .. } => *ready,
     });
-    humans >= 2 && ready
+    if !ready {
+        return false;
+    }
+    match lobby.visibility {
+        Visibility::Private => lobby.members.len() >= 2,
+        Visibility::Public => humans >= 2,
+    }
 }
 
 fn fail_out(out: &Outbox, id: MessageId, code: ErrorCode) {

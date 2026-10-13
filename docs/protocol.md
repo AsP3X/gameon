@@ -61,7 +61,7 @@ The client branches on `code`. `message` is safe to show but not meant to be par
 | `ALREADY_SEATED` | 409 | The user is in another lobby, queue or game |
 | `NOT_IN_LOBBY` | 409 | |
 | `NOT_HOST` | 403 | |
-| `NOT_READY` | 409 | Start with unready players or fewer than two humans |
+| `NOT_READY` | 409 | Start with unready players, a private table with fewer than two seats, or a public table with fewer than two humans |
 | `BOTS_DISABLED` | 409 | `lobby.addBot` on a table that does not seat bots. The message is `This table does not seat bots.` |
 | `ACCOUNT_REQUIRED` | 403 | Ranked needs a registered account |
 | `QUEUE_COOLDOWN` | 403 | Leaver penalty; `message` carries no time, `GET /me` does |
@@ -294,7 +294,7 @@ type LobbySummary = {
 | `lobby.addBot` | | host | `ok`. On a table with `allowBots: false`, `BOTS_DISABLED`. Ranked and casual never read `allowBots`. |
 | `lobby.removeBot` | `{ index: number }` | host | `ok`. `index` is the index in `members` (join order), not a seat. |
 | `lobby.kick` | `{ userId }` | host | `ok` |
-| `lobby.start` | | host | `ok`; needs ≥ 2 humans and every human ready. A bot fills a seat and does not count as one of those two. A public lobby and a private lobby use the same rule. |
+| `lobby.start` | | host | `ok`. Every human must be ready. A private table needs at least two seats, and a bot counts as a seat. A public table needs at least two humans, and a bot does not. The host sends this. Seats filling up does not start the table. |
 
 Pushes: `{ t: 'lobby.state', lobby }` to every member on any change, including the member whose
 message caused it. `ok` for `lobby.ready`, `lobby.settings`, `lobby.addBot` and `lobby.removeBot`

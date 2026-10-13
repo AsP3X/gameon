@@ -271,7 +271,7 @@ async fn the_host_can_kick_and_leaving_hands_the_table_on() {
 }
 
 #[tokio::test]
-async fn a_lobby_does_not_start_until_two_humans_are_seated() {
+async fn a_public_lobby_does_not_start_until_two_humans_are_seated() {
     let state = AppState::for_socket_tests(Duration::from_secs(5), Duration::from_secs(45));
     let port = serve(state).await;
 
@@ -300,19 +300,58 @@ async fn a_lobby_does_not_start_until_two_humans_are_seated() {
     send(&mut host, r#"{"t":"lobby.start","id":7}"#).await;
     let _ = read_until(&mut host, "\"t\":\"game.update\"").await;
     let _ = read_until(&mut mate, "\"t\":\"game.update\"").await;
+}
 
-    let mut alone = open_socket(port, &guest(port).await).await;
-    hello(&mut alone).await;
-    send(&mut alone, &create_with(2, "private")).await;
-    let _ = read_until(&mut alone, "\"t\":\"ok\"").await;
-    send(&mut alone, r#"{"t":"lobby.ready","id":3,"ready":true}"#).await;
-    let _ = read_until(&mut alone, "\"t\":\"ok\"").await;
-    send(&mut alone, r#"{"t":"lobby.addBot","id":4}"#).await;
-    let _ = read_until(&mut alone, "\"t\":\"ok\"").await;
-    send(&mut alone, r#"{"t":"lobby.start","id":5}"#).await;
-    let refused_private = read_text(&mut alone).await;
-    assert!(refused_private.contains("NOT_READY"), "{refused_private}");
-    assert!(!refused_private.contains("game.start"), "{refused_private}");
+#[tokio::test]
+async fn the_host_starts_a_private_table_without_a_second_player() {
+    let state = AppState::for_socket_tests(Duration::from_secs(5), Duration::from_secs(45));
+    let port = serve(state).await;
+
+    let mut host = open_socket(port, &guest(port).await).await;
+    hello(&mut host).await;
+    send(&mut host, &create_with(2, "private")).await;
+    let _ = read_until(&mut host, "\"t\":\"ok\"").await;
+    send(&mut host, r#"{"t":"lobby.ready","id":3,"ready":true}"#).await;
+    let _ = read_until(&mut host, "\"t\":\"ok\"").await;
+    send(&mut host, r#"{"t":"lobby.start","id":4}"#).await;
+    let alone = read_text(&mut host).await;
+    assert!(alone.contains("NOT_READY"), "{alone}");
+    assert!(!alone.contains("game.start"), "{alone}");
+    send(&mut host, r#"{"t":"lobby.addBot","id":5}"#).await;
+    let seated = read_until(&mut host, "\"t\":\"ok\"").await;
+    assert!(!seated.contains("game.start"), "{seated}");
+    let early = tokio::time::timeout(Duration::from_millis(200), read_text(&mut host)).await;
+    assert!(
+        early.is_err(),
+        "a private table waits for the host to start"
+    );
+    send(&mut host, r#"{"t":"lobby.start","id":6}"#).await;
+    let started = read_until(&mut host, "\"t\":\"game.update\"").await;
+    assert!(started.contains("\"t\":\"game.update\""), "{started}");
+
+    let mut owner = open_socket(port, &guest(port).await).await;
+    let mut mate = open_socket(port, &guest(port).await).await;
+    hello(&mut owner).await;
+    hello(&mut mate).await;
+    send(&mut owner, &create_with(2, "private")).await;
+    let code = quoted(&read_text(&mut owner).await, "code");
+    send(&mut mate, &join(2, &code)).await;
+    let _ = read_until(&mut mate, "\"t\":\"ok\"").await;
+    let _ = read_until(&mut owner, "lobby.state").await;
+    send(&mut owner, r#"{"t":"lobby.ready","id":3,"ready":true}"#).await;
+    let _ = read_until(&mut owner, "\"t\":\"ok\"").await;
+    let _ = read_until(&mut mate, "lobby.state").await;
+    send(&mut owner, r#"{"t":"lobby.start","id":4}"#).await;
+    let unready = read_text(&mut owner).await;
+    assert!(unready.contains("NOT_READY"), "{unready}");
+    send(&mut mate, r#"{"t":"lobby.ready","id":3,"ready":true}"#).await;
+    let _ = read_until(&mut mate, "\"t\":\"ok\"").await;
+    let _ = read_until(&mut owner, "lobby.state").await;
+    let waited = tokio::time::timeout(Duration::from_millis(200), read_text(&mut owner)).await;
+    assert!(waited.is_err(), "ready friends do not start the table");
+    send(&mut owner, r#"{"t":"lobby.start","id":5}"#).await;
+    let _ = read_until(&mut owner, "\"t\":\"game.update\"").await;
+    let _ = read_until(&mut mate, "\"t\":\"game.update\"").await;
 }
 
 #[tokio::test]
