@@ -620,8 +620,107 @@ async fn a_player_table_omits_standing_and_a_house_table_sends_it() {
         r#"{"t":"lobby.settings","id":7,"settings":{"maxPlayers":4,"scoring":"classic","format":"brawl","loot":false,"kraken":false,"whale":false,"abilities":false,"botLevel":"normal","pace":"standard"}}"#,
     )
     .await;
-    let changed = read_until(&mut socket, "\"format\":\"brawl\"").await;
-    assert!(changed.contains("\"standing\":true"), "{changed}");
+    let refused = read_text(&mut socket).await;
+    assert!(refused.contains("RULES_LOCKED"), "{refused}");
+    assert!(
+        refused.contains("A public table keeps its rules."),
+        "{refused}"
+    );
+    assert!(joined.contains("\"format\":\"classic\""), "{joined}");
+    assert!(!refused.contains("\"format\":\"brawl\""), "{refused}");
+}
+
+#[tokio::test]
+async fn a_private_table_changes_its_rules_and_a_public_one_does_not() {
+    let state = AppState::for_socket_tests(Duration::from_secs(5), Duration::from_secs(45));
+    let port = serve(state).await;
+    let mut host = open_socket(port, &guest(port).await).await;
+    let mut mate = open_socket(port, &guest(port).await).await;
+    hello(&mut host).await;
+    hello(&mut mate).await;
+
+    send(&mut host, &create(2)).await;
+    let created = read_text(&mut host).await;
+    assert!(created.contains("\"visibility\":\"private\""), "{created}");
+    send(&mut host, r#"{"t":"lobby.ready","id":3,"ready":true}"#).await;
+    let _ = read_until(&mut host, "\"t\":\"ok\"").await;
+    send(
+        &mut host,
+        r#"{"t":"lobby.settings","id":4,"settings":{"maxPlayers":4,"scoring":"rascal","format":"brawl","loot":true,"kraken":false,"whale":false,"abilities":false,"botLevel":"normal","pace":"standard"}}"#,
+    )
+    .await;
+    let changed = read_until(&mut host, "\"format\":\"brawl\"").await;
+    assert!(changed.contains("\"t\":\"lobby.state\""), "{changed}");
+    assert!(changed.contains("\"scoring\":\"rascal\""), "{changed}");
+    assert!(changed.contains("\"loot\":true"), "{changed}");
+    assert!(changed.contains("\"ready\":false"), "{changed}");
+    let accepted = read_text(&mut host).await;
+    assert!(accepted.contains("\"t\":\"ok\""), "{accepted}");
+    send(&mut host, r#"{"t":"lobby.leave","id":5}"#).await;
+    let left = read_text(&mut host).await;
+    assert!(left.contains("\"t\":\"ok\""), "{left}");
+
+    send(&mut host, &create_with(6, "public")).await;
+    let public_table = read_text(&mut host).await;
+    assert!(
+        public_table.contains("\"visibility\":\"public\""),
+        "{public_table}"
+    );
+    assert!(
+        public_table.contains("\"format\":\"swift\""),
+        "{public_table}"
+    );
+    let code = quoted(&public_table, "code");
+    send(&mut host, r#"{"t":"lobby.ready","id":7,"ready":true}"#).await;
+    let _ = read_until(&mut host, "\"t\":\"ok\"").await;
+    send(&mut mate, &join(2, &code)).await;
+    let joined = read_text(&mut mate).await;
+    assert!(joined.contains("\"t\":\"ok\""), "{joined}");
+    let mate_seated = read_text(&mut mate).await;
+    assert!(
+        mate_seated.contains("\"t\":\"lobby.state\""),
+        "{mate_seated}"
+    );
+    assert!(
+        mate_seated.contains("\"format\":\"swift\""),
+        "{mate_seated}"
+    );
+    let host_seated = read_text(&mut host).await;
+    assert!(
+        host_seated.contains("\"t\":\"lobby.state\""),
+        "{host_seated}"
+    );
+    assert!(host_seated.contains("\"ready\":true"), "{host_seated}");
+
+    send(
+        &mut host,
+        r#"{"t":"lobby.settings","id":8,"settings":{"maxPlayers":4,"scoring":"classic","format":"even","loot":false,"kraken":false,"whale":false,"abilities":false,"botLevel":"normal","pace":"standard"}}"#,
+    )
+    .await;
+    let host_refused = read_text(&mut host).await;
+    assert!(host_refused.contains("RULES_LOCKED"), "{host_refused}");
+    assert!(
+        host_refused.contains("A public table keeps its rules."),
+        "{host_refused}"
+    );
+    send(
+        &mut mate,
+        r#"{"t":"lobby.settings","id":3,"settings":{"maxPlayers":4,"scoring":"classic","format":"whirl","loot":false,"kraken":false,"whale":false,"abilities":false,"botLevel":"hard","pace":"fast"}}"#,
+    )
+    .await;
+    let mate_refused = read_text(&mut mate).await;
+    assert!(mate_refused.contains("RULES_LOCKED"), "{mate_refused}");
+    assert!(!mate_refused.contains("NOT_HOST"), "{mate_refused}");
+
+    send(&mut host, r#"{"t":"ping","id":9}"#).await;
+    let pong = read_text(&mut host).await;
+    assert!(pong.contains("\"t\":\"ok\""), "{pong}");
+    assert!(!pong.contains("lobby.state"), "{pong}");
+    assert!(!pong.contains("\"format\":\"even\""), "{pong}");
+    send(&mut mate, r#"{"t":"ping","id":4}"#).await;
+    let mate_pong = read_text(&mut mate).await;
+    assert!(mate_pong.contains("\"t\":\"ok\""), "{mate_pong}");
+    assert!(!mate_pong.contains("\"format\":\"whirl\""), "{mate_pong}");
 }
 
 async fn http_body(port: u16, method: &str, path: &str, cookie: &str) -> String {

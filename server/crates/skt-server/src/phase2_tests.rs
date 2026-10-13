@@ -323,7 +323,7 @@ async fn sitting_at_a_house_table_does_not_open_a_second_of_that_format(pool: sq
 }
 
 #[sqlx::test(migrations = "../../migrations/postgres")]
-async fn changing_a_house_table_off_its_format_opens_a_fresh_one(pool: sqlx::PgPool) {
+async fn a_house_table_keeps_its_format(pool: sqlx::PgPool) {
     let state = AppState::for_tests(pool, Duration::ZERO, budgets());
     let port = serve(state).await;
     let (cookie, _) = guest(port).await;
@@ -340,40 +340,24 @@ async fn changing_a_house_table_off_its_format_opens_a_fresh_one(pool: sqlx::PgP
     .await;
     let joined = read_text(&mut socket).await;
     assert!(joined.contains("\"t\":\"ok\""), "{joined}");
+    let seated = read_text(&mut socket).await;
+    assert!(seated.contains("\"t\":\"lobby.state\""), "{seated}");
+    assert!(seated.contains("\"format\":\"classic\""), "{seated}");
     send(
         &mut socket,
         r#"{"t":"lobby.settings","id":2,"settings":{"maxPlayers":4,"scoring":"classic","format":"brawl","loot":false,"kraken":false,"whale":false,"abilities":false,"botLevel":"normal","pace":"standard"}}"#,
     )
     .await;
-    let mut saw_ok = false;
-    for _ in 0..4 {
-        let frame = read_text(&mut socket).await;
-        if frame.contains("\"t\":\"ok\"") {
-            saw_ok = true;
-            break;
-        }
-        assert!(!frame.contains("\"t\":\"err\""), "{frame}");
-    }
-    assert!(saw_ok);
+    let refused = read_text(&mut socket).await;
+    assert!(refused.contains("RULES_LOCKED"), "{refused}");
+    assert!(
+        refused.contains("A public table keeps its rules."),
+        "{refused}"
+    );
     let (_, _, after) = http(port, "GET", "/api/v1/lobbies", &cookie, "").await;
-    let after_ids = listed_ids(&after);
-    assert_eq!(after_ids.len(), 6, "{after}");
-    assert!(after_ids.contains(classic), "{after}");
-    assert!(before.iter().all(|id| after_ids.contains(id)), "{after}");
-    assert_eq!(
-        after.matches("\"format\":\"classic\"").count(),
-        1,
-        "{after}"
-    );
-    assert_eq!(after.matches("\"format\":\"brawl\"").count(), 2, "{after}");
-    assert_eq!(after.matches("\"format\":\"swift\"").count(), 1, "{after}");
-    assert_eq!(after.matches("\"format\":\"even\"").count(), 1, "{after}");
-    assert_eq!(after.matches("\"format\":\"whirl\"").count(), 1, "{after}");
-    assert_eq!(
-        after.matches("\"hostName\":\"Open table\"").count(),
-        5,
-        "{after}"
-    );
+    assert_eq!(listed_ids(&after), before, "{after}");
+    assert_one_of_each_format(&after);
+    assert_eq!(after.matches("\"players\":1").count(), 1, "{after}");
 }
 
 fn listed_ids(list: &str) -> Vec<&str> {

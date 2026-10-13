@@ -23,6 +23,7 @@ export type ErrorCode =
   | "NOT_HOST"
   | "NOT_READY"
   | "BOTS_DISABLED"
+  | "RULES_LOCKED"
   | "ACCOUNT_REQUIRED"
   | "QUEUE_COOLDOWN"
   | "NOT_IN_GAME"

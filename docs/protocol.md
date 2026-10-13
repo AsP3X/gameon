@@ -63,6 +63,7 @@ The client branches on `code`. `message` is safe to show but not meant to be par
 | `NOT_HOST` | 403 | |
 | `NOT_READY` | 409 | Start with unready players, a private table with fewer than two seats, or a public table with fewer than two humans |
 | `BOTS_DISABLED` | 409 | `lobby.addBot` on a table that does not seat bots. The message is `This table does not seat bots.` |
+| `RULES_LOCKED` | 409 | `lobby.settings` on an open public table. The message is `A public table keeps its rules.` |
 | `ACCOUNT_REQUIRED` | 403 | Ranked needs a registered account |
 | `QUEUE_COOLDOWN` | 403 | Leaver penalty; `message` carries no time, `GET /me` does |
 | `NOT_IN_GAME` | 409 | |
@@ -286,9 +287,9 @@ type LobbySummary = {
 ```
 
 `standing` is sent as `true` only on a standing house table: one of the public tables the tavern
-keeps open, including after someone sits down and after the host changes its rules. It is omitted
-on every table opened with `lobby.create`, and on a matchmade table. A missing field means the
-table is not a house table. The public list does not carry it. Protocol stays 1.
+keeps open, including after someone sits down. It is omitted on every table opened with
+`lobby.create`, and on a matchmade table. A missing field means the table is not a house table.
+The public list does not carry it. A public table's rules are fixed when it opens. Protocol stays 1.
 
 | Client message | Payload | Who | Result |
 | -------------- | ------- | --- | ------ |
@@ -296,7 +297,7 @@ table is not a house table. The public list does not carry it. Protocol stays 1.
 | `lobby.join` | `{ code?: string, lobbyId?: string }` | anyone not seated | `ok { lobby }`. Send one. If both are present, `code` wins. `lobbyId` may seat a private lobby: the id of a private lobby reaches only its members. |
 | `lobby.leave` | | member of an open lobby | `ok`. While the lobby is `inGame`, `LOBBY_STARTED`; leaving the seat is `game.leave`. |
 | `lobby.ready` | `{ ready: boolean }` | member | `ok` |
-| `lobby.settings` | `{ settings }` | host | `ok`; clears everyone's ready |
+| `lobby.settings` | `{ settings }` | host of a private table | `ok`; clears everyone's ready. On an open public table, `RULES_LOCKED` for anyone, and nothing is written. `maxPlayers` outside 2..8 is still `VALIDATION`. |
 | `lobby.addBot` | | host | `ok`. On a table with `allowBots: false`, `BOTS_DISABLED`. Ranked and casual never read `allowBots`. |
 | `lobby.removeBot` | `{ index: number }` | host | `ok`. `index` is the index in `members` (join order), not a seat. |
 | `lobby.kick` | `{ userId }` | host | `ok` |

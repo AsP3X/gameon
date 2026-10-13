@@ -46,6 +46,8 @@ pub enum ErrorCode {
     NotReady,
     /// `lobby.addBot` on a table that does not seat bots.
     BotsDisabled,
+    /// `lobby.settings` on a public table. The rules stay as they were opened.
+    RulesLocked,
     /// Ranked needs a registered account.
     AccountRequired,
     /// The leaver penalty has not expired. The message carries no time.
@@ -88,6 +90,7 @@ impl ErrorCode {
             Self::NotHost,
             Self::NotReady,
             Self::BotsDisabled,
+            Self::RulesLocked,
             Self::AccountRequired,
             Self::QueueCooldown,
             Self::NotInGame,
@@ -115,6 +118,7 @@ impl ErrorCode {
             | Self::NotInLobby
             | Self::NotReady
             | Self::BotsDisabled
+            | Self::RulesLocked
             | Self::NotInGame
             | Self::NotYourTurn
             | Self::StaleAction
@@ -149,6 +153,7 @@ impl ErrorCode {
             Self::NotHost => "Only the host can do that.",
             Self::NotReady => "Not everyone is ready.",
             Self::BotsDisabled => "This table does not seat bots.",
+            Self::RulesLocked => "A public table keeps its rules.",
             Self::AccountRequired => "Ranked needs an account.",
             Self::QueueCooldown => "You cannot queue yet.",
             Self::NotInGame => "You are not in a game.",

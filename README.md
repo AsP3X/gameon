@@ -323,6 +323,8 @@ argument is wrong or the terminal or the Ctrl-C handler cannot be set up.
 </p>
 
 A table's rules are one `GameSettings` object ([`docs/protocol.md`](docs/protocol.md) §5.3).
+A private table's host can change them before the game starts, and a solo game chooses them when
+it starts. A public table keeps the rules it opened with. Nobody at that table can change them.
 
 | Setting | Values | Meaning |
 | ------- | ------ | ------- |

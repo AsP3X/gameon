@@ -694,6 +694,16 @@ impl World {
             self.fail_live(user, id, ErrorCode::Validation);
             return;
         }
+        // Human: A public table keeps the rules it opened with. Only a private table can change them. Solo chooses its rules in solo.start, which is not a lobby.
+        // Agent: READS lobby.visibility of an open lobby; RETURNS RULES_LOCKED and WRITES nothing. A closed lobby still falls through to LOBBY_STARTED. A private lobby falls through to mutate_host.
+        if let Some(lobby_id) = self.identity.lobby_of(user)
+            && let Some(lobby) = self.lobbies.get(&lobby_id)
+            && lobby.state == LobbyPhase::Open
+            && lobby.visibility == Visibility::Public
+        {
+            self.fail_live(user, id, ErrorCode::RulesLocked);
+            return;
+        }
         if self.mutate_host(user, id, |lobby| {
             if lobby.members.len() > usize::from(settings.max_players) {
                 return false;
@@ -706,8 +716,8 @@ impl World {
             }
             true
         }) {
-            // Human: Moving a standing table onto another format leaves the old one with nobody waiting, so a fresh table of that format opens.
-            // Agent: CALLS ensure_house_tables after the host's settings are stored. WRITES a lobby only for a format that has no open house table with a free seat.
+            // Human: Changing a private table does not move a house table. This only opens a format that has no free seat.
+            // Agent: CALLS ensure_house_tables. A public lobby never reaches here.
             self.ensure_house_tables();
             self.ok(user, id, None, false);
         }
@@ -998,8 +1008,8 @@ impl World {
     ///
     /// Human: An empty tavern lists Classic, Brawl, Swift, Even and Whirl, in that order.
     /// Each is four players, classic scoring, no extra cards, and seats bots. Sitting down
-    /// does not open a second table of that format. Filling one, or the host changing its
-    /// format, opens a fresh empty table of the format that no longer has a free seat.
+    /// does not open a second table of that format. Filling one opens a fresh empty table of
+    /// the format that no longer has a free seat. The host cannot change a public table's rules.
     /// Agent: READS house lobbies' state, member count and settings.format; WRITES one lobby
     /// per missing format. Other settings are `GameSettings::standard()`. Does not read hands or bids.
     pub(crate) fn ensure_house_tables(&mut self) {
