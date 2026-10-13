@@ -189,7 +189,7 @@ impl AppState {
         self.persist_open().await;
     }
 
-    /// Write steps of games that are still running, and delete abandoned solo games.
+    /// Write steps of games that are still running, and delete games the last human resigned.
     pub async fn persist_open(&self) {
         let (abandoned, pending) = {
             let mut world = self.world.lock().await;
@@ -201,7 +201,7 @@ impl AppState {
         };
         for id in abandoned {
             if store.drop_open(&id).await.is_err() {
-                tracing::error!("an abandoned solo game was not deleted");
+                tracing::error!("a cancelled game was not deleted");
             }
         }
         for game in pending {

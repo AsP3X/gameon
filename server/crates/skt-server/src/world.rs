@@ -350,7 +350,7 @@ impl World {
         self.tables.mark_stored(id, stored);
     }
 
-    /// Solo games abandoned since the last persist. Their open rows are deleted.
+    /// Games cancelled since the last persist. Their open rows are deleted.
     pub fn take_abandoned(&mut self) -> Vec<String> {
         self.tables.take_abandoned()
     }

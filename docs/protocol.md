@@ -173,7 +173,8 @@ headline counters, including for a seat that stayed. `rating.games` counts that 
 instead, including a seat that left. A shared first place counts as a win for each of those seats.
 A seat that sent `game.leave` is not counted in `Stats`. A seat kicked for inactivity is not
 counted in `Stats` either, in any mode, including a casual, friends or public game the table then
-won. An abandoned solo game is not a finish. A solo game played on the device never reaches the
+won. An abandoned solo game is not a finish, and neither is any game cancelled because the last
+human resigned. A solo game played on the device never reaches the
 server. `byMode` is the same five numbers for solo, friends, public, casual and ranked. Ranked
 sits in `byMode.ranked` and in `rating`, and not in the headline `games`. A reply that omits
 `byMode` is readable: every line is empty. `bestScore` is set by the first finished custom, casual
@@ -444,7 +445,7 @@ enum as `EngineEvent` so the wire union can be called `GameEvent`.
 | `game.ready` | | `ok`; ready for the next round |
 | `game.emote` | `{ emote }` | `ok`; one per 2 seconds |
 | `solo.start` | `{ settings }` | anyone not seated | `ok`, then `game.start` with `table: 'solo'` and `lobbyId: null`. `maxPlayers` outside 2..8 is `VALIDATION`. A second start while that game exists is `ALREADY_SEATED`. |
-| `game.leave` | | `ok`; a bot takes the seat. In ranked this is a forfeit. On `table: 'solo'` the game ends with no result, no stats, no bot and no cooldown. |
+| `game.leave` | | `ok`. The player resigns. If another human is still in the game the seat becomes `out` and the others play on. If every other seat is a bot or already `out`, the game is cancelled: no result, no stats, and the open game is deleted. Ranked still forfeits and starts the cooldown. On `table: 'solo'` the cancel is `ok` alone. |
 
 `at` is `{ round: number, trick: number }`: the round index and the number of tricks of that round
 already finished, as the sender's view shows them. `trick` is the sum of `won` plus
@@ -471,10 +472,18 @@ the same pair with the `game.emote` push in place of `game.update`. `protocol` s
 A bot move, a timeout and the server's `advance` are steps of their own. Each is its own
 `game.update`, written to a socket only after both frames of an earlier pair are queued on it.
 
-`game.leave` uses the `ok` then `game.update` pair, and that socket then receives no further
-`game.update` for the game. A solo leave is the exception: `ok` is the whole answer, and the game is gone. The client takes the table down when that update has been presented.
-The seat is a bot from that step. A later `welcome` for that user has `game: null`, and the hand
-cannot be resumed. In ranked the leave is a forfeit, recorded then and scored last. `forfeited`
+`game.leave` is a resign.
+
+When another human is still in the game, the seat becomes `out` from this step. A human still in
+the game has status `online`, `offline` or `away`. A bot, and a seat that is already `out`, do not
+count. The seat is not given to a bot. Later turns of that seat are the bot's move 1.5 seconds
+after the turn reaches them, the same as a seat kicked for inactivity: those updates carry the
+engine events only, with no `timedOut`, and the seat is not in `deadline.seats`. The leaver's
+socket gets `ok` and then, as the next message, the `game.update` for that step. Its event is
+`seatStatus` `out`. That socket then receives no further `game.update` for the game. The client
+takes the table down when that update has been presented. A later `welcome` for that user has
+`game: null`, and the hand cannot be resumed. In ranked the leave is a forfeit, recorded then and
+scored last when the game ends. `forfeited`
 and `rating` travel on `game.over`, sent to the leaver when the game ends. If the leaver has no
 socket at that moment, that `game.over` is written immediately after the next `welcome`, which
 still has `game: null`. It does not put the table back. The same delivery is owed to any seated
@@ -491,6 +500,13 @@ ranked game, and null in every other mode. `before` is the rating at the deal. F
 had none, `before` is `{ value: 0, tier: 'Deckhand', provisional: true, games: 0 }`. `after` is
 written to `Me.rating` and `User.tier` before `game.over` is sent. No other seat's new rating is
 on this message.
+
+When the resigning player is the only human still in the game, the game is cancelled and removed.
+Nothing is written to `games` or `Stats`, and there is no `game.over`. A ranked resign still sets
+`Me.cooldownUntil` when the leave is accepted, and it does not move a rating, because the game was
+not scored. On `table: 'solo'` the answer is `ok` and then nothing else on that socket. On every
+other table the answer is `ok` and then one `game.update` whose event is `seatStatus` `out`, and
+then nothing else. The open game is deleted. A later `welcome` has `game: null`.
 
 `lobby.start`'s `ok` does not carry the opening table. Every member, including the host, is then
 sent `lobby.state` with `state: 'inGame'`. On each seated human's socket the server then writes
@@ -596,7 +612,7 @@ not as a notice after `game.leave`.
 with a bot. `pace` is stored as `standard` and does not arm a deadline on the human's turn. A drop
 leaves the seat with that player. No bot is seated for the drop, and no card is played until the
 same player connects again. One unfinished solo game is kept, with no expiry. Registering a guest
-keeps that game on the same id. `game.leave` on `table: 'solo'` answers `ok` and then nothing else on that socket: no `game.update` and no `game.over`. The next `welcome` has `game: null`. `game.leave` on any other table is unchanged.
+keeps that game on the same id. `game.leave` on a solo table is the cancel above: `ok`, and then nothing else on that socket. The next `welcome` has `game: null`.
 
 Friends is `lobby.create` with `visibility: 'private'`. Public is `visibility: 'public'`. Casual
 is `queue.join` with `casual`, and ranked is `queue.join` with `ranked`. A named ruleset is a

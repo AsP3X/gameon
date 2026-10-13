@@ -752,6 +752,112 @@ fn close_frame(code: u16) -> tokio_tungstenite::tungstenite::protocol::CloseFram
     }
 }
 
+#[tokio::test]
+async fn the_last_human_to_resign_cancels_the_game() {
+    let state = AppState::for_socket_tests(Duration::from_secs(5), Duration::from_secs(45));
+    let port = serve(state.clone()).await;
+    let cookie = guest(port).await;
+    let mut host = open_socket(port, &cookie).await;
+    hello(&mut host).await;
+    send(&mut host, &create(2)).await;
+    let _ = read_until(&mut host, "\"t\":\"ok\"").await;
+    send(&mut host, r#"{"t":"lobby.ready","id":3,"ready":true}"#).await;
+    let _ = read_until(&mut host, "\"t\":\"ok\"").await;
+    send(&mut host, r#"{"t":"lobby.addBot","id":4}"#).await;
+    let _ = read_until(&mut host, "\"t\":\"ok\"").await;
+    send(&mut host, r#"{"t":"lobby.start","id":5}"#).await;
+    let _ = read_until(&mut host, "\"t\":\"game.update\"").await;
+
+    send(&mut host, r#"{"t":"game.leave","id":6}"#).await;
+    let left = read_text(&mut host).await;
+    assert!(left.contains("\"t\":\"ok\""), "{left}");
+    let update = read_text(&mut host).await;
+    assert!(update.contains("\"t\":\"game.update\""), "{update}");
+    assert!(update.contains("\"type\":\"seatStatus\""), "{update}");
+    assert!(update.contains("\"status\":\"out\""), "{update}");
+
+    state.advance(Duration::from_secs(30)).await;
+    let later = tokio::time::timeout(Duration::from_millis(200), read_text(&mut host)).await;
+    assert!(
+        later.is_err(),
+        "a cancelled game sends nothing more: {later:?}"
+    );
+
+    let mut back = open_socket(port, &cookie).await;
+    send(
+        &mut back,
+        r#"{"t":"hello","id":1,"protocol":1,"build":"test"}"#,
+    )
+    .await;
+    let _ = read_text(&mut back).await;
+    let welcome = read_text(&mut back).await;
+    assert!(welcome.contains("\"game\":null"), "{welcome}");
+}
+
+#[tokio::test]
+async fn a_resign_removes_that_player_and_the_others_play_on() {
+    let state = AppState::for_socket_tests(Duration::from_secs(5), Duration::from_secs(45));
+    let port = serve(state.clone()).await;
+    let mut host = open_socket(port, &guest(port).await).await;
+    let mate_cookie = guest(port).await;
+    let mut mate = open_socket(port, &mate_cookie).await;
+    hello(&mut host).await;
+    hello(&mut mate).await;
+    send(&mut host, &create(2)).await;
+    let code = quoted(&read_text(&mut host).await, "code");
+    send(&mut mate, &join(2, &code)).await;
+    let _ = read_until(&mut mate, "\"t\":\"ok\"").await;
+    let _ = read_until(&mut host, "lobby.state").await;
+    send(&mut host, r#"{"t":"lobby.ready","id":3,"ready":true}"#).await;
+    let _ = read_until(&mut host, "\"t\":\"ok\"").await;
+    let _ = read_until(&mut mate, "lobby.state").await;
+    send(&mut mate, r#"{"t":"lobby.ready","id":3,"ready":true}"#).await;
+    let _ = read_until(&mut mate, "\"t\":\"ok\"").await;
+    let _ = read_until(&mut host, "lobby.state").await;
+    send(&mut host, r#"{"t":"lobby.start","id":4}"#).await;
+    let _ = read_until(&mut host, "\"t\":\"game.update\"").await;
+    let _ = read_until(&mut mate, "\"t\":\"game.update\"").await;
+
+    send(&mut host, r#"{"t":"game.leave","id":5}"#).await;
+    let left = read_text(&mut host).await;
+    assert!(left.contains("\"t\":\"ok\""), "{left}");
+    let host_update = read_text(&mut host).await;
+    assert!(host_update.contains("\"status\":\"out\""), "{host_update}");
+    assert!(!host_update.contains("\"status\":\"bot\""), "{host_update}");
+    let mate_update = read_text(&mut mate).await;
+    assert!(
+        mate_update.contains("\"t\":\"game.update\""),
+        "{mate_update}"
+    );
+    assert!(mate_update.contains("\"status\":\"out\""), "{mate_update}");
+    assert!(!mate_update.contains("\"status\":\"bot\""), "{mate_update}");
+    let _ = tokio::time::timeout(Duration::from_millis(200), read_text(&mut mate)).await;
+
+    state.advance(Duration::from_secs(3)).await;
+    let continued = read_until(&mut mate, "\"t\":\"game.update\"").await;
+    assert!(continued.contains("\"type\":\"bidPlaced\""), "{continued}");
+    assert!(!continued.contains("\"type\":\"timedOut\""), "{continued}");
+
+    send(&mut mate, r#"{"t":"game.leave","id":4}"#).await;
+    let mate_ok = read_text(&mut mate).await;
+    assert!(mate_ok.contains("\"t\":\"ok\""), "{mate_ok}");
+    let mate_last = read_text(&mut mate).await;
+    assert!(mate_last.contains("\"status\":\"out\""), "{mate_last}");
+    state.advance(Duration::from_secs(30)).await;
+    let done = tokio::time::timeout(Duration::from_millis(200), read_text(&mut mate)).await;
+    assert!(done.is_err(), "the last resign cancels the game: {done:?}");
+
+    let mut back = open_socket(port, &mate_cookie).await;
+    send(
+        &mut back,
+        r#"{"t":"hello","id":1,"protocol":1,"build":"test"}"#,
+    )
+    .await;
+    let _ = read_text(&mut back).await;
+    let welcome = read_text(&mut back).await;
+    assert!(welcome.contains("\"game\":null"), "{welcome}");
+}
+
 async fn serve(state: AppState) -> u16 {
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
         .await

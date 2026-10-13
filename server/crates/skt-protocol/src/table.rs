@@ -48,9 +48,9 @@ pub enum SeatStatus {
     Offline,
     /// Two deadlines were missed while the socket was up. The server plays until the player acts.
     Away,
-    /// A bot seat, or a seat a player left on purpose.
+    /// A seat that was a bot from the deal.
     Bot,
-    /// Kicked for inactivity. The seat is not a bot, and the player cannot return.
+    /// The player resigned or was kicked. The seat is not a bot, and the player cannot return.
     Out,
 }
 

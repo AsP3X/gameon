@@ -241,7 +241,7 @@ pub struct Tables {
     seat_of: HashMap<UserId, (GameId, Seat)>,
     /// `seat.lost` still owed. Removed once a `welcome` has had it queued.
     lost: HashMap<UserId, SeatLost>,
-    /// Solo games abandoned since the last persist. Their `open_games` rows must go.
+    /// Games cancelled because the last human resigned. Their `open_games` rows must go.
     abandoned: Vec<String>,
 }
 
@@ -413,7 +413,7 @@ impl Tables {
         Some((u32::from(view.round).saturating_add(1), rounds, bots))
     }
 
-    /// Solo games abandoned since the last call. Their open rows are deleted on persist.
+    /// Games cancelled since the last call. Their open rows are deleted on persist.
     pub fn take_abandoned(&mut self) -> Vec<String> {
         std::mem::take(&mut self.abandoned)
     }
@@ -814,35 +814,56 @@ impl Tables {
         let Some((id, _)) = self.seat_of.get(user).cloned() else {
             return (Vec::new(), false);
         };
-        let Some(running) = self.games.get(&id) else {
-            return (Vec::new(), false);
+        let (solo, ranked, last_human) = {
+            let Some(running) = self.games.get(&id) else {
+                return (Vec::new(), false);
+            };
+            (
+                running.kind == Some(TableKind::Solo),
+                running.mode == TableMode::Ranked,
+                !running.another_human(seat),
+            )
         };
-        if running.kind == Some(TableKind::Solo) {
-            // Human: Leaving a solo game ends it. No bot sits down, and the result is not stored.
-            // Agent: WRITES ok; REMOVES the game and the seat; RETURNS the player with ranked false. No game.update and no game.over.
-            ok(live, user, msg);
-            self.abandoned.push(id.as_str().to_owned());
-            self.seat_of.remove(user);
-            self.games.remove(&id);
-            return (vec![user.clone()], false);
+        if last_human {
+            self.cancel_resigned(&id, user, seat, msg, solo, live);
+            return (vec![user.clone()], ranked);
         }
         let Some(running) = self.games.get_mut(&id) else {
             return (Vec::new(), false);
         };
-        let ranked = running.mode == TableMode::Ranked;
         ok(live, user, msg);
-        running.status[seat.index()] = SeatStatus::Bot;
-        running.forfeited.push(seat);
-        // Human: The seat is a bot from this update on, so the clock in the update is the bot's.
-        // Agent: WRITES status Bot, step_at, bot_at, shown; publish reads shown.
-        running.arm(now);
-        let events = vec![GameEvent::Online(OnlineEvent::SeatStatus {
-            seat,
-            status: SeatStatus::Bot,
-        })];
-        running.publish(&events, Some(user), live);
+        running.resign_seat(seat, user, now, live);
         self.seat_of.remove(user);
         (vec![user.clone()], ranked)
+    }
+
+    /// The last human resigned. Stop the game and drop its open row. No result is stored.
+    ///
+    // Human: Bots do not play the round out. A solo leave is `ok` alone. Every other table still
+    // sends the one update the client waits for, then the game is gone.
+    // Agent: WRITES ok; on a non-solo table one game.update with seatStatus out; REMOVES the game
+    // and the seat. No report and no game.over. Ranked still returns true so the cooldown starts.
+    fn cancel_resigned(
+        &mut self,
+        id: &GameId,
+        user: &UserId,
+        seat: Seat,
+        msg: MessageId,
+        solo: bool,
+        live: &HashMap<UserId, super::Live>,
+    ) {
+        ok(live, user, msg);
+        if !solo && let Some(running) = self.games.get_mut(id) {
+            running.mark_out(seat);
+            let events = vec![GameEvent::Online(OnlineEvent::SeatStatus {
+                seat,
+                status: SeatStatus::Out,
+            })];
+            running.publish(&events, Some(user), live);
+        }
+        self.abandoned.push(id.as_str().to_owned());
+        self.seat_of.remove(user);
+        self.games.remove(id);
     }
 
     pub fn tick(
@@ -1002,6 +1023,51 @@ struct Hit<'a> {
 impl Running {
     fn players(&self) -> usize {
         self.seats.len()
+    }
+
+    /// Someone besides `leaving` is still a person at this table.
+    ///
+    /// A bot, a seat already `out`, and a seat a bot took over do not count. An offline or away
+    /// human does: they still have the seat.
+    fn another_human(&self, leaving: Seat) -> bool {
+        self.seats.iter().enumerate().any(|(index, seat)| {
+            index != leaving.index()
+                && !seat.started_bot
+                && seat.user.is_some()
+                && matches!(
+                    self.status.get(index),
+                    Some(SeatStatus::Online | SeatStatus::Offline | SeatStatus::Away)
+                )
+        })
+    }
+
+    fn mark_out(&mut self, seat: Seat) {
+        if let Some(status) = self.status.get_mut(seat.index()) {
+            *status = SeatStatus::Out;
+        }
+    }
+
+    /// Take this player out of a game other people are still playing.
+    ///
+    // Human: The seat is not handed to a bot. The server plays its remaining cards so the round can finish.
+    // Agent: WRITES status Out, forfeited, step_at, bot_at, shown; publish reads shown. The actor gets this update. A closed seat does not.
+    fn resign_seat(
+        &mut self,
+        seat: Seat,
+        user: &UserId,
+        now: Instant,
+        live: &HashMap<UserId, super::Live>,
+    ) {
+        self.mark_out(seat);
+        if !self.forfeited.contains(&seat) {
+            self.forfeited.push(seat);
+        }
+        self.arm(now);
+        let events = vec![GameEvent::Online(OnlineEvent::SeatStatus {
+            seat,
+            status: SeatStatus::Out,
+        })];
+        self.publish(&events, Some(user), live);
     }
 
     fn returns_to_lobby(&self) -> bool {

@@ -950,6 +950,61 @@ async fn a_finished_round_publishes_its_clock_and_the_next_one_starts(pool: sqlx
     );
 }
 
+#[sqlx::test(migrations = "../../migrations/postgres")]
+async fn a_last_human_resign_deletes_the_open_game(pool: sqlx::PgPool) {
+    let state = AppState::for_tests(pool.clone(), Duration::ZERO, budgets());
+    let port = serve(state.clone()).await;
+    let (cookie, _) = guest(port).await;
+    let mut socket = open_socket(port, &cookie).await;
+    greet(&mut socket).await;
+    send(
+        &mut socket,
+        r#"{"t":"lobby.create","id":2,"visibility":"private","settings":{"maxPlayers":4,"scoring":"classic","format":"swift","loot":false,"kraken":false,"whale":false,"abilities":false,"botLevel":"normal","pace":"standard"}}"#,
+    )
+    .await;
+    assert!(next_ok(&mut socket).await.contains("\"t\":\"ok\""));
+    send(&mut socket, r#"{"t":"lobby.ready","id":3,"ready":true}"#).await;
+    assert!(next_ok(&mut socket).await.contains("\"t\":\"ok\""));
+    send(&mut socket, r#"{"t":"lobby.addBot","id":4}"#).await;
+    assert!(next_ok(&mut socket).await.contains("\"t\":\"ok\""));
+    send(&mut socket, r#"{"t":"lobby.start","id":5}"#).await;
+    let mut saw_open = false;
+    for _ in 0..8 {
+        let frame = read_text(&mut socket).await;
+        if frame.contains("\"t\":\"game.update\"") {
+            saw_open = true;
+            break;
+        }
+    }
+    assert!(saw_open, "the private table started");
+    state.persist_open().await;
+    let open_rows: i64 = sqlx::query_scalar("SELECT count(*) FROM open_games")
+        .fetch_one(&pool)
+        .await
+        .expect("count open");
+    assert_eq!(open_rows, 1);
+
+    send(&mut socket, r#"{"t":"game.leave","id":6}"#).await;
+    let left = read_text(&mut socket).await;
+    assert!(left.contains("\"t\":\"ok\""), "{left}");
+    let update = read_text(&mut socket).await;
+    assert!(update.contains("\"status\":\"out\""), "{update}");
+    state.persist_open().await;
+    let open_rows: i64 = sqlx::query_scalar("SELECT count(*) FROM open_games")
+        .fetch_one(&pool)
+        .await
+        .expect("count open");
+    let stored_rows: i64 = sqlx::query_scalar("SELECT count(*) FROM games")
+        .fetch_one(&pool)
+        .await
+        .expect("count games");
+    assert_eq!((open_rows, stored_rows), (0, 0));
+    let (status, _, me) = http(port, "GET", "/api/v1/me", &cookie, "").await;
+    assert_eq!(status, 200, "{me}");
+    assert!(me.contains("\"games\":0"), "{me}");
+    assert!(me.contains("\"active\":null"), "{me}");
+}
+
 async fn drain(
     socket: &mut tokio_tungstenite::WebSocketStream<tokio_tungstenite::MaybeTlsStream<TcpStream>>,
 ) -> Vec<String> {
@@ -1014,6 +1069,17 @@ async fn send(
         .send(tokio_tungstenite::tungstenite::Message::Text(text.into()))
         .await
         .expect("send");
+}
+
+async fn next_ok(socket: &mut Socket) -> String {
+    let mut last = String::new();
+    for _ in 0..6 {
+        last = read_text(socket).await;
+        if last.contains("\"t\":\"ok\"") || last.contains("\"t\":\"err\"") {
+            return last;
+        }
+    }
+    panic!("no ok in {last}");
 }
 
 async fn read_text(
