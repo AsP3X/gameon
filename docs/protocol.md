@@ -98,7 +98,7 @@ All bodies are JSON. Unless marked *public*, a session is required.
 type ServerConfig = {
   protocol: number;                 // 1
   build: string;                    // server build id
-  timers: Timers;                   // the defaults: 45s bid, 30s play, 30s ability, 2.5s trick end, 20s round end, 60s grace
+  timers: Timers;                   // the defaults: 45s bid, 30s play, 30s ability, 2.5s trick end, 20s round end
   standard: GameSettings;           // quick play and ranked, spelled out below
   season: Season | null;
   emotes: string[];                 // yoho, arr, nice, oops, thinking, laugh, cry, gg
@@ -207,8 +207,10 @@ future is null. The penalty starts when the ranked `game.leave` is accepted, not
 ends. The first ranked leave of a season closes ranked for 15 minutes. Each further leave in that
 season doubles it: 15, 30, 60 minutes, then 2, 4, 8 and 16 hours. The eighth leave and every leave
 after it is 24 hours, which is the cap. The `QUEUE_COOLDOWN` message carries no time. Casual queue
-and every lobby message still work during the penalty. A bot that takes a seat after the disconnect
-grace is not a forfeit and does not start a cooldown.
+and every lobby message still work during the penalty. A drop keeps the seat with its player. A ranked
+seat that misses two turns while `offline` becomes `out`, and `Me.cooldownUntil` is set then, by
+the same steps as `game.leave`. `GET /config` still sends `timers.disconnectGraceMs` as `60000`.
+No path reads that number.
 
 ## 5. Socket
 
@@ -531,7 +533,7 @@ snapshot at the current `rev` with `events: []`. It is not a new step. A drop se
 `offline`. The seat stays that player's. A later `welcome` puts them back in the same game
 until they are kicked. Coming back sets `online` and the miss count returns to zero. The kicked
 player is removed from the lobby, as a leaver is, so that `welcome` has no lobby for the table.
-There is no change to `bot` after 60 seconds. While `offline` the seat is on the bid, play and
+While `offline` the seat is on the bid, play and
 ability clock and is listed in `deadline.seats`. A missed deadline plays the bot's move for that turn and the
 `game.update` carries `timedOut`. The status stays `offline`. The second missed deadline in a row
 while `offline` is the kick. That one `game.update` carries the move, `timedOut`, and

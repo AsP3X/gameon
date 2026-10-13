@@ -75,7 +75,7 @@ pub struct Timers {
     pub trick_end_ms: u32,
     /// How long the round summary stays up.
     pub round_end_ms: u32,
-    /// How long a dropped seat is kept before a bot takes it.
+    /// Sent on `GET /config` as 60000. No path reads it. A dropped seat stays with its player.
     pub disconnect_grace_ms: u32,
 }
 
