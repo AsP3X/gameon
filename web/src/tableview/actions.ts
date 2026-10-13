@@ -42,7 +42,7 @@ import { recordGame } from './stats';
 import { Store } from './store';
 import { Tracker, trkCreate, trkNow } from './tracker';
 import { TRK_ACTIONS } from './trackerActions';
-import { abilityToast, movesStandings, ratingLine, scored } from './views';
+import { abilityToast, movesStandings, ratingLine, roundResults, scored } from './views';
 
 type EventOf<T extends GameEvent['type']> = Extract<GameEvent, { type: T }>;
 
@@ -119,6 +119,12 @@ async function present(
   if (info?.unlock !== false) ui.waiting = false;
   if (ui.screen !== 'game') return;
   const v = tableView();
+  // A new phase asks a new question. Whatever this seat sent in the old one has been answered or
+  // overtaken, also when the update that says so is somebody else's step.
+  if (before && isTableView(before) && (before.phase !== v.phase || before.round !== v.round)) ui.waiting = false;
+  // The results are a round end's. The table can be past it without a `roundStarted` having been
+  // shown here: a snapshot after a reconnect has no events, and an update can follow a missed one.
+  if (ui.sheet === 'results' && !roundResults(v)) ui.sheet = null;
   events.forEach((e) => {
     if (e.type === 'cardPlayed') {
       ui.toast = null;
@@ -148,12 +154,12 @@ async function present(
     ui.toast = null;
     const L = localSeatsOf(v),
       R = v.log[v.round],
-      good = L.some((i) => scored(v.cfg, R, i).hit);
+      good = L.some((i) => scored(v.cfg, R, i)?.hit);
     Sound.play(good ? 'roundGood' : 'roundBad');
     if (L.length === 1 && good) {
       let st = 0;
       for (let r = v.round; r >= 0; r--) {
-        if (scored(v.cfg, v.log[r], L[0]).hit) st++;
+        if (scored(v.cfg, v.log[r], L[0])?.hit) st++;
         else break;
       }
       if (st >= 3) setTimeout(() => Sound.play('streak', st), 520);
@@ -323,10 +329,33 @@ export function showTable(table: Table): void {
 /** Counts the actions sent, so an answer can tell whether it is still the one input is waiting for. */
 let sent = 0;
 /**
+ * How long input stays locked on an action the table took and then said nothing about. The update
+ * of an accepted action is the table's next word, so this is long for one that is on its way.
+ */
+export const ACCEPTED_GRACE_MS = 3000;
+/**
+ * The table took action `mine` and has not shown what it did. Give input back if it still has not
+ * after the grace: the lock must not outlive an update that never comes. An update that is still
+ * being shown (the feed is busy) is waited for instead: the unlock is that one's to give. The
+ * player gets their pick back with it, and what they send again is the table's to take or refuse.
+ */
+function unlockAfterGrace(mine: number, table: Table, giveBack: () => void): void {
+  clearTimer('unlock');
+  timers.unlock = setTimeout(() => {
+    timers.unlock = null;
+    if (!ui.waiting || mine !== sent || session.table !== table) return;
+    if (feed.pumping || feed.queue.length) return unlockAfterGrace(mine, table, giveBack);
+    giveBack();
+    ui.waiting = false;
+    if (ui.screen === 'game') render();
+  }, ACCEPTED_GRACE_MS);
+}
+/**
  * Send a local seat's action. Input is locked at once. An accepted action unlocks it when the
- * table's update has been presented. A refused one, or one the table never answers, unlocks it
- * here: the view is the one the action was sent from, and `undo` puts back what the player had
- * picked. Nothing is drawn from the action itself, only from what the table says.
+ * table's update has been presented, or after a grace when no update follows. A refused one, or
+ * one the table never answers, unlocks it here: the view is the one the action was sent from, and
+ * `undo` puts back what the player had picked. Nothing is drawn from the action itself, only from
+ * what the table says.
  */
 function act(action: Action, undo?: () => void): void {
   const table = session.table;
@@ -336,10 +365,15 @@ function act(action: Action, undo?: () => void): void {
   ui.waiting = true;
   const answer = dispatchWithin(table, action);
   render();
+  // On a table that still shows what the action was sent from, the player gets their pick back.
+  const giveBack = (): void => {
+    if (session.view === from) undo?.();
+  };
   void answer.then((r) => {
     // Late news about an action nobody is waiting for any more: its update was shown, another one was sent, or the table was left.
-    if (r.ok || !ui.waiting || mine !== sent || session.table !== table) return;
-    if (session.view === from) undo?.();
+    if (!ui.waiting || mine !== sent || session.table !== table) return;
+    if (r.ok) return unlockAfterGrace(mine, table, giveBack);
+    giveBack();
     ui.waiting = false;
     if (ui.screen === 'game') render();
   });

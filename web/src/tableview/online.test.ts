@@ -7,9 +7,12 @@ import { Bots, Engine } from '../game';
 import type { Action, GameState, OnlineInfo, TableView } from '../game';
 import type { GameEvent, Seat } from '../protocol/generated';
 import type { DispatchResult, Table, TableListener, UpdateInfo } from '../table/table';
+import { ACCEPTED_GRACE_MS } from './actions';
 import { closeOnlineTable, mountTavern, openOnlineTable } from './index';
+import { render } from './render';
 import { session, stats, tableView, ui } from './state';
 import { Store } from './store';
+import { resultsSheet, roundResults, scored } from './views';
 
 const ANSWER: UpdateInfo = { unlock: true, last: false };
 const OTHERS: UpdateInfo = { unlock: false, last: false };
@@ -491,6 +494,112 @@ describe('who is at an online table', () => {
     await settle();
     expect(tableView()).toMatchObject({ phase: 'bidding', round: 1 });
     expect(app.querySelector('.bidsheet')).not.toBeNull();
+  });
+});
+
+describe('a table that moved on without saying so', () => {
+  /** Play the first round to its results: the sheet is up, over a table at `roundEnd`. */
+  async function toResults(): Promise<void> {
+    online = present();
+    openTable();
+    for (let i = 0; i < 100 && state.phase !== 'roundEnd'; i++) {
+      step(nextMove(), OTHERS);
+      await settle(20);
+    }
+    await settle(3000);
+    expect(state.phase).toBe('roundEnd');
+    expect(ui.sheet).toBe('results');
+    expect(app.querySelector('.sheet[aria-label="Round results"]')).not.toBeNull();
+  }
+  /** The server takes steps this device is never told about: only the state moves. */
+  function unseen(until: GameState['phase']): void {
+    for (let i = 0; i < 20 && state.phase !== until; i++) {
+      const r = Engine.reduce(state, nextMove());
+      if (r.error != null) throw new Error(r.error);
+      state = r.state;
+    }
+    expect(state.phase).toBe(until);
+  }
+
+  it.each(['bidding', 'playing'] as const)(
+    'closes the results over a table that is %s, on an update with no `roundStarted` in it',
+    async (phase) => {
+      await toResults();
+      unseen(phase);
+      // What a reconnect brings, or the update after a missed one: the view, and nothing that happened.
+      tell(present(), ANSWER);
+      await settle();
+      expect(tableView().phase).toBe(phase);
+      expect(ui.sheet).toBeNull();
+      expect(app.querySelector('.sheet')).toBeNull();
+      // The table is in reach again: nothing of it is inert, and it asks for what the phase asks.
+      expect(Array.from(app.children).some((el) => (el as HTMLElement).inert)).toBe(false);
+      if (phase === 'bidding') expect(app.querySelector('#bid')).not.toBeNull();
+      else expect(app.querySelector('.hand .hslot[data-act="pick"]')).not.toBeNull();
+    },
+  );
+
+  it('closes them on any redraw too, and draws no results for a round that has no bid yet', () => {
+    openTable();
+    const v = tableView();
+    expect(v.phase).toBe('bidding');
+    expect(v.log[v.round].bids).toEqual([null, null, null]);
+    expect(scored(v.cfg, v.log[v.round], 0)).toBeNull();
+    expect(roundResults(v)).toBeNull();
+    expect(resultsSheet()).toBe('');
+    // The sheet is asked for over that table: the redraw does not throw, and does not leave it up.
+    ui.sheet = 'results';
+    expect(() => render()).not.toThrow();
+    expect(ui.sheet).toBeNull();
+    expect(app.querySelector('.sheet')).toBeNull();
+    expect(app.querySelector('#bid')).not.toBeNull();
+  });
+
+  it('gives input back when the phase changes under an unanswered action', async () => {
+    await toResults();
+    click('[data-act="next"]');
+    expect(sent).toEqual([{ type: 'advance' }]);
+    expect(ui.waiting).toBe(true);
+    // The round starts as somebody else's step. No update is marked as the answer to "ready".
+    step({ type: 'advance' }, OTHERS);
+    await settle();
+    expect(tableView()).toMatchObject({ phase: 'bidding', round: 1 });
+    expect(ui.waiting).toBe(false);
+    document.querySelector('#bid')?.dispatchEvent(new KeyboardEvent('keydown', { key: '1', bubbles: true }));
+    click('[data-act="bid"]');
+    expect(sent).toEqual([{ type: 'advance' }, { type: 'bid', seat: 0, bid: 1 }]);
+  });
+
+  it('gives input back when the table took an action and no update followed', async () => {
+    openTable();
+    document.querySelector('#bid')?.dispatchEvent(new KeyboardEvent('keydown', { key: '2', bubbles: true }));
+    click('[data-act="bid"]');
+    expect(ui.waiting).toBe(true);
+    // The table said `ok` (see openTable) and then nothing. The lock holds for the grace, not for good.
+    await settle(ACCEPTED_GRACE_MS - 1);
+    expect(ui.waiting).toBe(true);
+    expect(text('.actions')).toBe('Locked in');
+    await settle(1);
+    expect(ui.waiting).toBe(false);
+    expect(app.querySelector('#bid')).not.toBeNull();
+    click('[data-act="bid"]');
+    expect(sent).toEqual([
+      { type: 'bid', seat: 0, bid: 2 },
+      { type: 'bid', seat: 0, bid: 2 },
+    ]);
+  });
+
+  it('keeps the lock while the answer is on its way: an update inside the grace unlocks, and the grace does nothing after it', async () => {
+    openTable();
+    document.querySelector('#bid')?.dispatchEvent(new KeyboardEvent('keydown', { key: '2', bubbles: true }));
+    click('[data-act="bid"]');
+    await settle(1000);
+    step({ type: 'bid', seat: 0, bid: 2 }, ANSWER);
+    await settle();
+    expect(ui.waiting).toBe(false);
+    const drawn = app.innerHTML;
+    await settle(ACCEPTED_GRACE_MS);
+    expect(app.innerHTML).toBe(drawn);
   });
 });
 

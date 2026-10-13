@@ -3,6 +3,7 @@
    end-of-game finale. What its buttons do is in trackerActions.ts.
    Ported from the legacy build (legacy/Skull King Tavern.html, "Score tracker") without changing behavior. */
 import { Rules } from '../game';
+import type { Score } from '../game';
 import { fill } from '../game/util';
 import type { RoundRecord, Seat } from '../protocol/generated';
 import { avatar, cardHTML, ICON, mascot } from './art';
@@ -71,7 +72,7 @@ function trkStreak(t: TrackerState, i: Seat): number {
   for (let r = t.log.length - 1; r >= 0; r--) {
     const R = t.log[r];
     if (!R.done) continue;
-    if (scored(t.cfg, R, i).hit) s++;
+    if (scored(t.cfg, R, i)?.hit) s++;
     else break;
   }
   return s;
@@ -328,10 +329,16 @@ export function trkResultsSheet(): string {
     n = t.seats.length,
     before = fill(n, 0);
   t.log.forEach((X, r) => {
-    if (X.done && r < t.cur) for (let i = 0; i < n; i++) before[i] += scored(t.cfg, X, i).total;
+    if (X.done && r < t.cur) for (let i = 0; i < n; i++) before[i] += scored(t.cfg, X, i)?.total ?? 0;
   });
-  const sc = t.seats.map((_, i) => scored(t.cfg, R, i)),
-    hits = sc.filter((s) => s.hit).length;
+  // The sheet opens on a round that has been checked: every seat has a score. Without one there is no sheet.
+  const sc: Score[] = [];
+  for (let i = 0; i < n; i++) {
+    const s = scored(t.cfg, R, i);
+    if (!s) return '';
+    sc.push(s);
+  }
+  const hits = sc.filter((s) => s.hit).length;
   const after = before.map((b, i) => b + sc[i].total),
     top = (): number => after.indexOf(Math.max(...after));
   const tone = hits === n ? 'good' : hits * 2 >= n ? 'mid' : 'bad';

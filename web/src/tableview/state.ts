@@ -328,10 +328,11 @@ export const stage: {
 
 type Timer = ReturnType<typeof setTimeout>;
 /** Timeouts that outlive the function that set them. */
-export const timers: { undo: Timer | null; resize: Timer | null; closing: Timer | null } = {
+export const timers: { undo: Timer | null; resize: Timer | null; closing: Timer | null; unlock: Timer | null } = {
   undo: null,
   resize: null,
   closing: null,
+  unlock: null,
 };
 export function clearTimer(name: keyof typeof timers): void {
   const t = timers[name];

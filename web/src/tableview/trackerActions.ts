@@ -208,7 +208,7 @@ export const TRK_ACTIONS: Record<string, ActionFn> = {
       R = trkRound(t);
     if (trkValidate(R, t).length) return;
     const n = t.seats.length,
-      hits = t.seats.filter((_, i) => scored(t.cfg, R, i).hit).length;
+      hits = t.seats.filter((_, i) => scored(t.cfg, R, i)?.hit).length;
     ui.sheet = 'trkResults';
     ui.anim = true;
     render();

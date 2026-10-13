@@ -18,6 +18,7 @@ import {
   leaveSheet,
   peekSheet,
   resultsSheet,
+  roundResults,
   rulesSheet,
   setupView,
   soundSheet,
@@ -138,6 +139,9 @@ export function render(): void {
   const app = stage.app;
   if (!app) return; // unmounted: a late timer or a finished animation has nothing to draw on
   tuneMenu();
+  // The results sheet belongs to a round's end. Over any other phase it would cover, and take out of
+  // reach, a table that is waiting for a bid or a card: so it is closed before anything is drawn.
+  if (ui.screen === 'game' && ui.sheet === 'results' && !roundResults(tableView())) ui.sheet = null;
   // A round dealt just now is shown being dealt, unless the felt is covered: then, and whenever the
   // felt gets covered or left while a deal is shown, everything is simply where it ends up.
   if (ui.screen !== 'game' || ui.curtain || ui.sheet) endDeal();

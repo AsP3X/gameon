@@ -113,6 +113,7 @@ export function mountTavern(app: HTMLElement, fx: HTMLCanvasElement, hooks: Tave
     if (session.table) session.table.stop();
     finale.token++;
     clearTimer('undo');
+    clearTimer('unlock');
     resetFeed();
     Sound.hush();
     $$('.banner').forEach((el) => el.remove());

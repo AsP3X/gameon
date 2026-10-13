@@ -28,11 +28,27 @@ import {
 import type { ScoreView } from './state';
 import { Store } from './store';
 
-/** A seat's score in a round whose bids and tricks are all in: a finished one, or one the scorekeeper has checked. */
-export function scored(cfg: ScoreConfig, R: ScoreRecord, i: Seat): Score {
-  const s = Rules.scoreSeat(cfg, R, i);
-  if (!s) throw new Error('This round has no score yet');
-  return s;
+/**
+ * A seat's score in a round, or null while its bid or its tricks are not in. A finished round and
+ * one the scorekeeper has checked have one for every seat. It never throws: a view is drawn before
+ * it is put on the page, and one that threw would leave the old page standing, sheet and all.
+ */
+export const scored = (cfg: ScoreConfig, R: ScoreRecord, i: Seat): Score | null => Rules.scoreSeat(cfg, R, i);
+/**
+ * Every seat's score of the round that has just ended at the table, or null when there is none to
+ * show: the table is in another phase (the next round has begun), or a score is missing. The
+ * results sheet is drawn from this and is only open while there is one.
+ */
+export function roundResults(v: TableView): Score[] | null {
+  if (v.phase !== 'roundEnd') return null;
+  const R = v.log[v.round],
+    all: Score[] = [];
+  for (let i = 0; i < v.seats.length; i++) {
+    const s = scored(v.cfg, R, i);
+    if (!s) return null;
+    all.push(s);
+  }
+  return all;
 }
 
 function statsView(): string {
@@ -561,8 +577,10 @@ export function resultsSheet(): string {
     n = v.seats.length,
     R = v.log[v.round],
     tot = Rules.totals(v.log, v.cfg, n);
-  const sc = v.seats.map((_, i) => scored(v.cfg, R, i)),
+  const sc = roundResults(v),
     H = localSeatsOf(v);
+  // Nothing to show (render() closes the sheet before it gets here): no sheet, and no throw.
+  if (!sc) return '';
   let tone: 'good' | 'mid' | 'bad', title: string;
   if (H.length === 1) {
     const mine = sc[H[0]];
@@ -620,6 +638,7 @@ function boardBody(v: ScoreView, editable: boolean): string {
         : `<tr ${editable ? `class="editable" data-act="trkEdit" data-r="${r}" title="Fix round ${r + 1}"` : ''}><td>${r + 1}<small class="muted" style="display:block;font-size:11px">${R.cards}c</small></td>${v.seats
             .map((_, i) => {
               const s = scored(v.cfg, R, i);
+              if (!s) return '<td class="cell"></td>';
               run[i] += s.total;
               return `<td class="cell"><b class="${toneOf(s.total)}">${sgn(s.total)}</b><small>${R.bids[i]}/${R.tricks[i]}${s.bonus ? ' ★' + s.bonus : ''}${s.wager ? ' $' + s.wager : ''} · ${run[i]}</small></td>`;
             })
@@ -763,6 +782,7 @@ function awards(v: ScoreView): Award[] {
       for (let i = 0; i < n; i++) {
         const s = scored(v.cfg, R, i),
           x = stat[i];
+        if (!s) continue;
         if (s.hit) {
           x.hits++;
           x.cur++;
