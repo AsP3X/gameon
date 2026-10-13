@@ -760,6 +760,7 @@ fn queue() -> QueueStatus {
         since: UnixMs::new(WHEN),
         found: 2,
         needed: 4,
+        fills_at: Some(UnixMs::new(WHEN + 10_000)),
     }
 }
 

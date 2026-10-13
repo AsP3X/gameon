@@ -161,13 +161,19 @@ impl Line {
         taken
     }
 
-    fn status(&self, user: &UserId, mode: QueueMode) -> Option<QueueStatus> {
+    fn status(
+        &self,
+        user: &UserId,
+        mode: QueueMode,
+        fills_at: Option<skt_protocol::UnixMs>,
+    ) -> Option<QueueStatus> {
         let waiting = self.waiting.iter().find(|waiting| &waiting.user == user)?;
         Some(QueueStatus {
             mode,
             since: waiting.since,
             found: u32::try_from(self.waiting.len()).unwrap_or(0),
             needed: 4,
+            fills_at,
         })
     }
 }
@@ -186,7 +192,7 @@ impl World {
     /// An empty tavern.
     #[must_use]
     pub fn new() -> Self {
-        Self::with_fill(Duration::from_secs(6))
+        Self::with_fill(Duration::from_secs(10))
     }
 
     /// `fill` is how long a casual queue waits before bots take the empty seats.
@@ -1125,7 +1131,7 @@ impl World {
         };
         let now = self.now;
         self.line_mut(mode).push(user.clone(), now, ordinal);
-        let status = self.line(mode).status(user, mode);
+        let status = self.line(mode).status(user, mode, self.fills_at(mode));
         self.ok_queue(user, id, status);
         self.push_queue_except(mode, user);
         if mode == QueueMode::Casual && self.casual.waiting.len() >= 4 {
@@ -1327,8 +1333,26 @@ impl World {
 
     fn queue_status(&self, user: &UserId) -> Option<QueueStatus> {
         self.casual
-            .status(user, QueueMode::Casual)
-            .or_else(|| self.ranked.status(user, QueueMode::Ranked))
+            .status(user, QueueMode::Casual, self.fills_at(QueueMode::Casual))
+            .or_else(|| self.ranked.status(user, QueueMode::Ranked, None))
+    }
+
+    /// When casual seats whoever is waiting. Absent for ranked, for a full line, and once the wait is over.
+    fn fills_at(&self, mode: QueueMode) -> Option<skt_protocol::UnixMs> {
+        if mode != QueueMode::Casual || self.casual.waiting.len() >= 4 {
+            return None;
+        }
+        let since = self.casual.since?;
+        let left = self
+            .fill
+            .saturating_sub(self.now.saturating_duration_since(since));
+        if left.is_zero() {
+            return None;
+        }
+        let ms = i64::try_from(left.as_millis()).unwrap_or(i64::MAX);
+        Some(skt_protocol::UnixMs::new(
+            identity::unix_now().get().saturating_add(ms),
+        ))
     }
 
     fn push_queue(&self, mode: QueueMode) {
@@ -1336,21 +1360,28 @@ impl World {
     }
 
     fn push_queue_except(&self, mode: QueueMode, skip: &UserId) {
-        let line = self.line(mode);
-        let found = u32::try_from(line.waiting.len()).unwrap_or(0);
-        for waiting in &line.waiting {
-            if &waiting.user == skip {
+        let fills_at = self.fills_at(mode);
+        let found = u32::try_from(self.line(mode).waiting.len()).unwrap_or(0);
+        let waiting: Vec<_> = self
+            .line(mode)
+            .waiting
+            .iter()
+            .map(|waiting| (waiting.user.clone(), waiting.since))
+            .collect();
+        for (user, since) in waiting {
+            if &user == skip {
                 continue;
             }
             self.send(
-                &waiting.user,
+                &user,
                 &QueueStatusPush {
                     tag: QueueStatusTag::Value,
                     queue: QueueStatus {
                         mode,
-                        since: waiting.since,
+                        since,
                         found,
                         needed: 4,
+                        fills_at,
                     },
                 },
             );

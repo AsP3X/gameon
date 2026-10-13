@@ -293,6 +293,39 @@ async fn a_full_house_table_starts_and_a_new_one_takes_its_place(pool: sqlx::PgP
 }
 
 #[sqlx::test(migrations = "../../migrations/postgres")]
+async fn a_casual_queue_says_when_the_bots_will_fill(pool: sqlx::PgPool) {
+    let state = AppState::for_tests(pool, Duration::from_secs(10), budgets());
+    let port = serve(state).await;
+    let (cookie, _) = guest(port).await;
+    let mut socket = open_socket(port, &cookie).await;
+    greet(&mut socket).await;
+    send(&mut socket, r#"{"t":"queue.join","id":3,"mode":"casual"}"#).await;
+    let joined = read_text(&mut socket).await;
+    let at = joined
+        .split("\"fillsAt\":")
+        .nth(1)
+        .and_then(|rest| rest.split([',', '}']).next())
+        .and_then(|text| text.parse::<i64>().ok())
+        .expect(&joined);
+    let now = i64::try_from(
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .expect("clock")
+            .as_millis(),
+    )
+    .unwrap_or(0);
+    assert!(
+        (at - now - 10_000).abs() < 2_000,
+        "fillsAt {at} now {now} {joined}"
+    );
+    let (_cookie, mut ranked) = account(port, "Nia").await;
+    send(&mut ranked, r#"{"t":"queue.join","id":4,"mode":"ranked"}"#).await;
+    let waiting = read_text(&mut ranked).await;
+    assert!(waiting.contains("\"mode\":\"ranked\""), "{waiting}");
+    assert!(!waiting.contains("fillsAt"), "{waiting}");
+}
+
+#[sqlx::test(migrations = "../../migrations/postgres")]
 async fn a_casual_queue_starts_a_game_and_a_guest_cannot_play_ranked(pool: sqlx::PgPool) {
     let state = AppState::for_tests(pool, Duration::ZERO, budgets());
     let port = serve(state.clone()).await;

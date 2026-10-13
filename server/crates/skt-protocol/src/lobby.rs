@@ -173,4 +173,9 @@ pub struct QueueStatus {
     pub found: u32,
     /// Players required.
     pub needed: u32,
+    /// When a casual queue seats whoever is waiting and fills the rest with bots.
+    /// Omitted for ranked, and when four people are already waiting.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub fills_at: Option<UnixMs>,
 }

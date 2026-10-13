@@ -315,7 +315,9 @@ lobby as well as from the seat. The members who remain are sent `lobby.state`. T
 | `queue.leave` | | `ok`, including when the user was not queued |
 
 ```ts
-type QueueStatus = { mode: 'casual' | 'ranked'; since: number; found: number; needed: number };
+type QueueStatus = {
+  mode: 'casual' | 'ranked'; since: number; found: number; needed: number; fillsAt?: number
+};
 ```
 
 `queue.join` is checked in this order. Any other `mode` is `VALIDATION`. `ranked` from a guest is
@@ -334,8 +336,11 @@ too, with the new `found`, and then `game.start`. There is no further `queue.sta
 `queue.status` with the reduced `found`.
 
 For `casual`, when `found` reaches 4 the table forms at once, the first four in join order.
-Otherwise the server waits 6000 ms from the moment that line stopped being empty, then seats
-whoever is waiting and fills the empty seats with bots. The client does not print that duration.
+Otherwise the server waits 10000 ms from the moment that line stopped being empty, then seats
+whoever is waiting and fills the empty seats with bots. `fillsAt` is that moment, in Unix
+milliseconds, and it is the same for everyone waiting. It is omitted for `ranked`, and when the
+table is about to form because four people are already waiting. A player who joins during the
+wait sees the time that is left, not a new 10 seconds.
 A dropped socket keeps the place, with no time limit. The next `welcome` has `queue` set. A queued
 player with no socket when the table forms is seated `offline`.
 

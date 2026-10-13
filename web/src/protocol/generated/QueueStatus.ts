@@ -22,4 +22,9 @@ export type QueueStatus = {
    * Players required.
    */
   needed: number;
+  /**
+   * When a casual queue seats whoever is waiting and fills the rest with bots.
+   * Omitted for ranked, and when four people are already waiting.
+   */
+  fillsAt?: UnixMs;
 };
