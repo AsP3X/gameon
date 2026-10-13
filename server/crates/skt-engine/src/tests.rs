@@ -555,6 +555,169 @@ fn normal_bids_zero_on_a_hand_of_escapes() {
 }
 
 #[test]
+fn normal_bids_the_tricks_a_hand_is_likely_to_win() {
+    let pirates = dealt(
+        &[vec![61, 62, 0, 1, 2], vec![3, 4, 5, 6, 7]],
+        1,
+        false,
+        Expansions::none(),
+    );
+    assert!(normal_bid(&pirates, 0) >= 2, "two pirates");
+
+    let highs = dealt(
+        &[vec![55, 54, 27, 0, 1], vec![3, 4, 5, 6, 7]],
+        1,
+        false,
+        Expansions::none(),
+    );
+    let high_bid = normal_bid(&highs, 0);
+    assert!(
+        high_bid >= 2,
+        "black 14, black 13 and a side 14 bid {high_bid}"
+    );
+
+    let lows = dealt(
+        &[vec![0, 1, 2, 3, 4], vec![5, 6, 7, 8, 9]],
+        1,
+        false,
+        Expansions::none(),
+    );
+    assert_eq!(normal_bid(&lows, 0), 0, "five low cards");
+}
+
+#[test]
+fn normal_bids_are_not_stuck_at_zero_or_one() {
+    // Four players, one card: a fair share is a quarter of a trick, so most bids stay 0.
+    let (open, open_sum) = bid_sample(4, 1, 70);
+    let open_total = open.iter().sum::<u32>();
+    let open_mean = open_sum * 100 / open_total;
+    assert!(
+        (10..=45).contains(&open_mean),
+        "one-card mean {open_mean} hundredths, bids {open:?}"
+    );
+
+    // Four players, ten cards: a fair share is 2.5. Zero and one are the low end, not the bid.
+    let (long, long_sum) = bid_sample(4, 10, 80);
+    assert_spread(&long, long_sum, 190..=280, 40, 3, 25);
+
+    // Two players, ten cards: a fair share is 5. The bid sits above 1.
+    let (pair, pair_sum) = bid_sample(2, 10, 40);
+    assert_spread(&pair, pair_sum, 250..=420, 30, 3, 40);
+
+    // Four players, five cards: a fair share is 1.25, and 2 still comes up.
+    let (swift, swift_sum) = bid_sample(4, 5, 80);
+    assert_spread(&swift, swift_sum, 90..=160, 80, 2, 20);
+}
+
+fn normal_bid(game: &GameState, seat: u8) -> u8 {
+    let seat = Seat::from_index(seat);
+    let view = game.view(seat).expect("view");
+    choose_bid(
+        &view,
+        game.deck(),
+        game.rules(),
+        BotLevel::Normal,
+        sight_of(game, seat),
+        &mut FixedRng(0.5),
+    )
+    .expect("bid")
+}
+
+fn bid_sample(players: u8, cards: u8, deals: u64) -> (Vec<u32>, u32) {
+    let mut counts = vec![0u32; usize::from(cards) + 1];
+    let mut sum = 0u32;
+    for deal in 0..deals {
+        let game = with_hands(
+            players,
+            cards,
+            &shuffled(0xB1D0_0000 + deal.wrapping_mul(0x9E37)),
+        );
+        for seat in 0..players {
+            let bid = u32::from(normal_bid(&game, seat));
+            sum += bid;
+            let slot = counts
+                .get_mut(usize::try_from(bid).expect("bid"))
+                .expect("slot");
+            *slot += 1;
+        }
+    }
+    (counts, sum)
+}
+
+/// `mean_band` is the mean bid in hundredths. `low_pct` is the most bids of 0 or 1 allowed, in
+/// percent. `high_pct` is the least share, in percent, of bids at or above `high_from`.
+fn assert_spread(
+    counts: &[u32],
+    sum: u32,
+    mean_band: std::ops::RangeInclusive<u32>,
+    low_pct: u32,
+    high_from: usize,
+    high_pct: u32,
+) {
+    let total = counts.iter().sum::<u32>();
+    assert!(total > 0, "no bids");
+    let mean = sum * 100 / total;
+    let zeros = counts.first().copied().unwrap_or(0) + counts.get(1).copied().unwrap_or(0);
+    let highs = counts.iter().skip(high_from).sum::<u32>();
+    assert!(
+        mean_band.contains(&mean),
+        "mean {mean} hundredths, bids {counts:?}"
+    );
+    assert!(
+        zeros * 100 / total < low_pct,
+        "bids of 0 or 1 were {}% of {counts:?}",
+        zeros * 100 / total
+    );
+    assert!(
+        highs * 100 / total >= high_pct,
+        "bids of {high_from} or more were {}% of {counts:?}",
+        highs * 100 / total
+    );
+}
+
+fn with_hands(players: u8, cards: u8, order: &[CardId]) -> GameState {
+    let mut deals = Scripted {
+        rounds: vec![identity(Expansions::none())],
+    };
+    let mut game = GameState::create(
+        Ruleset::new(Scoring::Classic, Format::Swift, Expansions::none(), false),
+        players,
+        Seat::from_index(0),
+        &mut deals,
+    )
+    .expect("create");
+    let width = usize::from(cards);
+    let count = usize::from(players);
+    let mut hands = Vec::with_capacity(count);
+    for index in 0..count {
+        let start = index * width;
+        hands.push(order[start..start + width].to_vec());
+    }
+    game.hands = hands;
+    game.pile = order[count * width..].to_vec();
+    game.played.clear();
+    game.round_plays.clear();
+    game.bids = vec![None; count];
+    game.won = vec![0; count];
+    game.phase = Phase::Bidding;
+    game
+}
+
+fn shuffled(seed: u64) -> Vec<CardId> {
+    let mut order = identity(Expansions::none());
+    let mut state = seed;
+    for index in (1..order.len()).rev() {
+        state = state
+            .wrapping_mul(6_364_136_223_846_793_005)
+            .wrapping_add(1);
+        let span = u64::try_from(index + 1).expect("span");
+        let pick = usize::try_from((state >> 33) % span).expect("pick");
+        order.swap(index, pick);
+    }
+    order
+}
+
+#[test]
 fn unknown_seat_is_not_your_turn() {
     let order = identity(Expansions::none());
     let mut deals = Scripted {
@@ -601,7 +764,7 @@ fn deal_gives_each_seat_a_slice_and_the_suffix_is_the_pile() {
 
 fn dealt(hands: &[Vec<u8>], dealer: u8, abilities: bool, expansions: Expansions) -> GameState {
     let players = u8::try_from(hands.len()).expect("players");
-    let order = deal_hands(expansions, &hands);
+    let order = deal_hands(expansions, hands);
     let mut deals = Scripted {
         rounds: vec![order.clone(), order],
     };

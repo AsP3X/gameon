@@ -44,12 +44,11 @@ pub fn choose_bid(
     sight: BotSight<'_>,
     rng: &mut impl Rng,
 ) -> Result<u8, StepError> {
-    // Human: Count the tricks the hand can actually win, then let Easy add a beginner's extra.
-    // Agent: READS EngineView, deck, Ruleset, BotSight, BotLevel, Rng; does not take GameState; RETURNS a bid in 0..=hand length.
+    // Human: Bid the tricks this hand is likely to win. Easy still adds a beginner's extra on top.
+    // Agent: READS EngineView, deck, Ruleset, BotSight, BotLevel, Rng; does not take GameState; RETURNS a bid in 0..=hand length. Play still uses sure_count, not this bid.
     let read = Read::build(view, deck, rules, level, sight)?;
-    let plan = plan_of(view, deck, &read)?;
-    let mut bid = plan.sure;
-    if bid == 0 && plan.ducks == 0 && has_high_black(view, deck)? {
+    let mut bid = likely_bid(view, deck, &read)?;
+    if bid == 0 && duck_count(view, deck)? == 0 && has_high_black(view, deck)? {
         bid = 1;
     }
     if level == BotLevel::Easy {
@@ -414,7 +413,7 @@ fn rank_one(
         rival_threat(view, deck, choice, &rivals, read)?
     };
     let wins = wins_now(view, deck, choice)?;
-    let kind = kind_of(view, note, wins, threatened);
+    let kind = kind_of(view, card, note, wins, threatened);
     let sure = is_sure_card(&view.hand, deck, choice.0, read)?;
     let spend = spend_of(card, choice.1);
     let shed = shed_of(card, choice.1, sure, plan.target);
@@ -434,12 +433,12 @@ fn rank_one(
     })
 }
 
-fn kind_of(view: &EngineView, note: Note, wins: bool, threatened: bool) -> Kind {
+fn kind_of(view: &EngineView, card: Card, note: Note, wins: bool, threatened: bool) -> Kind {
     if matches!(note, Note::Escape | Note::Kraken | Note::Whale) {
         return Kind::Duck;
     }
     if view.trick.plays.is_empty() {
-        return lead_kind(note, threatened);
+        return lead_kind(card, note, threatened);
     }
     if wins && !threatened {
         Kind::SafeTake
@@ -450,14 +449,29 @@ fn kind_of(view: &EngineView, note: Note, wins: bool, threatened: bool) -> Kind 
     }
 }
 
-fn lead_kind(note: Note, threatened: bool) -> Kind {
+fn lead_kind(card: Card, note: Note, threatened: bool) -> Kind {
+    // Human: A black 10 or a side 13 is a trick worth bidding, so a threatened one is still a take.
+    // Agent: READS card, note, threatened; RETURNS SafeTake when nothing unseen beats it, RiskyTake for a stopper or a high number, Duck otherwise.
     if !threatened {
         return Kind::SafeTake;
     }
-    if note == Note::Stopper {
+    if note == Note::Stopper || contested_winner(card) {
         Kind::RiskyTake
     } else {
         Kind::Duck
+    }
+}
+
+/// A number high enough to bid, below the stopper line.
+fn contested_winner(card: Card) -> bool {
+    match card {
+        Card::Number {
+            suit: Suit::Black,
+            rank,
+            ..
+        } => rank >= 10,
+        Card::Number { rank, .. } => rank >= 13,
+        _ => false,
     }
 }
 
@@ -818,6 +832,78 @@ fn expected_in_hands(count: i32, holders: i32, unseen: i32) -> i32 {
     }
     let holders = holders.min(unseen);
     (count * holders + unseen / 2) / unseen
+}
+
+/// Tricks a regular player would bid from this hand.
+///
+/// Each card adds its own share, in tenths. Pirates and the Tigress add a full trick.
+/// The total is rounded to a whole bid. A card can be worth bidding before it is safe to cash.
+///
+/// # Errors
+///
+/// [`StepError::Broken`] when the hand names a card that is not in `deck`.
+fn likely_bid(view: &EngineView, deck: &[Card], read: &Read) -> Result<i32, StepError> {
+    // Human: Add up what each card is likely to take, then round. A short table makes the same card worth more.
+    // Agent: READS view.hand, deck, Read.players; does not read GameState or another hand; RETURNS a bid in 0..=hand length.
+    let mut tenths = 0i32;
+    for id in &view.hand {
+        tenths += card_tenths(lookup(deck, *id)?, read.players)?;
+    }
+    let len = i32::try_from(view.hand.len()).map_err(|_| StepError::Broken)?;
+    Ok((tenths.saturating_add(5) / 10).clamp(0, len))
+}
+
+/// Tenths of a trick this card adds to the bid. One card never adds more than one trick.
+///
+/// Four players keep [`raw_tenths`]. Other tables use `raw * 4 / players`.
+///
+/// # Errors
+///
+/// [`StepError::Broken`] when `players` is zero or does not fit in an `i32`.
+fn card_tenths(card: Card, players: usize) -> Result<i32, StepError> {
+    let base = raw_tenths(card);
+    if base == 0 {
+        return Ok(0);
+    }
+    // A pirate or the Tigress wins the trick it is played in, at any table size.
+    if matches!(card, Card::Pirate { .. } | Card::Tigress { .. }) {
+        return Ok(base.min(10));
+    }
+    let players = i32::try_from(players).map_err(|_| StepError::Broken)?;
+    if players <= 0 {
+        return Err(StepError::Broken);
+    }
+    Ok((base * 4 / players).clamp(0, 10))
+}
+
+/// Tenths of a trick at a four-player table, before the table size scales it.
+fn raw_tenths(card: Card) -> i32 {
+    match card {
+        Card::Pirate { .. } | Card::Tigress { .. } | Card::SkullKing { .. } => 10,
+        Card::Mermaid { .. } => 6,
+        Card::Number {
+            suit: Suit::Black,
+            rank,
+            ..
+        } => match rank {
+            14 => 10,
+            13 => 8,
+            12 => 7,
+            11 => 5,
+            10 => 4,
+            9 => 2,
+            8 => 1,
+            _ => 0,
+        },
+        Card::Number { rank, .. } => match rank {
+            14 => 6,
+            13 => 4,
+            12 => 2,
+            11 | 10 => 1,
+            _ => 0,
+        },
+        Card::Escape { .. } | Card::Loot { .. } | Card::Kraken { .. } | Card::Whale { .. } => 0,
+    }
 }
 
 fn duck_count(view: &EngineView, deck: &[Card]) -> Result<i32, StepError> {
