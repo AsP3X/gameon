@@ -137,7 +137,7 @@
 }
 .presence.away {
   background: var(--gold-bg);
-  color: var(--gold-d);
+  color: var(--fg);
 }
 .presence.bot,
 .presence.out {

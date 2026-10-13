@@ -253,9 +253,11 @@ p {
   background: var(--red-bg);
   color: var(--red-ink);
 }
+/* Text on --gold-bg is --fg: no gold of the tokens is 4.5:1 on it in both themes (--gold-d is
+   2.0:1 in the light one, --gold-ink 1.1:1 in the dark one). */
 .pill.gold {
   background: var(--gold-bg);
-  color: var(--gold-d);
+  color: var(--fg);
 }
 .pill.soft {
   background: var(--soft);
@@ -2048,7 +2050,7 @@ tr.editable:hover td:first-child {
   color: var(--red-ink);
 }
 .sheet.mid .title {
-  color: var(--gold-d);
+  color: var(--fg);
 }
 .sheet .title {
   animation: pop 0.45s 0.1s var(--spring) both;
