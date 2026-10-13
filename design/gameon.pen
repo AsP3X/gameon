@@ -330,7 +330,7 @@
                   "type": "text",
                   "id": "JSAU8",
                   "name": "Label",
-                  "fill": "$gold-d",
+                  "fill": "$fg",
                   "content": "Gold pill",
                   "lineHeight": 1.4,
                   "fontFamily": "$f-ui",
@@ -35637,7 +35637,7 @@
                               "ref": "qUZQR",
                               "descendants": {
                                 "kQQHu": {
-                                  "content": "3"
+                                  "content": "6"
                                 }
                               }
                             }
@@ -35645,98 +35645,152 @@
                         },
                         {
                           "type": "frame",
-                          "id": "M50XW6",
-                          "name": "Table · Mira",
+                          "id": "SbmUt",
+                          "name": "Table · Classic · Open table",
                           "width": "fill_container",
                           "stroke": "$line",
                           "strokeWidth": {
                             "top": 2
                           },
                           "strokeAlignment": "inner",
-                          "gap": 12,
+                          "layout": "vertical",
+                          "gap": 2,
                           "padding": [
                             12,
                             16,
                             14,
                             20
                           ],
-                          "alignItems": "center",
                           "children": [
                             {
-                              "id": "mh54k",
-                              "type": "ref",
-                              "ref": "SebZL",
-                              "width": 42,
-                              "height": 42,
-                              "fill": "$purple",
-                              "descendants": {
-                                "peRO2": {
-                                  "content": "M",
-                                  "fontSize": 18
-                                }
-                              }
-                            },
-                            {
                               "type": "frame",
-                              "id": "FLpC2",
-                              "name": "Text",
+                              "id": "gg0vb",
+                              "name": "Top",
                               "width": "fill_container",
-                              "layout": "vertical",
+                              "gap": 12,
+                              "alignItems": "center",
                               "children": [
                                 {
-                                  "type": "text",
-                                  "id": "dyBHu",
-                                  "fill": "$fg",
-                                  "content": "Mira’s table",
-                                  "lineHeight": 1.3,
-                                  "fontFamily": "$f-ui",
-                                  "fontSize": 16,
-                                  "fontWeight": "800"
+                                  "id": "Fea0h",
+                                  "type": "ref",
+                                  "ref": "SebZL",
+                                  "width": 42,
+                                  "height": 42,
+                                  "fill": "$soft",
+                                  "stroke": "$line",
+                                  "descendants": {
+                                    "peRO2": {
+                                      "content": "O",
+                                      "fontSize": 18,
+                                      "fill": "$muted"
+                                    }
+                                  }
                                 },
                                 {
-                                  "type": "text",
-                                  "id": "RyECk",
-                                  "fill": "$muted",
-                                  "content": "3 of 6 seats · Classic",
-                                  "lineHeight": 1.3,
-                                  "fontFamily": "$f-ui",
-                                  "fontSize": 13,
-                                  "fontWeight": "700"
+                                  "type": "frame",
+                                  "id": "bFrT0",
+                                  "name": "Text",
+                                  "width": "fill_container",
+                                  "layout": "vertical",
+                                  "gap": 4,
+                                  "children": [
+                                    {
+                                      "id": "qBjRY",
+                                      "type": "ref",
+                                      "ref": "r6QUX",
+                                      "name": "Format",
+                                      "fill": "$gold",
+                                      "descendants": {
+                                        "f2cJzJ": {
+                                          "content": "Classic",
+                                          "fill": "$gold-ink"
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "GnHU7",
+                                      "name": "Title",
+                                      "fill": "$fg",
+                                      "content": "Open table",
+                                      "lineHeight": 1.3,
+                                      "fontFamily": "$f-ui",
+                                      "fontSize": 16,
+                                      "fontWeight": "800"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "Creo4",
+                                  "name": "Join",
+                                  "width": 78,
+                                  "layout": "vertical",
+                                  "padding": [
+                                    0,
+                                    0,
+                                    3,
+                                    0
+                                  ],
+                                  "children": [
+                                    {
+                                      "id": "STwrE",
+                                      "type": "ref",
+                                      "ref": "R4KVz",
+                                      "height": 44,
+                                      "effect": {
+                                        "type": "shadow",
+                                        "shadowType": "outer",
+                                        "color": "$line",
+                                        "offset": {
+                                          "x": 0,
+                                          "y": 3
+                                        }
+                                      },
+                                      "descendants": {
+                                        "tMaLT": {
+                                          "content": "JOIN"
+                                        }
+                                      }
+                                    }
+                                  ]
                                 }
                               ]
                             },
                             {
                               "type": "frame",
-                              "id": "m8bVx",
-                              "name": "Join",
-                              "width": 78,
+                              "id": "L0DEl3",
+                              "name": "More",
+                              "width": "fill_container",
                               "layout": "vertical",
                               "padding": [
                                 0,
                                 0,
-                                3,
-                                0
+                                0,
+                                54
                               ],
                               "children": [
                                 {
-                                  "id": "BjHQs",
-                                  "type": "ref",
-                                  "ref": "R4KVz",
-                                  "height": 44,
-                                  "effect": {
-                                    "type": "shadow",
-                                    "shadowType": "outer",
-                                    "color": "$line",
-                                    "offset": {
-                                      "x": 0,
-                                      "y": 3
-                                    }
-                                  },
-                                  "descendants": {
-                                    "tMaLT": {
-                                      "content": "JOIN"
-                                    }
-                                  }
+                                  "type": "text",
+                                  "id": "BvUUC",
+                                  "name": "Rounds",
+                                  "fill": "$muted",
+                                  "content": "10 rounds · 1 to 10 cards",
+                                  "lineHeight": 1.3,
+                                  "fontFamily": "$f-ui",
+                                  "fontSize": 13,
+                                  "fontWeight": "700"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "ozEfV",
+                                  "name": "Seats",
+                                  "fill": "$muted",
+                                  "content": "0 of 4 seats",
+                                  "lineHeight": 1.3,
+                                  "fontFamily": "$f-ui",
+                                  "fontSize": 13,
+                                  "fontWeight": "700"
                                 }
                               ]
                             }
@@ -35744,98 +35798,150 @@
                         },
                         {
                           "type": "frame",
-                          "id": "cHPR4",
-                          "name": "Table · Teo",
+                          "id": "WKwA4",
+                          "name": "Table · Brawl · Mira’s table",
                           "width": "fill_container",
                           "stroke": "$line",
                           "strokeWidth": {
                             "top": 2
                           },
                           "strokeAlignment": "inner",
-                          "gap": 12,
+                          "layout": "vertical",
+                          "gap": 2,
                           "padding": [
                             12,
                             16,
                             14,
                             20
                           ],
-                          "alignItems": "center",
                           "children": [
                             {
-                              "id": "yXU7d",
-                              "type": "ref",
-                              "ref": "SebZL",
-                              "width": 42,
-                              "height": 42,
-                              "fill": "$orange",
-                              "descendants": {
-                                "peRO2": {
-                                  "content": "T",
-                                  "fontSize": 18
-                                }
-                              }
-                            },
-                            {
                               "type": "frame",
-                              "id": "xFSHi",
-                              "name": "Text",
+                              "id": "b2lbf",
+                              "name": "Top",
                               "width": "fill_container",
-                              "layout": "vertical",
+                              "gap": 12,
+                              "alignItems": "center",
                               "children": [
                                 {
-                                  "type": "text",
-                                  "id": "rkAyW",
-                                  "fill": "$fg",
-                                  "content": "Teo’s table",
-                                  "lineHeight": 1.3,
-                                  "fontFamily": "$f-ui",
-                                  "fontSize": 16,
-                                  "fontWeight": "800"
+                                  "id": "mwV0u",
+                                  "type": "ref",
+                                  "ref": "SebZL",
+                                  "width": 42,
+                                  "height": 42,
+                                  "fill": "$purple",
+                                  "descendants": {
+                                    "peRO2": {
+                                      "content": "M",
+                                      "fontSize": 18
+                                    }
+                                  }
                                 },
                                 {
-                                  "type": "text",
-                                  "id": "V8AGU4",
-                                  "fill": "$muted",
-                                  "content": "2 of 4 seats · Whirlpool",
-                                  "lineHeight": 1.3,
-                                  "fontFamily": "$f-ui",
-                                  "fontSize": 13,
-                                  "fontWeight": "700"
+                                  "type": "frame",
+                                  "id": "Bm702",
+                                  "name": "Text",
+                                  "width": "fill_container",
+                                  "layout": "vertical",
+                                  "gap": 4,
+                                  "children": [
+                                    {
+                                      "id": "TVnPF",
+                                      "type": "ref",
+                                      "ref": "r6QUX",
+                                      "name": "Format",
+                                      "fill": "$gold",
+                                      "descendants": {
+                                        "f2cJzJ": {
+                                          "content": "Brawl",
+                                          "fill": "$gold-ink"
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "GkoIv",
+                                      "name": "Title",
+                                      "fill": "$fg",
+                                      "content": "Mira’s table",
+                                      "lineHeight": 1.3,
+                                      "fontFamily": "$f-ui",
+                                      "fontSize": 16,
+                                      "fontWeight": "800"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "r62bp",
+                                  "name": "Join",
+                                  "width": 78,
+                                  "layout": "vertical",
+                                  "padding": [
+                                    0,
+                                    0,
+                                    3,
+                                    0
+                                  ],
+                                  "children": [
+                                    {
+                                      "id": "k9fV0",
+                                      "type": "ref",
+                                      "ref": "R4KVz",
+                                      "height": 44,
+                                      "effect": {
+                                        "type": "shadow",
+                                        "shadowType": "outer",
+                                        "color": "$line",
+                                        "offset": {
+                                          "x": 0,
+                                          "y": 3
+                                        }
+                                      },
+                                      "descendants": {
+                                        "tMaLT": {
+                                          "content": "JOIN"
+                                        }
+                                      }
+                                    }
+                                  ]
                                 }
                               ]
                             },
                             {
                               "type": "frame",
-                              "id": "Mnxn2",
-                              "name": "Join",
-                              "width": 78,
+                              "id": "CSwY0",
+                              "name": "More",
+                              "width": "fill_container",
                               "layout": "vertical",
                               "padding": [
                                 0,
                                 0,
-                                3,
-                                0
+                                0,
+                                54
                               ],
                               "children": [
                                 {
-                                  "id": "qizlf",
-                                  "type": "ref",
-                                  "ref": "R4KVz",
-                                  "height": 44,
-                                  "effect": {
-                                    "type": "shadow",
-                                    "shadowType": "outer",
-                                    "color": "$line",
-                                    "offset": {
-                                      "x": 0,
-                                      "y": 3
-                                    }
-                                  },
-                                  "descendants": {
-                                    "tMaLT": {
-                                      "content": "JOIN"
-                                    }
-                                  }
+                                  "type": "text",
+                                  "id": "mC5If",
+                                  "name": "Rounds",
+                                  "fill": "$muted",
+                                  "content": "5 rounds · 6 to 10 cards",
+                                  "lineHeight": 1.3,
+                                  "fontFamily": "$f-ui",
+                                  "fontSize": 13,
+                                  "fontWeight": "700"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "oPUgc",
+                                  "name": "Seats",
+                                  "fill": "$muted",
+                                  "content": "1 of 4 seats",
+                                  "lineHeight": 1.3,
+                                  "fontFamily": "$f-ui",
+                                  "fontSize": 13,
+                                  "fontWeight": "700"
                                 }
                               ]
                             }
@@ -35843,98 +35949,609 @@
                         },
                         {
                           "type": "frame",
-                          "id": "haShb",
-                          "name": "Table · Lou",
+                          "id": "uMjsm",
+                          "name": "Table · Swift · Open table",
                           "width": "fill_container",
                           "stroke": "$line",
                           "strokeWidth": {
                             "top": 2
                           },
                           "strokeAlignment": "inner",
-                          "gap": 12,
+                          "layout": "vertical",
+                          "gap": 2,
                           "padding": [
                             12,
                             16,
                             14,
                             20
                           ],
-                          "alignItems": "center",
                           "children": [
                             {
-                              "id": "yBQlp",
-                              "type": "ref",
-                              "ref": "SebZL",
-                              "width": 42,
-                              "height": 42,
-                              "fill": "$red",
-                              "descendants": {
-                                "peRO2": {
-                                  "content": "L",
-                                  "fontSize": 18
+                              "type": "frame",
+                              "id": "d4qHB6",
+                              "name": "Top",
+                              "width": "fill_container",
+                              "gap": 12,
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "id": "yy4sJ",
+                                  "type": "ref",
+                                  "ref": "SebZL",
+                                  "width": 42,
+                                  "height": 42,
+                                  "fill": "$soft",
+                                  "stroke": "$line",
+                                  "descendants": {
+                                    "peRO2": {
+                                      "content": "O",
+                                      "fontSize": 18,
+                                      "fill": "$muted"
+                                    }
+                                  }
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "Jw15W",
+                                  "name": "Text",
+                                  "width": "fill_container",
+                                  "layout": "vertical",
+                                  "gap": 4,
+                                  "children": [
+                                    {
+                                      "id": "KZRoZ",
+                                      "type": "ref",
+                                      "ref": "r6QUX",
+                                      "name": "Format",
+                                      "fill": "$gold",
+                                      "descendants": {
+                                        "f2cJzJ": {
+                                          "content": "Swift",
+                                          "fill": "$gold-ink"
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "VgDbD",
+                                      "name": "Title",
+                                      "fill": "$fg",
+                                      "content": "Open table",
+                                      "lineHeight": 1.3,
+                                      "fontFamily": "$f-ui",
+                                      "fontSize": 16,
+                                      "fontWeight": "800"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "kSfNQ",
+                                  "name": "Join",
+                                  "width": 78,
+                                  "layout": "vertical",
+                                  "padding": [
+                                    0,
+                                    0,
+                                    3,
+                                    0
+                                  ],
+                                  "children": [
+                                    {
+                                      "id": "ZpSjx",
+                                      "type": "ref",
+                                      "ref": "R4KVz",
+                                      "height": 44,
+                                      "effect": {
+                                        "type": "shadow",
+                                        "shadowType": "outer",
+                                        "color": "$line",
+                                        "offset": {
+                                          "x": 0,
+                                          "y": 3
+                                        }
+                                      },
+                                      "descendants": {
+                                        "tMaLT": {
+                                          "content": "JOIN"
+                                        }
+                                      }
+                                    }
+                                  ]
                                 }
-                              }
+                              ]
                             },
                             {
                               "type": "frame",
-                              "id": "ZzZzw",
-                              "name": "Text",
+                              "id": "f8LFM",
+                              "name": "More",
                               "width": "fill_container",
                               "layout": "vertical",
+                              "padding": [
+                                0,
+                                0,
+                                0,
+                                54
+                              ],
                               "children": [
                                 {
                                   "type": "text",
-                                  "id": "AlazC",
-                                  "fill": "$fg",
-                                  "content": "Lou’s table",
+                                  "id": "u0ARt",
+                                  "name": "Rounds",
+                                  "fill": "$muted",
+                                  "content": "5 rounds · 5 cards each",
                                   "lineHeight": 1.3,
                                   "fontFamily": "$f-ui",
-                                  "fontSize": 16,
-                                  "fontWeight": "800"
+                                  "fontSize": 13,
+                                  "fontWeight": "700"
                                 },
                                 {
                                   "type": "text",
-                                  "id": "JtHbp",
+                                  "id": "eabaC",
+                                  "name": "Seats",
                                   "fill": "$muted",
-                                  "content": "5 of 8 seats · Classic",
+                                  "content": "0 of 4 seats",
                                   "lineHeight": 1.3,
                                   "fontFamily": "$f-ui",
                                   "fontSize": 13,
                                   "fontWeight": "700"
                                 }
                               ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "L7B0OL",
+                          "name": "Table · Even · Open table",
+                          "width": "fill_container",
+                          "stroke": "$line",
+                          "strokeWidth": {
+                            "top": 2
+                          },
+                          "strokeAlignment": "inner",
+                          "layout": "vertical",
+                          "gap": 2,
+                          "padding": [
+                            12,
+                            16,
+                            14,
+                            20
+                          ],
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "IYJld",
+                              "name": "Top",
+                              "width": "fill_container",
+                              "gap": 12,
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "id": "Q8u0Ix",
+                                  "type": "ref",
+                                  "ref": "SebZL",
+                                  "width": 42,
+                                  "height": 42,
+                                  "fill": "$soft",
+                                  "stroke": "$line",
+                                  "descendants": {
+                                    "peRO2": {
+                                      "content": "O",
+                                      "fontSize": 18,
+                                      "fill": "$muted"
+                                    }
+                                  }
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "H8k3H",
+                                  "name": "Text",
+                                  "width": "fill_container",
+                                  "layout": "vertical",
+                                  "gap": 4,
+                                  "children": [
+                                    {
+                                      "id": "AWoS9",
+                                      "type": "ref",
+                                      "ref": "r6QUX",
+                                      "name": "Format",
+                                      "fill": "$gold",
+                                      "descendants": {
+                                        "f2cJzJ": {
+                                          "content": "Even",
+                                          "fill": "$gold-ink"
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "oHKSh",
+                                      "name": "Title",
+                                      "fill": "$fg",
+                                      "content": "Open table",
+                                      "lineHeight": 1.3,
+                                      "fontFamily": "$f-ui",
+                                      "fontSize": 16,
+                                      "fontWeight": "800"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "lB6Lq",
+                                  "name": "Join",
+                                  "width": 78,
+                                  "layout": "vertical",
+                                  "padding": [
+                                    0,
+                                    0,
+                                    3,
+                                    0
+                                  ],
+                                  "children": [
+                                    {
+                                      "id": "TPjQG",
+                                      "type": "ref",
+                                      "ref": "R4KVz",
+                                      "height": 44,
+                                      "effect": {
+                                        "type": "shadow",
+                                        "shadowType": "outer",
+                                        "color": "$line",
+                                        "offset": {
+                                          "x": 0,
+                                          "y": 3
+                                        }
+                                      },
+                                      "descendants": {
+                                        "tMaLT": {
+                                          "content": "JOIN"
+                                        }
+                                      }
+                                    }
+                                  ]
+                                }
+                              ]
                             },
                             {
                               "type": "frame",
-                              "id": "k73s2",
-                              "name": "Join",
-                              "width": 78,
+                              "id": "JtNd6",
+                              "name": "More",
+                              "width": "fill_container",
                               "layout": "vertical",
                               "padding": [
                                 0,
                                 0,
-                                3,
-                                0
+                                0,
+                                54
                               ],
                               "children": [
                                 {
-                                  "id": "qM5Ht",
+                                  "type": "text",
+                                  "id": "yMViO",
+                                  "name": "Rounds",
+                                  "fill": "$muted",
+                                  "content": "10 rounds · 2, 4, 6, 8, 10 twice",
+                                  "lineHeight": 1.3,
+                                  "fontFamily": "$f-ui",
+                                  "fontSize": 13,
+                                  "fontWeight": "700"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "J0GZgJ",
+                                  "name": "Seats",
+                                  "fill": "$muted",
+                                  "content": "0 of 4 seats",
+                                  "lineHeight": 1.3,
+                                  "fontFamily": "$f-ui",
+                                  "fontSize": 13,
+                                  "fontWeight": "700"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "IVlGD",
+                          "name": "Table · Whirl · Open table",
+                          "width": "fill_container",
+                          "stroke": "$line",
+                          "strokeWidth": {
+                            "top": 2
+                          },
+                          "strokeAlignment": "inner",
+                          "layout": "vertical",
+                          "gap": 2,
+                          "padding": [
+                            12,
+                            16,
+                            14,
+                            20
+                          ],
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "Tu59t",
+                              "name": "Top",
+                              "width": "fill_container",
+                              "gap": 12,
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "id": "UKrb5",
                                   "type": "ref",
-                                  "ref": "R4KVz",
-                                  "height": 44,
-                                  "effect": {
-                                    "type": "shadow",
-                                    "shadowType": "outer",
-                                    "color": "$line",
-                                    "offset": {
-                                      "x": 0,
-                                      "y": 3
-                                    }
-                                  },
+                                  "ref": "SebZL",
+                                  "width": 42,
+                                  "height": 42,
+                                  "fill": "$soft",
+                                  "stroke": "$line",
                                   "descendants": {
-                                    "tMaLT": {
-                                      "content": "JOIN"
+                                    "peRO2": {
+                                      "content": "O",
+                                      "fontSize": 18,
+                                      "fill": "$muted"
                                     }
                                   }
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "qNpCX",
+                                  "name": "Text",
+                                  "width": "fill_container",
+                                  "layout": "vertical",
+                                  "gap": 4,
+                                  "children": [
+                                    {
+                                      "id": "SjnnD",
+                                      "type": "ref",
+                                      "ref": "r6QUX",
+                                      "name": "Format",
+                                      "fill": "$gold",
+                                      "descendants": {
+                                        "f2cJzJ": {
+                                          "content": "Whirl",
+                                          "fill": "$gold-ink"
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "q1q4J",
+                                      "name": "Title",
+                                      "fill": "$fg",
+                                      "content": "Open table",
+                                      "lineHeight": 1.3,
+                                      "fontFamily": "$f-ui",
+                                      "fontSize": 16,
+                                      "fontWeight": "800"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "M1YJi",
+                                  "name": "Join",
+                                  "width": 78,
+                                  "layout": "vertical",
+                                  "padding": [
+                                    0,
+                                    0,
+                                    3,
+                                    0
+                                  ],
+                                  "children": [
+                                    {
+                                      "id": "RiEks",
+                                      "type": "ref",
+                                      "ref": "R4KVz",
+                                      "height": 44,
+                                      "effect": {
+                                        "type": "shadow",
+                                        "shadowType": "outer",
+                                        "color": "$line",
+                                        "offset": {
+                                          "x": 0,
+                                          "y": 3
+                                        }
+                                      },
+                                      "descendants": {
+                                        "tMaLT": {
+                                          "content": "JOIN"
+                                        }
+                                      }
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "AwPyo",
+                              "name": "More",
+                              "width": "fill_container",
+                              "layout": "vertical",
+                              "padding": [
+                                0,
+                                0,
+                                0,
+                                54
+                              ],
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "SEPss",
+                                  "name": "Rounds",
+                                  "fill": "$muted",
+                                  "content": "10 rounds · 9, 7, 5, 3, 1 twice",
+                                  "lineHeight": 1.3,
+                                  "fontFamily": "$f-ui",
+                                  "fontSize": 13,
+                                  "fontWeight": "700"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "b9wBRP",
+                                  "name": "Seats",
+                                  "fill": "$muted",
+                                  "content": "0 of 4 seats",
+                                  "lineHeight": 1.3,
+                                  "fontFamily": "$f-ui",
+                                  "fontSize": 13,
+                                  "fontWeight": "700"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "u9EORN",
+                          "name": "Table · Swift · Teo’s table",
+                          "width": "fill_container",
+                          "stroke": "$line",
+                          "strokeWidth": {
+                            "top": 2
+                          },
+                          "strokeAlignment": "inner",
+                          "layout": "vertical",
+                          "gap": 2,
+                          "padding": [
+                            12,
+                            16,
+                            14,
+                            20
+                          ],
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "wU5H2",
+                              "name": "Top",
+                              "width": "fill_container",
+                              "gap": 12,
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "id": "Z1jjL5",
+                                  "type": "ref",
+                                  "ref": "SebZL",
+                                  "width": 42,
+                                  "height": 42,
+                                  "fill": "$orange",
+                                  "descendants": {
+                                    "peRO2": {
+                                      "content": "T",
+                                      "fontSize": 18
+                                    }
+                                  }
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "Lm89C",
+                                  "name": "Text",
+                                  "width": "fill_container",
+                                  "layout": "vertical",
+                                  "gap": 4,
+                                  "children": [
+                                    {
+                                      "id": "PKSUv",
+                                      "type": "ref",
+                                      "ref": "r6QUX",
+                                      "name": "Format",
+                                      "fill": "$gold",
+                                      "descendants": {
+                                        "f2cJzJ": {
+                                          "content": "Swift",
+                                          "fill": "$gold-ink"
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "AlKKV",
+                                      "name": "Title",
+                                      "fill": "$fg",
+                                      "content": "Teo’s table",
+                                      "lineHeight": 1.3,
+                                      "fontFamily": "$f-ui",
+                                      "fontSize": 16,
+                                      "fontWeight": "800"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "OsH80",
+                                  "name": "Join",
+                                  "width": 78,
+                                  "layout": "vertical",
+                                  "padding": [
+                                    0,
+                                    0,
+                                    3,
+                                    0
+                                  ],
+                                  "children": [
+                                    {
+                                      "id": "qtrL2",
+                                      "type": "ref",
+                                      "ref": "R4KVz",
+                                      "height": 44,
+                                      "effect": {
+                                        "type": "shadow",
+                                        "shadowType": "outer",
+                                        "color": "$line",
+                                        "offset": {
+                                          "x": 0,
+                                          "y": 3
+                                        }
+                                      },
+                                      "descendants": {
+                                        "tMaLT": {
+                                          "content": "JOIN"
+                                        }
+                                      }
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "ioRai",
+                              "name": "More",
+                              "width": "fill_container",
+                              "layout": "vertical",
+                              "padding": [
+                                0,
+                                0,
+                                0,
+                                54
+                              ],
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "DvUxQ",
+                                  "name": "Rounds",
+                                  "fill": "$muted",
+                                  "content": "5 rounds · 5 cards each",
+                                  "lineHeight": 1.3,
+                                  "fontFamily": "$f-ui",
+                                  "fontSize": 13,
+                                  "fontWeight": "700"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "apKf0",
+                                  "name": "Seats",
+                                  "fill": "$muted",
+                                  "content": "2 of 3 seats",
+                                  "lineHeight": 1.3,
+                                  "fontFamily": "$f-ui",
+                                  "fontSize": 13,
+                                  "fontWeight": "700"
                                 }
                               ]
                             }
@@ -38827,7 +39444,7 @@
                       "ref": "qUZQR",
                       "descendants": {
                         "kQQHu": {
-                          "content": "3"
+                          "content": "6"
                         }
                       }
                     }
@@ -38835,98 +39452,152 @@
                 },
                 {
                   "type": "frame",
-                  "id": "u7Da7C",
-                  "name": "Table · Mira",
+                  "id": "lMhj4",
+                  "name": "Table · Classic · Open table",
                   "width": "fill_container",
                   "stroke": "$line",
                   "strokeWidth": {
                     "top": 2
                   },
                   "strokeAlignment": "inner",
-                  "gap": 12,
+                  "layout": "vertical",
+                  "gap": 2,
                   "padding": [
                     12,
                     14,
                     14,
                     16
                   ],
-                  "alignItems": "center",
                   "children": [
                     {
-                      "id": "MkuWQ",
-                      "type": "ref",
-                      "ref": "SebZL",
-                      "width": 42,
-                      "height": 42,
-                      "fill": "$purple",
-                      "descendants": {
-                        "peRO2": {
-                          "content": "M",
-                          "fontSize": 18
-                        }
-                      }
-                    },
-                    {
                       "type": "frame",
-                      "id": "qkcRG",
-                      "name": "Text",
+                      "id": "vfbAr",
+                      "name": "Top",
                       "width": "fill_container",
-                      "layout": "vertical",
+                      "gap": 12,
+                      "alignItems": "center",
                       "children": [
                         {
-                          "type": "text",
-                          "id": "AXe8s",
-                          "fill": "$fg",
-                          "content": "Mira’s table",
-                          "lineHeight": 1.3,
-                          "fontFamily": "$f-ui",
-                          "fontSize": 16,
-                          "fontWeight": "800"
+                          "id": "wY4XX",
+                          "type": "ref",
+                          "ref": "SebZL",
+                          "width": 42,
+                          "height": 42,
+                          "fill": "$soft",
+                          "stroke": "$line",
+                          "descendants": {
+                            "peRO2": {
+                              "content": "O",
+                              "fontSize": 18,
+                              "fill": "$muted"
+                            }
+                          }
                         },
                         {
-                          "type": "text",
-                          "id": "SRP0k",
-                          "fill": "$muted",
-                          "content": "3 of 6 seats · Classic",
-                          "lineHeight": 1.3,
-                          "fontFamily": "$f-ui",
-                          "fontSize": 13,
-                          "fontWeight": "700"
+                          "type": "frame",
+                          "id": "eugCs",
+                          "name": "Text",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": 4,
+                          "children": [
+                            {
+                              "id": "bSkMb",
+                              "type": "ref",
+                              "ref": "r6QUX",
+                              "name": "Format",
+                              "fill": "$gold",
+                              "descendants": {
+                                "f2cJzJ": {
+                                  "content": "Classic",
+                                  "fill": "$gold-ink"
+                                }
+                              }
+                            },
+                            {
+                              "type": "text",
+                              "id": "fwT9T",
+                              "name": "Title",
+                              "fill": "$fg",
+                              "content": "Open table",
+                              "lineHeight": 1.3,
+                              "fontFamily": "$f-ui",
+                              "fontSize": 16,
+                              "fontWeight": "800"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "M0vZo",
+                          "name": "Join",
+                          "width": 78,
+                          "layout": "vertical",
+                          "padding": [
+                            0,
+                            0,
+                            3,
+                            0
+                          ],
+                          "children": [
+                            {
+                              "id": "wNl5h",
+                              "type": "ref",
+                              "ref": "R4KVz",
+                              "height": 44,
+                              "effect": {
+                                "type": "shadow",
+                                "shadowType": "outer",
+                                "color": "$line",
+                                "offset": {
+                                  "x": 0,
+                                  "y": 3
+                                }
+                              },
+                              "descendants": {
+                                "tMaLT": {
+                                  "content": "JOIN"
+                                }
+                              }
+                            }
+                          ]
                         }
                       ]
                     },
                     {
                       "type": "frame",
-                      "id": "tbKHQ",
-                      "name": "Join",
-                      "width": 78,
+                      "id": "R63Wav",
+                      "name": "More",
+                      "width": "fill_container",
                       "layout": "vertical",
                       "padding": [
                         0,
                         0,
-                        3,
-                        0
+                        0,
+                        54
                       ],
                       "children": [
                         {
-                          "id": "dev0L",
-                          "type": "ref",
-                          "ref": "R4KVz",
-                          "height": 44,
-                          "effect": {
-                            "type": "shadow",
-                            "shadowType": "outer",
-                            "color": "$line",
-                            "offset": {
-                              "x": 0,
-                              "y": 3
-                            }
-                          },
-                          "descendants": {
-                            "tMaLT": {
-                              "content": "JOIN"
-                            }
-                          }
+                          "type": "text",
+                          "id": "WE2h9",
+                          "name": "Rounds",
+                          "fill": "$muted",
+                          "content": "10 rounds · 1 to 10 cards",
+                          "lineHeight": 1.3,
+                          "fontFamily": "$f-ui",
+                          "fontSize": 13,
+                          "fontWeight": "700"
+                        },
+                        {
+                          "type": "text",
+                          "id": "Jfl5N",
+                          "name": "Seats",
+                          "fill": "$muted",
+                          "content": "0 of 4 seats",
+                          "lineHeight": 1.3,
+                          "fontFamily": "$f-ui",
+                          "fontSize": 13,
+                          "fontWeight": "700"
                         }
                       ]
                     }
@@ -38934,98 +39605,760 @@
                 },
                 {
                   "type": "frame",
-                  "id": "rZbIU",
-                  "name": "Table · Teo",
+                  "id": "bPjyu",
+                  "name": "Table · Brawl · Mira’s table",
                   "width": "fill_container",
                   "stroke": "$line",
                   "strokeWidth": {
                     "top": 2
                   },
                   "strokeAlignment": "inner",
-                  "gap": 12,
+                  "layout": "vertical",
+                  "gap": 2,
                   "padding": [
                     12,
                     14,
                     14,
                     16
                   ],
-                  "alignItems": "center",
                   "children": [
                     {
-                      "id": "FYgRt",
-                      "type": "ref",
-                      "ref": "SebZL",
-                      "width": 42,
-                      "height": 42,
-                      "fill": "$orange",
-                      "descendants": {
-                        "peRO2": {
-                          "content": "T",
-                          "fontSize": 18
+                      "type": "frame",
+                      "id": "zsKsK",
+                      "name": "Top",
+                      "width": "fill_container",
+                      "gap": 12,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "id": "XkwSk",
+                          "type": "ref",
+                          "ref": "SebZL",
+                          "width": 42,
+                          "height": 42,
+                          "fill": "$purple",
+                          "descendants": {
+                            "peRO2": {
+                              "content": "M",
+                              "fontSize": 18
+                            }
+                          }
+                        },
+                        {
+                          "type": "frame",
+                          "id": "q4uwI",
+                          "name": "Text",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": 4,
+                          "children": [
+                            {
+                              "id": "OnBbx",
+                              "type": "ref",
+                              "ref": "r6QUX",
+                              "name": "Format",
+                              "fill": "$gold",
+                              "descendants": {
+                                "f2cJzJ": {
+                                  "content": "Brawl",
+                                  "fill": "$gold-ink"
+                                }
+                              }
+                            },
+                            {
+                              "type": "text",
+                              "id": "BxtFo",
+                              "name": "Title",
+                              "fill": "$fg",
+                              "content": "Mira’s table",
+                              "lineHeight": 1.3,
+                              "fontFamily": "$f-ui",
+                              "fontSize": 16,
+                              "fontWeight": "800"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "f5uRkb",
+                          "name": "Join",
+                          "width": 78,
+                          "layout": "vertical",
+                          "padding": [
+                            0,
+                            0,
+                            3,
+                            0
+                          ],
+                          "children": [
+                            {
+                              "id": "ks0KQ",
+                              "type": "ref",
+                              "ref": "R4KVz",
+                              "height": 44,
+                              "effect": {
+                                "type": "shadow",
+                                "shadowType": "outer",
+                                "color": "$line",
+                                "offset": {
+                                  "x": 0,
+                                  "y": 3
+                                }
+                              },
+                              "descendants": {
+                                "tMaLT": {
+                                  "content": "JOIN"
+                                }
+                              }
+                            }
+                          ]
                         }
-                      }
+                      ]
                     },
                     {
                       "type": "frame",
-                      "id": "OCl8U",
-                      "name": "Text",
+                      "id": "aAl4d",
+                      "name": "More",
                       "width": "fill_container",
                       "layout": "vertical",
+                      "padding": [
+                        0,
+                        0,
+                        0,
+                        54
+                      ],
                       "children": [
                         {
                           "type": "text",
-                          "id": "Y0UmLY",
-                          "fill": "$fg",
-                          "content": "Teo’s table",
+                          "id": "RYFu9",
+                          "name": "Rounds",
+                          "fill": "$muted",
+                          "content": "5 rounds · 6 to 10 cards",
                           "lineHeight": 1.3,
                           "fontFamily": "$f-ui",
-                          "fontSize": 16,
-                          "fontWeight": "800"
+                          "fontSize": 13,
+                          "fontWeight": "700"
                         },
                         {
                           "type": "text",
-                          "id": "LN7IU",
+                          "id": "viT9m",
+                          "name": "Seats",
                           "fill": "$muted",
-                          "content": "2 of 4 seats · Whirlpool",
+                          "content": "1 of 4 seats",
                           "lineHeight": 1.3,
                           "fontFamily": "$f-ui",
                           "fontSize": 13,
                           "fontWeight": "700"
                         }
                       ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "XF5im",
+                  "name": "Table · Swift · Open table",
+                  "width": "fill_container",
+                  "stroke": "$line",
+                  "strokeWidth": {
+                    "top": 2
+                  },
+                  "strokeAlignment": "inner",
+                  "layout": "vertical",
+                  "gap": 2,
+                  "padding": [
+                    12,
+                    14,
+                    14,
+                    16
+                  ],
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "jmymI",
+                      "name": "Top",
+                      "width": "fill_container",
+                      "gap": 12,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "id": "ogxcl",
+                          "type": "ref",
+                          "ref": "SebZL",
+                          "width": 42,
+                          "height": 42,
+                          "fill": "$soft",
+                          "stroke": "$line",
+                          "descendants": {
+                            "peRO2": {
+                              "content": "O",
+                              "fontSize": 18,
+                              "fill": "$muted"
+                            }
+                          }
+                        },
+                        {
+                          "type": "frame",
+                          "id": "b6o8Wp",
+                          "name": "Text",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": 4,
+                          "children": [
+                            {
+                              "id": "UlEhQ",
+                              "type": "ref",
+                              "ref": "r6QUX",
+                              "name": "Format",
+                              "fill": "$gold",
+                              "descendants": {
+                                "f2cJzJ": {
+                                  "content": "Swift",
+                                  "fill": "$gold-ink"
+                                }
+                              }
+                            },
+                            {
+                              "type": "text",
+                              "id": "BAXfa",
+                              "name": "Title",
+                              "fill": "$fg",
+                              "content": "Open table",
+                              "lineHeight": 1.3,
+                              "fontFamily": "$f-ui",
+                              "fontSize": 16,
+                              "fontWeight": "800"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "JSc1q",
+                          "name": "Join",
+                          "width": 78,
+                          "layout": "vertical",
+                          "padding": [
+                            0,
+                            0,
+                            3,
+                            0
+                          ],
+                          "children": [
+                            {
+                              "id": "QhgWf",
+                              "type": "ref",
+                              "ref": "R4KVz",
+                              "height": 44,
+                              "effect": {
+                                "type": "shadow",
+                                "shadowType": "outer",
+                                "color": "$line",
+                                "offset": {
+                                  "x": 0,
+                                  "y": 3
+                                }
+                              },
+                              "descendants": {
+                                "tMaLT": {
+                                  "content": "JOIN"
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      ]
                     },
                     {
                       "type": "frame",
-                      "id": "J3Kixh",
-                      "name": "Join",
-                      "width": 78,
+                      "id": "vhShS",
+                      "name": "More",
+                      "width": "fill_container",
                       "layout": "vertical",
                       "padding": [
                         0,
                         0,
-                        3,
-                        0
+                        0,
+                        54
                       ],
                       "children": [
                         {
-                          "id": "PMc64",
+                          "type": "text",
+                          "id": "QAv0W",
+                          "name": "Rounds",
+                          "fill": "$muted",
+                          "content": "5 rounds · 5 cards each",
+                          "lineHeight": 1.3,
+                          "fontFamily": "$f-ui",
+                          "fontSize": 13,
+                          "fontWeight": "700"
+                        },
+                        {
+                          "type": "text",
+                          "id": "vztGh",
+                          "name": "Seats",
+                          "fill": "$muted",
+                          "content": "0 of 4 seats",
+                          "lineHeight": 1.3,
+                          "fontFamily": "$f-ui",
+                          "fontSize": 13,
+                          "fontWeight": "700"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "WGxdW",
+                  "name": "Table · Even · Open table",
+                  "width": "fill_container",
+                  "stroke": "$line",
+                  "strokeWidth": {
+                    "top": 2
+                  },
+                  "strokeAlignment": "inner",
+                  "layout": "vertical",
+                  "gap": 2,
+                  "padding": [
+                    12,
+                    14,
+                    14,
+                    16
+                  ],
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "BD0xj",
+                      "name": "Top",
+                      "width": "fill_container",
+                      "gap": 12,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "id": "JSNmk",
                           "type": "ref",
-                          "ref": "R4KVz",
-                          "height": 44,
-                          "effect": {
-                            "type": "shadow",
-                            "shadowType": "outer",
-                            "color": "$line",
-                            "offset": {
-                              "x": 0,
-                              "y": 3
-                            }
-                          },
+                          "ref": "SebZL",
+                          "width": 42,
+                          "height": 42,
+                          "fill": "$soft",
+                          "stroke": "$line",
                           "descendants": {
-                            "tMaLT": {
-                              "content": "JOIN"
+                            "peRO2": {
+                              "content": "O",
+                              "fontSize": 18,
+                              "fill": "$muted"
                             }
                           }
+                        },
+                        {
+                          "type": "frame",
+                          "id": "l06rF",
+                          "name": "Text",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": 4,
+                          "children": [
+                            {
+                              "id": "ZtA9H",
+                              "type": "ref",
+                              "ref": "r6QUX",
+                              "name": "Format",
+                              "fill": "$gold",
+                              "descendants": {
+                                "f2cJzJ": {
+                                  "content": "Even",
+                                  "fill": "$gold-ink"
+                                }
+                              }
+                            },
+                            {
+                              "type": "text",
+                              "id": "V5f3x3",
+                              "name": "Title",
+                              "fill": "$fg",
+                              "content": "Open table",
+                              "lineHeight": 1.3,
+                              "fontFamily": "$f-ui",
+                              "fontSize": 16,
+                              "fontWeight": "800"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "z745mY",
+                          "name": "Join",
+                          "width": 78,
+                          "layout": "vertical",
+                          "padding": [
+                            0,
+                            0,
+                            3,
+                            0
+                          ],
+                          "children": [
+                            {
+                              "id": "B68iMP",
+                              "type": "ref",
+                              "ref": "R4KVz",
+                              "height": 44,
+                              "effect": {
+                                "type": "shadow",
+                                "shadowType": "outer",
+                                "color": "$line",
+                                "offset": {
+                                  "x": 0,
+                                  "y": 3
+                                }
+                              },
+                              "descendants": {
+                                "tMaLT": {
+                                  "content": "JOIN"
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "GdfdQ",
+                      "name": "More",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "padding": [
+                        0,
+                        0,
+                        0,
+                        54
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "jL20D",
+                          "name": "Rounds",
+                          "fill": "$muted",
+                          "content": "10 rounds · 2, 4, 6, 8, 10 twice",
+                          "lineHeight": 1.3,
+                          "fontFamily": "$f-ui",
+                          "fontSize": 13,
+                          "fontWeight": "700"
+                        },
+                        {
+                          "type": "text",
+                          "id": "Yg4O3",
+                          "name": "Seats",
+                          "fill": "$muted",
+                          "content": "0 of 4 seats",
+                          "lineHeight": 1.3,
+                          "fontFamily": "$f-ui",
+                          "fontSize": 13,
+                          "fontWeight": "700"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "HRL13",
+                  "name": "Table · Whirl · Open table",
+                  "width": "fill_container",
+                  "stroke": "$line",
+                  "strokeWidth": {
+                    "top": 2
+                  },
+                  "strokeAlignment": "inner",
+                  "layout": "vertical",
+                  "gap": 2,
+                  "padding": [
+                    12,
+                    14,
+                    14,
+                    16
+                  ],
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "R7cLE",
+                      "name": "Top",
+                      "width": "fill_container",
+                      "gap": 12,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "id": "WlDpV",
+                          "type": "ref",
+                          "ref": "SebZL",
+                          "width": 42,
+                          "height": 42,
+                          "fill": "$soft",
+                          "stroke": "$line",
+                          "descendants": {
+                            "peRO2": {
+                              "content": "O",
+                              "fontSize": 18,
+                              "fill": "$muted"
+                            }
+                          }
+                        },
+                        {
+                          "type": "frame",
+                          "id": "AV1NK",
+                          "name": "Text",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": 4,
+                          "children": [
+                            {
+                              "id": "o5eQwf",
+                              "type": "ref",
+                              "ref": "r6QUX",
+                              "name": "Format",
+                              "fill": "$gold",
+                              "descendants": {
+                                "f2cJzJ": {
+                                  "content": "Whirl",
+                                  "fill": "$gold-ink"
+                                }
+                              }
+                            },
+                            {
+                              "type": "text",
+                              "id": "Vojn2",
+                              "name": "Title",
+                              "fill": "$fg",
+                              "content": "Open table",
+                              "lineHeight": 1.3,
+                              "fontFamily": "$f-ui",
+                              "fontSize": 16,
+                              "fontWeight": "800"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "yKmSg",
+                          "name": "Join",
+                          "width": 78,
+                          "layout": "vertical",
+                          "padding": [
+                            0,
+                            0,
+                            3,
+                            0
+                          ],
+                          "children": [
+                            {
+                              "id": "gHrt3",
+                              "type": "ref",
+                              "ref": "R4KVz",
+                              "height": 44,
+                              "effect": {
+                                "type": "shadow",
+                                "shadowType": "outer",
+                                "color": "$line",
+                                "offset": {
+                                  "x": 0,
+                                  "y": 3
+                                }
+                              },
+                              "descendants": {
+                                "tMaLT": {
+                                  "content": "JOIN"
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "bgriV",
+                      "name": "More",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "padding": [
+                        0,
+                        0,
+                        0,
+                        54
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "PAbKU",
+                          "name": "Rounds",
+                          "fill": "$muted",
+                          "content": "10 rounds · 9, 7, 5, 3, 1 twice",
+                          "lineHeight": 1.3,
+                          "fontFamily": "$f-ui",
+                          "fontSize": 13,
+                          "fontWeight": "700"
+                        },
+                        {
+                          "type": "text",
+                          "id": "MQKJs",
+                          "name": "Seats",
+                          "fill": "$muted",
+                          "content": "0 of 4 seats",
+                          "lineHeight": 1.3,
+                          "fontFamily": "$f-ui",
+                          "fontSize": 13,
+                          "fontWeight": "700"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "e7lyT3",
+                  "name": "Table · Swift · Teo’s table",
+                  "width": "fill_container",
+                  "stroke": "$line",
+                  "strokeWidth": {
+                    "top": 2
+                  },
+                  "strokeAlignment": "inner",
+                  "layout": "vertical",
+                  "gap": 2,
+                  "padding": [
+                    12,
+                    14,
+                    14,
+                    16
+                  ],
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "VDwkj",
+                      "name": "Top",
+                      "width": "fill_container",
+                      "gap": 12,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "id": "HlENk",
+                          "type": "ref",
+                          "ref": "SebZL",
+                          "width": 42,
+                          "height": 42,
+                          "fill": "$orange",
+                          "descendants": {
+                            "peRO2": {
+                              "content": "T",
+                              "fontSize": 18
+                            }
+                          }
+                        },
+                        {
+                          "type": "frame",
+                          "id": "TdULk",
+                          "name": "Text",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": 4,
+                          "children": [
+                            {
+                              "id": "T156F8",
+                              "type": "ref",
+                              "ref": "r6QUX",
+                              "name": "Format",
+                              "fill": "$gold",
+                              "descendants": {
+                                "f2cJzJ": {
+                                  "content": "Swift",
+                                  "fill": "$gold-ink"
+                                }
+                              }
+                            },
+                            {
+                              "type": "text",
+                              "id": "O3UQ1",
+                              "name": "Title",
+                              "fill": "$fg",
+                              "content": "Teo’s table",
+                              "lineHeight": 1.3,
+                              "fontFamily": "$f-ui",
+                              "fontSize": 16,
+                              "fontWeight": "800"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "vNWqu",
+                          "name": "Join",
+                          "width": 78,
+                          "layout": "vertical",
+                          "padding": [
+                            0,
+                            0,
+                            3,
+                            0
+                          ],
+                          "children": [
+                            {
+                              "id": "QCQ3d",
+                              "type": "ref",
+                              "ref": "R4KVz",
+                              "height": 44,
+                              "effect": {
+                                "type": "shadow",
+                                "shadowType": "outer",
+                                "color": "$line",
+                                "offset": {
+                                  "x": 0,
+                                  "y": 3
+                                }
+                              },
+                              "descendants": {
+                                "tMaLT": {
+                                  "content": "JOIN"
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "RX49y",
+                      "name": "More",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "padding": [
+                        0,
+                        0,
+                        0,
+                        54
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "FYphx",
+                          "name": "Rounds",
+                          "fill": "$muted",
+                          "content": "5 rounds · 5 cards each",
+                          "lineHeight": 1.3,
+                          "fontFamily": "$f-ui",
+                          "fontSize": 13,
+                          "fontWeight": "700"
+                        },
+                        {
+                          "type": "text",
+                          "id": "tjLyV",
+                          "name": "Seats",
+                          "fill": "$muted",
+                          "content": "2 of 3 seats",
+                          "lineHeight": 1.3,
+                          "fontFamily": "$f-ui",
+                          "fontSize": 13,
+                          "fontWeight": "700"
                         }
                       ]
                     }
@@ -42076,100 +43409,152 @@
                 },
                 {
                   "type": "frame",
-                  "id": "TSlu0",
-                  "name": "Table · nobody hosts",
+                  "id": "Rzy2X",
+                  "name": "Table · Classic · Open table",
                   "width": "fill_container",
                   "stroke": "$line",
                   "strokeWidth": {
                     "top": 2
                   },
                   "strokeAlignment": "inner",
-                  "gap": 12,
+                  "layout": "vertical",
+                  "gap": 2,
                   "padding": [
                     12,
                     14,
                     14,
                     16
                   ],
-                  "alignItems": "center",
                   "children": [
                     {
-                      "id": "Yo4Of",
-                      "type": "ref",
-                      "ref": "SebZL",
-                      "width": 42,
-                      "height": 42,
-                      "fill": "$soft",
-                      "stroke": "$line",
-                      "descendants": {
-                        "peRO2": {
-                          "content": "O",
-                          "fontSize": 18,
-                          "fill": "$muted"
-                        }
-                      }
-                    },
-                    {
                       "type": "frame",
-                      "id": "I4Ucs",
-                      "name": "Text",
+                      "id": "qdYxv",
+                      "name": "Top",
                       "width": "fill_container",
-                      "layout": "vertical",
+                      "gap": 12,
+                      "alignItems": "center",
                       "children": [
                         {
-                          "type": "text",
-                          "id": "L2NRow",
-                          "fill": "$fg",
-                          "content": "Open table",
-                          "lineHeight": 1.3,
-                          "fontFamily": "$f-ui",
-                          "fontSize": 16,
-                          "fontWeight": "800"
+                          "id": "SLRju",
+                          "type": "ref",
+                          "ref": "SebZL",
+                          "width": 42,
+                          "height": 42,
+                          "fill": "$soft",
+                          "stroke": "$line",
+                          "descendants": {
+                            "peRO2": {
+                              "content": "O",
+                              "fontSize": 18,
+                              "fill": "$muted"
+                            }
+                          }
                         },
                         {
-                          "type": "text",
-                          "id": "WXG3a",
-                          "fill": "$muted",
-                          "content": "0 of 4 seats · Classic",
-                          "lineHeight": 1.3,
-                          "fontFamily": "$f-ui",
-                          "fontSize": 13,
-                          "fontWeight": "700"
+                          "type": "frame",
+                          "id": "F32nHN",
+                          "name": "Text",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": 4,
+                          "children": [
+                            {
+                              "id": "ZHk9O",
+                              "type": "ref",
+                              "ref": "r6QUX",
+                              "name": "Format",
+                              "fill": "$gold",
+                              "descendants": {
+                                "f2cJzJ": {
+                                  "content": "Classic",
+                                  "fill": "$gold-ink"
+                                }
+                              }
+                            },
+                            {
+                              "type": "text",
+                              "id": "FNzyF",
+                              "name": "Title",
+                              "fill": "$fg",
+                              "content": "Open table",
+                              "lineHeight": 1.3,
+                              "fontFamily": "$f-ui",
+                              "fontSize": 16,
+                              "fontWeight": "800"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "s20vn5",
+                          "name": "Join",
+                          "width": 78,
+                          "layout": "vertical",
+                          "padding": [
+                            0,
+                            0,
+                            3,
+                            0
+                          ],
+                          "children": [
+                            {
+                              "id": "gks6e",
+                              "type": "ref",
+                              "ref": "R4KVz",
+                              "height": 44,
+                              "effect": {
+                                "type": "shadow",
+                                "shadowType": "outer",
+                                "color": "$line",
+                                "offset": {
+                                  "x": 0,
+                                  "y": 3
+                                }
+                              },
+                              "descendants": {
+                                "tMaLT": {
+                                  "content": "JOIN"
+                                }
+                              }
+                            }
+                          ]
                         }
                       ]
                     },
                     {
                       "type": "frame",
-                      "id": "wlctw",
-                      "name": "Join",
-                      "width": 78,
+                      "id": "J7hGi",
+                      "name": "More",
+                      "width": "fill_container",
                       "layout": "vertical",
                       "padding": [
                         0,
                         0,
-                        3,
-                        0
+                        0,
+                        54
                       ],
                       "children": [
                         {
-                          "id": "Fckyq",
-                          "type": "ref",
-                          "ref": "R4KVz",
-                          "height": 44,
-                          "effect": {
-                            "type": "shadow",
-                            "shadowType": "outer",
-                            "color": "$line",
-                            "offset": {
-                              "x": 0,
-                              "y": 3
-                            }
-                          },
-                          "descendants": {
-                            "tMaLT": {
-                              "content": "JOIN"
-                            }
-                          }
+                          "type": "text",
+                          "id": "LS0jp",
+                          "name": "Rounds",
+                          "fill": "$muted",
+                          "content": "10 rounds · 1 to 10 cards",
+                          "lineHeight": 1.3,
+                          "fontFamily": "$f-ui",
+                          "fontSize": 13,
+                          "fontWeight": "700"
+                        },
+                        {
+                          "type": "text",
+                          "id": "sm0wd",
+                          "name": "Seats",
+                          "fill": "$muted",
+                          "content": "0 of 4 seats",
+                          "lineHeight": 1.3,
+                          "fontFamily": "$f-ui",
+                          "fontSize": 13,
+                          "fontWeight": "700"
                         }
                       ]
                     }
@@ -46320,7 +47705,7 @@
                               "ref": "qUZQR",
                               "descendants": {
                                 "kQQHu": {
-                                  "content": "3"
+                                  "content": "6"
                                 }
                               }
                             }
@@ -46328,98 +47713,152 @@
                         },
                         {
                           "type": "frame",
-                          "id": "kApqM",
-                          "name": "Table · Mira",
+                          "id": "cA2bW",
+                          "name": "Table · Classic · Open table",
                           "width": "fill_container",
                           "stroke": "$line",
                           "strokeWidth": {
                             "top": 2
                           },
                           "strokeAlignment": "inner",
-                          "gap": 12,
+                          "layout": "vertical",
+                          "gap": 2,
                           "padding": [
                             12,
                             16,
                             14,
                             20
                           ],
-                          "alignItems": "center",
                           "children": [
                             {
-                              "id": "Ap6ii",
-                              "type": "ref",
-                              "ref": "SebZL",
-                              "width": 42,
-                              "height": 42,
-                              "fill": "$purple",
-                              "descendants": {
-                                "peRO2": {
-                                  "content": "M",
-                                  "fontSize": 18
-                                }
-                              }
-                            },
-                            {
                               "type": "frame",
-                              "id": "yDWm5",
-                              "name": "Text",
+                              "id": "ELXIO",
+                              "name": "Top",
                               "width": "fill_container",
-                              "layout": "vertical",
+                              "gap": 12,
+                              "alignItems": "center",
                               "children": [
                                 {
-                                  "type": "text",
-                                  "id": "VHpn7",
-                                  "fill": "$fg",
-                                  "content": "Mira’s table",
-                                  "lineHeight": 1.3,
-                                  "fontFamily": "$f-ui",
-                                  "fontSize": 16,
-                                  "fontWeight": "800"
+                                  "id": "uyaJi",
+                                  "type": "ref",
+                                  "ref": "SebZL",
+                                  "width": 42,
+                                  "height": 42,
+                                  "fill": "$soft",
+                                  "stroke": "$line",
+                                  "descendants": {
+                                    "peRO2": {
+                                      "content": "O",
+                                      "fontSize": 18,
+                                      "fill": "$muted"
+                                    }
+                                  }
                                 },
                                 {
-                                  "type": "text",
-                                  "id": "SbB0m",
-                                  "fill": "$muted",
-                                  "content": "3 of 6 seats · Classic",
-                                  "lineHeight": 1.3,
-                                  "fontFamily": "$f-ui",
-                                  "fontSize": 13,
-                                  "fontWeight": "700"
+                                  "type": "frame",
+                                  "id": "R34qgL",
+                                  "name": "Text",
+                                  "width": "fill_container",
+                                  "layout": "vertical",
+                                  "gap": 4,
+                                  "children": [
+                                    {
+                                      "id": "iHiDW",
+                                      "type": "ref",
+                                      "ref": "r6QUX",
+                                      "name": "Format",
+                                      "fill": "$gold",
+                                      "descendants": {
+                                        "f2cJzJ": {
+                                          "content": "Classic",
+                                          "fill": "$gold-ink"
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "kJgAX",
+                                      "name": "Title",
+                                      "fill": "$fg",
+                                      "content": "Open table",
+                                      "lineHeight": 1.3,
+                                      "fontFamily": "$f-ui",
+                                      "fontSize": 16,
+                                      "fontWeight": "800"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "EWaoA",
+                                  "name": "Join",
+                                  "width": 78,
+                                  "layout": "vertical",
+                                  "padding": [
+                                    0,
+                                    0,
+                                    3,
+                                    0
+                                  ],
+                                  "children": [
+                                    {
+                                      "id": "S76zr",
+                                      "type": "ref",
+                                      "ref": "R4KVz",
+                                      "height": 44,
+                                      "effect": {
+                                        "type": "shadow",
+                                        "shadowType": "outer",
+                                        "color": "$line",
+                                        "offset": {
+                                          "x": 0,
+                                          "y": 3
+                                        }
+                                      },
+                                      "descendants": {
+                                        "tMaLT": {
+                                          "content": "JOIN"
+                                        }
+                                      }
+                                    }
+                                  ]
                                 }
                               ]
                             },
                             {
                               "type": "frame",
-                              "id": "w4GUm",
-                              "name": "Join",
-                              "width": 78,
+                              "id": "V9mL74",
+                              "name": "More",
+                              "width": "fill_container",
                               "layout": "vertical",
                               "padding": [
                                 0,
                                 0,
-                                3,
-                                0
+                                0,
+                                54
                               ],
                               "children": [
                                 {
-                                  "id": "b5pa4",
-                                  "type": "ref",
-                                  "ref": "R4KVz",
-                                  "height": 44,
-                                  "effect": {
-                                    "type": "shadow",
-                                    "shadowType": "outer",
-                                    "color": "$line",
-                                    "offset": {
-                                      "x": 0,
-                                      "y": 3
-                                    }
-                                  },
-                                  "descendants": {
-                                    "tMaLT": {
-                                      "content": "JOIN"
-                                    }
-                                  }
+                                  "type": "text",
+                                  "id": "Uoa82",
+                                  "name": "Rounds",
+                                  "fill": "$muted",
+                                  "content": "10 rounds · 1 to 10 cards",
+                                  "lineHeight": 1.3,
+                                  "fontFamily": "$f-ui",
+                                  "fontSize": 13,
+                                  "fontWeight": "700"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "ZByE0",
+                                  "name": "Seats",
+                                  "fill": "$muted",
+                                  "content": "0 of 4 seats",
+                                  "lineHeight": 1.3,
+                                  "fontFamily": "$f-ui",
+                                  "fontSize": 13,
+                                  "fontWeight": "700"
                                 }
                               ]
                             }
@@ -46427,98 +47866,150 @@
                         },
                         {
                           "type": "frame",
-                          "id": "UC3DL",
-                          "name": "Table · Teo",
+                          "id": "FNYZy",
+                          "name": "Table · Brawl · Mira’s table",
                           "width": "fill_container",
                           "stroke": "$line",
                           "strokeWidth": {
                             "top": 2
                           },
                           "strokeAlignment": "inner",
-                          "gap": 12,
+                          "layout": "vertical",
+                          "gap": 2,
                           "padding": [
                             12,
                             16,
                             14,
                             20
                           ],
-                          "alignItems": "center",
                           "children": [
                             {
-                              "id": "uD4jp",
-                              "type": "ref",
-                              "ref": "SebZL",
-                              "width": 42,
-                              "height": 42,
-                              "fill": "$orange",
-                              "descendants": {
-                                "peRO2": {
-                                  "content": "T",
-                                  "fontSize": 18
-                                }
-                              }
-                            },
-                            {
                               "type": "frame",
-                              "id": "H8KBs3",
-                              "name": "Text",
+                              "id": "Wyhmw",
+                              "name": "Top",
                               "width": "fill_container",
-                              "layout": "vertical",
+                              "gap": 12,
+                              "alignItems": "center",
                               "children": [
                                 {
-                                  "type": "text",
-                                  "id": "g9zpk7",
-                                  "fill": "$fg",
-                                  "content": "Teo’s table",
-                                  "lineHeight": 1.3,
-                                  "fontFamily": "$f-ui",
-                                  "fontSize": 16,
-                                  "fontWeight": "800"
+                                  "id": "mzD3a",
+                                  "type": "ref",
+                                  "ref": "SebZL",
+                                  "width": 42,
+                                  "height": 42,
+                                  "fill": "$purple",
+                                  "descendants": {
+                                    "peRO2": {
+                                      "content": "M",
+                                      "fontSize": 18
+                                    }
+                                  }
                                 },
                                 {
-                                  "type": "text",
-                                  "id": "LeUpq",
-                                  "fill": "$muted",
-                                  "content": "2 of 4 seats · Whirlpool",
-                                  "lineHeight": 1.3,
-                                  "fontFamily": "$f-ui",
-                                  "fontSize": 13,
-                                  "fontWeight": "700"
+                                  "type": "frame",
+                                  "id": "rnsNA",
+                                  "name": "Text",
+                                  "width": "fill_container",
+                                  "layout": "vertical",
+                                  "gap": 4,
+                                  "children": [
+                                    {
+                                      "id": "k7HsL",
+                                      "type": "ref",
+                                      "ref": "r6QUX",
+                                      "name": "Format",
+                                      "fill": "$gold",
+                                      "descendants": {
+                                        "f2cJzJ": {
+                                          "content": "Brawl",
+                                          "fill": "$gold-ink"
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "na2E0",
+                                      "name": "Title",
+                                      "fill": "$fg",
+                                      "content": "Mira’s table",
+                                      "lineHeight": 1.3,
+                                      "fontFamily": "$f-ui",
+                                      "fontSize": 16,
+                                      "fontWeight": "800"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "Us4RM",
+                                  "name": "Join",
+                                  "width": 78,
+                                  "layout": "vertical",
+                                  "padding": [
+                                    0,
+                                    0,
+                                    3,
+                                    0
+                                  ],
+                                  "children": [
+                                    {
+                                      "id": "i1hc6",
+                                      "type": "ref",
+                                      "ref": "R4KVz",
+                                      "height": 44,
+                                      "effect": {
+                                        "type": "shadow",
+                                        "shadowType": "outer",
+                                        "color": "$line",
+                                        "offset": {
+                                          "x": 0,
+                                          "y": 3
+                                        }
+                                      },
+                                      "descendants": {
+                                        "tMaLT": {
+                                          "content": "JOIN"
+                                        }
+                                      }
+                                    }
+                                  ]
                                 }
                               ]
                             },
                             {
                               "type": "frame",
-                              "id": "jPB1o",
-                              "name": "Join",
-                              "width": 78,
+                              "id": "vhhPi",
+                              "name": "More",
+                              "width": "fill_container",
                               "layout": "vertical",
                               "padding": [
                                 0,
                                 0,
-                                3,
-                                0
+                                0,
+                                54
                               ],
                               "children": [
                                 {
-                                  "id": "t3Mwtt",
-                                  "type": "ref",
-                                  "ref": "R4KVz",
-                                  "height": 44,
-                                  "effect": {
-                                    "type": "shadow",
-                                    "shadowType": "outer",
-                                    "color": "$line",
-                                    "offset": {
-                                      "x": 0,
-                                      "y": 3
-                                    }
-                                  },
-                                  "descendants": {
-                                    "tMaLT": {
-                                      "content": "JOIN"
-                                    }
-                                  }
+                                  "type": "text",
+                                  "id": "strtU",
+                                  "name": "Rounds",
+                                  "fill": "$muted",
+                                  "content": "5 rounds · 6 to 10 cards",
+                                  "lineHeight": 1.3,
+                                  "fontFamily": "$f-ui",
+                                  "fontSize": 13,
+                                  "fontWeight": "700"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "ClBN9",
+                                  "name": "Seats",
+                                  "fill": "$muted",
+                                  "content": "1 of 4 seats",
+                                  "lineHeight": 1.3,
+                                  "fontFamily": "$f-ui",
+                                  "fontSize": 13,
+                                  "fontWeight": "700"
                                 }
                               ]
                             }
@@ -46526,98 +48017,609 @@
                         },
                         {
                           "type": "frame",
-                          "id": "dedST",
-                          "name": "Table · Lou",
+                          "id": "mNlyM",
+                          "name": "Table · Swift · Open table",
                           "width": "fill_container",
                           "stroke": "$line",
                           "strokeWidth": {
                             "top": 2
                           },
                           "strokeAlignment": "inner",
-                          "gap": 12,
+                          "layout": "vertical",
+                          "gap": 2,
                           "padding": [
                             12,
                             16,
                             14,
                             20
                           ],
-                          "alignItems": "center",
                           "children": [
                             {
-                              "id": "JdaFV",
-                              "type": "ref",
-                              "ref": "SebZL",
-                              "width": 42,
-                              "height": 42,
-                              "fill": "$red",
-                              "descendants": {
-                                "peRO2": {
-                                  "content": "L",
-                                  "fontSize": 18
+                              "type": "frame",
+                              "id": "P3Et2f",
+                              "name": "Top",
+                              "width": "fill_container",
+                              "gap": 12,
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "id": "C9MYk8",
+                                  "type": "ref",
+                                  "ref": "SebZL",
+                                  "width": 42,
+                                  "height": 42,
+                                  "fill": "$soft",
+                                  "stroke": "$line",
+                                  "descendants": {
+                                    "peRO2": {
+                                      "content": "O",
+                                      "fontSize": 18,
+                                      "fill": "$muted"
+                                    }
+                                  }
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "kd5I3",
+                                  "name": "Text",
+                                  "width": "fill_container",
+                                  "layout": "vertical",
+                                  "gap": 4,
+                                  "children": [
+                                    {
+                                      "id": "PlEFS",
+                                      "type": "ref",
+                                      "ref": "r6QUX",
+                                      "name": "Format",
+                                      "fill": "$gold",
+                                      "descendants": {
+                                        "f2cJzJ": {
+                                          "content": "Swift",
+                                          "fill": "$gold-ink"
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "DCooL",
+                                      "name": "Title",
+                                      "fill": "$fg",
+                                      "content": "Open table",
+                                      "lineHeight": 1.3,
+                                      "fontFamily": "$f-ui",
+                                      "fontSize": 16,
+                                      "fontWeight": "800"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "tXgN2",
+                                  "name": "Join",
+                                  "width": 78,
+                                  "layout": "vertical",
+                                  "padding": [
+                                    0,
+                                    0,
+                                    3,
+                                    0
+                                  ],
+                                  "children": [
+                                    {
+                                      "id": "vCjcw",
+                                      "type": "ref",
+                                      "ref": "R4KVz",
+                                      "height": 44,
+                                      "effect": {
+                                        "type": "shadow",
+                                        "shadowType": "outer",
+                                        "color": "$line",
+                                        "offset": {
+                                          "x": 0,
+                                          "y": 3
+                                        }
+                                      },
+                                      "descendants": {
+                                        "tMaLT": {
+                                          "content": "JOIN"
+                                        }
+                                      }
+                                    }
+                                  ]
                                 }
-                              }
+                              ]
                             },
                             {
                               "type": "frame",
-                              "id": "wlocQ",
-                              "name": "Text",
+                              "id": "H5eRWG",
+                              "name": "More",
                               "width": "fill_container",
                               "layout": "vertical",
+                              "padding": [
+                                0,
+                                0,
+                                0,
+                                54
+                              ],
                               "children": [
                                 {
                                   "type": "text",
-                                  "id": "c9pZtk",
-                                  "fill": "$fg",
-                                  "content": "Lou’s table",
+                                  "id": "g3bIe7",
+                                  "name": "Rounds",
+                                  "fill": "$muted",
+                                  "content": "5 rounds · 5 cards each",
                                   "lineHeight": 1.3,
                                   "fontFamily": "$f-ui",
-                                  "fontSize": 16,
-                                  "fontWeight": "800"
+                                  "fontSize": 13,
+                                  "fontWeight": "700"
                                 },
                                 {
                                   "type": "text",
-                                  "id": "RmcVd",
+                                  "id": "npJmX",
+                                  "name": "Seats",
                                   "fill": "$muted",
-                                  "content": "5 of 8 seats · Classic",
+                                  "content": "0 of 4 seats",
                                   "lineHeight": 1.3,
                                   "fontFamily": "$f-ui",
                                   "fontSize": 13,
                                   "fontWeight": "700"
                                 }
                               ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "J6M7to",
+                          "name": "Table · Even · Open table",
+                          "width": "fill_container",
+                          "stroke": "$line",
+                          "strokeWidth": {
+                            "top": 2
+                          },
+                          "strokeAlignment": "inner",
+                          "layout": "vertical",
+                          "gap": 2,
+                          "padding": [
+                            12,
+                            16,
+                            14,
+                            20
+                          ],
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "Szi1X",
+                              "name": "Top",
+                              "width": "fill_container",
+                              "gap": 12,
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "id": "QFvEX",
+                                  "type": "ref",
+                                  "ref": "SebZL",
+                                  "width": 42,
+                                  "height": 42,
+                                  "fill": "$soft",
+                                  "stroke": "$line",
+                                  "descendants": {
+                                    "peRO2": {
+                                      "content": "O",
+                                      "fontSize": 18,
+                                      "fill": "$muted"
+                                    }
+                                  }
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "x09BKp",
+                                  "name": "Text",
+                                  "width": "fill_container",
+                                  "layout": "vertical",
+                                  "gap": 4,
+                                  "children": [
+                                    {
+                                      "id": "R2FyUH",
+                                      "type": "ref",
+                                      "ref": "r6QUX",
+                                      "name": "Format",
+                                      "fill": "$gold",
+                                      "descendants": {
+                                        "f2cJzJ": {
+                                          "content": "Even",
+                                          "fill": "$gold-ink"
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "mOCQw",
+                                      "name": "Title",
+                                      "fill": "$fg",
+                                      "content": "Open table",
+                                      "lineHeight": 1.3,
+                                      "fontFamily": "$f-ui",
+                                      "fontSize": 16,
+                                      "fontWeight": "800"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "YDZty",
+                                  "name": "Join",
+                                  "width": 78,
+                                  "layout": "vertical",
+                                  "padding": [
+                                    0,
+                                    0,
+                                    3,
+                                    0
+                                  ],
+                                  "children": [
+                                    {
+                                      "id": "Uo2Qp",
+                                      "type": "ref",
+                                      "ref": "R4KVz",
+                                      "height": 44,
+                                      "effect": {
+                                        "type": "shadow",
+                                        "shadowType": "outer",
+                                        "color": "$line",
+                                        "offset": {
+                                          "x": 0,
+                                          "y": 3
+                                        }
+                                      },
+                                      "descendants": {
+                                        "tMaLT": {
+                                          "content": "JOIN"
+                                        }
+                                      }
+                                    }
+                                  ]
+                                }
+                              ]
                             },
                             {
                               "type": "frame",
-                              "id": "PAZwH",
-                              "name": "Join",
-                              "width": 78,
+                              "id": "oyToN",
+                              "name": "More",
+                              "width": "fill_container",
                               "layout": "vertical",
                               "padding": [
                                 0,
                                 0,
-                                3,
-                                0
+                                0,
+                                54
                               ],
                               "children": [
                                 {
-                                  "id": "H8CqiF",
+                                  "type": "text",
+                                  "id": "jESQl",
+                                  "name": "Rounds",
+                                  "fill": "$muted",
+                                  "content": "10 rounds · 2, 4, 6, 8, 10 twice",
+                                  "lineHeight": 1.3,
+                                  "fontFamily": "$f-ui",
+                                  "fontSize": 13,
+                                  "fontWeight": "700"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "OxvuN",
+                                  "name": "Seats",
+                                  "fill": "$muted",
+                                  "content": "0 of 4 seats",
+                                  "lineHeight": 1.3,
+                                  "fontFamily": "$f-ui",
+                                  "fontSize": 13,
+                                  "fontWeight": "700"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "WtGSA",
+                          "name": "Table · Whirl · Open table",
+                          "width": "fill_container",
+                          "stroke": "$line",
+                          "strokeWidth": {
+                            "top": 2
+                          },
+                          "strokeAlignment": "inner",
+                          "layout": "vertical",
+                          "gap": 2,
+                          "padding": [
+                            12,
+                            16,
+                            14,
+                            20
+                          ],
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "l37Lm",
+                              "name": "Top",
+                              "width": "fill_container",
+                              "gap": 12,
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "id": "jGBHe",
                                   "type": "ref",
-                                  "ref": "R4KVz",
-                                  "height": 44,
-                                  "effect": {
-                                    "type": "shadow",
-                                    "shadowType": "outer",
-                                    "color": "$line",
-                                    "offset": {
-                                      "x": 0,
-                                      "y": 3
-                                    }
-                                  },
+                                  "ref": "SebZL",
+                                  "width": 42,
+                                  "height": 42,
+                                  "fill": "$soft",
+                                  "stroke": "$line",
                                   "descendants": {
-                                    "tMaLT": {
-                                      "content": "JOIN"
+                                    "peRO2": {
+                                      "content": "O",
+                                      "fontSize": 18,
+                                      "fill": "$muted"
                                     }
                                   }
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "lwpDm",
+                                  "name": "Text",
+                                  "width": "fill_container",
+                                  "layout": "vertical",
+                                  "gap": 4,
+                                  "children": [
+                                    {
+                                      "id": "iwvoH",
+                                      "type": "ref",
+                                      "ref": "r6QUX",
+                                      "name": "Format",
+                                      "fill": "$gold",
+                                      "descendants": {
+                                        "f2cJzJ": {
+                                          "content": "Whirl",
+                                          "fill": "$gold-ink"
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "Sy5dB",
+                                      "name": "Title",
+                                      "fill": "$fg",
+                                      "content": "Open table",
+                                      "lineHeight": 1.3,
+                                      "fontFamily": "$f-ui",
+                                      "fontSize": 16,
+                                      "fontWeight": "800"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "M6ICD",
+                                  "name": "Join",
+                                  "width": 78,
+                                  "layout": "vertical",
+                                  "padding": [
+                                    0,
+                                    0,
+                                    3,
+                                    0
+                                  ],
+                                  "children": [
+                                    {
+                                      "id": "Mgydg",
+                                      "type": "ref",
+                                      "ref": "R4KVz",
+                                      "height": 44,
+                                      "effect": {
+                                        "type": "shadow",
+                                        "shadowType": "outer",
+                                        "color": "$line",
+                                        "offset": {
+                                          "x": 0,
+                                          "y": 3
+                                        }
+                                      },
+                                      "descendants": {
+                                        "tMaLT": {
+                                          "content": "JOIN"
+                                        }
+                                      }
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "OG9B4",
+                              "name": "More",
+                              "width": "fill_container",
+                              "layout": "vertical",
+                              "padding": [
+                                0,
+                                0,
+                                0,
+                                54
+                              ],
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "L0rPKV",
+                                  "name": "Rounds",
+                                  "fill": "$muted",
+                                  "content": "10 rounds · 9, 7, 5, 3, 1 twice",
+                                  "lineHeight": 1.3,
+                                  "fontFamily": "$f-ui",
+                                  "fontSize": 13,
+                                  "fontWeight": "700"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "Lcxah",
+                                  "name": "Seats",
+                                  "fill": "$muted",
+                                  "content": "0 of 4 seats",
+                                  "lineHeight": 1.3,
+                                  "fontFamily": "$f-ui",
+                                  "fontSize": 13,
+                                  "fontWeight": "700"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "WqyRF",
+                          "name": "Table · Swift · Teo’s table",
+                          "width": "fill_container",
+                          "stroke": "$line",
+                          "strokeWidth": {
+                            "top": 2
+                          },
+                          "strokeAlignment": "inner",
+                          "layout": "vertical",
+                          "gap": 2,
+                          "padding": [
+                            12,
+                            16,
+                            14,
+                            20
+                          ],
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "S4bPWU",
+                              "name": "Top",
+                              "width": "fill_container",
+                              "gap": 12,
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "id": "Q7MlH",
+                                  "type": "ref",
+                                  "ref": "SebZL",
+                                  "width": 42,
+                                  "height": 42,
+                                  "fill": "$orange",
+                                  "descendants": {
+                                    "peRO2": {
+                                      "content": "T",
+                                      "fontSize": 18
+                                    }
+                                  }
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "AcicS",
+                                  "name": "Text",
+                                  "width": "fill_container",
+                                  "layout": "vertical",
+                                  "gap": 4,
+                                  "children": [
+                                    {
+                                      "id": "TcGAP",
+                                      "type": "ref",
+                                      "ref": "r6QUX",
+                                      "name": "Format",
+                                      "fill": "$gold",
+                                      "descendants": {
+                                        "f2cJzJ": {
+                                          "content": "Swift",
+                                          "fill": "$gold-ink"
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "Es0X8",
+                                      "name": "Title",
+                                      "fill": "$fg",
+                                      "content": "Teo’s table",
+                                      "lineHeight": 1.3,
+                                      "fontFamily": "$f-ui",
+                                      "fontSize": 16,
+                                      "fontWeight": "800"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "l7rQE",
+                                  "name": "Join",
+                                  "width": 78,
+                                  "layout": "vertical",
+                                  "padding": [
+                                    0,
+                                    0,
+                                    3,
+                                    0
+                                  ],
+                                  "children": [
+                                    {
+                                      "id": "Wj3CR",
+                                      "type": "ref",
+                                      "ref": "R4KVz",
+                                      "height": 44,
+                                      "effect": {
+                                        "type": "shadow",
+                                        "shadowType": "outer",
+                                        "color": "$line",
+                                        "offset": {
+                                          "x": 0,
+                                          "y": 3
+                                        }
+                                      },
+                                      "descendants": {
+                                        "tMaLT": {
+                                          "content": "JOIN"
+                                        }
+                                      }
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "qHnQl",
+                              "name": "More",
+                              "width": "fill_container",
+                              "layout": "vertical",
+                              "padding": [
+                                0,
+                                0,
+                                0,
+                                54
+                              ],
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "tCGqw",
+                                  "name": "Rounds",
+                                  "fill": "$muted",
+                                  "content": "5 rounds · 5 cards each",
+                                  "lineHeight": 1.3,
+                                  "fontFamily": "$f-ui",
+                                  "fontSize": 13,
+                                  "fontWeight": "700"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "uetmt",
+                                  "name": "Seats",
+                                  "fill": "$muted",
+                                  "content": "2 of 3 seats",
+                                  "lineHeight": 1.3,
+                                  "fontFamily": "$f-ui",
+                                  "fontSize": 13,
+                                  "fontWeight": "700"
                                 }
                               ]
                             }
@@ -49510,7 +51512,7 @@
                       "ref": "qUZQR",
                       "descendants": {
                         "kQQHu": {
-                          "content": "3"
+                          "content": "6"
                         }
                       }
                     }
@@ -49518,98 +51520,152 @@
                 },
                 {
                   "type": "frame",
-                  "id": "b8bgfO",
-                  "name": "Table · Mira",
+                  "id": "NXd0F",
+                  "name": "Table · Classic · Open table",
                   "width": "fill_container",
                   "stroke": "$line",
                   "strokeWidth": {
                     "top": 2
                   },
                   "strokeAlignment": "inner",
-                  "gap": 12,
+                  "layout": "vertical",
+                  "gap": 2,
                   "padding": [
                     12,
                     14,
                     14,
                     16
                   ],
-                  "alignItems": "center",
                   "children": [
                     {
-                      "id": "c67fu",
-                      "type": "ref",
-                      "ref": "SebZL",
-                      "width": 42,
-                      "height": 42,
-                      "fill": "$purple",
-                      "descendants": {
-                        "peRO2": {
-                          "content": "M",
-                          "fontSize": 18
-                        }
-                      }
-                    },
-                    {
                       "type": "frame",
-                      "id": "UWEjH",
-                      "name": "Text",
+                      "id": "oDFLX",
+                      "name": "Top",
                       "width": "fill_container",
-                      "layout": "vertical",
+                      "gap": 12,
+                      "alignItems": "center",
                       "children": [
                         {
-                          "type": "text",
-                          "id": "FQgB4",
-                          "fill": "$fg",
-                          "content": "Mira’s table",
-                          "lineHeight": 1.3,
-                          "fontFamily": "$f-ui",
-                          "fontSize": 16,
-                          "fontWeight": "800"
+                          "id": "paHVE",
+                          "type": "ref",
+                          "ref": "SebZL",
+                          "width": 42,
+                          "height": 42,
+                          "fill": "$soft",
+                          "stroke": "$line",
+                          "descendants": {
+                            "peRO2": {
+                              "content": "O",
+                              "fontSize": 18,
+                              "fill": "$muted"
+                            }
+                          }
                         },
                         {
-                          "type": "text",
-                          "id": "nW0Kc",
-                          "fill": "$muted",
-                          "content": "3 of 6 seats · Classic",
-                          "lineHeight": 1.3,
-                          "fontFamily": "$f-ui",
-                          "fontSize": 13,
-                          "fontWeight": "700"
+                          "type": "frame",
+                          "id": "ddxaS",
+                          "name": "Text",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": 4,
+                          "children": [
+                            {
+                              "id": "GSP79",
+                              "type": "ref",
+                              "ref": "r6QUX",
+                              "name": "Format",
+                              "fill": "$gold",
+                              "descendants": {
+                                "f2cJzJ": {
+                                  "content": "Classic",
+                                  "fill": "$gold-ink"
+                                }
+                              }
+                            },
+                            {
+                              "type": "text",
+                              "id": "EECCL",
+                              "name": "Title",
+                              "fill": "$fg",
+                              "content": "Open table",
+                              "lineHeight": 1.3,
+                              "fontFamily": "$f-ui",
+                              "fontSize": 16,
+                              "fontWeight": "800"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "OaizU",
+                          "name": "Join",
+                          "width": 78,
+                          "layout": "vertical",
+                          "padding": [
+                            0,
+                            0,
+                            3,
+                            0
+                          ],
+                          "children": [
+                            {
+                              "id": "J4xtaE",
+                              "type": "ref",
+                              "ref": "R4KVz",
+                              "height": 44,
+                              "effect": {
+                                "type": "shadow",
+                                "shadowType": "outer",
+                                "color": "$line",
+                                "offset": {
+                                  "x": 0,
+                                  "y": 3
+                                }
+                              },
+                              "descendants": {
+                                "tMaLT": {
+                                  "content": "JOIN"
+                                }
+                              }
+                            }
+                          ]
                         }
                       ]
                     },
                     {
                       "type": "frame",
-                      "id": "Q8hD5x",
-                      "name": "Join",
-                      "width": 78,
+                      "id": "dVzgo",
+                      "name": "More",
+                      "width": "fill_container",
                       "layout": "vertical",
                       "padding": [
                         0,
                         0,
-                        3,
-                        0
+                        0,
+                        54
                       ],
                       "children": [
                         {
-                          "id": "pYzG2",
-                          "type": "ref",
-                          "ref": "R4KVz",
-                          "height": 44,
-                          "effect": {
-                            "type": "shadow",
-                            "shadowType": "outer",
-                            "color": "$line",
-                            "offset": {
-                              "x": 0,
-                              "y": 3
-                            }
-                          },
-                          "descendants": {
-                            "tMaLT": {
-                              "content": "JOIN"
-                            }
-                          }
+                          "type": "text",
+                          "id": "V6xjj5",
+                          "name": "Rounds",
+                          "fill": "$muted",
+                          "content": "10 rounds · 1 to 10 cards",
+                          "lineHeight": 1.3,
+                          "fontFamily": "$f-ui",
+                          "fontSize": 13,
+                          "fontWeight": "700"
+                        },
+                        {
+                          "type": "text",
+                          "id": "P9MnvS",
+                          "name": "Seats",
+                          "fill": "$muted",
+                          "content": "0 of 4 seats",
+                          "lineHeight": 1.3,
+                          "fontFamily": "$f-ui",
+                          "fontSize": 13,
+                          "fontWeight": "700"
                         }
                       ]
                     }
@@ -49617,98 +51673,760 @@
                 },
                 {
                   "type": "frame",
-                  "id": "nZb3L",
-                  "name": "Table · Teo",
+                  "id": "i162K",
+                  "name": "Table · Brawl · Mira’s table",
                   "width": "fill_container",
                   "stroke": "$line",
                   "strokeWidth": {
                     "top": 2
                   },
                   "strokeAlignment": "inner",
-                  "gap": 12,
+                  "layout": "vertical",
+                  "gap": 2,
                   "padding": [
                     12,
                     14,
                     14,
                     16
                   ],
-                  "alignItems": "center",
                   "children": [
                     {
-                      "id": "oPXvb",
-                      "type": "ref",
-                      "ref": "SebZL",
-                      "width": 42,
-                      "height": 42,
-                      "fill": "$orange",
-                      "descendants": {
-                        "peRO2": {
-                          "content": "T",
-                          "fontSize": 18
+                      "type": "frame",
+                      "id": "kxxF3",
+                      "name": "Top",
+                      "width": "fill_container",
+                      "gap": 12,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "id": "fBhT9",
+                          "type": "ref",
+                          "ref": "SebZL",
+                          "width": 42,
+                          "height": 42,
+                          "fill": "$purple",
+                          "descendants": {
+                            "peRO2": {
+                              "content": "M",
+                              "fontSize": 18
+                            }
+                          }
+                        },
+                        {
+                          "type": "frame",
+                          "id": "wyW7m",
+                          "name": "Text",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": 4,
+                          "children": [
+                            {
+                              "id": "G0Lpmv",
+                              "type": "ref",
+                              "ref": "r6QUX",
+                              "name": "Format",
+                              "fill": "$gold",
+                              "descendants": {
+                                "f2cJzJ": {
+                                  "content": "Brawl",
+                                  "fill": "$gold-ink"
+                                }
+                              }
+                            },
+                            {
+                              "type": "text",
+                              "id": "veAoC",
+                              "name": "Title",
+                              "fill": "$fg",
+                              "content": "Mira’s table",
+                              "lineHeight": 1.3,
+                              "fontFamily": "$f-ui",
+                              "fontSize": 16,
+                              "fontWeight": "800"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "kTK3B",
+                          "name": "Join",
+                          "width": 78,
+                          "layout": "vertical",
+                          "padding": [
+                            0,
+                            0,
+                            3,
+                            0
+                          ],
+                          "children": [
+                            {
+                              "id": "PYCwj",
+                              "type": "ref",
+                              "ref": "R4KVz",
+                              "height": 44,
+                              "effect": {
+                                "type": "shadow",
+                                "shadowType": "outer",
+                                "color": "$line",
+                                "offset": {
+                                  "x": 0,
+                                  "y": 3
+                                }
+                              },
+                              "descendants": {
+                                "tMaLT": {
+                                  "content": "JOIN"
+                                }
+                              }
+                            }
+                          ]
                         }
-                      }
+                      ]
                     },
                     {
                       "type": "frame",
-                      "id": "coZmB",
-                      "name": "Text",
+                      "id": "m0Kiz1",
+                      "name": "More",
                       "width": "fill_container",
                       "layout": "vertical",
+                      "padding": [
+                        0,
+                        0,
+                        0,
+                        54
+                      ],
                       "children": [
                         {
                           "type": "text",
-                          "id": "wzS5p",
-                          "fill": "$fg",
-                          "content": "Teo’s table",
+                          "id": "t4qJH",
+                          "name": "Rounds",
+                          "fill": "$muted",
+                          "content": "5 rounds · 6 to 10 cards",
                           "lineHeight": 1.3,
                           "fontFamily": "$f-ui",
-                          "fontSize": 16,
-                          "fontWeight": "800"
+                          "fontSize": 13,
+                          "fontWeight": "700"
                         },
                         {
                           "type": "text",
-                          "id": "F3GV82",
+                          "id": "b30LuI",
+                          "name": "Seats",
                           "fill": "$muted",
-                          "content": "2 of 4 seats · Whirlpool",
+                          "content": "1 of 4 seats",
                           "lineHeight": 1.3,
                           "fontFamily": "$f-ui",
                           "fontSize": 13,
                           "fontWeight": "700"
                         }
                       ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "Q65A7K",
+                  "name": "Table · Swift · Open table",
+                  "width": "fill_container",
+                  "stroke": "$line",
+                  "strokeWidth": {
+                    "top": 2
+                  },
+                  "strokeAlignment": "inner",
+                  "layout": "vertical",
+                  "gap": 2,
+                  "padding": [
+                    12,
+                    14,
+                    14,
+                    16
+                  ],
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "K07nQ",
+                      "name": "Top",
+                      "width": "fill_container",
+                      "gap": 12,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "id": "sQseG",
+                          "type": "ref",
+                          "ref": "SebZL",
+                          "width": 42,
+                          "height": 42,
+                          "fill": "$soft",
+                          "stroke": "$line",
+                          "descendants": {
+                            "peRO2": {
+                              "content": "O",
+                              "fontSize": 18,
+                              "fill": "$muted"
+                            }
+                          }
+                        },
+                        {
+                          "type": "frame",
+                          "id": "nWfm1",
+                          "name": "Text",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": 4,
+                          "children": [
+                            {
+                              "id": "xoI1B",
+                              "type": "ref",
+                              "ref": "r6QUX",
+                              "name": "Format",
+                              "fill": "$gold",
+                              "descendants": {
+                                "f2cJzJ": {
+                                  "content": "Swift",
+                                  "fill": "$gold-ink"
+                                }
+                              }
+                            },
+                            {
+                              "type": "text",
+                              "id": "oabPx",
+                              "name": "Title",
+                              "fill": "$fg",
+                              "content": "Open table",
+                              "lineHeight": 1.3,
+                              "fontFamily": "$f-ui",
+                              "fontSize": 16,
+                              "fontWeight": "800"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "IzEhO",
+                          "name": "Join",
+                          "width": 78,
+                          "layout": "vertical",
+                          "padding": [
+                            0,
+                            0,
+                            3,
+                            0
+                          ],
+                          "children": [
+                            {
+                              "id": "l463us",
+                              "type": "ref",
+                              "ref": "R4KVz",
+                              "height": 44,
+                              "effect": {
+                                "type": "shadow",
+                                "shadowType": "outer",
+                                "color": "$line",
+                                "offset": {
+                                  "x": 0,
+                                  "y": 3
+                                }
+                              },
+                              "descendants": {
+                                "tMaLT": {
+                                  "content": "JOIN"
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      ]
                     },
                     {
                       "type": "frame",
-                      "id": "S91BI",
-                      "name": "Join",
-                      "width": 78,
+                      "id": "vEFIf",
+                      "name": "More",
+                      "width": "fill_container",
                       "layout": "vertical",
                       "padding": [
                         0,
                         0,
-                        3,
-                        0
+                        0,
+                        54
                       ],
                       "children": [
                         {
-                          "id": "XDNch",
+                          "type": "text",
+                          "id": "clCbB",
+                          "name": "Rounds",
+                          "fill": "$muted",
+                          "content": "5 rounds · 5 cards each",
+                          "lineHeight": 1.3,
+                          "fontFamily": "$f-ui",
+                          "fontSize": 13,
+                          "fontWeight": "700"
+                        },
+                        {
+                          "type": "text",
+                          "id": "dqQvx",
+                          "name": "Seats",
+                          "fill": "$muted",
+                          "content": "0 of 4 seats",
+                          "lineHeight": 1.3,
+                          "fontFamily": "$f-ui",
+                          "fontSize": 13,
+                          "fontWeight": "700"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "rWwUV",
+                  "name": "Table · Even · Open table",
+                  "width": "fill_container",
+                  "stroke": "$line",
+                  "strokeWidth": {
+                    "top": 2
+                  },
+                  "strokeAlignment": "inner",
+                  "layout": "vertical",
+                  "gap": 2,
+                  "padding": [
+                    12,
+                    14,
+                    14,
+                    16
+                  ],
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "xrjXG",
+                      "name": "Top",
+                      "width": "fill_container",
+                      "gap": 12,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "id": "aDCrb",
                           "type": "ref",
-                          "ref": "R4KVz",
-                          "height": 44,
-                          "effect": {
-                            "type": "shadow",
-                            "shadowType": "outer",
-                            "color": "$line",
-                            "offset": {
-                              "x": 0,
-                              "y": 3
-                            }
-                          },
+                          "ref": "SebZL",
+                          "width": 42,
+                          "height": 42,
+                          "fill": "$soft",
+                          "stroke": "$line",
                           "descendants": {
-                            "tMaLT": {
-                              "content": "JOIN"
+                            "peRO2": {
+                              "content": "O",
+                              "fontSize": 18,
+                              "fill": "$muted"
                             }
                           }
+                        },
+                        {
+                          "type": "frame",
+                          "id": "rxCAU",
+                          "name": "Text",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": 4,
+                          "children": [
+                            {
+                              "id": "UNJRC",
+                              "type": "ref",
+                              "ref": "r6QUX",
+                              "name": "Format",
+                              "fill": "$gold",
+                              "descendants": {
+                                "f2cJzJ": {
+                                  "content": "Even",
+                                  "fill": "$gold-ink"
+                                }
+                              }
+                            },
+                            {
+                              "type": "text",
+                              "id": "YEAP6",
+                              "name": "Title",
+                              "fill": "$fg",
+                              "content": "Open table",
+                              "lineHeight": 1.3,
+                              "fontFamily": "$f-ui",
+                              "fontSize": 16,
+                              "fontWeight": "800"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "z7H44r",
+                          "name": "Join",
+                          "width": 78,
+                          "layout": "vertical",
+                          "padding": [
+                            0,
+                            0,
+                            3,
+                            0
+                          ],
+                          "children": [
+                            {
+                              "id": "g5PngY",
+                              "type": "ref",
+                              "ref": "R4KVz",
+                              "height": 44,
+                              "effect": {
+                                "type": "shadow",
+                                "shadowType": "outer",
+                                "color": "$line",
+                                "offset": {
+                                  "x": 0,
+                                  "y": 3
+                                }
+                              },
+                              "descendants": {
+                                "tMaLT": {
+                                  "content": "JOIN"
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "fHtFu",
+                      "name": "More",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "padding": [
+                        0,
+                        0,
+                        0,
+                        54
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "MLtT3",
+                          "name": "Rounds",
+                          "fill": "$muted",
+                          "content": "10 rounds · 2, 4, 6, 8, 10 twice",
+                          "lineHeight": 1.3,
+                          "fontFamily": "$f-ui",
+                          "fontSize": 13,
+                          "fontWeight": "700"
+                        },
+                        {
+                          "type": "text",
+                          "id": "AZGeV",
+                          "name": "Seats",
+                          "fill": "$muted",
+                          "content": "0 of 4 seats",
+                          "lineHeight": 1.3,
+                          "fontFamily": "$f-ui",
+                          "fontSize": 13,
+                          "fontWeight": "700"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "r4MMk",
+                  "name": "Table · Whirl · Open table",
+                  "width": "fill_container",
+                  "stroke": "$line",
+                  "strokeWidth": {
+                    "top": 2
+                  },
+                  "strokeAlignment": "inner",
+                  "layout": "vertical",
+                  "gap": 2,
+                  "padding": [
+                    12,
+                    14,
+                    14,
+                    16
+                  ],
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "W10NS",
+                      "name": "Top",
+                      "width": "fill_container",
+                      "gap": 12,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "id": "A0Gb2",
+                          "type": "ref",
+                          "ref": "SebZL",
+                          "width": 42,
+                          "height": 42,
+                          "fill": "$soft",
+                          "stroke": "$line",
+                          "descendants": {
+                            "peRO2": {
+                              "content": "O",
+                              "fontSize": 18,
+                              "fill": "$muted"
+                            }
+                          }
+                        },
+                        {
+                          "type": "frame",
+                          "id": "P0CTN",
+                          "name": "Text",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": 4,
+                          "children": [
+                            {
+                              "id": "t3qao",
+                              "type": "ref",
+                              "ref": "r6QUX",
+                              "name": "Format",
+                              "fill": "$gold",
+                              "descendants": {
+                                "f2cJzJ": {
+                                  "content": "Whirl",
+                                  "fill": "$gold-ink"
+                                }
+                              }
+                            },
+                            {
+                              "type": "text",
+                              "id": "LY3lR",
+                              "name": "Title",
+                              "fill": "$fg",
+                              "content": "Open table",
+                              "lineHeight": 1.3,
+                              "fontFamily": "$f-ui",
+                              "fontSize": 16,
+                              "fontWeight": "800"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "wrgyZ",
+                          "name": "Join",
+                          "width": 78,
+                          "layout": "vertical",
+                          "padding": [
+                            0,
+                            0,
+                            3,
+                            0
+                          ],
+                          "children": [
+                            {
+                              "id": "EsQXC",
+                              "type": "ref",
+                              "ref": "R4KVz",
+                              "height": 44,
+                              "effect": {
+                                "type": "shadow",
+                                "shadowType": "outer",
+                                "color": "$line",
+                                "offset": {
+                                  "x": 0,
+                                  "y": 3
+                                }
+                              },
+                              "descendants": {
+                                "tMaLT": {
+                                  "content": "JOIN"
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "sGlNt",
+                      "name": "More",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "padding": [
+                        0,
+                        0,
+                        0,
+                        54
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "VhSfT",
+                          "name": "Rounds",
+                          "fill": "$muted",
+                          "content": "10 rounds · 9, 7, 5, 3, 1 twice",
+                          "lineHeight": 1.3,
+                          "fontFamily": "$f-ui",
+                          "fontSize": 13,
+                          "fontWeight": "700"
+                        },
+                        {
+                          "type": "text",
+                          "id": "u4ri6",
+                          "name": "Seats",
+                          "fill": "$muted",
+                          "content": "0 of 4 seats",
+                          "lineHeight": 1.3,
+                          "fontFamily": "$f-ui",
+                          "fontSize": 13,
+                          "fontWeight": "700"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "ObjiO",
+                  "name": "Table · Swift · Teo’s table",
+                  "width": "fill_container",
+                  "stroke": "$line",
+                  "strokeWidth": {
+                    "top": 2
+                  },
+                  "strokeAlignment": "inner",
+                  "layout": "vertical",
+                  "gap": 2,
+                  "padding": [
+                    12,
+                    14,
+                    14,
+                    16
+                  ],
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "ErsXZ",
+                      "name": "Top",
+                      "width": "fill_container",
+                      "gap": 12,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "id": "UwbBq",
+                          "type": "ref",
+                          "ref": "SebZL",
+                          "width": 42,
+                          "height": 42,
+                          "fill": "$orange",
+                          "descendants": {
+                            "peRO2": {
+                              "content": "T",
+                              "fontSize": 18
+                            }
+                          }
+                        },
+                        {
+                          "type": "frame",
+                          "id": "Zp4rn",
+                          "name": "Text",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": 4,
+                          "children": [
+                            {
+                              "id": "aZJof",
+                              "type": "ref",
+                              "ref": "r6QUX",
+                              "name": "Format",
+                              "fill": "$gold",
+                              "descendants": {
+                                "f2cJzJ": {
+                                  "content": "Swift",
+                                  "fill": "$gold-ink"
+                                }
+                              }
+                            },
+                            {
+                              "type": "text",
+                              "id": "bcU8w",
+                              "name": "Title",
+                              "fill": "$fg",
+                              "content": "Teo’s table",
+                              "lineHeight": 1.3,
+                              "fontFamily": "$f-ui",
+                              "fontSize": 16,
+                              "fontWeight": "800"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "hPD17",
+                          "name": "Join",
+                          "width": 78,
+                          "layout": "vertical",
+                          "padding": [
+                            0,
+                            0,
+                            3,
+                            0
+                          ],
+                          "children": [
+                            {
+                              "id": "GOUut",
+                              "type": "ref",
+                              "ref": "R4KVz",
+                              "height": 44,
+                              "effect": {
+                                "type": "shadow",
+                                "shadowType": "outer",
+                                "color": "$line",
+                                "offset": {
+                                  "x": 0,
+                                  "y": 3
+                                }
+                              },
+                              "descendants": {
+                                "tMaLT": {
+                                  "content": "JOIN"
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "Jt0bT",
+                      "name": "More",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "padding": [
+                        0,
+                        0,
+                        0,
+                        54
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "SJIPh",
+                          "name": "Rounds",
+                          "fill": "$muted",
+                          "content": "5 rounds · 5 cards each",
+                          "lineHeight": 1.3,
+                          "fontFamily": "$f-ui",
+                          "fontSize": 13,
+                          "fontWeight": "700"
+                        },
+                        {
+                          "type": "text",
+                          "id": "EhPre",
+                          "name": "Seats",
+                          "fill": "$muted",
+                          "content": "2 of 3 seats",
+                          "lineHeight": 1.3,
+                          "fontFamily": "$f-ui",
+                          "fontSize": 13,
+                          "fontWeight": "700"
                         }
                       ]
                     }
@@ -52759,100 +55477,152 @@
                 },
                 {
                   "type": "frame",
-                  "id": "SozIT",
-                  "name": "Table · nobody hosts",
+                  "id": "tEk3f",
+                  "name": "Table · Classic · Open table",
                   "width": "fill_container",
                   "stroke": "$line",
                   "strokeWidth": {
                     "top": 2
                   },
                   "strokeAlignment": "inner",
-                  "gap": 12,
+                  "layout": "vertical",
+                  "gap": 2,
                   "padding": [
                     12,
                     14,
                     14,
                     16
                   ],
-                  "alignItems": "center",
                   "children": [
                     {
-                      "id": "dyZMd",
-                      "type": "ref",
-                      "ref": "SebZL",
-                      "width": 42,
-                      "height": 42,
-                      "fill": "$soft",
-                      "stroke": "$line",
-                      "descendants": {
-                        "peRO2": {
-                          "content": "O",
-                          "fontSize": 18,
-                          "fill": "$muted"
-                        }
-                      }
-                    },
-                    {
                       "type": "frame",
-                      "id": "dOSlA",
-                      "name": "Text",
+                      "id": "NCbjS",
+                      "name": "Top",
                       "width": "fill_container",
-                      "layout": "vertical",
+                      "gap": 12,
+                      "alignItems": "center",
                       "children": [
                         {
-                          "type": "text",
-                          "id": "cWir9",
-                          "fill": "$fg",
-                          "content": "Open table",
-                          "lineHeight": 1.3,
-                          "fontFamily": "$f-ui",
-                          "fontSize": 16,
-                          "fontWeight": "800"
+                          "id": "TGAMv",
+                          "type": "ref",
+                          "ref": "SebZL",
+                          "width": 42,
+                          "height": 42,
+                          "fill": "$soft",
+                          "stroke": "$line",
+                          "descendants": {
+                            "peRO2": {
+                              "content": "O",
+                              "fontSize": 18,
+                              "fill": "$muted"
+                            }
+                          }
                         },
                         {
-                          "type": "text",
-                          "id": "zcwfl",
-                          "fill": "$muted",
-                          "content": "0 of 4 seats · Classic",
-                          "lineHeight": 1.3,
-                          "fontFamily": "$f-ui",
-                          "fontSize": 13,
-                          "fontWeight": "700"
+                          "type": "frame",
+                          "id": "mD3Fk",
+                          "name": "Text",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": 4,
+                          "children": [
+                            {
+                              "id": "fkF7a",
+                              "type": "ref",
+                              "ref": "r6QUX",
+                              "name": "Format",
+                              "fill": "$gold",
+                              "descendants": {
+                                "f2cJzJ": {
+                                  "content": "Classic",
+                                  "fill": "$gold-ink"
+                                }
+                              }
+                            },
+                            {
+                              "type": "text",
+                              "id": "DDQPP",
+                              "name": "Title",
+                              "fill": "$fg",
+                              "content": "Open table",
+                              "lineHeight": 1.3,
+                              "fontFamily": "$f-ui",
+                              "fontSize": 16,
+                              "fontWeight": "800"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "hbegh",
+                          "name": "Join",
+                          "width": 78,
+                          "layout": "vertical",
+                          "padding": [
+                            0,
+                            0,
+                            3,
+                            0
+                          ],
+                          "children": [
+                            {
+                              "id": "E9RxLS",
+                              "type": "ref",
+                              "ref": "R4KVz",
+                              "height": 44,
+                              "effect": {
+                                "type": "shadow",
+                                "shadowType": "outer",
+                                "color": "$line",
+                                "offset": {
+                                  "x": 0,
+                                  "y": 3
+                                }
+                              },
+                              "descendants": {
+                                "tMaLT": {
+                                  "content": "JOIN"
+                                }
+                              }
+                            }
+                          ]
                         }
                       ]
                     },
                     {
                       "type": "frame",
-                      "id": "JAQO9",
-                      "name": "Join",
-                      "width": 78,
+                      "id": "YiN8n",
+                      "name": "More",
+                      "width": "fill_container",
                       "layout": "vertical",
                       "padding": [
                         0,
                         0,
-                        3,
-                        0
+                        0,
+                        54
                       ],
                       "children": [
                         {
-                          "id": "G3zkJ",
-                          "type": "ref",
-                          "ref": "R4KVz",
-                          "height": 44,
-                          "effect": {
-                            "type": "shadow",
-                            "shadowType": "outer",
-                            "color": "$line",
-                            "offset": {
-                              "x": 0,
-                              "y": 3
-                            }
-                          },
-                          "descendants": {
-                            "tMaLT": {
-                              "content": "JOIN"
-                            }
-                          }
+                          "type": "text",
+                          "id": "uiu5D",
+                          "name": "Rounds",
+                          "fill": "$muted",
+                          "content": "10 rounds · 1 to 10 cards",
+                          "lineHeight": 1.3,
+                          "fontFamily": "$f-ui",
+                          "fontSize": 13,
+                          "fontWeight": "700"
+                        },
+                        {
+                          "type": "text",
+                          "id": "XNCOB",
+                          "name": "Seats",
+                          "fill": "$muted",
+                          "content": "0 of 4 seats",
+                          "lineHeight": 1.3,
+                          "fontFamily": "$f-ui",
+                          "fontSize": 13,
+                          "fontWeight": "700"
                         }
                       ]
                     }

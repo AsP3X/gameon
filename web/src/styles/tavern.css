@@ -1936,7 +1936,7 @@ input.name:focus {
   color: var(--muted);
 }
 .disclose b {
-  color: var(--gold-d);
+  color: var(--fg);
 }
 .disclose svg {
   width: 18px;
