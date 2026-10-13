@@ -239,6 +239,7 @@ fn lobbies(dir: &Path, write: bool) -> Result<(), ExportError> {
     put(dir, write, "member-human", &human())?;
     put(dir, write, "member-bot", &bot())?;
     put(dir, write, "lobby", &lobby())?;
+    put(dir, write, "lobby-standing", &house_lobby())?;
     put(dir, write, "queue-status", &queue())?;
     Ok(())
 }
@@ -745,12 +746,24 @@ fn lobby() -> Lobby {
         code: "ABCDEF".to_owned(),
         mode: TableMode::Custom,
         visibility: Visibility::Private,
+        standing: None,
         host_id: Some(UserId::new(USER)),
         settings: sample_game(),
         members: vec![human(), bot()],
         allow_bots: None,
         state: LobbyPhase::Open,
         game_id: None,
+    }
+}
+
+fn house_lobby() -> Lobby {
+    Lobby {
+        visibility: Visibility::Public,
+        standing: Some(true),
+        host_id: None,
+        settings: GameSettings::standard(),
+        members: Vec::new(),
+        ..lobby()
     }
 }
 

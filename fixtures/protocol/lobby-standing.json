@@ -1,0 +1,22 @@
+{
+  "id": "018f6b4a-6a2e-7c3a-8b1d-9e0f1a2b3c4e",
+  "code": "ABCDEF",
+  "mode": "custom",
+  "visibility": "public",
+  "standing": true,
+  "hostId": null,
+  "settings": {
+    "maxPlayers": 4,
+    "scoring": "classic",
+    "format": "classic",
+    "loot": false,
+    "kraken": false,
+    "whale": false,
+    "abilities": false,
+    "botLevel": "normal",
+    "pace": "standard"
+  },
+  "members": [],
+  "state": "open",
+  "gameId": null
+}

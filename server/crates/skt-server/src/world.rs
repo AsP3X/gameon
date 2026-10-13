@@ -583,6 +583,7 @@ impl World {
             code: code.clone(),
             mode: TableMode::Custom,
             visibility,
+            standing: None,
             host_id: Some(user.clone()),
             settings,
             allow_bots: (allow_bots == Some(false)).then_some(false),
@@ -884,6 +885,7 @@ impl World {
             code: String::new(),
             mode: TableMode::Custom,
             visibility: Visibility::Private,
+            standing: None,
             host_id: None,
             settings,
             allow_bots: None,
@@ -1018,6 +1020,9 @@ impl World {
     }
 
     /// One empty public table of `format`. The first person to sit down becomes its host.
+    ///
+    // Human: This is a house table, so the invite link stays off it even after someone sits down.
+    // Agent: WRITES standing true. A lobby.create table leaves standing false, and the field is omitted on the wire.
     fn spawn_house_table(&mut self, format: Format) -> LobbyId {
         let lobby_id = LobbyId::new(identity::uuid());
         let code = self.fresh_code();
@@ -1026,6 +1031,7 @@ impl World {
             code: code.clone(),
             mode: TableMode::Custom,
             visibility: Visibility::Public,
+            standing: Some(true),
             host_id: None,
             settings: skt_protocol::GameSettings {
                 format,
@@ -1313,6 +1319,7 @@ impl World {
             code: String::new(),
             mode: table_mode,
             visibility: Visibility::Private,
+            standing: None,
             host_id: None,
             settings: skt_protocol::GameSettings::standard(),
             allow_bots: None,

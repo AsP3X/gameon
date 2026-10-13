@@ -571,6 +571,81 @@ fn first_card(frame: &str) -> String {
         .to_owned()
 }
 
+#[tokio::test]
+async fn a_player_table_omits_standing_and_a_house_table_sends_it() {
+    let state = AppState::for_socket_tests(Duration::from_secs(5), Duration::from_secs(45));
+    let port = serve(state).await;
+    let cookie = guest(port).await;
+    let mut socket = open_socket(port, &cookie).await;
+    hello(&mut socket).await;
+
+    send(&mut socket, &create(2)).await;
+    let private_table = read_text(&mut socket).await;
+    assert!(
+        private_table.contains("\"visibility\":\"private\""),
+        "{private_table}"
+    );
+    assert!(!private_table.contains("\"standing\""), "{private_table}");
+
+    send(&mut socket, r#"{"t":"lobby.leave","id":3}"#).await;
+    let left = read_text(&mut socket).await;
+    assert!(left.contains("\"t\":\"ok\""), "{left}");
+
+    send(&mut socket, &create_with(4, "public")).await;
+    let created = read_text(&mut socket).await;
+    assert!(created.contains("\"visibility\":\"public\""), "{created}");
+    assert!(!created.contains("\"standing\""), "{created}");
+
+    send(&mut socket, r#"{"t":"lobby.leave","id":5}"#).await;
+    let left_public = read_text(&mut socket).await;
+    assert!(left_public.contains("\"t\":\"ok\""), "{left_public}");
+
+    let list = http_body(port, "GET", "/api/v1/lobbies", &cookie).await;
+    assert!(!list.contains("\"standing\""), "{list}");
+    let house = quoted(&list, "id");
+    send(
+        &mut socket,
+        &format!(r#"{{"t":"lobby.join","id":6,"lobbyId":"{house}"}}"#),
+    )
+    .await;
+    let joined = read_text(&mut socket).await;
+    assert!(joined.contains("\"standing\":true"), "{joined}");
+    assert_eq!(quoted(&joined, "code").len(), 6, "{joined}");
+    let pushed = read_text(&mut socket).await;
+    assert!(pushed.contains("\"t\":\"lobby.state\""), "{pushed}");
+    assert!(pushed.contains("\"standing\":true"), "{pushed}");
+
+    send(
+        &mut socket,
+        r#"{"t":"lobby.settings","id":7,"settings":{"maxPlayers":4,"scoring":"classic","format":"brawl","loot":false,"kraken":false,"whale":false,"abilities":false,"botLevel":"normal","pace":"standard"}}"#,
+    )
+    .await;
+    let changed = read_until(&mut socket, "\"format\":\"brawl\"").await;
+    assert!(changed.contains("\"standing\":true"), "{changed}");
+}
+
+async fn http_body(port: u16, method: &str, path: &str, cookie: &str) -> String {
+    let request = format!(
+        "{method} {path} HTTP/1.1\r\nHost: localhost\r\nOrigin: http://localhost\r\nCookie: {cookie}\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"
+    );
+    let mut stream = TcpStream::connect(("127.0.0.1", port))
+        .await
+        .expect("connect");
+    tokio::io::AsyncWriteExt::write_all(&mut stream, request.as_bytes())
+        .await
+        .expect("write");
+    let mut bytes = Vec::new();
+    tokio::io::AsyncReadExt::read_to_end(&mut stream, &mut bytes)
+        .await
+        .expect("read");
+    let text = String::from_utf8_lossy(&bytes);
+    let (head, body) = text
+        .split_once("\r\n\r\n")
+        .unwrap_or_else(|| panic!("no body in {text}"));
+    assert!(head.starts_with("HTTP/1.1 200"), "{head}");
+    body.to_owned()
+}
+
 fn close_frame(code: u16) -> tokio_tungstenite::tungstenite::protocol::CloseFrame {
     tokio_tungstenite::tungstenite::protocol::CloseFrame {
         code: code.into(),

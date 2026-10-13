@@ -113,6 +113,10 @@ pub struct Lobby {
     pub mode: TableMode,
     /// Private or public.
     pub visibility: Visibility,
+    /// `Some(true)` on a standing house table. Omitted on a table a player opened with `lobby.create`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub standing: Option<bool>,
     /// Host, or `null` in a matchmade lobby.
     pub host_id: Option<UserId>,
     /// Rules for the next game.

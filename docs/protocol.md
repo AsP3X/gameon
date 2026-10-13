@@ -269,6 +269,7 @@ type Lobby = {
   id: LobbyId; code: string;               // 6 characters from ABCDEFGHJKMNPQRSTUVWXYZ23456789
   mode: 'custom' | 'casual' | 'ranked';
   visibility: 'private' | 'public';
+  standing?: boolean;                      // true only on a standing house table; omitted otherwise
   hostId: UserId | null;                   // null in matchmade lobbies
   settings: GameSettings;
   allowBots?: boolean;                     // omitted means true
@@ -283,6 +284,11 @@ type LobbySummary = {
   id: LobbyId; hostName: string; hostColor?: TableColor; settings: GameSettings; players: number; allowBots?: boolean
 };
 ```
+
+`standing` is sent as `true` only on a standing house table: one of the public tables the tavern
+keeps open, including after someone sits down and after the host changes its rules. It is omitted
+on every table opened with `lobby.create`, and on a matchmade table. A missing field means the
+table is not a house table. The public list does not carry it. Protocol stays 1.
 
 | Client message | Payload | Who | Result |
 | -------------- | ------- | --- | ------ |

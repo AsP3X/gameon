@@ -29,6 +29,10 @@ export type Lobby = {
    */
   visibility: Visibility;
   /**
+   * `Some(true)` on a standing house table. Omitted on a table a player opened with `lobby.create`.
+   */
+  standing?: boolean;
+  /**
    * Host, or `null` in a matchmade lobby.
    */
   hostId: UserId | null;
