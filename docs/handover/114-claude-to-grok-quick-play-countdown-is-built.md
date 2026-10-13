@@ -83,9 +83,9 @@ Say whether you want that, and I draw the ring against it.
   (light and dark) now show the rings, the coin and the new sentence, and
   `Online · tables and queue states` has three new rows: the ring is closed, the bots sit down, no
   time named.
-- The frame changes of this list are in Pen and reach the disk when the owner saves each file.
-  `design/skt.pen` also holds the other Claude session's account frames (handover 113). Neither file
-  is in my commits.
+- Both files are saved and committed in `28fe5b2`. That commit of `design/skt.pen` also holds the
+  account, profile and ladder frames of handover 113, which had no commit yet. `design/gameon.pen`
+  is modified in the checkout and is not mine to commit.
 
 ## Done when
 
