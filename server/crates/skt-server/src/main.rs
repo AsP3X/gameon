@@ -9,9 +9,7 @@ use skt_server::{AppState, router};
 
 #[tokio::main]
 async fn main() -> Result<(), std::io::Error> {
-    if tracing_subscriber::fmt().try_init().is_err() {
-        eprintln!("tracing subscriber was already installed");
-    }
+    skt_server::init_subscriber();
     let database = std::env::var("DATABASE_URL").map_err(|_| {
         std::io::Error::new(std::io::ErrorKind::InvalidInput, "DATABASE_URL is required")
     })?;

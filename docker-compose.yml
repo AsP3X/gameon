@@ -66,6 +66,8 @@ services:
       HOST: 0.0.0.0
       PORT: "8080"
       RUST_LOG: ${RUST_LOG:-info}
+      # text or json. The Logging dialog does not write this. Unset means text.
+      RUST_LOG_FORMAT: ${RUST_LOG_FORMAT:-text}
       SKT_PUBLIC_ORIGIN: ${SKT_PUBLIC_ORIGIN:-}
       SKT_SECURE_COOKIE: ${SKT_SECURE_COOKIE:-}
       DATABASE_URL: postgres://${POSTGRES_USER:-skt}:${POSTGRES_PASSWORD:-skt}@postgres:5432/${POSTGRES_DB:-skt}

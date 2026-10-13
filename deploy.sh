@@ -136,6 +136,7 @@ show_help() {
     SKT_NETWORKS_API       optional. Unset keeps skt-internal, plus proxy-network in NPM.
     SKT_NETWORKS_WEB       optional. Same default as the API.
     RUST_LOG            API log level. The Logging dialog writes this.
+    RUST_LOG_FORMAT     text or json. The Logging dialog leaves this alone. Unset means text.
     SKT_LOG_POSTGRES    Postgres log_min_messages. Unset means warning.
     SKT_LOG_WEB         page error log. Unset means notice.
     SKT_LOG_SIZE_POSTGRES  SKT_LOG_SIZE_API  SKT_LOG_SIZE_WEB
