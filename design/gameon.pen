@@ -81077,6 +81077,18 @@
                       "fontFamily": "$f-ui",
                       "fontSize": 17,
                       "fontWeight": "700"
+                    },
+                    {
+                      "type": "text",
+                      "id": "Ie3bq",
+                      "fill": "$fg",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "When you walk out of a ranked game, the server keeps how often you have done so this season, and until when ranked stays closed for you. The ladder shows neither.",
+                      "lineHeight": 1.55,
+                      "fontFamily": "$f-ui",
+                      "fontSize": 17,
+                      "fontWeight": "700"
                     }
                   ]
                 },
@@ -81560,6 +81572,18 @@
                       "textGrowth": "fixed-width",
                       "width": "fill_container",
                       "content": "A game played on the server is stored with its deals and its moves in order, so that it can be replayed exactly. Your results, your stats and your rating come from those games. Your finished games are listed on your profile, and only the players who sat in a game can open its record.",
+                      "lineHeight": 1.55,
+                      "fontFamily": "$f-ui",
+                      "fontSize": 16,
+                      "fontWeight": "700"
+                    },
+                    {
+                      "type": "text",
+                      "id": "ECzjS",
+                      "fill": "$fg",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "When you walk out of a ranked game, the server keeps how often you have done so this season, and until when ranked stays closed for you. The ladder shows neither.",
                       "lineHeight": 1.55,
                       "fontFamily": "$f-ui",
                       "fontSize": 16,
@@ -82234,6 +82258,18 @@
                       "fontFamily": "$f-ui",
                       "fontSize": 17,
                       "fontWeight": "700"
+                    },
+                    {
+                      "type": "text",
+                      "id": "LhyjY",
+                      "fill": "$fg",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "When you walk out of a ranked game, the server keeps how often you have done so this season, and until when ranked stays closed for you. The ladder shows neither.",
+                      "lineHeight": 1.55,
+                      "fontFamily": "$f-ui",
+                      "fontSize": 17,
+                      "fontWeight": "700"
                     }
                   ]
                 },
@@ -82717,6 +82753,18 @@
                       "textGrowth": "fixed-width",
                       "width": "fill_container",
                       "content": "A game played on the server is stored with its deals and its moves in order, so that it can be replayed exactly. Your results, your stats and your rating come from those games. Your finished games are listed on your profile, and only the players who sat in a game can open its record.",
+                      "lineHeight": 1.55,
+                      "fontFamily": "$f-ui",
+                      "fontSize": 16,
+                      "fontWeight": "700"
+                    },
+                    {
+                      "type": "text",
+                      "id": "TiTHn",
+                      "fill": "$fg",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "When you walk out of a ranked game, the server keeps how often you have done so this season, and until when ranked stays closed for you. The ladder shows neither.",
                       "lineHeight": 1.55,
                       "fontFamily": "$f-ui",
                       "fontSize": 16,
