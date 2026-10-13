@@ -20,6 +20,12 @@ import { describeSettings, MAX_SEATS } from './settings';
 
 /** How long the queue's last picture stands once the server has started a game with bots in it. */
 export const BOARDING_MS = 600;
+/**
+ * The server writes `fillsAt` afresh into every message, off its own clock of the moment, and two
+ * of them can be a fifth of a second apart for the same wait. A time this close to the one already
+ * drawn is that one: the ring and the coin are not read off the clock again for it.
+ */
+const SAME_WAIT_MS = 500;
 
 type Vars = CSSProperties & Record<`--${string}`, string | number>;
 
@@ -83,8 +89,11 @@ export function QueueScreen({ online, queue, live, rules, boarded }: QueueScreen
   // The seats that were taken when the screen went up are simply there. One that fills later pops.
   const [first] = useState(found);
   // The wait is drawn for quick play, while the server is heard and has said when the bots come.
-  const timed = !ranked && queue.fillsAt != null,
-    fillsAt = timed && live && !boarded ? (queue.fillsAt ?? null) : null,
+  const named = ranked ? null : (queue.fillsAt ?? null);
+  const [wait, setWait] = useState(named);
+  if (named == null ? wait != null : wait == null || Math.abs(named - wait) > SAME_WAIT_MS) setWait(named);
+  const timed = wait != null,
+    fillsAt = live && !boarded ? wait : null,
     seconds = useSecondsLeft(online, fillsAt ?? 0);
   const sat = boarded?.slice(0, MAX_SEATS),
     bots = sat?.filter(Boolean).length ?? 0;

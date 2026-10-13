@@ -43,5 +43,8 @@ Playwright's own once: `npx playwright-core install chromium`.
 - `empty-seat.e2e.ts`: three guests at a table. One stays away for two turns: the others see
   the seat marked OUT and play on, and the one who went is told once that the seat is lost.
   `SKT_E2E_SHOTS=<folder>` writes a picture of both.
+- `quick-play.e2e.ts`: two guests in the casual queue, the second one four seconds late. Both are
+  told the same `fillsAt`, the late page opens on what is left of the wait, the first page's rings
+  run on, and when the time has come both show the bots sitting down and then the table.
 - `pwa.e2e.ts`: the built page as an installed app. It builds the page, serves it with `vp preview`
   in front of the mock host, and takes both away: the page must still open and deal a game.

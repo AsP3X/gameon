@@ -719,7 +719,7 @@ describe('the quick-play wait, frame by frame', () => {
   });
 
   it('opens on the time that is left for a player who arrives late, not on a fresh ten seconds', async () => {
-    const { online } = await wired(waiting(2, { fillsAt: Date.now() + 5400 }));
+    const { online, say } = await wired(waiting(2, { fillsAt: Date.now() + 5400 }));
     expect($('#online .searching [role="status"]')?.textContent).toBe('2 of 4 found');
     // 4.6 of the ten seconds are gone: the ring is that far closed, and has 5.4 seconds to go.
     expect(ring()).toEqual(['54.0 5400ms 6', '54.0 5400ms 6']);
@@ -727,6 +727,20 @@ describe('the quick-play wait, frame by frame', () => {
     // Nothing flips in on the first picture, and nobody popped into a seat.
     expect($('#online .queue-coin .coin')?.className).toBe('coin');
     expect(document.querySelectorAll('#online .queue-seat.pop')).toHaveLength(0);
+
+    // The server writes the time anew into every message, up to a fifth of a second off. That is
+    // the same wait: the rings that are running stay, and are not read off the clock again.
+    const running = Array.from(document.querySelectorAll('#online .queue-ring'));
+    await settle(2000);
+    for (const off of [1, 200, -150]) {
+      await say({ t: 'queue.status', queue: waiting(2, { fillsAt: Date.now() + 3400 + off }) });
+      expect(Array.from(document.querySelectorAll('#online .queue-ring'))).toEqual(running);
+      expect(ring()).toEqual(['54.0 5400ms 6', '54.0 5400ms 6']);
+    }
+    // A time that is really another one is drawn from where the clock is then.
+    await say({ t: 'queue.status', queue: waiting(2, { fillsAt: Date.now() + 9000 }) });
+    expect(ring()).toEqual(['90.0 9000ms 9', '90.0 9000ms 9']);
+    expect($('#online .queue-coin .now')?.textContent).toBe('9');
     online.dispose();
   });
 
