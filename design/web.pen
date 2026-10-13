@@ -158699,21 +158699,42 @@
                         },
                         {
                           "type": "frame",
-                          "id": "V0bCYW",
-                          "name": "Seat · open",
+                          "id": "B7HBm",
+                          "name": "Seat · open · ring 40%",
                           "width": 44,
                           "height": 44,
-                          "cornerRadius": 50,
-                          "stroke": "$line",
-                          "strokeWidth": 2,
-                          "strokeAlignment": "inner",
                           "justifyContent": "center",
                           "alignItems": "center",
                           "children": [
                             {
+                              "type": "ellipse",
+                              "id": "xK8Y8",
+                              "layoutPosition": "absolute",
+                              "x": 0,
+                              "y": 0,
+                              "name": "Ring track",
+                              "innerRadius": 0.82,
+                              "fill": "$line",
+                              "width": 44,
+                              "height": 44
+                            },
+                            {
+                              "type": "ellipse",
+                              "id": "TZtxq",
+                              "layoutPosition": "absolute",
+                              "x": 0,
+                              "y": 0,
+                              "name": "Ring",
+                              "innerRadius": 0.82,
+                              "startAngle": 90,
+                              "sweepAngle": -144,
+                              "fill": "$blue",
+                              "width": 44,
+                              "height": 44
+                            },
+                            {
                               "type": "text",
-                              "id": "onTze",
-                              "name": "?",
+                              "id": "GNz6T",
                               "fill": "$faint",
                               "content": "?",
                               "lineHeight": 1.4,
@@ -158725,21 +158746,42 @@
                         },
                         {
                           "type": "frame",
-                          "id": "h6izzj",
-                          "name": "Seat · open",
+                          "id": "LQ526",
+                          "name": "Seat · open · ring 40%",
                           "width": 44,
                           "height": 44,
-                          "cornerRadius": 50,
-                          "stroke": "$line",
-                          "strokeWidth": 2,
-                          "strokeAlignment": "inner",
                           "justifyContent": "center",
                           "alignItems": "center",
                           "children": [
                             {
+                              "type": "ellipse",
+                              "id": "ZZxr0",
+                              "layoutPosition": "absolute",
+                              "x": 0,
+                              "y": 0,
+                              "name": "Ring track",
+                              "innerRadius": 0.82,
+                              "fill": "$line",
+                              "width": 44,
+                              "height": 44
+                            },
+                            {
+                              "type": "ellipse",
+                              "id": "l1KBFt",
+                              "layoutPosition": "absolute",
+                              "x": 0,
+                              "y": 0,
+                              "name": "Ring",
+                              "innerRadius": 0.82,
+                              "startAngle": 90,
+                              "sweepAngle": -144,
+                              "fill": "$blue",
+                              "width": 44,
+                              "height": 44
+                            },
+                            {
                               "type": "text",
-                              "id": "y1sge1",
-                              "name": "?",
+                              "id": "GfTR9",
                               "fill": "$faint",
                               "content": "?",
                               "lineHeight": 1.4,
@@ -158748,6 +158790,40 @@
                               "fontWeight": "900"
                             }
                           ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "ycwf6",
+                      "name": "Coin · 6",
+                      "width": 40,
+                      "height": 40,
+                      "fill": "$gold",
+                      "cornerRadius": 40,
+                      "stroke": "$gold-d",
+                      "strokeWidth": {
+                        "bottom": 4
+                      },
+                      "strokeAlignment": "inner",
+                      "padding": [
+                        0,
+                        0,
+                        3,
+                        0
+                      ],
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "oZTk3",
+                          "fill": "$gold-ink",
+                          "content": "6",
+                          "lineHeight": 1,
+                          "fontFamily": "$f-ui",
+                          "fontSize": 18,
+                          "fontWeight": "900"
                         }
                       ]
                     },
@@ -158868,7 +158944,7 @@
                   "fill": "$muted",
                   "textGrowth": "fixed-width",
                   "width": "fill_container",
-                  "content": "The game starts by itself when the table is full. Open seats are filled with bots.",
+                  "content": "Bots take the open seats when the ring closes. With four pirates the game starts at once.",
                   "lineHeight": 1.4,
                   "fontFamily": "$f-ui",
                   "fontSize": 14,
@@ -159071,21 +159147,42 @@
                         },
                         {
                           "type": "frame",
-                          "id": "aXxGu",
-                          "name": "Seat · open",
+                          "id": "r5Eb5",
+                          "name": "Seat · open · ring 40%",
                           "width": 44,
                           "height": 44,
-                          "cornerRadius": 50,
-                          "stroke": "$line",
-                          "strokeWidth": 2,
-                          "strokeAlignment": "inner",
                           "justifyContent": "center",
                           "alignItems": "center",
                           "children": [
                             {
+                              "type": "ellipse",
+                              "id": "lh6ag",
+                              "layoutPosition": "absolute",
+                              "x": 0,
+                              "y": 0,
+                              "name": "Ring track",
+                              "innerRadius": 0.82,
+                              "fill": "$line",
+                              "width": 44,
+                              "height": 44
+                            },
+                            {
+                              "type": "ellipse",
+                              "id": "aVcAR",
+                              "layoutPosition": "absolute",
+                              "x": 0,
+                              "y": 0,
+                              "name": "Ring",
+                              "innerRadius": 0.82,
+                              "startAngle": 90,
+                              "sweepAngle": -144,
+                              "fill": "$blue",
+                              "width": 44,
+                              "height": 44
+                            },
+                            {
                               "type": "text",
-                              "id": "HmZ9O",
-                              "name": "?",
+                              "id": "BgHlY",
                               "fill": "$faint",
                               "content": "?",
                               "lineHeight": 1.4,
@@ -159097,21 +159194,42 @@
                         },
                         {
                           "type": "frame",
-                          "id": "kx3hO",
-                          "name": "Seat · open",
+                          "id": "j0oA6",
+                          "name": "Seat · open · ring 40%",
                           "width": 44,
                           "height": 44,
-                          "cornerRadius": 50,
-                          "stroke": "$line",
-                          "strokeWidth": 2,
-                          "strokeAlignment": "inner",
                           "justifyContent": "center",
                           "alignItems": "center",
                           "children": [
                             {
+                              "type": "ellipse",
+                              "id": "QSSmZ",
+                              "layoutPosition": "absolute",
+                              "x": 0,
+                              "y": 0,
+                              "name": "Ring track",
+                              "innerRadius": 0.82,
+                              "fill": "$line",
+                              "width": 44,
+                              "height": 44
+                            },
+                            {
+                              "type": "ellipse",
+                              "id": "nGuDU",
+                              "layoutPosition": "absolute",
+                              "x": 0,
+                              "y": 0,
+                              "name": "Ring",
+                              "innerRadius": 0.82,
+                              "startAngle": 90,
+                              "sweepAngle": -144,
+                              "fill": "$blue",
+                              "width": 44,
+                              "height": 44
+                            },
+                            {
                               "type": "text",
-                              "id": "RJPgw",
-                              "name": "?",
+                              "id": "SIECV",
                               "fill": "$faint",
                               "content": "?",
                               "lineHeight": 1.4,
@@ -159120,6 +159238,40 @@
                               "fontWeight": "900"
                             }
                           ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "dGZr9",
+                      "name": "Coin · 6",
+                      "width": 40,
+                      "height": 40,
+                      "fill": "$gold",
+                      "cornerRadius": 40,
+                      "stroke": "$gold-d",
+                      "strokeWidth": {
+                        "bottom": 4
+                      },
+                      "strokeAlignment": "inner",
+                      "padding": [
+                        0,
+                        0,
+                        3,
+                        0
+                      ],
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "P7ZSS8",
+                          "fill": "$gold-ink",
+                          "content": "6",
+                          "lineHeight": 1,
+                          "fontFamily": "$f-ui",
+                          "fontSize": 18,
+                          "fontWeight": "900"
                         }
                       ]
                     },
@@ -159240,7 +159392,7 @@
                   "fill": "$muted",
                   "textGrowth": "fixed-width",
                   "width": "fill_container",
-                  "content": "The game starts by itself when the table is full. Open seats are filled with bots.",
+                  "content": "Bots take the open seats when the ring closes. With four pirates the game starts at once.",
                   "lineHeight": 1.4,
                   "fontFamily": "$f-ui",
                   "fontSize": 14,
@@ -160727,6 +160879,662 @@
               ]
             }
           ]
+        },
+        {
+          "type": "frame",
+          "id": "E8vwM",
+          "name": "State · Quick play · the ring is closed",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 8,
+          "children": [
+            {
+              "type": "text",
+              "id": "hRc9Q",
+              "fill": "$faint",
+              "content": "QUICK PLAY · THE RING IS CLOSED",
+              "lineHeight": 1.4,
+              "fontFamily": "$f-ui",
+              "fontSize": 11,
+              "fontWeight": "800",
+              "letterSpacing": 0.88
+            },
+            {
+              "type": "frame",
+              "id": "ca662",
+              "name": "Search",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 10,
+              "padding": [
+                4,
+                0,
+                0,
+                0
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "wH3Jc",
+                  "name": "Seats",
+                  "gap": 10,
+                  "padding": [
+                    0,
+                    0,
+                    6,
+                    0
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "N8NWe",
+                      "name": "Seat · found",
+                      "width": 44,
+                      "height": 44,
+                      "fill": "$green",
+                      "cornerRadius": 50,
+                      "stroke": "#0000002e",
+                      "strokeWidth": {
+                        "bottom": 3
+                      },
+                      "strokeAlignment": "inner",
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "pdPCc",
+                          "width": 22,
+                          "height": 22,
+                          "icon": "check",
+                          "library": "lucide",
+                          "fill": "$white"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "M67Hs",
+                      "name": "Seat · found",
+                      "width": 44,
+                      "height": 44,
+                      "fill": "$green",
+                      "cornerRadius": 50,
+                      "stroke": "#0000002e",
+                      "strokeWidth": {
+                        "bottom": 3
+                      },
+                      "strokeAlignment": "inner",
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "HZXOD",
+                          "width": 22,
+                          "height": 22,
+                          "icon": "check",
+                          "library": "lucide",
+                          "fill": "$white"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "DMtAu",
+                      "name": "Seat · open · ring 100%",
+                      "width": 44,
+                      "height": 44,
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "ellipse",
+                          "id": "k46sgv",
+                          "layoutPosition": "absolute",
+                          "x": 0,
+                          "y": 0,
+                          "name": "Ring track",
+                          "innerRadius": 0.82,
+                          "fill": "$line",
+                          "width": 44,
+                          "height": 44
+                        },
+                        {
+                          "type": "ellipse",
+                          "id": "S7ZnQH",
+                          "layoutPosition": "absolute",
+                          "x": 0,
+                          "y": 0,
+                          "name": "Ring",
+                          "innerRadius": 0.82,
+                          "startAngle": 90,
+                          "fill": "$blue",
+                          "width": 44,
+                          "height": 44
+                        },
+                        {
+                          "type": "text",
+                          "id": "f7WZW",
+                          "fill": "$faint",
+                          "content": "?",
+                          "lineHeight": 1.4,
+                          "fontFamily": "$f-ui",
+                          "fontSize": 16,
+                          "fontWeight": "900"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "WJczh",
+                      "name": "Seat · open · ring 100%",
+                      "width": 44,
+                      "height": 44,
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "ellipse",
+                          "id": "m9S53",
+                          "layoutPosition": "absolute",
+                          "x": 0,
+                          "y": 0,
+                          "name": "Ring track",
+                          "innerRadius": 0.82,
+                          "fill": "$line",
+                          "width": 44,
+                          "height": 44
+                        },
+                        {
+                          "type": "ellipse",
+                          "id": "aH3NY",
+                          "layoutPosition": "absolute",
+                          "x": 0,
+                          "y": 0,
+                          "name": "Ring",
+                          "innerRadius": 0.82,
+                          "startAngle": 90,
+                          "fill": "$blue",
+                          "width": 44,
+                          "height": 44
+                        },
+                        {
+                          "type": "text",
+                          "id": "UUrhc",
+                          "fill": "$faint",
+                          "content": "?",
+                          "lineHeight": 1.4,
+                          "fontFamily": "$f-ui",
+                          "fontSize": 16,
+                          "fontWeight": "900"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "H00FYV",
+                  "name": "Coin · 0",
+                  "width": 40,
+                  "height": 40,
+                  "fill": "$gold",
+                  "cornerRadius": 40,
+                  "stroke": "$gold-d",
+                  "strokeWidth": {
+                    "bottom": 4
+                  },
+                  "strokeAlignment": "inner",
+                  "padding": [
+                    0,
+                    0,
+                    3,
+                    0
+                  ],
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "P7e5ti",
+                      "fill": "$gold-ink",
+                      "content": "0",
+                      "lineHeight": 1,
+                      "fontFamily": "$f-ui",
+                      "fontSize": 18,
+                      "fontWeight": "900"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "fpj5F",
+                  "fill": "$fg",
+                  "content": "Setting the table…",
+                  "lineHeight": 1.4,
+                  "fontFamily": "$f-ui",
+                  "fontSize": 20,
+                  "fontWeight": "900"
+                },
+                {
+                  "type": "text",
+                  "id": "Sdq14",
+                  "fill": "$muted",
+                  "content": "2 of 4 found",
+                  "lineHeight": 1.4,
+                  "fontFamily": "$f-ui",
+                  "fontSize": 14,
+                  "fontWeight": "700"
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "id": "SXkNJ",
+              "fill": "$muted",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "The time the server named has come. The page waits for the server to start the game.",
+              "lineHeight": 1.4,
+              "fontFamily": "$f-ui",
+              "fontSize": 14,
+              "fontWeight": "700"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "VGEH5",
+          "name": "State · Quick play · the bots sit down",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 8,
+          "children": [
+            {
+              "type": "text",
+              "id": "RIfMl",
+              "fill": "$faint",
+              "content": "QUICK PLAY · THE BOTS SIT DOWN",
+              "lineHeight": 1.4,
+              "fontFamily": "$f-ui",
+              "fontSize": 11,
+              "fontWeight": "800",
+              "letterSpacing": 0.88
+            },
+            {
+              "type": "frame",
+              "id": "pFx5T",
+              "name": "Search",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 10,
+              "padding": [
+                4,
+                0,
+                0,
+                0
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "o9vsuC",
+                  "name": "Seats",
+                  "gap": 10,
+                  "padding": [
+                    0,
+                    0,
+                    6,
+                    0
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "N4M6j",
+                      "name": "Seat · found",
+                      "width": 44,
+                      "height": 44,
+                      "fill": "$green",
+                      "cornerRadius": 50,
+                      "stroke": "#0000002e",
+                      "strokeWidth": {
+                        "bottom": 3
+                      },
+                      "strokeAlignment": "inner",
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "x7kPcc",
+                          "width": 22,
+                          "height": 22,
+                          "icon": "check",
+                          "library": "lucide",
+                          "fill": "$white"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "oRJzD",
+                      "name": "Seat · found",
+                      "width": 44,
+                      "height": 44,
+                      "fill": "$green",
+                      "cornerRadius": 50,
+                      "stroke": "#0000002e",
+                      "strokeWidth": {
+                        "bottom": 3
+                      },
+                      "strokeAlignment": "inner",
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "DEcjm",
+                          "width": 22,
+                          "height": 22,
+                          "icon": "check",
+                          "library": "lucide",
+                          "fill": "$white"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "oaxtE",
+                      "name": "Seat · bot",
+                      "width": 44,
+                      "height": 44,
+                      "fill": "$blue",
+                      "cornerRadius": 50,
+                      "stroke": "#0000002e",
+                      "strokeWidth": {
+                        "bottom": 3
+                      },
+                      "strokeAlignment": "inner",
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "Sh04P",
+                          "width": 22,
+                          "height": 22,
+                          "icon": "bot",
+                          "library": "lucide",
+                          "fill": "$white"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "bemXm",
+                      "name": "Seat · bot",
+                      "width": 44,
+                      "height": 44,
+                      "fill": "$blue",
+                      "cornerRadius": 50,
+                      "stroke": "#0000002e",
+                      "strokeWidth": {
+                        "bottom": 3
+                      },
+                      "strokeAlignment": "inner",
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "jCkZo",
+                          "width": 22,
+                          "height": 22,
+                          "icon": "bot",
+                          "library": "lucide",
+                          "fill": "$white"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "SDDfa",
+                  "name": "Coin slot · the coin has left",
+                  "width": 40,
+                  "height": 40
+                },
+                {
+                  "type": "text",
+                  "id": "t1Eao",
+                  "fill": "$fg",
+                  "content": "All aboard!",
+                  "lineHeight": 1.4,
+                  "fontFamily": "$f-ui",
+                  "fontSize": 20,
+                  "fontWeight": "900"
+                },
+                {
+                  "type": "text",
+                  "id": "OYxGo",
+                  "fill": "$muted",
+                  "content": "2 pirates, 2 bots",
+                  "lineHeight": 1.4,
+                  "fontFamily": "$f-ui",
+                  "fontSize": 14,
+                  "fontWeight": "700"
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "id": "q1cdvG",
+              "fill": "$muted",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "The server started the game. This stands for 600 ms, then the table opens. Leave the queue is off.",
+              "lineHeight": 1.4,
+              "fontFamily": "$f-ui",
+              "fontSize": 14,
+              "fontWeight": "700"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "tOLBv",
+          "name": "State · Quick play · no time named",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 8,
+          "children": [
+            {
+              "type": "text",
+              "id": "vyDEY",
+              "fill": "$faint",
+              "content": "QUICK PLAY · NO TIME NAMED",
+              "lineHeight": 1.4,
+              "fontFamily": "$f-ui",
+              "fontSize": 11,
+              "fontWeight": "800",
+              "letterSpacing": 0.88
+            },
+            {
+              "type": "frame",
+              "id": "KiPjS",
+              "name": "Search",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 10,
+              "padding": [
+                4,
+                0,
+                0,
+                0
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "dYSsf",
+                  "name": "Seats",
+                  "gap": 10,
+                  "padding": [
+                    0,
+                    0,
+                    6,
+                    0
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "YgHke",
+                      "name": "Seat · found",
+                      "width": 44,
+                      "height": 44,
+                      "fill": "$green",
+                      "cornerRadius": 50,
+                      "stroke": "#0000002e",
+                      "strokeWidth": {
+                        "bottom": 3
+                      },
+                      "strokeAlignment": "inner",
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "TX1D7",
+                          "width": 22,
+                          "height": 22,
+                          "icon": "check",
+                          "library": "lucide",
+                          "fill": "$white"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "J4wG9",
+                      "name": "Seat · found",
+                      "width": 44,
+                      "height": 44,
+                      "fill": "$green",
+                      "cornerRadius": 50,
+                      "stroke": "#0000002e",
+                      "strokeWidth": {
+                        "bottom": 3
+                      },
+                      "strokeAlignment": "inner",
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "wFMxY",
+                          "width": 22,
+                          "height": 22,
+                          "icon": "check",
+                          "library": "lucide",
+                          "fill": "$white"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "R9yUtP",
+                      "name": "Seat · found",
+                      "width": 44,
+                      "height": 44,
+                      "fill": "$green",
+                      "cornerRadius": 50,
+                      "stroke": "#0000002e",
+                      "strokeWidth": {
+                        "bottom": 3
+                      },
+                      "strokeAlignment": "inner",
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "Z90wV5",
+                          "width": 22,
+                          "height": 22,
+                          "icon": "check",
+                          "library": "lucide",
+                          "fill": "$white"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "FO69v",
+                      "name": "Seat · open",
+                      "width": 44,
+                      "height": 44,
+                      "cornerRadius": 50,
+                      "stroke": "$line",
+                      "strokeWidth": 2,
+                      "strokeAlignment": "inner",
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "E86bbB",
+                          "fill": "$faint",
+                          "content": "?",
+                          "lineHeight": 1.4,
+                          "fontFamily": "$f-ui",
+                          "fontSize": 16,
+                          "fontWeight": "900"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "V91HN",
+                  "fill": "$fg",
+                  "content": "Looking for pirates…",
+                  "lineHeight": 1.4,
+                  "fontFamily": "$f-ui",
+                  "fontSize": 20,
+                  "fontWeight": "900"
+                },
+                {
+                  "type": "text",
+                  "id": "Igo6R",
+                  "fill": "$muted",
+                  "content": "3 of 4 found",
+                  "lineHeight": 1.4,
+                  "fontFamily": "$f-ui",
+                  "fontSize": 14,
+                  "fontWeight": "700"
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "id": "jGQYR",
+              "fill": "$muted",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "The game starts by itself when the table is full. Open seats are filled with bots.",
+              "lineHeight": 1.4,
+              "fontFamily": "$f-ui",
+              "fontSize": 14,
+              "fontWeight": "700"
+            }
+          ]
         }
       ]
     },
@@ -161228,6 +162036,662 @@
                   "fontWeight": "700"
                 }
               ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "xfmrk",
+          "name": "State · Quick play · the ring is closed",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 8,
+          "children": [
+            {
+              "type": "text",
+              "id": "f0eiiS",
+              "fill": "$faint",
+              "content": "QUICK PLAY · THE RING IS CLOSED",
+              "lineHeight": 1.4,
+              "fontFamily": "$f-ui",
+              "fontSize": 11,
+              "fontWeight": "800",
+              "letterSpacing": 0.88
+            },
+            {
+              "type": "frame",
+              "id": "pe7TI",
+              "name": "Search",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 10,
+              "padding": [
+                4,
+                0,
+                0,
+                0
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "BNKEr",
+                  "name": "Seats",
+                  "gap": 10,
+                  "padding": [
+                    0,
+                    0,
+                    6,
+                    0
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "Zq8VK",
+                      "name": "Seat · found",
+                      "width": 44,
+                      "height": 44,
+                      "fill": "$green",
+                      "cornerRadius": 50,
+                      "stroke": "#0000002e",
+                      "strokeWidth": {
+                        "bottom": 3
+                      },
+                      "strokeAlignment": "inner",
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "B012ZS",
+                          "width": 22,
+                          "height": 22,
+                          "icon": "check",
+                          "library": "lucide",
+                          "fill": "$white"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "G43kx8",
+                      "name": "Seat · found",
+                      "width": 44,
+                      "height": 44,
+                      "fill": "$green",
+                      "cornerRadius": 50,
+                      "stroke": "#0000002e",
+                      "strokeWidth": {
+                        "bottom": 3
+                      },
+                      "strokeAlignment": "inner",
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "NfHCX",
+                          "width": 22,
+                          "height": 22,
+                          "icon": "check",
+                          "library": "lucide",
+                          "fill": "$white"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "uW6He",
+                      "name": "Seat · open · ring 100%",
+                      "width": 44,
+                      "height": 44,
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "ellipse",
+                          "id": "RmWzY",
+                          "layoutPosition": "absolute",
+                          "x": 0,
+                          "y": 0,
+                          "name": "Ring track",
+                          "innerRadius": 0.82,
+                          "fill": "$line",
+                          "width": 44,
+                          "height": 44
+                        },
+                        {
+                          "type": "ellipse",
+                          "id": "XD2ta",
+                          "layoutPosition": "absolute",
+                          "x": 0,
+                          "y": 0,
+                          "name": "Ring",
+                          "innerRadius": 0.82,
+                          "startAngle": 90,
+                          "fill": "$blue",
+                          "width": 44,
+                          "height": 44
+                        },
+                        {
+                          "type": "text",
+                          "id": "o0rDp",
+                          "fill": "$faint",
+                          "content": "?",
+                          "lineHeight": 1.4,
+                          "fontFamily": "$f-ui",
+                          "fontSize": 16,
+                          "fontWeight": "900"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "W8A9z",
+                      "name": "Seat · open · ring 100%",
+                      "width": 44,
+                      "height": 44,
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "ellipse",
+                          "id": "ct1Iz",
+                          "layoutPosition": "absolute",
+                          "x": 0,
+                          "y": 0,
+                          "name": "Ring track",
+                          "innerRadius": 0.82,
+                          "fill": "$line",
+                          "width": 44,
+                          "height": 44
+                        },
+                        {
+                          "type": "ellipse",
+                          "id": "hGd0Z",
+                          "layoutPosition": "absolute",
+                          "x": 0,
+                          "y": 0,
+                          "name": "Ring",
+                          "innerRadius": 0.82,
+                          "startAngle": 90,
+                          "fill": "$blue",
+                          "width": 44,
+                          "height": 44
+                        },
+                        {
+                          "type": "text",
+                          "id": "xqBHA",
+                          "fill": "$faint",
+                          "content": "?",
+                          "lineHeight": 1.4,
+                          "fontFamily": "$f-ui",
+                          "fontSize": 16,
+                          "fontWeight": "900"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "z6oyPf",
+                  "name": "Coin · 0",
+                  "width": 40,
+                  "height": 40,
+                  "fill": "$gold",
+                  "cornerRadius": 40,
+                  "stroke": "$gold-d",
+                  "strokeWidth": {
+                    "bottom": 4
+                  },
+                  "strokeAlignment": "inner",
+                  "padding": [
+                    0,
+                    0,
+                    3,
+                    0
+                  ],
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "NBLzV",
+                      "fill": "$gold-ink",
+                      "content": "0",
+                      "lineHeight": 1,
+                      "fontFamily": "$f-ui",
+                      "fontSize": 18,
+                      "fontWeight": "900"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "nB4mq",
+                  "fill": "$fg",
+                  "content": "Setting the table…",
+                  "lineHeight": 1.4,
+                  "fontFamily": "$f-ui",
+                  "fontSize": 20,
+                  "fontWeight": "900"
+                },
+                {
+                  "type": "text",
+                  "id": "tBbev",
+                  "fill": "$muted",
+                  "content": "2 of 4 found",
+                  "lineHeight": 1.4,
+                  "fontFamily": "$f-ui",
+                  "fontSize": 14,
+                  "fontWeight": "700"
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "id": "UaahZ",
+              "fill": "$muted",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "The time the server named has come. The page waits for the server to start the game.",
+              "lineHeight": 1.4,
+              "fontFamily": "$f-ui",
+              "fontSize": 14,
+              "fontWeight": "700"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "HgpvJ",
+          "name": "State · Quick play · the bots sit down",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 8,
+          "children": [
+            {
+              "type": "text",
+              "id": "o8dmZ",
+              "fill": "$faint",
+              "content": "QUICK PLAY · THE BOTS SIT DOWN",
+              "lineHeight": 1.4,
+              "fontFamily": "$f-ui",
+              "fontSize": 11,
+              "fontWeight": "800",
+              "letterSpacing": 0.88
+            },
+            {
+              "type": "frame",
+              "id": "LGMX0",
+              "name": "Search",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 10,
+              "padding": [
+                4,
+                0,
+                0,
+                0
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "inbNv",
+                  "name": "Seats",
+                  "gap": 10,
+                  "padding": [
+                    0,
+                    0,
+                    6,
+                    0
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "c7sOKo",
+                      "name": "Seat · found",
+                      "width": 44,
+                      "height": 44,
+                      "fill": "$green",
+                      "cornerRadius": 50,
+                      "stroke": "#0000002e",
+                      "strokeWidth": {
+                        "bottom": 3
+                      },
+                      "strokeAlignment": "inner",
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "xuWXU",
+                          "width": 22,
+                          "height": 22,
+                          "icon": "check",
+                          "library": "lucide",
+                          "fill": "$white"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "HrPei",
+                      "name": "Seat · found",
+                      "width": 44,
+                      "height": 44,
+                      "fill": "$green",
+                      "cornerRadius": 50,
+                      "stroke": "#0000002e",
+                      "strokeWidth": {
+                        "bottom": 3
+                      },
+                      "strokeAlignment": "inner",
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "cqr0r",
+                          "width": 22,
+                          "height": 22,
+                          "icon": "check",
+                          "library": "lucide",
+                          "fill": "$white"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "sDHYH",
+                      "name": "Seat · bot",
+                      "width": 44,
+                      "height": 44,
+                      "fill": "$blue",
+                      "cornerRadius": 50,
+                      "stroke": "#0000002e",
+                      "strokeWidth": {
+                        "bottom": 3
+                      },
+                      "strokeAlignment": "inner",
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "oKo2A",
+                          "width": 22,
+                          "height": 22,
+                          "icon": "bot",
+                          "library": "lucide",
+                          "fill": "$white"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "bmBlO",
+                      "name": "Seat · bot",
+                      "width": 44,
+                      "height": 44,
+                      "fill": "$blue",
+                      "cornerRadius": 50,
+                      "stroke": "#0000002e",
+                      "strokeWidth": {
+                        "bottom": 3
+                      },
+                      "strokeAlignment": "inner",
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "cSHjp",
+                          "width": 22,
+                          "height": 22,
+                          "icon": "bot",
+                          "library": "lucide",
+                          "fill": "$white"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "tS6iK",
+                  "name": "Coin slot · the coin has left",
+                  "width": 40,
+                  "height": 40
+                },
+                {
+                  "type": "text",
+                  "id": "z18Swv",
+                  "fill": "$fg",
+                  "content": "All aboard!",
+                  "lineHeight": 1.4,
+                  "fontFamily": "$f-ui",
+                  "fontSize": 20,
+                  "fontWeight": "900"
+                },
+                {
+                  "type": "text",
+                  "id": "OHJuP",
+                  "fill": "$muted",
+                  "content": "2 pirates, 2 bots",
+                  "lineHeight": 1.4,
+                  "fontFamily": "$f-ui",
+                  "fontSize": 14,
+                  "fontWeight": "700"
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "id": "zor6j",
+              "fill": "$muted",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "The server started the game. This stands for 600 ms, then the table opens. Leave the queue is off.",
+              "lineHeight": 1.4,
+              "fontFamily": "$f-ui",
+              "fontSize": 14,
+              "fontWeight": "700"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "UHTvw",
+          "name": "State · Quick play · no time named",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 8,
+          "children": [
+            {
+              "type": "text",
+              "id": "fuFLF",
+              "fill": "$faint",
+              "content": "QUICK PLAY · NO TIME NAMED",
+              "lineHeight": 1.4,
+              "fontFamily": "$f-ui",
+              "fontSize": 11,
+              "fontWeight": "800",
+              "letterSpacing": 0.88
+            },
+            {
+              "type": "frame",
+              "id": "o2i7ue",
+              "name": "Search",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 10,
+              "padding": [
+                4,
+                0,
+                0,
+                0
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "JI43P",
+                  "name": "Seats",
+                  "gap": 10,
+                  "padding": [
+                    0,
+                    0,
+                    6,
+                    0
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "a4B54Y",
+                      "name": "Seat · found",
+                      "width": 44,
+                      "height": 44,
+                      "fill": "$green",
+                      "cornerRadius": 50,
+                      "stroke": "#0000002e",
+                      "strokeWidth": {
+                        "bottom": 3
+                      },
+                      "strokeAlignment": "inner",
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "cA4Ra",
+                          "width": 22,
+                          "height": 22,
+                          "icon": "check",
+                          "library": "lucide",
+                          "fill": "$white"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "P9AvDy",
+                      "name": "Seat · found",
+                      "width": 44,
+                      "height": 44,
+                      "fill": "$green",
+                      "cornerRadius": 50,
+                      "stroke": "#0000002e",
+                      "strokeWidth": {
+                        "bottom": 3
+                      },
+                      "strokeAlignment": "inner",
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "gc3T1",
+                          "width": 22,
+                          "height": 22,
+                          "icon": "check",
+                          "library": "lucide",
+                          "fill": "$white"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "A72Xg",
+                      "name": "Seat · found",
+                      "width": 44,
+                      "height": 44,
+                      "fill": "$green",
+                      "cornerRadius": 50,
+                      "stroke": "#0000002e",
+                      "strokeWidth": {
+                        "bottom": 3
+                      },
+                      "strokeAlignment": "inner",
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "oIGJj",
+                          "width": 22,
+                          "height": 22,
+                          "icon": "check",
+                          "library": "lucide",
+                          "fill": "$white"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "c7pCOC",
+                      "name": "Seat · open",
+                      "width": 44,
+                      "height": 44,
+                      "cornerRadius": 50,
+                      "stroke": "$line",
+                      "strokeWidth": 2,
+                      "strokeAlignment": "inner",
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "JuNX5",
+                          "fill": "$faint",
+                          "content": "?",
+                          "lineHeight": 1.4,
+                          "fontFamily": "$f-ui",
+                          "fontSize": 16,
+                          "fontWeight": "900"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "w9nnV",
+                  "fill": "$fg",
+                  "content": "Looking for pirates…",
+                  "lineHeight": 1.4,
+                  "fontFamily": "$f-ui",
+                  "fontSize": 20,
+                  "fontWeight": "900"
+                },
+                {
+                  "type": "text",
+                  "id": "TBwfH",
+                  "fill": "$muted",
+                  "content": "3 of 4 found",
+                  "lineHeight": 1.4,
+                  "fontFamily": "$f-ui",
+                  "fontSize": 14,
+                  "fontWeight": "700"
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "id": "k5CopU",
+              "fill": "$muted",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "The game starts by itself when the table is full. Open seats are filled with bots.",
+              "lineHeight": 1.4,
+              "fontFamily": "$f-ui",
+              "fontSize": 14,
+              "fontWeight": "700"
             }
           ]
         }
@@ -448018,21 +449482,42 @@
                         },
                         {
                           "type": "frame",
-                          "id": "Fgwc9",
-                          "name": "Seat · open",
+                          "id": "zZotu",
+                          "name": "Seat · open · ring 40%",
                           "width": 44,
                           "height": 44,
-                          "cornerRadius": 50,
-                          "stroke": "$line",
-                          "strokeWidth": 2,
-                          "strokeAlignment": "inner",
                           "justifyContent": "center",
                           "alignItems": "center",
                           "children": [
                             {
+                              "type": "ellipse",
+                              "id": "y7VwS5",
+                              "layoutPosition": "absolute",
+                              "x": 0,
+                              "y": 0,
+                              "name": "Ring track",
+                              "innerRadius": 0.82,
+                              "fill": "$line",
+                              "width": 44,
+                              "height": 44
+                            },
+                            {
+                              "type": "ellipse",
+                              "id": "LbqC8",
+                              "layoutPosition": "absolute",
+                              "x": 0,
+                              "y": 0,
+                              "name": "Ring",
+                              "innerRadius": 0.82,
+                              "startAngle": 90,
+                              "sweepAngle": -144,
+                              "fill": "$blue",
+                              "width": 44,
+                              "height": 44
+                            },
+                            {
                               "type": "text",
-                              "id": "R86Mq",
-                              "name": "?",
+                              "id": "BWzw0",
                               "fill": "$faint",
                               "content": "?",
                               "lineHeight": 1.4,
@@ -448044,21 +449529,42 @@
                         },
                         {
                           "type": "frame",
-                          "id": "hce2E",
-                          "name": "Seat · open",
+                          "id": "eHnUQ",
+                          "name": "Seat · open · ring 40%",
                           "width": 44,
                           "height": 44,
-                          "cornerRadius": 50,
-                          "stroke": "$line",
-                          "strokeWidth": 2,
-                          "strokeAlignment": "inner",
                           "justifyContent": "center",
                           "alignItems": "center",
                           "children": [
                             {
+                              "type": "ellipse",
+                              "id": "EA1mi",
+                              "layoutPosition": "absolute",
+                              "x": 0,
+                              "y": 0,
+                              "name": "Ring track",
+                              "innerRadius": 0.82,
+                              "fill": "$line",
+                              "width": 44,
+                              "height": 44
+                            },
+                            {
+                              "type": "ellipse",
+                              "id": "hDLzj",
+                              "layoutPosition": "absolute",
+                              "x": 0,
+                              "y": 0,
+                              "name": "Ring",
+                              "innerRadius": 0.82,
+                              "startAngle": 90,
+                              "sweepAngle": -144,
+                              "fill": "$blue",
+                              "width": 44,
+                              "height": 44
+                            },
+                            {
                               "type": "text",
-                              "id": "iy4m6",
-                              "name": "?",
+                              "id": "m9Cgr",
                               "fill": "$faint",
                               "content": "?",
                               "lineHeight": 1.4,
@@ -448067,6 +449573,40 @@
                               "fontWeight": "900"
                             }
                           ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "GsYng",
+                      "name": "Coin · 6",
+                      "width": 40,
+                      "height": 40,
+                      "fill": "$gold",
+                      "cornerRadius": 40,
+                      "stroke": "$gold-d",
+                      "strokeWidth": {
+                        "bottom": 4
+                      },
+                      "strokeAlignment": "inner",
+                      "padding": [
+                        0,
+                        0,
+                        3,
+                        0
+                      ],
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "jao2V",
+                          "fill": "$gold-ink",
+                          "content": "6",
+                          "lineHeight": 1,
+                          "fontFamily": "$f-ui",
+                          "fontSize": 18,
+                          "fontWeight": "900"
                         }
                       ]
                     },
@@ -448187,7 +449727,7 @@
                   "fill": "$muted",
                   "textGrowth": "fixed-width",
                   "width": "fill_container",
-                  "content": "The game starts by itself when the table is full. Open seats are filled with bots.",
+                  "content": "Bots take the open seats when the ring closes. With four pirates the game starts at once.",
                   "lineHeight": 1.4,
                   "fontFamily": "$f-ui",
                   "fontSize": 14,
@@ -448401,21 +449941,42 @@
                         },
                         {
                           "type": "frame",
-                          "id": "t0SiTl",
-                          "name": "Seat · open",
+                          "id": "MLXIe",
+                          "name": "Seat · open · ring 40%",
                           "width": 44,
                           "height": 44,
-                          "cornerRadius": 50,
-                          "stroke": "$line",
-                          "strokeWidth": 2,
-                          "strokeAlignment": "inner",
                           "justifyContent": "center",
                           "alignItems": "center",
                           "children": [
                             {
+                              "type": "ellipse",
+                              "id": "p9FKK",
+                              "layoutPosition": "absolute",
+                              "x": 0,
+                              "y": 0,
+                              "name": "Ring track",
+                              "innerRadius": 0.82,
+                              "fill": "$line",
+                              "width": 44,
+                              "height": 44
+                            },
+                            {
+                              "type": "ellipse",
+                              "id": "oIiih",
+                              "layoutPosition": "absolute",
+                              "x": 0,
+                              "y": 0,
+                              "name": "Ring",
+                              "innerRadius": 0.82,
+                              "startAngle": 90,
+                              "sweepAngle": -144,
+                              "fill": "$blue",
+                              "width": 44,
+                              "height": 44
+                            },
+                            {
                               "type": "text",
-                              "id": "JfpcD",
-                              "name": "?",
+                              "id": "k7MlEc",
                               "fill": "$faint",
                               "content": "?",
                               "lineHeight": 1.4,
@@ -448427,21 +449988,42 @@
                         },
                         {
                           "type": "frame",
-                          "id": "XTESd",
-                          "name": "Seat · open",
+                          "id": "qAxhE",
+                          "name": "Seat · open · ring 40%",
                           "width": 44,
                           "height": 44,
-                          "cornerRadius": 50,
-                          "stroke": "$line",
-                          "strokeWidth": 2,
-                          "strokeAlignment": "inner",
                           "justifyContent": "center",
                           "alignItems": "center",
                           "children": [
                             {
+                              "type": "ellipse",
+                              "id": "l9T4B",
+                              "layoutPosition": "absolute",
+                              "x": 0,
+                              "y": 0,
+                              "name": "Ring track",
+                              "innerRadius": 0.82,
+                              "fill": "$line",
+                              "width": 44,
+                              "height": 44
+                            },
+                            {
+                              "type": "ellipse",
+                              "id": "kqYO7",
+                              "layoutPosition": "absolute",
+                              "x": 0,
+                              "y": 0,
+                              "name": "Ring",
+                              "innerRadius": 0.82,
+                              "startAngle": 90,
+                              "sweepAngle": -144,
+                              "fill": "$blue",
+                              "width": 44,
+                              "height": 44
+                            },
+                            {
                               "type": "text",
-                              "id": "Y9lza",
-                              "name": "?",
+                              "id": "f1DeqA",
                               "fill": "$faint",
                               "content": "?",
                               "lineHeight": 1.4,
@@ -448450,6 +450032,40 @@
                               "fontWeight": "900"
                             }
                           ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "XEIp9",
+                      "name": "Coin · 6",
+                      "width": 40,
+                      "height": 40,
+                      "fill": "$gold",
+                      "cornerRadius": 40,
+                      "stroke": "$gold-d",
+                      "strokeWidth": {
+                        "bottom": 4
+                      },
+                      "strokeAlignment": "inner",
+                      "padding": [
+                        0,
+                        0,
+                        3,
+                        0
+                      ],
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "n1J1a",
+                          "fill": "$gold-ink",
+                          "content": "6",
+                          "lineHeight": 1,
+                          "fontFamily": "$f-ui",
+                          "fontSize": 18,
+                          "fontWeight": "900"
                         }
                       ]
                     },
@@ -448570,7 +450186,7 @@
                   "fill": "$muted",
                   "textGrowth": "fixed-width",
                   "width": "fill_container",
-                  "content": "The game starts by itself when the table is full. Open seats are filled with bots.",
+                  "content": "Bots take the open seats when the ring closes. With four pirates the game starts at once.",
                   "lineHeight": 1.4,
                   "fontFamily": "$f-ui",
                   "fontSize": 14,
