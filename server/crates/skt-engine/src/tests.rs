@@ -821,6 +821,31 @@ fn normal_does_not_lead_the_skull_king_and_easy_sometimes_does() {
 }
 
 #[test]
+fn normal_leads_a_high_number_it_still_needs() {
+    let other = vec![4, 5, 6, 7, 8];
+    let leads = [
+        (vec![52, 0, 1, 2, 3], 52_u8),
+        (vec![26, 0, 1, 2, 3], 26),
+        (vec![50, 0, 1, 2, 3], 0),
+        (vec![25, 0, 1, 2, 3], 0),
+    ];
+    for (hand, card) in leads {
+        let mut game = dealt(&[hand, other.clone()], 1, false, Expansions::none());
+        bid_seats(&mut game, &[1, 0]);
+        for roll in [0.0, 0.99] {
+            assert_eq!(
+                chosen_card(&game, 0, BotLevel::Normal, roll),
+                card,
+                "roll {roll}"
+            );
+        }
+    }
+    let mut game = dealt(&[vec![26, 0, 1, 2, 3], other], 1, false, Expansions::none());
+    bid_seats(&mut game, &[1, 0]);
+    assert_eq!(chosen_card(&game, 0, BotLevel::Hard, 0.99), 26);
+}
+
+#[test]
 fn normal_krakens_instead_of_taking_a_trick_it_does_not_need() {
     let expansions = Expansions {
         loot: false,
