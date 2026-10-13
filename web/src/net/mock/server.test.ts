@@ -773,7 +773,8 @@ describe('the table', () => {
       await vi.advanceTimersByTimeAsync(1400);
       expect(last(other, 'game.update').rev).toBe(turn.rev);
       await vi.advanceTimersByTimeAsync(100);
-      expect(last(other, 'game.update').events).toMatchObject([{ type: 'cardPlayed', seat: 0 }]);
+      // The card may also close the trick, so only the first event of the step is the seat's own.
+      expect(last(other, 'game.update').events[0]).toMatchObject({ type: 'cardPlayed', seat: 0 });
 
       await until(() => framesOf(other, 'game.over').length > 0, 'the game ends');
       // Two misses were the player's. No later turn of the seat is one, and it is never on a clock again.

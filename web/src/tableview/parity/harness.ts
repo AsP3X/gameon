@@ -6,6 +6,10 @@
    That covers what a reading of the code cannot: copy, class names, timing constants, sounds and
    stored shapes across whole games.
 
+   The two builds no longer play alike: the port's bots follow the server's policy (src/game/bots.ts),
+   the legacy page's its old power table. What is compared here is the table, not the players, so
+   the port is handed the legacy bots for the run (openPort) and both sides play the same game.
+
    The scenarios are in the test files next to this one, one file each so they run side by side. */
 import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
@@ -153,17 +157,33 @@ type LegacyPage = (
   addEventListener: EventTarget['addEventListener'],
 ) => void;
 
+// Not `new URL(…, import.meta.url)`: in this environment URL is the page's, and Node wants its own.
+const LEGACY_PATH = resolve(dirname(fileURLToPath(import.meta.url)), '../../../../legacy/Skull King Tavern.html');
+
 /** The whole legacy script, with the page globals it touches turned into parameters. */
 function loadLegacy(): LegacyPage {
-  // Not `new URL(…, import.meta.url)`: in this environment URL is the page's, and Node wants its own.
-  const path = resolve(dirname(fileURLToPath(import.meta.url)), '../../../../legacy/Skull King Tavern.html');
-  const html = readFileSync(path, 'utf8');
+  const html = readFileSync(LEGACY_PATH, 'utf8');
   const script = html.slice(html.indexOf('<script>') + '<script>'.length, html.lastIndexOf('</script>'));
   // The legacy script is the reference itself, read from this repo.
   const source = `(function (document, window, localStorage, addEventListener) {${script}\n})`;
   return runInThisContext(source, { filename: 'Skull King Tavern.html' }) as LegacyPage;
 }
 const legacyPage = loadLegacy();
+
+/**
+ * The legacy bots on their own: sections 1–4 of the script (utilities, Rules, Engine, Bots), which
+ * touch no DOM. They read the state and draw from Math.random, as they do inside the legacy page.
+ */
+function loadLegacyBots(): object {
+  const html = readFileSync(LEGACY_PATH, 'utf8');
+  const from = html.indexOf('/* ---------- 1. Utilities ---------- */');
+  const to = html.indexOf('/* ---------- 5. Local table (transport) ---------- */');
+  if (from < 0 || to < from) throw new Error('The legacy script has no engine sections');
+  // The legacy script is the reference itself, read from this repo.
+  const source = `(function () { "use strict";${html.slice(from, to)}\nreturn Bots; })`;
+  return (runInThisContext(source, { filename: 'Skull King Tavern.html' }) as () => object)();
+}
+const legacyBots = loadLegacyBots();
 
 async function openLegacy(): Promise<Stage> {
   const doc = document.implementation.createHTMLDocument('legacy');
@@ -192,6 +212,8 @@ async function openLegacy(): Promise<Stage> {
 async function openPort(): Promise<Stage> {
   // Fresh modules: the port keeps its state (and its audio graph) in them, as the legacy page kept it in a closure.
   vi.resetModules();
+  // The same players on both sides: the port's table is run by the legacy bots.
+  vi.doMock('../../game/bots', () => legacyBots);
   const { mountTavern } = await import('../index');
   const { Sound } = await import('../../sound/sound');
   localStorage.clear();
@@ -202,7 +224,7 @@ async function openPort(): Promise<Stage> {
     const out: [string, string][] = [];
     for (let i = 0; i < localStorage.length; i++) {
       const k = localStorage.key(i);
-      if (k != null) out.push([k, localStorage.getItem(k) ?? '']);
+      if (k != null) out.push([k, withoutBotMemory(k, localStorage.getItem(k) ?? '')]);
     }
     return Object.fromEntries(out.sort(byKey));
   };
@@ -212,6 +234,17 @@ async function openPort(): Promise<Stage> {
     Sound.play(known, arg);
   };
   return { ...page, win: window, stored, sounds: () => Sound.names(), play, close };
+}
+
+/* The port's saved game also holds what its bots remember of the round (GameState.roundPlays and
+   .peeked), which the legacy build never kept. They are the last two keys of the save, and are
+   taken off before the two saves are compared. */
+const GAME_KEY = 'skullking-tavern.game.v2';
+function withoutBotMemory(key: string, value: string): string {
+  const saved = key === GAME_KEY ? (JSON.parse(value) as Record<string, unknown> | null) : null;
+  if (!saved) return value; // another key, or the `null` a finished game leaves behind
+  const { roundPlays: _roundPlays, peeked: _peeked, ...legacyShape } = saved;
+  return JSON.stringify(legacyShape);
 }
 
 /* ---------- the places the port is drawn differently on purpose ---------- */
@@ -488,6 +521,7 @@ export async function expectParity(scenario: Scenario, { reducedMotion, seed, co
     if (firstDifference >= 0) expect(port[firstDifference]).toBe(legacy[firstDifference]);
     expect(port).toHaveLength(legacy.length);
   } finally {
+    vi.doUnmock('../../game/bots');
     Reflect.deleteProperty(Element.prototype, 'animate');
     Reflect.deleteProperty(navigator, 'vibrate');
     vi.useRealTimers();

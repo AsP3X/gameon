@@ -77,6 +77,8 @@ export function create({
     giantSeat: null,
     giantUsed: false,
     log: [],
+    roundPlays: [],
+    peeked: [],
   };
   s.dealer = Math.floor(rand(s) * seats.length);
   startRound(s, true);
@@ -103,6 +105,8 @@ function startRound(s: GameState, first = false): void {
   s.pending = null;
   s.giantSeat = null;
   s.giantUsed = false;
+  s.roundPlays = [];
+  s.peeked = s.seats.map(() => []);
   s.phase = 'bidding';
   s.log.push(Rules.newRecord(n, cards));
 }
@@ -181,6 +185,7 @@ export function reduce(prev: GameState, a: Action): ReduceResult {
       hand.splice(hand.indexOf(a.card), 1);
       const play = tigress ? { seat: a.seat, card: a.card, as: a.as } : { seat: a.seat, card: a.card };
       s.trick.plays.push(play);
+      s.roundPlays.push(play);
       s.played.push(a.card);
       ev.push({ type: 'cardPlayed', ...play });
       if (s.trick.plays.length < n) {
@@ -224,8 +229,10 @@ export function reduce(prev: GameState, a: Action): ReduceResult {
           s.hands[w].push(...drawn);
           startAbility(s, ev, { kind: 'smuggler', seat: w, drawn });
         } else if (ab === 'gambler' && w != null) startAbility(s, ev, { kind: 'gambler', seat: w });
-        else if (ab === 'seer' && !last && s.pile.length && w != null) startAbility(s, ev, { kind: 'seer', seat: w });
-        else afterTrick(s, ev);
+        else if (ab === 'seer' && !last && s.pile.length && w != null) {
+          s.peeked[w] = s.pile.slice(); // the Seer keeps what they saw after the ability closes
+          startAbility(s, ev, { kind: 'seer', seat: w });
+        } else afterTrick(s, ev);
       } else if (s.phase === 'roundEnd') {
         if (s.round < s.schedule.length - 1) {
           startRound(s);
@@ -281,6 +288,14 @@ export function reduce(prev: GameState, a: Action): ReduceResult {
       return fail('Unknown action');
   }
   return { state: s, events: ev };
+}
+
+/**
+ * A game read back from a save. One saved before the bots kept a memory of the round has no
+ * `roundPlays` and no `peeked`: it gets them empty, and the bots count from the current trick on.
+ */
+export function restore(saved: Omit<GameState, 'roundPlays' | 'peeked'> & Partial<GameState>): GameState {
+  return { ...saved, roundPlays: saved.roundPlays ?? [], peeked: saved.peeked ?? saved.seats.map(() => []) };
 }
 
 /** What one seat is allowed to see. Other hands become counts, open bids and the deck stay hidden. */

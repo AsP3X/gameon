@@ -1,13 +1,16 @@
 /* Compares this engine with the legacy build itself, move by move.
    The fixtures cover the rules and the reducer; this covers what they cannot: the seeded shuffle,
-   the bots (which draw from Math.random) and the scorekeeper's cannonball scoring. */
+   the reducer under whole games the bots play, and the scorekeeper's cannonball scoring.
+
+   The bots are not compared. They follow the server's policy now (bots.test.ts), not the legacy
+   power table; here they only choose the actions both reducers are handed. */
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { runInThisContext } from 'node:vm';
-import { afterEach, describe, expect, it, vi } from 'vite-plus/test';
-import type { AbilityChoice, BotLevel, Format, Scoring } from '../protocol/generated';
+import { describe, expect, it } from 'vite-plus/test';
+import type { BotLevel, Format, Scoring } from '../protocol/generated';
 import { Bots, Engine, Rules } from './index';
-import type { Action, GameState, PlayChoice, ReduceResult, Score, ScoreConfig, ScoreRecord } from './types';
+import type { Action, GameState, ReduceResult, Score, ScoreConfig, ScoreRecord } from './types';
 
 interface Legacy {
   Rules: {
@@ -18,14 +21,9 @@ interface Legacy {
     create(options: Engine.CreateOptions): GameState;
     reduce(state: GameState, action: Action): ReduceResult;
   };
-  Bots: {
-    bid(state: GameState, seat: number): number;
-    play(state: GameState, seat: number): PlayChoice;
-    ability(state: GameState, seat: number): AbilityChoice;
-  };
 }
 
-/** mulberry32, so both sides can be handed the same stream of "random" numbers. */
+/** mulberry32: a stream of "random" numbers a test can repeat. */
 function seeded(seed: number): () => number {
   let a = seed >>> 0;
   return () => {
@@ -36,21 +34,16 @@ function seeded(seed: number): () => number {
   };
 }
 
-/** The legacy side draws from this; each test points it at a stream of its own. */
-let legacyRandom: () => number = Math.random;
-
 /** Sections 1–4 of the legacy script (utilities, Rules, Engine, Bots). They touch no DOM. */
 function loadLegacy(): Legacy {
   const path = fileURLToPath(new URL('../../../legacy/Skull King Tavern.html', import.meta.url));
   const html = readFileSync(path, 'utf8');
   const from = html.indexOf('/* ---------- 1. Utilities ---------- */');
   const to = html.indexOf('/* ---------- 5. Local table (transport) ---------- */');
-  const math: Math = Object.create(Math) as Math;
-  math.random = () => legacyRandom();
   // The legacy script is the reference itself, read from this repo.
-  const source = `(function (Math) { "use strict";${html.slice(from, to)}\nreturn { Rules, Engine, Bots }; })`;
-  const factory = runInThisContext(source, { filename: 'Skull King Tavern.html' }) as (math: Math) => Legacy;
-  return factory(math);
+  const source = `(function () { "use strict";${html.slice(from, to)}\nreturn { Rules, Engine }; })`;
+  const factory = runInThisContext(source, { filename: 'Skull King Tavern.html' }) as () => Legacy;
+  return factory();
 }
 
 const legacy = loadLegacy();
@@ -60,9 +53,14 @@ const SCORINGS: Scoring[] = ['classic', 'rascal'];
 const seatsFor = (n: number) =>
   Array.from({ length: n }, (_, i) => ({ name: `Bot ${i}`, color: '#1cb0f6', bot: true }));
 
-afterEach(() => {
-  vi.restoreAllMocks();
-});
+/**
+ * The state the legacy build knows. What the bots remember of the round (`roundPlays`, `peeked`) is
+ * this engine's own: the legacy reducer carries those two along untouched, so they are left out.
+ */
+function shared(state: GameState): Omit<GameState, 'roundPlays' | 'peeked'> {
+  const { roundPlays: _roundPlays, peeked: _peeked, ...rest } = state;
+  return rest;
+}
 
 describe('reference: the legacy build', () => {
   it('deals the same game from the same seed', () => {
@@ -78,19 +76,17 @@ describe('reference: the legacy build', () => {
         level: LEVELS[seed % 3],
         seed: seed * 7919,
       };
-      expect(Engine.create(options)).toEqual(legacy.Engine.create(options));
+      expect(shared(Engine.create(options))).toEqual(legacy.Engine.create(options));
     }
   });
 
   // 36 games, and both engines' whole state compared after each of some 3000 moves: two seconds of
   // work on a free core, and several times that on a busy machine. The runner's five seconds are
   // not for this.
-  it('plays whole bot games identically, decision by decision', { timeout: 60_000 }, () => {
+  it('reduces whole bot games identically, action by action', { timeout: 60_000 }, () => {
     let decisions = 0;
     for (let game = 0; game < 36; game++) {
-      const mine = seeded(1000 + game);
-      legacyRandom = seeded(1000 + game);
-      vi.spyOn(Math, 'random').mockImplementation(mine);
+      const random = seeded(1000 + game);
       let state = Engine.create({
         seats: seatsFor(2 + (game % 7)),
         scoring: SCORINGS[game % 2],
@@ -107,20 +103,14 @@ describe('reference: the legacy build', () => {
         let action: Action;
         if (state.phase === 'bidding') {
           const seat = state.bids.findIndex((b) => b == null);
-          const bid = Bots.bid(state, seat);
-          expect(bid).toBe(legacy.Bots.bid(state, seat));
-          action = { type: 'bid', seat, bid };
+          action = { type: 'bid', seat, bid: Bots.bid(state, seat, random) };
           decisions++;
         } else if (state.phase === 'playing' && state.turn != null) {
-          const choice = Bots.play(state, state.turn);
-          expect(choice).toEqual(legacy.Bots.play(state, state.turn));
-          action = { type: 'play', seat: state.turn, ...choice };
+          action = { type: 'play', seat: state.turn, ...Bots.play(state, state.turn, random) };
           decisions++;
         } else if (state.phase === 'ability' && state.pending) {
           const seat = state.pending.seat;
-          const choice = Bots.ability(state, seat);
-          expect(choice).toEqual(legacy.Bots.ability(state, seat));
-          action = { type: 'ability', seat, choice };
+          action = { type: 'ability', seat, choice: Bots.ability(state, seat, random) };
           decisions++;
         } else {
           action = { type: 'advance' };
@@ -129,7 +119,10 @@ describe('reference: the legacy build', () => {
         const reference = legacy.Engine.reduce(state, action);
         expect(next.error).toBeUndefined();
         expect(next.events).toEqual(reference.events);
-        expect(next.state).toEqual(reference.state);
+        expect(shared(next.state)).toEqual(shared(reference.state));
+        // The round's memory is this engine's alone: it is every card played, and one list per seat.
+        expect(next.state.roundPlays.map((p) => p.card)).toEqual(next.state.played);
+        expect(next.state.peeked).toHaveLength(next.state.seats.length);
         state = next.state;
       }
     }

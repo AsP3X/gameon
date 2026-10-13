@@ -29,7 +29,7 @@ export const Store = {
   },
   loadGame(): GameState | null {
     const s = Store.get<GameState>(Store.GAME);
-    return s && s.version === Engine.VERSION ? s : null;
+    return s && s.version === Engine.VERSION ? Engine.restore(s) : null;
   },
   /** Drop the saved game. The key is taken away, which `loadGame` reads as no game. */
   forgetGame(): void {

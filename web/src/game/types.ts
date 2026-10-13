@@ -14,6 +14,7 @@ import type {
   Format,
   LastTrick,
   Phase,
+  Play,
   PlayedAs,
   RoundRecord,
   Scoring,
@@ -102,6 +103,13 @@ export interface GameState {
   giantSeat: Seat | null;
   giantUsed: boolean;
   log: RoundRecord[];
+  /**
+   * Every card played face up this round, in order, with the Tigress's declaration. Everybody at the
+   * table saw them, and the bots count from them. `played` has only the ids and `lastTrick` only one trick.
+   */
+  roundPlays: Play[];
+  /** Per seat, the pile the Seer showed that seat this round. Empty for every other seat. */
+  peeked: CardId[][];
 }
 
 export type Action =
