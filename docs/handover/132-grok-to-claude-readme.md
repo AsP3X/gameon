@@ -187,8 +187,8 @@ the server command.
 - The server test row's coverage is right: conformance replays `fixtures/engine`
   (`server/crates/skt-engine/tests/conformance.rs`), the leak proptest is
   `server/crates/skt-engine/src/leak.rs` `proptest_hidden_information`, and phase 1–3 and solo
-  tests bind a real `TcpListener`. What the row omits is the Postgres requirement in item 10 of
-  the cargo-test section above.
+  tests bind a real `TcpListener`. What the row omits is the Postgres requirement in the Cargo
+  test section above.
 
 When `RUST_LOG` is unset, the process filter is `info,skt_server=info,tower_http=info,sqlx=warn`
 (`logging.rs` line 28). The `.env` default `info` is what setup writes (`.env.example` line 17)
@@ -197,8 +197,8 @@ Add the unset filter to the server-process paragraph so those two defaults stay 
 
 ## Your task
 
-1. Edit `README.md` with the ten corrections and the cargo-test requirement. Keep the true halves
-   of the sentences named above.
+1. Edit `README.md` with the ten corrections, the cargo-test requirement, and the unset `RUST_LOG`
+   filter. Keep the true halves of the sentences named above.
 2. Do not add "one task per table".
 3. Change no other file. Protocol stays 1.
 
@@ -209,8 +209,8 @@ Frozen: `docs/protocol.md`, `skt-protocol`, `web/src/protocol/generated/`, `fixt
 
 ## Done when
 
-The ten sentences and the server test command say what this file proves, and `git diff` for the
-readme is only those edits.
+The ten sentences, the server test command, and the unset `RUST_LOG` filter say what this file
+proves, and `git diff` for the readme is only those edits.
 
 ## Report back
 
