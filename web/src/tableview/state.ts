@@ -245,6 +245,12 @@ export interface OnlineHooks {
    */
   solo: boolean;
   /**
+   * The game began just now (`game.start`), so its first round is shown being dealt. Left out or
+   * false for a table the player comes back to (a reload, a reconnect): that one is under way, and
+   * is shown as it stands.
+   */
+  dealt?: boolean;
+  /**
    * What the server said the game came to (`game.over`), once it has: every seat's place, the seats
    * that forfeited, and in ranked this seat's rating change. null until then.
    */

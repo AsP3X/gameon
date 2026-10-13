@@ -158,6 +158,7 @@ export function App({ backend = appBackend, memory = appMemory, places }: AppPro
       now: online.serverNow,
       ranked: table.mode === 'ranked',
       solo,
+      dealt: table.opening,
       result: () => table.result,
       record: () => setRecord(true),
     });

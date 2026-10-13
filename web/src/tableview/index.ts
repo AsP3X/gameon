@@ -12,6 +12,7 @@
 import { Sound } from '../sound/sound';
 import { resetFeed } from './actions';
 import { SPRITE } from './art';
+import { endDeal } from './deal';
 import { $$ } from './dom';
 import { listen } from './events';
 import { finale } from './motion';
@@ -115,6 +116,7 @@ export function mountTavern(app: HTMLElement, fx: HTMLCanvasElement, hooks: Tave
     resetFeed();
     Sound.hush();
     $$('.banner').forEach((el) => el.remove());
+    endDeal();
     sprite?.remove();
     app.removeAttribute('data-enter');
     app.classList.remove('full');

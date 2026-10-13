@@ -33,10 +33,26 @@ function seeded(seed: number): () => number {
 /** Every effect either build asks for, in order: animations, Web Audio calls, vibration, confetti, warnings. */
 const effects: string[] = [];
 
+/* The legacy page flew every card that was new in the hand in from the middle of the trick: at
+   the deal, when a table was come back to, and after the curtain. The port deals a round from the
+   stack instead (deal.ts), and a hand that was not dealt just now is simply there. So that one
+   animation, a hand card coming in faded, is left out of what the two builds are compared on. */
+function dealtIn(el: Element, keyframes: unknown): boolean {
+  const first: unknown = Array.isArray(keyframes) ? keyframes[0] : null;
+  return (
+    el.classList.contains('hslot') &&
+    typeof first === 'object' &&
+    first !== null &&
+    'opacity' in first &&
+    first.opacity === 0.2
+  );
+}
+
 function stubAnimations(): void {
   Object.defineProperty(Element.prototype, 'animate', {
     configurable: true,
     value(this: Element, keyframes: unknown, options: unknown) {
+      if (dealtIn(this, keyframes)) return { finished: Promise.resolve() };
       effects.push(`animate ${JSON.stringify({ on: this.className, keyframes, options })}`);
       return { finished: Promise.resolve() };
     },
@@ -259,12 +275,25 @@ function withoutKeyboardMarks(app: HTMLElement): HTMLElement {
   return copy;
 }
 
+/* The port draws the deck where the legacy page had none (views.ts, pileView and seatPile, and
+   deal.ts): what is left of it lies on the felt, every other seat has its hand as one back and a
+   count, and a round that starts is dealt from the stack. The legacy page named the trick as the
+   place new hand cards came from, and gave each a delay. All of that is taken off both pages
+   before they are compared: the pile, the seats' piles, where a hand card comes from, and the
+   marks a deal that is being shown leaves on the hand and on the felt's words. */
+function withoutDeal(app: HTMLElement): HTMLElement {
+  for (const el of Array.from(app.querySelectorAll('.pile, .spile, .hslot .cover'))) el.remove();
+  for (const el of Array.from(app.querySelectorAll('.hslot, .hand, .trick, .trick .empty')))
+    for (const name of ['data-deal', 'data-delay', 'data-anchor', 'data-from']) el.removeAttribute(name);
+  return app;
+}
+
 /* The legacy page asks for a bid with a row of chips; the port asks with a slider on a sheet
    (views.ts, bidSheet). Both end in the same button. So the two are compared on what a bid control
    says, not on how it is drawn: how many bids it offers, and what its button reads and whether it
    can be pressed. Everything around it is still compared as markup. */
 function pageHtml(page: HTMLElement): string {
-  const app = withoutKeyboardMarks(page);
+  const app = withoutDeal(withoutKeyboardMarks(page));
   // The port's home screen offers "Play online" next to "Play", in a row the legacy page does not
   // have. What is compared is the button both builds share.
   const row = app.querySelector('.play-row'),

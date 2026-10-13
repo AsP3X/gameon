@@ -77,6 +77,8 @@ export class RemoteTable implements Table {
   readonly kind: TableKind | null;
   /** The one seat `game.start` calls `me`. */
   readonly localSeats: readonly Seat[];
+  /** Whether the table was opened by `game.start`: the game began just now. False for one a `welcome` brought back. */
+  readonly opening: boolean;
   private readonly client: SocketClient;
   private readonly subs = new Set<TableListener>();
   private readonly resultSubs = new Set<() => void>();
@@ -104,6 +106,7 @@ export class RemoteTable implements Table {
     this.mode = start.mode;
     this.kind = start.table ?? null;
     this.localSeats = [start.me];
+    this.opening = opening;
     this.start = start;
     this.rev = update.rev;
     this.current = this.viewOf(update, opening);

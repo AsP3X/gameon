@@ -812,6 +812,137 @@ input.name:focus {
   font-weight: 800;
   font-size: 14px;
   text-align: center;
+  transition: opacity 0.3s;
+}
+/* ---------- the deck (not in the legacy build) ----------
+   What is left of the deck lies face down in the felt's top band, where no card of the trick goes:
+   a short stack of backs and the count. A round that starts is dealt from it (tableview/deal.ts):
+   for that it is the stack in the middle of the felt, in the place of the felt's own words, and it
+   goes back to its corner when the last card is down. Every seat keeps its hand as one back and a
+   count. Nothing here has a face. */
+.pile {
+  --pw: 20px;
+  position: absolute;
+  top: 3px;
+  left: 10px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  transform-origin: 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 900;
+  pointer-events: none;
+}
+.pile[hidden] {
+  display: none;
+}
+.pile-cards {
+  position: relative;
+  flex: none;
+  width: var(--pw);
+  height: calc(var(--pw) * 1.4);
+  /* the two backs under the top one show on its right and lower edge */
+  margin: 0 3px 3px 0;
+}
+.pile-cards i {
+  position: absolute;
+  inset: 0;
+}
+.pile-cards i:nth-child(1) {
+  translate: 3px 3px;
+}
+.pile-cards i:nth-child(2) {
+  translate: 1.5px 1.5px;
+}
+.pile .card {
+  --w: var(--pw);
+}
+.pile .card,
+.spile .card,
+.dealfly .card {
+  box-shadow:
+    0 1px 0 rgba(0, 0, 0, 0.22),
+    0 0 0 1px rgba(0, 0, 0, 0.08);
+}
+/* the suit to follow moves over for it */
+.pile:not([hidden]) ~ .lead {
+  left: 62px;
+}
+.pile[data-deal] {
+  --pw: 30px;
+  top: 34px;
+  left: 50%;
+  translate: -50% 0;
+  gap: 0;
+}
+.pile[data-deal] .cnt {
+  position: absolute;
+  left: calc(100% + 6px);
+  font-size: 14px;
+  transition: opacity 0.15s;
+}
+/* the riffle spreads over where the count is: it is back when the first card leaves */
+.pile[data-deal='shuffle'] .cnt {
+  opacity: 0;
+}
+/* two riffles: the outer backs part and close again. --t is how far in a redrawn stack already is. */
+.pile[data-deal='shuffle'] .pile-cards i:first-child {
+  animation: riffleL 0.3s ease-in-out var(--t, 0ms) 2 both;
+}
+.pile[data-deal='shuffle'] .pile-cards i:last-child {
+  animation: riffleR 0.3s ease-in-out var(--t, 0ms) 2 both;
+}
+@keyframes riffleL {
+  50% {
+    transform: translateX(-72%) rotate(-9deg);
+  }
+}
+@keyframes riffleR {
+  50% {
+    transform: translateX(72%) rotate(9deg);
+  }
+}
+.felt .empty[data-deal] {
+  opacity: 0;
+  transition: none;
+}
+/* a card on its way from the stack: drawn over the page, gone when it lands */
+.dealfly {
+  position: fixed;
+  z-index: 30;
+  pointer-events: none;
+}
+/* another seat's hand: one back and how many cards */
+.spile {
+  position: absolute;
+  top: 24px;
+  left: 4px;
+  display: flex;
+  align-items: flex-end;
+  pointer-events: none;
+  transition: opacity 0.2s;
+}
+.spile.none {
+  opacity: 0;
+}
+.spile .card {
+  --w: 14px;
+  rotate: -8deg;
+}
+.spile .cnt {
+  position: relative;
+  margin: 0 0 -3px -5px;
+  min-width: 17px;
+  padding: 0 3px;
+  border-radius: 99px;
+  border: 2px solid var(--line);
+  background: var(--card);
+  color: var(--fg);
+  font-size: 10px;
+  line-height: 13px;
+  font-weight: 900;
+  text-align: center;
 }
 .status {
   font-weight: 900;
@@ -936,6 +1067,18 @@ input.name:focus {
 .hand.hidden {
   pointer-events: none;
 }
+/* while the round is dealt: a card that has not come yet is not there, one that has lies face down */
+.hslot[data-deal] {
+  pointer-events: none;
+}
+.hslot[data-deal='wait'] {
+  visibility: hidden;
+}
+.hslot .cover {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
 .actions {
   display: flex;
   flex-direction: column;
@@ -1012,6 +1155,20 @@ input.name:focus {
 /* Too short even for that line: the sheet's own hint asks the question. */
 @media (max-height: 659px) {
   .game:has(.bidsheet) .felt {
+    display: none;
+  }
+}
+/* On that short screen the felt is one line: the stack keeps its corner while it is dealt from,
+   and leaves the count out so the line has its room. */
+@media (max-height: 700px) {
+  .game:has(.bidsheet) .pile,
+  .game:has(.bidsheet) .pile[data-deal] {
+    --pw: 18px;
+    top: 6px;
+    left: 10px;
+    translate: none;
+  }
+  .game:has(.bidsheet) .pile .cnt {
     display: none;
   }
 }
@@ -2770,6 +2927,11 @@ canvas#fx {
 }
 [data-enter] .felt {
   animation: pop 0.5s 0.1s var(--spring) both;
+}
+/* The hand of a table that is come back to, or shown after the curtain: it is there, it was not dealt. */
+[data-enter] .hand:not([data-deal]) .hslot {
+  --rise: 14px;
+  animation: rise 0.35s var(--ease-out) both;
 }
 [data-enter] .lb .li {
   animation: rise 0.4s var(--ease-out) both;

@@ -2,9 +2,10 @@
    motion that connects the old picture to the new one.
    Ported from the legacy build (legacy/Skull King Tavern.html, section 13) without changing behavior. */
 import { Sound } from '../sound/sound';
+import { endDeal, paintDeal, startDeal } from './deal';
 import { $ } from './dom';
 import { animateBar, countUp, flip, snapshot } from './motion';
-import { clearTimer, patchUi, placeNow, stage, ui } from './state';
+import { clearTimer, patchUi, placeNow, stage, tableView, ui } from './state';
 import type { Screen, Sheet } from './state';
 import { trackScreen, trkResultsSheet, trkSetupView, trkView } from './tracker';
 import {
@@ -137,6 +138,10 @@ export function render(): void {
   const app = stage.app;
   if (!app) return; // unmounted: a late timer or a finished animation has nothing to draw on
   tuneMenu();
+  // A round dealt just now is shown being dealt, unless the felt is covered: then, and whenever the
+  // felt gets covered or left while a deal is shown, everything is simply where it ends up.
+  if (ui.screen !== 'game' || ui.curtain || ui.sheet) endDeal();
+  else if (ui.deal) startDeal(tableView());
   const snap = ui.screen === 'game' && !ui.curtain ? snapshot() : null;
   // A page that draws the home itself leaves the renderer nothing to draw there but a sheet.
   const blank = ui.screen === 'home' && stage.pageHome;
@@ -150,6 +155,7 @@ export function render(): void {
   const before = focused(app);
   app.innerHTML = html;
   keepFocus(app, before);
+  paintDeal();
   flip(snap);
   animateBar();
   if (ui.anim || ui.enter) {

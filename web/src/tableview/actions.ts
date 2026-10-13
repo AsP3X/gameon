@@ -10,6 +10,7 @@ import type { SoundName } from '../sound/sound';
 import { humanSeats, LocalTable } from '../table/localTable';
 import { dispatchWithin } from '../table/table';
 import type { GetView, Table, UpdateInfo } from '../table/table';
+import { tossFromPile } from './deal';
 import { $, reduced } from './dom';
 import type { ActionFn } from './dom';
 import { layout } from './layout';
@@ -182,6 +183,10 @@ async function present(
     return;
   }
   render();
+  // The Smuggler's swap, as the rest of the table sees it: backs from the pile to that seat.
+  const swap = events.find((e) => e.type === 'abilityUsed' && e.kind === 'smuggler');
+  if (swap?.type === 'abilityUsed' && swap.kind === 'smuggler' && swap.seat !== v.me && !ui.curtain && !ui.sheet)
+    tossFromPile(swap.seat, swap.count);
 }
 
 /* ---------- Actions ---------- */
@@ -258,7 +263,8 @@ export function openOnlineTable(table: Table, hooks: OnlineHooks): void {
   finale.token++;
   showTable(table);
   session.online = hooks;
-  patchUi({ deal: true, lastPct: 0 });
+  // Only a game that began just now is shown being dealt (deal.ts).
+  patchUi({ deal: hooks.dealt === true && tableView().phase === 'bidding', lastPct: 0 });
   go('game');
 }
 /**

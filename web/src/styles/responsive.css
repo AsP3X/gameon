@@ -282,6 +282,44 @@
     top: -4px;
     right: -8px;
   }
+  /* the deck: larger, in the corner the last trick's button leaves free */
+  .pile {
+    --pw: 26px;
+    top: 0;
+    left: 0;
+    font-size: 14px;
+  }
+  .pile[data-deal],
+  .game:has(.bidsheet) .pile[data-deal] {
+    --pw: 32px;
+    top: 6px;
+    left: 50%;
+    translate: -50% 0;
+  }
+  .game:has(.bidsheet) .pile {
+    --pw: 26px;
+    top: 0;
+    left: 0;
+  }
+  .game:has(.bidsheet) .pile .cnt {
+    display: block;
+  }
+  /* A trick led by a card without a suit has no pill above it: the cards keep that row free all
+     the same, so the first of them never lies under the deck. */
+  .felt:has(.pile:not([hidden])):has(.trick .slot):not(:has(.lead)) {
+    padding-top: 48px;
+  }
+  .seat .spile {
+    top: calc(var(--av) - 12px);
+    left: 12px;
+  }
+  .seat .spile .card {
+    --w: 18px;
+  }
+  .seat .spile .cnt {
+    font-size: 11px;
+    line-height: 14px;
+  }
   .actions,
   .actions:has(.bidsheet) {
     position: static;

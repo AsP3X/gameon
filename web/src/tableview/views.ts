@@ -8,6 +8,7 @@ import { clamp, fill } from '../game/util';
 import type { AbilityUsed, Card, CardId, GameResult, RatingChange, Seat } from '../protocol/generated';
 import { avatar, cardBack, cardHTML, ICON, mascot } from './art';
 import type { FaceCard } from './art';
+import { pileSize } from './deal';
 import { esc, initial, sgn, toneOf, whole } from './dom';
 import { layout, tapWord } from './layout';
 import {
@@ -227,6 +228,25 @@ function seatBid(v: TableView, i: Seat): string {
   if (b == null) return '<span class="thinking" aria-label="Thinking"><i></i><i></i><i></i></span>';
   return `<span class="ready ${ui.just === 'bid' + i ? 'pop' : ''}">${i === v.me && !handHidden(v) ? 'Bid ' + b : 'Ready'}</span>`;
 }
+const cardsWord = (n: number): string => `${n} ${n === 1 ? 'card' : 'cards'}`;
+/**
+ * Another seat's hand, face down: one back and how many cards the seat holds. The count is all the
+ * view says about it. Not in the legacy build.
+ */
+function seatPile(v: TableView, i: Seat): string {
+  const n = v.handCounts[i];
+  return `<div class="spile${n ? '' : ' none'}" data-seat="${i}" data-n="${n}" role="img" aria-label="${cardsWord(n)} in hand">${cardBack()}<span class="cnt num">${n}</span></div>`;
+}
+/**
+ * What is left of the deck once every seat has its hand, face down on the felt: a short stack of
+ * backs and the count, never one element per card. It is where the deal comes from (deal.ts) and
+ * where the Smuggler's cards come from. Its size is the length of the card list less the cards
+ * dealt. Not in the legacy build.
+ */
+function pileView(v: TableView): string {
+  const n = pileSize(v);
+  return `<div class="pile" data-n="${n}" role="img" aria-label="${cardsWord(n)} left in the deck"${n ? '' : ' hidden'}><span class="pile-cards" data-anchor="deck">${`<i>${cardBack()}</i>`.repeat(3)}</span><span class="cnt num">${n}</span></div>`;
+}
 const who = (v: TableView, i: Seat): string => (i === v.me ? 'You' : esc(v.seats[i].name));
 function statusText(v: TableView): string {
   switch (v.phase) {
@@ -308,7 +328,8 @@ const KIND_ORDER: Record<Card['kind'], number> = {
   kraken: 7,
   whale: 8,
 };
-function sortHand(hand: CardId[], deck: Card[]): CardId[] {
+/** The hand in the order it is shown: by kind, then by suit and rank. */
+export function sortHand(hand: CardId[], deck: Card[]): CardId[] {
   return hand.slice().sort((a, b) => {
     const x = deck[a],
       y = deck[b];
@@ -448,7 +469,7 @@ export function gameView(): string {
       const presence = presenceTag(v, i),
         gone = presence && v.online?.status[i] !== 'away' ? ' gone' : '';
       // Offline none of the three online parts is there, and the markup is the legacy page's to the letter.
-      return `<div class="seat ${turn ? 'turn' : ''} ${won ? 'won' : ''} ${ui.bump === i ? 'bump' : ''}${gone}">${avatar(p, '', `seat-${i}`)}${deadlineRing(v, i)}${presence}${i === v.dealer ? '<span class="dealer" title="Dealer">D</span>' : ''}${multi && !p.bot ? '<span class="human-tag" title="Human player">H</span>' : ''}
+      return `<div class="seat ${turn ? 'turn' : ''} ${won ? 'won' : ''} ${ui.bump === i ? 'bump' : ''}${gone}">${avatar(p, '', `seat-${i}`)}${deadlineRing(v, i)}${presence}${i === v.dealer ? '<span class="dealer" title="Dealer">D</span>' : ''}${multi && !p.bot ? '<span class="human-tag" title="Human player">H</span>' : ''}${seatPile(v, i)}
       <span class="sname">${esc(p.name)}</span>${seatBid(v, i)}<span class="sscore num">${tot[i]} pts</span></div>`;
     })
     .join('');
@@ -472,11 +493,11 @@ export function gameView(): string {
   const handHtml = hidden
     ? hand.map(() => `<div class="hslot"><div class="hc">${cardBack()}</div></div>`).join('')
     : hand
-        .map((id, k) => {
+        .map((id) => {
           const locked = myTurn && !legal.has(id),
             disc = smuggling && ui.discard.includes(id);
           return `<button class="hslot ${ui.sel === id ? 'sel' : ''} ${v.deck[id].kind === 'tigress' ? 'tigress' : ''} ${disc ? 'discard' : ''} ${fresh.has(id) ? 'fresh' : ''} ${locked ? 'locked' : ''}" data-act="pick" data-id="${id}" data-key="c${id}"
-      data-from="deck" ${ui.deal ? `data-delay="${k * 70}"` : ''} aria-label="${esc(Rules.cardName(v.deck[id], abil))}${locked ? ', must follow suit' : ui.sel === id && myTurn ? ', tap again to play' : ''}" aria-pressed="${ui.sel === id || disc}">
+      ${fresh.has(id) ? 'data-from="deck" ' : ''}aria-label="${esc(Rules.cardName(v.deck[id], abil))}${locked ? ', must follow suit' : ui.sel === id && myTurn ? ', tap again to play' : ''}" aria-pressed="${ui.sel === id || disc}">
       <div class="hc">${cardHTML(v.deck[id], abil)}</div></button>`;
         })
         .join('');
@@ -498,9 +519,9 @@ export function gameView(): string {
     ${wide ? '' : info}${soloOnDevice(v) ? '<p class="g-note">Offline game · not counted in your stats</p>' : ''}
     <div class="seats">${seats}</div>
     <div class="felt">
-      ${ls ? `<span class="pill soft lead pop"><i class="sdot s-${ls}"></i>Follow ${Rules.SUIT_NAME[ls]}</span>` : ''}
+      ${pileView(v)}${ls ? `<span class="pill soft lead pop"><i class="sdot s-${ls}"></i>Follow ${Rules.SUIT_NAME[ls]}</span>` : ''}
       ${canPeekLast ? `<button class="lastbtn" data-act="last">Last trick</button>` : ''}
-      <div class="trick" data-anchor="deck">${plays || `<p class="empty">${v.phase === 'bidding' ? 'Cards are dealt.<br>Place your bids.' : 'Waiting for the lead…'}</p>`}</div>
+      <div class="trick">${plays || `<p class="empty">${v.phase === 'bidding' ? 'Cards are dealt.<br>Place your bids.' : 'Waiting for the lead…'}</p>`}</div>
       <div class="status" role="status">${statusText(v)}</div>${bonusText(v)}
     </div>
     <div class="mebar ${myTurn || (v.phase === 'ability' && v.pending?.seat === me) ? 'turn' : ''} ${res && res.winner === me ? 'won' : ''} ${ui.bump === me ? 'bump' : ''}">${avatar(meP, '', `seat-${me}`)}${deadlineRing(v, me)}
