@@ -683,9 +683,12 @@ ul.tables {
   padding-bottom: 110px;
 }
 
-/* The doors of the index are the home's way cards (skullking.css). One of them is a button. */
+/* The doors of the index are the home's way cards (skullking.css). One of them is a button. They are
+   one column at every width, each as wide as the column, and keep no room for an open card. */
 .on-body .sk-ways {
   display: flex;
+  align-items: stretch;
+  min-height: 0;
 }
 #gameon .on-body > .alert {
   text-align: center;

@@ -714,6 +714,10 @@
     break-inside: avoid;
     margin-bottom: 22px;
   }
+  /* The bar's padding is the page's, so the button ends at the columns' edge at every width. */
+  #app:has(.footbar [data-act='start']) > .footbar {
+    padding-inline: 40px;
+  }
   #app:has(.footbar [data-act='start']) > .footbar > div {
     max-width: 1280px;
     display: flex;

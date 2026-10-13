@@ -303,6 +303,25 @@
 .sk-opt .pill {
   flex: none;
 }
+/* A row too narrow for its pill beside its line carries the pill under the line. */
+.sk-opts {
+  container-type: inline-size;
+}
+@container (max-width: 300px) {
+  #gameon .sk-opt:has(> .pill) {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 6px 12px;
+  }
+  .sk-opt:has(> .pill) > .go-key,
+  .sk-opt:has(> .pill) > .sk-way-go {
+    grid-row: 1 / span 2;
+  }
+  .sk-opt > .pill {
+    grid-area: 2 / 2;
+    justify-self: start;
+  }
+}
 #gameon .sk-real {
   display: flex;
   align-items: center;
@@ -451,14 +470,26 @@
 @media (min-width: 1280px) {
   .sk-body {
     gap: 64px;
-    padding-inline: 80px;
+    padding-inline: clamp(24px, 5.5vw, 80px);
   }
+  /* Two cards side by side, as tall as each other whatever their lines wrap to: a card and what it
+     opens share the list's two rows. */
   .sk-ways {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    align-items: start;
+    grid-template-rows: auto auto;
     align-content: start;
     min-height: 272px;
+  }
+  .sk-ways > .sk-choice {
+    display: grid;
+    grid-row: span 2;
+    grid-template-rows: subgrid;
+    row-gap: 10px;
+    align-items: start;
+  }
+  .sk-ways > .sk-choice > .sk-way {
+    align-self: stretch;
   }
 }
 
@@ -603,6 +634,17 @@
   }
   .sk-formats {
     grid-auto-flow: column;
+  }
+  /* Five cards in a row: each starts at its top, and its rounds run five to a line. */
+  .sk-formats button {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .sk-formats .fmt {
+    display: grid;
+    grid-template-columns: repeat(5, max-content);
+    justify-items: start;
   }
   .sk-extras {
     grid-column: 1 / span 2;

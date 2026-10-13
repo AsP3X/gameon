@@ -2540,11 +2540,24 @@
 }
 
 @media (min-width: 1000px) {
+  /* Side by side and as tall as each other: a card and what it opens share the list's two rows. */
   .go-choices {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: auto auto;
+    gap: 0 12px;
+  }
+  .go-choices > .sk-choice {
+    display: grid;
+    grid-row: span 2;
+    grid-template-rows: subgrid;
     align-items: start;
-    gap: 12px;
+  }
+  .go-choices > .sk-choice > .sk-way {
+    align-self: stretch;
+  }
+  .go-choices .sk-opts {
+    margin-top: 10px;
   }
   /* Two cards share the game's card here: they are smaller than on the home's felt. */
   #gameon .go-choices .sk-way {

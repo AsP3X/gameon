@@ -74,3 +74,29 @@ describe("the class names of the footer's pages and of forgetting a game", () =>
     expect([...FOOTER_PAGES, ...FORGET].filter((name) => styles(tavern, name))).toEqual([]);
   });
 });
+
+describe('the way cards on a wide window', () => {
+  it("are as wide as the index's column, whatever the home's grid says", () => {
+    // From 1280 px skullking.css lays `.sk-ways` out as the home's grid: `align-content: start`
+    // and room kept for an open card. The index uses the same list as one column, and its three
+    // doors once came out as wide as their own lines, each a different width.
+    const skullking = sheet('skullking.css'),
+      online = sheet('online.css');
+    expect(/\.sk-ways \{[^}]*display: grid;[^}]*min-height: 272px;/.test(skullking)).toBe(true);
+    const own = /\.on-body \.sk-ways \{([^}]*)\}/.exec(online)?.[1] ?? '';
+    for (const taken of ['display: flex', 'align-items: stretch', 'min-height: 0']) expect(own).toContain(taken);
+  });
+});
+
+describe('the bar at the foot of a screen', () => {
+  it('is as wide as the column above it', () => {
+    // The column is `.wrap` less its padding. The bar was the whole 560 px, so on anything wider
+    // than a phone its button stood 16 px out on each side of the field above it.
+    const tavern = sheet('tavern.css');
+    const px = (rule: RegExp): number => Number(rule.exec(tavern)?.[1] ?? Number.NaN);
+    const wrap = px(/\.wrap \{[^}]*max-width: (\d+)px;/),
+      pad = px(/\.wrap \{[^}]*padding-inline: (\d+)px;/),
+      bar = px(/\.footbar > div \{[^}]*max-width: (\d+)px;/);
+    expect(bar).toBe(wrap - 2 * pad);
+  });
+});
