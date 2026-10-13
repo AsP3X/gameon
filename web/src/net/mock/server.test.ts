@@ -255,6 +255,28 @@ describe('a server with a store', () => {
     expect(last(back, 'welcome').game?.update.view.bids[0]).not.toBeNull();
   });
 
+  it('does not keep a game its last person resigned: the next life has no table for them', async () => {
+    const store = memory();
+    server = make(store);
+    const page = await connect(server.transport('this-page'));
+    page.send({ t: 'lobby.create', visibility: 'private', settings: SETTINGS });
+    page.send({ t: 'lobby.addBot' });
+    page.send({ t: 'lobby.ready', ready: true });
+    await flush();
+    page.send({ t: 'lobby.start' });
+    await flush();
+    expect(last(page, 'game.start').seats.map((seat) => seat.bot)).toEqual([false, true]);
+    page.send({ t: 'game.leave' });
+    await flush();
+
+    server.shutDown();
+    server = make(store, 99);
+    await flush();
+    const back = await connect(server.transport('this-page'));
+    expect(back.frames.map((f) => f.t)).toEqual(['ok', 'welcome']);
+    expect(last(back, 'welcome')).toMatchObject({ game: null, lobby: null, me: { active: null } });
+  });
+
   it('starts empty from a store that holds nothing it can read', async () => {
     const store = memory();
     store.save('{"v":7,"what":"another version"}');
@@ -739,21 +761,23 @@ describe('the table', () => {
     ]);
   });
 
-  it('gives a leaver ok and one last update, no update after it, and the result when the game ends', async () => {
+  it('gives a leaver ok and one last update that says out, no update after it, and the result when the game ends', async () => {
     const [a, b] = await startedTable(2, 1);
     await until(() => view(a).phase === 'playing', 'the bids are in');
     const leave = a.send({ t: 'game.leave' });
     await flush();
     const { reply, next } = answer(a, leave);
     expect(reply).toEqual({ t: 'ok', re: leave });
-    expect(next).toMatchObject({ t: 'game.update', events: [{ type: 'seatStatus', seat: 0, status: 'bot' }] });
+    expect(next).toMatchObject({ t: 'game.update', events: [{ type: 'seatStatus', seat: 0, status: 'out' }] });
     if (next?.t !== 'game.update') throw new Error('unreachable');
-    expect(next.table.status[0]).toBe('bot');
+    // The seat is out, the other person is still in the game, and no seat became a bot for the leave.
+    expect(next.table.status).toEqual(['out', 'online', 'bot']);
     const mark = a.frames.length,
       rev = next.rev;
     // The other seat hears the same step, and the leaver is out of the lobby it reads.
     expect(framesOf(b, 'game.update').find((u) => u.rev === rev)?.events).toEqual(next.events);
     expect(lobbyOf(b).members).toHaveLength(2);
+    expect(last(b, 'game.start').seats[0]).toMatchObject({ bot: false });
 
     await until(() => framesOf(b, 'game.over').length > 0, 'the game ends');
     expect(last(b, 'game.update').rev).toBeGreaterThan(rev + 50);
@@ -762,13 +786,102 @@ describe('the table', () => {
     expect(a.frames.slice(mark)).toEqual([{ ...last(b, 'game.over'), seat: 0 }]);
     expect(last(b, 'game.over')).toMatchObject({ seat: 1 });
     expect(last(a, 'game.over').result).toEqual(last(b, 'game.over').result);
-    // The seat it gave up was played by a bot to the end.
+    // The table played the seat it gave up to the end, as it plays a seat that was closed: the
+    // engine's events only, on no clock, and never ready.
     expect(last(b, 'game.over').result.totals).toHaveLength(3);
+    const after = framesOf(b, 'game.update').filter((u) => u.rev > rev);
+    expect(after.some((u) => u.events.some((e) => e.type === 'cardPlayed' && e.seat === 0))).toBe(true);
+    expect(after.every((u) => u.table.status[0] === 'out' && !u.table.deadline?.seats.includes(0))).toBe(true);
+    expect(after.every((u) => !u.table.ready[0])).toBe(true);
+    expect(after.some((u) => u.events.some((e) => e.type === 'timedOut' && e.seat === 0))).toBe(false);
+    // Not a forfeit at a table that is not ranked.
+    expect(last(b, 'game.over').result.forfeited).toEqual([]);
 
     // Leaving twice is not a thing, and neither is playing on.
     const again = a.send({ t: 'game.leave' });
     await flush();
     expect(answer(a, again).reply).toMatchObject({ t: 'err', code: 'NOT_IN_GAME' });
+  });
+
+  it('plays the turn of a seat that was left 1.5 seconds after it comes round', async () => {
+    const [a, b] = await startedTable(2, 1);
+    await until(() => view(a).phase === 'playing' && view(a).turn !== 0, 'somebody else is on turn');
+    a.send({ t: 'game.leave' });
+    await flush();
+    await until(() => view(b).phase === 'playing' && view(b).turn === 0, "the left seat's turn");
+    const turn = last(b, 'game.update');
+    expect(turn.table.deadline).toBeNull();
+    await vi.advanceTimersByTimeAsync(1400);
+    expect(last(b, 'game.update').rev).toBe(turn.rev);
+    await vi.advanceTimersByTimeAsync(100);
+    expect(last(b, 'game.update').events[0]).toMatchObject({ type: 'cardPlayed', seat: 0 });
+  });
+
+  it('cancels the game when the last person at it resigns: ok, one update that says out, and then nothing', async () => {
+    const [a] = await startedTable(1, 2);
+    await until(() => view(a).phase === 'playing', 'the bids are in');
+    const before = last(a, 'game.update').rev,
+      leave = a.send({ t: 'game.leave' });
+    await flush();
+    const { reply, next } = answer(a, leave);
+    expect(reply).toEqual({ t: 'ok', re: leave });
+    expect(next).toMatchObject({
+      t: 'game.update',
+      rev: before + 1,
+      events: [{ type: 'seatStatus', seat: 0, status: 'out' }],
+      table: { status: ['out', 'bot', 'bot'], deadline: null },
+    });
+    // That update was the last frame: the bots do not play the game out, and there is no result.
+    const mark = a.frames.length;
+    await vi.advanceTimersByTimeAsync(120_000);
+    expect(a.frames.slice(mark)).toEqual([]);
+    expect(framesOf(a, 'game.over')).toEqual([]);
+
+    // The game is gone and so is its lobby: the seat cannot be played, and the player is free to sit down again.
+    const again = a.send({ t: 'game.leave' });
+    await flush();
+    expect(answer(a, again).reply).toMatchObject({ t: 'err', code: 'NOT_IN_GAME' });
+    const create = a.send({ t: 'lobby.create', visibility: 'private', settings: SETTINGS });
+    await flush();
+    expect(answer(a, create).reply).toMatchObject({ t: 'ok' });
+  });
+
+  it('cancels it for the last person too when the others had resigned before: nobody is sent a result', async () => {
+    const [a, b] = await startedTable(2, 1);
+    a.send({ t: 'game.leave' });
+    await flush();
+    const mark = a.frames.length,
+      leave = b.send({ t: 'game.leave' });
+    await flush();
+    const { reply, next } = answer(b, leave);
+    expect(reply).toEqual({ t: 'ok', re: leave });
+    // A seat that is already out is not a person at the table, and neither is the bot.
+    expect(next).toMatchObject({
+      t: 'game.update',
+      events: [{ type: 'seatStatus', seat: 1, status: 'out' }],
+      table: { status: ['out', 'out', 'bot'] },
+    });
+    const end = b.frames.length;
+    await vi.advanceTimersByTimeAsync(120_000);
+    expect(b.frames.slice(end)).toEqual([]);
+    // The one who left first was owed the result of a game that is played out. This one was not.
+    expect(a.frames.slice(mark)).toEqual([]);
+  });
+
+  it('keeps the game going for a person who is offline: their seat is still theirs', async () => {
+    const [a, b] = await startedTable(2, 1);
+    b.close();
+    await flush();
+    expect(last(a, 'game.update').table.status).toEqual(['online', 'offline', 'bot']);
+    const leave = a.send({ t: 'game.leave' });
+    await flush();
+    const { next } = answer(a, leave);
+    if (next?.t !== 'game.update') throw new Error('unreachable');
+    expect(next.table.status).toEqual(['out', 'offline', 'bot']);
+    // The table plays on for the seat that can still come back.
+    const mark = a.frames.length;
+    await until(() => a.frames.length > mark, 'the game ends');
+    expect(a.frames.slice(mark).map((f) => f.t)).toEqual(['game.over']);
   });
 
   it('owes a leaver without a socket the result: it is written right after their next welcome, which has no game', async () => {

@@ -156,8 +156,10 @@ export class RemoteTable implements Table {
   }
 
   /**
-   * Give the seat up for good. The update that answers it is the last one (`last` in its info), and
-   * a bot plays the seat from that step. The result of the game still arrives later, as `game.over`.
+   * Resign: give the seat up for good. The update that answers it is the last one (`last` in its
+   * info) and says the seat is out. While another person is still in the game the table plays the
+   * seat from that step, and the result arrives later, as `game.over`. When nobody is, the server
+   * cancelled the game with that update, and no result follows. A solo game ends with the `ok`.
    */
   leave(): Promise<DispatchResult> {
     return this.send({ t: 'game.leave' });

@@ -335,7 +335,7 @@ describe('leaving a ranked game', () => {
     // The table is down for the leaver at once, and the cooldown is on `Me`: 15 minutes the first time.
     expect(await anne.me()).toMatchObject({ active: null, cooldownUntil: leftAt + 15 * MINUTE_MS });
     expect(last(await anne.connect(), 'welcome')).toMatchObject({ game: null, queue: null });
-    // A bot plays the seat to the end, and the leaver hears the result when the game is over.
+    // The table plays the seat to the end, and the leaver hears the result when the game is over.
     const back = await anne.connect();
     await played(others);
     const theirs = last(others[0].socket, 'game.over').result;
@@ -367,6 +367,44 @@ describe('leaving a ranked game', () => {
     expect(result.forfeited).toEqual([2, 0]);
     expect([result.places[0], result.places[2]]).toEqual([4, 4]);
     expect([result.places[1], result.places[3]].toSorted((a, b) => a - b)[0]).toBe(1);
+  });
+
+  it('keeps the seat a leaver gave up out: no bot sits down in it', async () => {
+    const players = await rankedTable();
+    await ask(players[0].socket, { t: 'game.leave' });
+    expect(last(players[1].socket, 'game.update')).toMatchObject({
+      events: [{ type: 'seatStatus', seat: 0, status: 'out' }],
+      table: { status: ['out', 'online', 'online', 'online'] },
+    });
+  });
+
+  it('cancels the game when the last of the four resigns: the cooldown starts for them too, and no rating moves', async () => {
+    const players = await rankedTable();
+    for (const p of players.slice(0, 3)) await ask(p.socket, { t: 'game.leave' });
+    const marks = players.map((p) => p.socket.frames.length),
+      leftAt = Date.now();
+    expect(await ask(players[3].socket, { t: 'game.leave' })).toMatchObject({ t: 'ok' });
+    await vi.advanceTimersByTimeAsync(10 * MINUTE_MS);
+    // The last one is sent `ok` and the update that says out. Nobody is sent anything else: the
+    // game was not played out, so it has no result.
+    expect(players.map((p, i) => p.socket.frames.slice(marks[i]).map((f) => f.t))).toEqual([
+      [],
+      [],
+      [],
+      ['ok', 'game.update'],
+    ]);
+    expect(last(players[3].socket, 'game.update')).toMatchObject({
+      events: [{ type: 'seatStatus', seat: 3, status: 'out' }],
+      table: { status: ['out', 'out', 'out', 'out'] },
+    });
+    for (const p of players) {
+      const me = await p.me();
+      // Every resign closed ranked for its player. A game that was cancelled was not scored.
+      expect(me.cooldownUntil).not.toBeNull();
+      expect(me).toMatchObject({ active: null, rating: null, stats: { games: 0 } });
+      expect((await p.call('GET', '/me/games')).body).toEqual({ games: [] });
+    }
+    expect((await players[3].me()).cooldownUntil).toBe(leftAt + 15 * MINUTE_MS);
   });
 
   it('is a forfeit too when the seat is closed for two missed turns: last place, and the cooldown from the kick', async () => {

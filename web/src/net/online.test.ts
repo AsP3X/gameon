@@ -220,7 +220,15 @@ describe('Online', () => {
     const leaving = online.leaveTable();
     expect(wire().sent.at(-1)).toMatchObject({ t: 'game.leave' });
     ok();
-    wire().say({ ...game.update, rev: 2, events: [{ type: 'seatStatus', seat: 0, status: 'bot' }] });
+    wire().say({
+      ...game.update,
+      rev: 2,
+      events: [{ type: 'seatStatus', seat: 0, status: 'out' }],
+      table: {
+        ...game.update.table,
+        status: game.update.table.status.map((status, seat) => (seat === 0 ? 'out' : status)),
+      },
+    });
     expect(await leaving).toEqual({ ok: true });
     online.closeTable();
     expect(online.getState()).toMatchObject({ table: null, lobby: null, notice: null });
@@ -247,6 +255,23 @@ describe('Online', () => {
       forfeited: true,
       delta: -18,
     });
+  });
+
+  it('leaves a table the leave cancelled the same way: the one update, the lobby goes with the seat, and nothing follows', async () => {
+    welcome({ lobby, game });
+    const leaving = online.leaveTable();
+    ok();
+    // Every other seat is a bot: the server cancelled the game with this update.
+    wire().say({
+      ...game.update,
+      rev: 2,
+      events: [{ type: 'seatStatus', seat: 0, status: 'out' }],
+      table: { ...game.update.table, status: game.update.table.status.map((_, seat) => (seat === 0 ? 'out' : 'bot')) },
+    });
+    expect(await leaving).toEqual({ ok: true });
+    expect(online.getState().table?.hasLeft).toBe(true);
+    online.closeTable();
+    expect(online.getState()).toMatchObject({ table: null, lobby: null, notice: null });
   });
 
   it('takes the result of a game it knows nothing about as news too: after a reload it follows the welcome', () => {

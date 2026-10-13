@@ -34,6 +34,10 @@
    trick is collected, no round goes on. Leaving it is `ok` and then nothing: the game is gone,
    with no result and no stats.
 
+   `game.leave` is a resign (§5.5). While another person is still in the game the seat is `out`
+   and the table plays it, as it plays a seat that was closed. When the leaver is the last person,
+   the game is cancelled: one last update, then no result, no stats and no stored game.
+
    The record follows docs/protocol.md §4, which the server it stands for has not built yet:
    `Stats.byMode` is the five lines, on `GET /me` and on `GET /users/{id}`, and `GET /me/games` is
    one row per finished game the player sat, newest first, a page at a time. A ranked game is in
@@ -112,6 +116,8 @@ export const STANDARD_TIMERS: Timers = {
 const PACE = { relaxed: 2, standard: 1, fast: 0.5 } as const;
 /** How long the table waits before it plays the turn of a seat that is `out` (§5.6). */
 const OUT_SEAT_MS = 1500;
+/** The statuses of a person who is still in the game (§5.5). A bot seat and a seat that is `out` are not. */
+const STILL_IN: readonly SeatStatus[] = ['online', 'offline', 'away'];
 /** The ruleset of §4 that quick play and ranked are played with: the classic deal, ten rounds of 1 to 10 cards. */
 export const STANDARD: GameSettings = {
   maxPlayers: 4,
@@ -302,12 +308,12 @@ interface Game {
   startedAt: number;
   state: GameState;
   rev: number;
-  /** Who plays each seat. null is a bot seat, or one whose player left. */
+  /** Who plays each seat. null is a bot seat, or one whose player resigned or was kicked. */
   players: (Account | null)[];
   colors: TableColor[];
   /** The tier each seat is announced with in `game.start`: its account's at the deal, if it had a rating. */
   tiers: (string | null)[];
-  /** Those who left, and the seat they gave up. In ranked that is a forfeit. */
+  /** Those who resigned, and the seat they gave up. In ranked that is a forfeit. */
   leavers: { account: Account; seat: Seat }[];
   /** Those whose seat was closed for missing two turns in a row while offline, in that order. In ranked that is a forfeit too. */
   kicked: { account: Account; seat: Seat }[];
@@ -1313,15 +1319,34 @@ export class MockServer {
           this.touch();
           return this.write(conn, { t: 'ok', re: m.id });
         }
-        // The seat is a bot from this step. The leaver still gets the step's update, and none after it.
-        game.status[seat] = 'bot';
+        // A resign. The seat is out from this step, and no bot sits down. The leaver still gets the
+        // step's update, and none after it.
+        const alone = !game.players.some(
+          (other, i) => other != null && i !== seat && STILL_IN.some((status) => status === game.status[i]),
+        );
+        game.status[seat] = 'out';
+        game.ready[seat] = false;
         game.players[seat] = null;
-        game.leavers.push({ account, seat });
         account.game = null;
         // Leaving a ranked game is a forfeit, and it closes the ranked queue from this moment:
-        // for longer with every leave of the season.
+        // for longer with every leave of the season. That holds for a game that is cancelled too.
         if (game.mode === 'ranked') account.me.cooldownUntil = this.now() + cooldownAfter(++account.leaves);
-        this.step(game, [{ type: 'seatStatus', seat, status: 'bot' }], actor);
+        const events: GameEvent[] = [{ type: 'seatStatus', seat, status: 'out' }];
+        // Nobody else is a person here: the game is cancelled. The one update the client waits for,
+        // and then nothing: no result, no stats, no stored game, and no rating moves.
+        if (alone) {
+          this.disarm(game);
+          game.rev++;
+          game.deadline = null;
+          this.write(conn, { t: 'ok', re: m.id });
+          this.write(conn, this.update(game, seat, events));
+          this.games.delete(game);
+          this.touch();
+          return this.unseat(account);
+        }
+        // The others play on, and the table plays this seat, as it plays one that was closed.
+        game.leavers.push({ account, seat });
+        this.step(game, events, actor);
         return this.unseat(account);
       }
       default:

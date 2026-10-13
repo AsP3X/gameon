@@ -180,6 +180,9 @@ describe('an online table', () => {
     click('.g-top [data-act="home"]');
     expect(ui.screen).toBe('game');
     expect(text('.sheet h2')).toBe('Leave the table?');
+    expect(text('.sheet p')).toBe(
+      "You resign. The others play on without you, and you can't come back to your seat. The game will not be saved to your stats.",
+    );
     click('.sheet [data-act="closeSheet"]');
     expect(app.querySelector('.sheet')).toBeNull();
     expect(leave).not.toHaveBeenCalled();
@@ -401,6 +404,49 @@ describe('a solo game on the server', () => {
   });
 });
 
+describe('the leave sheet of an online table', () => {
+  const asked = (): string | undefined => {
+    click('.g-top [data-act="home"]');
+    const said = text('.sheet p');
+    click('.sheet [data-act="closeSheet"]');
+    return said;
+  };
+  const ON =
+      "You resign. The others play on without you, and you can't come back to your seat. The game will not be saved to your stats.",
+    CANCELLED =
+      'You are the only person left at this table, so the game ends here. It will not be saved to your stats.';
+
+  it('says the others play on while anybody else is a person: there, offline or away', async () => {
+    for (const status of ['online', 'offline', 'away'] as const) {
+      online = present(['online', status, 'bot']);
+      openTable();
+      await settle();
+      expect(asked()).toBe(ON);
+      closeOnlineTable();
+    }
+  });
+
+  it('says the game ends when every other seat is a bot or out', async () => {
+    for (const status of ['out', 'bot'] as const) {
+      online = present(['online', status, 'bot']);
+      openTable();
+      await settle();
+      expect(asked()).toBe(CANCELLED);
+      closeOnlineTable();
+    }
+  });
+
+  it('follows the table: the last other person goes out while the sheet is open', async () => {
+    online = present();
+    openTable();
+    click('.g-top [data-act="home"]');
+    expect(text('.sheet p')).toBe(ON);
+    tell(present(['online', 'out', 'bot']), OTHERS, [{ type: 'seatStatus', seat: 1, status: 'out' }]);
+    await settle();
+    expect(text('.sheet p')).toBe(CANCELLED);
+  });
+});
+
 describe('who is at an online table', () => {
   it('tags a seat whose player is offline, away, out, or replaced by a bot, and says whom the table waits for', async () => {
     online = present();
@@ -429,7 +475,7 @@ describe('who is at an online table', () => {
     expect(remy().classList.contains('gone')).toBe(false);
     expect(text('.status')).toBe('<b>Remy</b> is away…');
 
-    // Two turns missed while offline: the seat is closed. The name stays, and the table plays it.
+    // The player resigned, or missed two turns while offline: the seat is out. The name stays, and the table plays it.
     tell(present(['online', 'out', 'bot']), OTHERS, [{ type: 'seatStatus', seat: 1, status: 'out' }]);
     await settle();
     expect(remy().querySelector('.presence.out')?.textContent).toBe('Out');

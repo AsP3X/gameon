@@ -220,11 +220,38 @@ describe('RemoteTable, frame by frame', () => {
     const left = table.leave();
     expect(wire.sent[1]).toMatchObject({ t: 'game.leave' });
     wire.say({ t: 'ok', re: wire.sent[1].id });
-    wire.say(update(2, { events: [{ type: 'seatStatus', seat: 0, status: 'bot' }] }));
+    wire.say(
+      update(2, {
+        events: [{ type: 'seatStatus', seat: 0, status: 'out' }],
+        table: { ...sample.update.table, status: ['out', 'online'] },
+      }),
+    );
     expect(await left).toEqual({ ok: true });
+    expect(table.hasLeft).toBe(true);
     expect(heard).toEqual([{ events: ['seatStatus'], info: { unlock: true, last: true }, bids: [2, -1] }]);
+    // The seat is out in the view that was shown last.
+    expect(table.view(0).online?.status).toEqual(['out', 'online']);
     wire.say(update(3, { events: [{ type: 'bidPlaced', seat: 1 }] }));
     expect(heard).toHaveLength(1);
+  });
+
+  it('ends the same way on the update of a leave that cancelled the game: nobody else was a person', async () => {
+    const left = table.leave();
+    wire.say({ t: 'ok', re: wire.sent[1].id });
+    // Not over until the update has come: only a solo game ends with the `ok`.
+    expect(table.hasLeft).toBe(false);
+    expect(heard).toEqual([]);
+    wire.say(
+      update(2, {
+        events: [{ type: 'seatStatus', seat: 0, status: 'out' }],
+        table: { ...sample.update.table, status: ['out', 'bot'] },
+      }),
+    );
+    expect(await left).toEqual({ ok: true });
+    expect(table.hasLeft).toBe(true);
+    expect(heard).toEqual([{ events: ['seatStatus'], info: { unlock: true, last: true }, bids: [2, -1] }]);
+    // The server sends nothing more for this game, and the table has no result.
+    expect(table.result).toBeNull();
   });
 
   it('is a table like any other unless game.start names it: only a solo game is named', () => {
@@ -338,6 +365,31 @@ describe('RemoteTable at a table on the mock server', () => {
     expect(v.seats.map((s) => s.bot)).toEqual([false, false, true]);
     expect(v).toMatchObject({ phase: 'bidding', round: 0, cards: 5 });
     expect(v.hand).toHaveLength(5);
+  });
+
+  it('comes down on the one update of a leave, whether the friend plays on or the game is cancelled', async () => {
+    const table = await seated(),
+      heard = listen(table);
+    expect(await table.leave()).toEqual({ ok: true });
+    await tick();
+    // The friend is still a person at the table: the seat is out and the game goes on without it.
+    expect(heard.at(-1)).toMatchObject({ events: ['seatStatus'], info: { unlock: true, last: true } });
+    expect(table.view(0).online?.status).toEqual(['out', 'online', 'bot']);
+    expect(table.hasLeft).toBe(true);
+    online.closeTable();
+    expect(online.getState()).toMatchObject({ table: null, lobby: null, notice: null });
+
+    // The friend resigns as the last person: one update that says out, and the game is cancelled.
+    const mark = friend.frames.length;
+    friend.send({ t: 'game.leave' });
+    await tick(60_000);
+    expect(friend.frames.slice(mark).map((f) => f.t)).toEqual(['ok', 'game.update']);
+    expect(friend.frames.at(-1)).toMatchObject({
+      events: [{ type: 'seatStatus', seat: 1, status: 'out' }],
+      table: { status: ['out', 'out', 'bot'] },
+    });
+    // No result is owed to the page that left first, so nothing brings news of the game.
+    expect(online.getState()).toMatchObject({ table: null, notice: null });
   });
 
   it('never names a seat in what it sends, and is locked only until its own update', async () => {

@@ -578,4 +578,28 @@ describe('stats', () => {
     expect((await one.me()).stats).toMatchObject({ games: 0, wins: 0, bidsTotal: 0, bestScore: null });
     expect((await two.me()).stats.games).toBe(1);
   });
+
+  it('cancels a game its only person resigns: one update that says out, no result, no stats and no stored game', async () => {
+    const one = await guest(),
+      a = await one.connect();
+    // Nobody else is in the queue: the table starts with bots in every other seat.
+    await ask(a, { t: 'queue.join', mode: 'casual' });
+    await vi.advanceTimersByTimeAsync(QUEUE_FILL_MS);
+    expect(framesOf(a, 'game.start')[0].seats.map((seat) => seat.bot)).toEqual([false, true, true, true]);
+    const before = (await one.me()).stats,
+      mark = a.frames.length;
+    await ask(a, { t: 'game.leave' });
+    await vi.advanceTimersByTimeAsync(120_000);
+    const after = a.frames.slice(mark);
+    expect(after.map((f) => f.t)).toEqual(['ok', 'game.update']);
+    expect(after[1]).toMatchObject({
+      events: [{ type: 'seatStatus', seat: 0, status: 'out' }],
+      table: { status: ['out', 'bot', 'bot', 'bot'] },
+    });
+    const me = await one.me();
+    expect(me.stats).toEqual(before);
+    expect(me).toMatchObject({ active: null, cooldownUntil: null, stats: { games: 0 } });
+    expect((await one.call('GET', '/me/games')).body).toEqual({ games: [] });
+    expect(last(await one.connect(), 'welcome')).toMatchObject({ lobby: null, queue: null, game: null });
+  });
 });

@@ -284,7 +284,7 @@ describe('ranked, for an account', () => {
     await click('#app .g-top [data-act="home"]');
     expect($('#app .sheet h2')?.textContent).toBe('Leave this ranked game?');
     expect($('#app .sheet p')?.textContent).toBe(
-      "Leaving scores last place and starts a cooldown before your next ranked game. A bot takes your seat, and you can't come back to it.",
+      "You resign. That scores last place and starts a cooldown before your next ranked game. The others play on without you, and you can't come back to your seat.",
     );
     expect(texts('#app .sheet .btn')).toEqual(['Leave and forfeit', 'Keep playing']);
     // The warning alone sends nothing, and neither does backing out of it.
@@ -356,7 +356,7 @@ describe('ranked, for an account', () => {
     await openRanked('anne_login');
     await press('Find a ranked game');
     const [calico, mary] = await threeMore();
-    // Calico gives the seat up at the deal: a bot plays it to the end, and the server places it last.
+    // Calico resigns at the deal: the table plays the seat to the end, and the server places it last.
     calico.send({ t: 'game.leave' });
     await settle();
     for (let i = 0; i < 800 && ui.screen !== 'end'; i++) await settle(250);
@@ -389,17 +389,51 @@ describe('ranked, for an account', () => {
     expect((await me()).cooldownUntil).toBeNull();
   }, 60_000);
 
-  it('keeps the casual leave sheet as it was', async () => {
+  it('says the game ends with no result when the three others have resigned, and the leave still starts the cooldown', async () => {
+    await openRanked('anne_login');
+    await press('Find a ranked game');
+    const others = await threeMore();
+    for (const other of others) other.send({ t: 'game.leave' });
+    await settle();
+    // Every other seat is out: nobody else is a person at this table.
+    expect(texts('#app .seat .presence')).toEqual(['Out', 'Out', 'Out']);
+    await click('#app .g-top [data-act="home"]');
+    expect($('#app .sheet h2')?.textContent).toBe('Leave this ranked game?');
+    expect($('#app .sheet p')?.textContent).toBe(
+      'You are the only person left at this table, so the game ends here with no place and no rating change. The cooldown before your next ranked game still starts.',
+    );
+    expect(texts('#app .sheet .btn')).toEqual(['Leave and forfeit', 'Keep playing']);
+
+    await click('[data-act="leaveTable"]');
+    await settle();
+    // The one update that answers the leave took the table down, as any leave does.
+    expect($('#online h1, #online h2')?.textContent).toBe('Online');
+    expect(session.table).toBeNull();
+    expect(await me()).toMatchObject({ active: null, cooldownUntil: NOW + COOLDOWN_MS, rating: null });
+    // The game was cancelled: no result arrives, for this page or for the three who left before.
+    await settle(10 * 60_000);
+    expect($('#online .notice.gold')).toBeNull();
+    expect(others.flatMap((other) => framesOf(other, 'game.over'))).toEqual([]);
+  });
+
+  it('says a casual leave is a resign, and that the game ends when nobody else is a person', async () => {
     await openAt('/skull-king/online', 'anne_login');
     await press('Quick play');
     await settle(4000 + BOARDING_MS);
     expect(ui.screen).toBe('game');
     await click('#app .g-top [data-act="home"]');
     expect($('#app .sheet h2')?.textContent).toBe('Leave the table?');
+    // Nobody else was in the queue: the three other seats are bots.
+    expect($('#app .sheet p')?.textContent).toBe(
+      'You are the only person left at this table, so the game ends here. It will not be saved to your stats.',
+    );
     expect(texts('#app .sheet .btn')).toEqual(['Leave table', 'Keep playing']);
     await click('[data-act="leaveTable"]');
     await settle();
-    expect((await me()).cooldownUntil).toBeNull();
+    expect($('#online h1, #online h2')?.textContent).toBe('Online');
+    expect(await me()).toMatchObject({ active: null, cooldownUntil: null, stats: { games: 0 } });
+    await settle(10 * 60_000);
+    expect($('#online .notice.gold')).toBeNull();
     await visit('/skull-king/ranked');
     expect($('#online [aria-label="Ranked"] .notice')).toBeNull();
     expect(button('Find a ranked game').disabled).toBe(false);

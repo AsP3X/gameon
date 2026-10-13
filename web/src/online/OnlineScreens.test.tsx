@@ -409,6 +409,10 @@ describe('playing online', () => {
 
       await click('#app .g-top [data-act="home"]');
       expect($('#app .sheet h2')?.textContent).toBe('Leave the table?');
+      // The friend is still a person at the table: the game goes on without this seat.
+      expect($('#app .sheet p')?.textContent).toBe(
+        "You resign. The others play on without you, and you can't come back to your seat. The game will not be saved to your stats.",
+      );
       await click('[data-act="leaveTable"]');
       await settle();
       // The table is down and so is the seat in the lobby: this is the hub.

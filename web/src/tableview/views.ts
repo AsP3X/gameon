@@ -232,9 +232,9 @@ function presenceTag(v: TableView, seat: Seat): string {
   const status = v.online?.status[seat];
   if (status === 'offline') return '<span class="presence off">Offline</span>';
   if (status === 'away') return '<span class="presence away">Away</span>';
-  // `bot` on a seat that started as a person: they left, and a bot took it over.
+  // `bot` on a seat that started as a person: a bot sits there now. A leave does not do that: it is `out`.
   if (status === 'bot' && !v.seats[seat].bot) return '<span class="presence bot">Bot</span>';
-  // The player was offline for two turns in a row. The seat is still theirs by name, and the table plays it.
+  // The player resigned, or was offline for two turns in a row. The seat is still theirs by name, and the table plays it.
   if (status === 'out') return '<span class="presence out">Out</span>';
   return '';
 }
@@ -677,9 +677,24 @@ export function lastSheet(): string {
     ${lastBody(v)}
   </div></div>`;
 }
+/** The statuses of a person who is still in the game. A bot seat and a seat that is out are not one. */
+const STILL_IN = new Set(['online', 'offline', 'away']);
+/** What leaving costs, in the words of the sheet. `alone` says nobody else at the table is a person any more. */
+function leaveText(ranked: boolean, alone: boolean): string {
+  if (alone)
+    return ranked
+      ? 'You are the only person left at this table, so the game ends here with no place and no rating change. The cooldown before your next ranked game still starts.'
+      : 'You are the only person left at this table, so the game ends here. It will not be saved to your stats.';
+  return ranked
+    ? "You resign. That scores last place and starts a cooldown before your next ranked game. The others play on without you, and you can't come back to your seat."
+    : "You resign. The others play on without you, and you can't come back to your seat. The game will not be saved to your stats.";
+}
 /**
- * Online only: leaving a running game gives the seat to a bot, so it is asked first. In a ranked
- * game it is also a forfeit, and the sheet says what that costs before anything is sent.
+ * Online only: leaving a running game is a resign, so it is asked first. While somebody else is
+ * still a person at the table the others play on and this seat is out. When nobody is, the server
+ * cancels the game. In a ranked game the resign is also a forfeit, and the sheet says what that
+ * costs before anything is sent. The server decides which of the two it is: the sheet only says
+ * what the last view makes of it.
  */
 export function leaveSheet(): string {
   // A solo game is nobody else's table: leaving it ends it, and the sheet says what that means.
@@ -690,10 +705,12 @@ export function leaveSheet(): string {
     <button class="btn red" data-act="leaveTable">Leave</button>
     <button class="btn ghost" data-act="closeSheet">Keep playing</button>
   </div></div>`;
-  const ranked = session.online?.ranked === true;
+  const ranked = session.online?.ranked === true,
+    v = tableView(),
+    alone = v.online != null && !v.online.status.some((status, seat) => seat !== v.me && STILL_IN.has(status));
   return `<div class="sheet-scrim" data-act="closeSheet"></div><div class="sheet" role="dialog" aria-label="${ranked ? 'Leave the ranked game' : 'Leave the table'}"><div class="in">
     <h2>${ranked ? 'Leave this ranked game?' : 'Leave the table?'}</h2>
-    <p>${ranked ? "Leaving scores last place and starts a cooldown before your next ranked game. A bot takes your seat, and you can't come back to it." : "A bot takes your seat for the rest of the game. You can't come back to it."}</p>
+    <p>${leaveText(ranked, alone)}</p>
     <button class="btn red" data-act="leaveTable">${ranked ? 'Leave and forfeit' : 'Leave table'}</button>
     <button class="btn ghost" data-act="closeSheet">Keep playing</button>
   </div></div>`;
