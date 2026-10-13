@@ -276,6 +276,22 @@ describe('lobbies', () => {
     return reply.t === 'err' ? reply.code : 'ok';
   };
 
+  it.each(['private', 'public'] as const)(
+    'leaves `standing` out of a %s table a player opened, when it is made and after somebody sits down',
+    async (visibility) => {
+      const host = await connect();
+      host.send({ t: 'lobby.create', visibility, settings: SETTINGS });
+      await flush();
+      const created = last(host, 'ok').lobby;
+      expect(created).not.toHaveProperty('standing');
+      const guest = await connect();
+      // The code is what an invite's address carries.
+      expect(await code(guest, { t: 'lobby.join', code: created?.code })).toBe('ok');
+      expect(last(guest, 'ok').lobby).not.toHaveProperty('standing');
+      expect(lobbyOf(host)).not.toHaveProperty('standing');
+    },
+  );
+
   it('creates a private lobby with a code, lets a second player join by it, and tells both of every change', async () => {
     const host = await connect();
     host.send({ t: 'lobby.create', visibility: 'private', settings: SETTINGS });

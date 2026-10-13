@@ -199,7 +199,7 @@ describe('playing online', () => {
     expect(texts('#online .member.open')).toHaveLength(3);
     expect($('#online .on-rules b')?.textContent).toBe('Swift · 5 rounds');
     expect($('#online .on-rules small')?.textContent).toBe('Classic scoring');
-    expect($('#online .foot-hint')?.textContent).toBe('Add a bot, or share the code.');
+    expect($('#online .foot-hint')?.textContent).toBe('Add a bot, or send the invite.');
     expect(button('Start').disabled).toBe(true);
 
     // A bot takes the second seat: once the host is ready, the table is theirs to start.
@@ -263,7 +263,7 @@ describe('playing online', () => {
     await createTable();
     await press("I'm ready");
     // Ready and alone: one seat is not a table.
-    expect($('#online .foot-hint')?.textContent).toBe('Add a bot, or share the code.');
+    expect($('#online .foot-hint')?.textContent).toBe('Add a bot, or send the invite.');
     expect(button('Start').disabled).toBe(true);
     await press('Add a bot');
     await settle();

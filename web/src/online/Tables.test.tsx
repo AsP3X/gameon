@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 /* The tables of friends and the public ones, on the whole page against the mock server (plan item
-   W4): what a new table is asked for with, the table that seats no bots, and what a row of the
-   public list says. What is checked is what the page writes to its socket and what it draws from
+   W4): what a new table is asked for with, the table that seats no bots, what a row of the public
+   list says, and the invite to a table a player opened with the address it links to. What is checked is what the page writes to its socket and what it draws from
    what it was sent. The mock's own answers are in src/net/mock/server.test.ts. */
 import { act, StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
@@ -41,6 +41,8 @@ let listed: LobbySummary[] | 'down' | null;
 /** A list that was asked for and is kept waiting, until the test lets the answer go. */
 let held: (() => void) | null;
 let hold: boolean;
+/** Every lobby the page is sent is a standing house table (docs/protocol.md §5.3). The mock keeps none of its own. */
+let house: boolean;
 
 const $ = (selector: string): HTMLElement | null => document.querySelector<HTMLElement>(selector);
 const texts = (selector: string): string[] =>
@@ -61,6 +63,8 @@ async function press(label: string): Promise<void> {
   });
 }
 const sentOf = (t: string): typeof sent => sent.filter((m) => m.t === t);
+/** The field of the join screen. */
+const codeField = (): HTMLInputElement | null => document.querySelector<HTMLInputElement>('#table-code');
 
 /** A backend that writes down what the page sends over its socket, and may answer the public list by hand. */
 function recording(inner: Backend): Backend {
@@ -85,7 +89,10 @@ function recording(inner: Backend): Backend {
         onmessage: null,
         onclose: null,
       };
-      real.onmessage = (data) => wire.onmessage?.(data);
+      real.onmessage = (data) =>
+        wire.onmessage?.(
+          house && typeof data === 'string' ? data.replaceAll('"visibility":', '"standing":true,"visibility":') : data,
+        );
       real.onclose = (code) => wire.onclose?.(code);
       return wire;
     },
@@ -104,6 +111,22 @@ async function openAt(at: string): Promise<void> {
     await vi.advanceTimersByTimeAsync(0);
   });
   await settle();
+}
+/** The page goes away: closed, or about to be loaded again. The browser it ran in keeps its session. */
+function closePage(): void {
+  act(() => root?.unmount());
+  root = null;
+}
+/** What the browser has to send a link with: a share sheet, a clipboard, both or neither. */
+function browserHas(what: {
+  share?: (data: ShareData) => Promise<void>;
+  copy?: (text: string) => Promise<void>;
+}): void {
+  Object.defineProperty(navigator, 'share', { configurable: true, value: what.share });
+  Object.defineProperty(navigator, 'clipboard', {
+    configurable: true,
+    value: what.copy && { writeText: what.copy },
+  });
 }
 /** Another player, on a connection of their own. */
 async function someone(): Promise<RawClient> {
@@ -140,6 +163,7 @@ beforeEach(() => {
   listed = null;
   held = null;
   hold = false;
+  house = false;
   page = recording(server.browser());
 });
 
@@ -149,6 +173,8 @@ afterEach(() => {
   vi.useRealTimers();
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
+  Reflect.deleteProperty(navigator, 'share');
+  Reflect.deleteProperty(navigator, 'clipboard');
 });
 
 describe('a new table', () => {
@@ -219,7 +245,7 @@ describe('a new table', () => {
       door: 'friends',
       at: '/skull-king/online/new',
       submit: 'Open table',
-      waiting: 'Share the code. The table can start once a second pirate sits down.',
+      waiting: 'Send the invite. The table can start once a second pirate sits down.',
     },
     {
       door: 'public',
@@ -402,5 +428,216 @@ describe('the public list', () => {
     expect($('#online .notice[role="alert"]')?.textContent).toBe(
       "Couldn't load tablesCheck your connection and try again.Try again",
     );
+  });
+});
+
+describe('an invite', () => {
+  const CODE = /^[ABCDEFGHJKMNPQRSTUVWXYZ23456789]{6}$/;
+  /** The link of the table the page is at: the join screen with its code, on the page's own origin. */
+  const linkOf = (code: string): string => `${location.origin}/skull-king/online/join/${code}`;
+  /** A table somebody else opened, and its code. */
+  async function tableOf(friend: RawClient, visibility: 'private' | 'public'): Promise<string> {
+    friend.send({ t: 'lobby.create', visibility, settings: STANDARD });
+    await settle();
+    const code = framesOf(friend, 'ok').at(-1)?.lobby?.code;
+    if (!code) throw new Error('The friend has no table');
+    return code;
+  }
+
+  it('of a private table copies the link where the browser has no share sheet, and keeps the code on the screen', async () => {
+    const copy = vi.fn((_text: string) => Promise.resolve());
+    browserHas({ copy });
+    await openAt('/skull-king/online/new');
+    await press('Open table');
+    const code = $('#online .code')?.textContent ?? '';
+    expect(code).toMatch(CODE);
+    expect($('#online .foot-hint')?.textContent).toBe('Add a bot, or send the invite.');
+    expect(texts('#online .on-code button')).toEqual(['Invite']);
+    expect(texts('#online button')).not.toContain('Copy');
+
+    await press('Invite');
+    await settle();
+    // The link, not the bare code.
+    expect(copy.mock.calls).toEqual([[linkOf(code)]]);
+    expect(texts('#online .on-code button')).toEqual(['Copied']);
+    expect($('#online .code')?.textContent).toBe(code);
+    await settle(2000);
+    expect(texts('#online .on-code button')).toEqual(['Invite']);
+  });
+
+  it('opens the share sheet where there is one, and a sheet that was closed is not an error', async () => {
+    const copy = vi.fn((_text: string) => Promise.resolve());
+    const share = vi.fn((_data: ShareData) => Promise.resolve());
+    browserHas({ share, copy });
+    await openAt('/skull-king/online/new');
+    await press('Open table');
+    const code = $('#online .code')?.textContent ?? '';
+
+    await press('Invite');
+    await settle();
+    expect(share.mock.calls).toEqual([[{ title: 'Skull King Tavern', text: 'Join my table', url: linkOf(code) }]]);
+    // Shared, not copied: the button says nothing else.
+    expect(copy).not.toHaveBeenCalled();
+    expect(texts('#online .on-code button')).toEqual(['Invite']);
+
+    // The player closes the sheet without sending.
+    share.mockImplementationOnce(() => Promise.reject(new DOMException('Share canceled', 'AbortError')));
+    await press('Invite');
+    await settle();
+    expect(copy).not.toHaveBeenCalled();
+    expect(texts('#online .on-code button')).toEqual(['Invite']);
+    expect($('#online [role="alert"]')).toBeNull();
+
+    // The sheet fails for another reason: the link is copied instead.
+    share.mockImplementationOnce(() => Promise.reject(new DOMException('Not allowed', 'NotAllowedError')));
+    await press('Invite');
+    await settle();
+    expect(copy.mock.calls).toEqual([[linkOf(code)]]);
+    expect(texts('#online .on-code button')).toEqual(['Copied']);
+  });
+
+  it('leaves the button as it is when the link can be neither shared nor copied', async () => {
+    browserHas({
+      share: () => Promise.reject(new Error('No share target')),
+      copy: () => Promise.reject(new Error('Not allowed')),
+    });
+    await openAt('/skull-king/online/new');
+    await press('Open table');
+    await press('Invite');
+    await settle();
+    expect(texts('#online .on-code button')).toEqual(['Invite']);
+    expect($('#online [role="alert"]')).toBeNull();
+
+    // A browser with neither of the two.
+    browserHas({});
+    await press('Invite');
+    await settle();
+    expect(texts('#online .on-code button')).toEqual(['Invite']);
+  });
+
+  it('of a public table a player opened is one button without a code, for the host and for a guest', async () => {
+    const copy = vi.fn((_text: string) => Promise.resolve());
+    browserHas({ copy });
+    await openAt('/skull-king/online/public/new');
+    await press('List table');
+    expect($('#online h1, #online h2')?.textContent).toBe('Public table');
+    expect($('#online .on-code')).toBeNull();
+    expect($('#online .code')).toBeNull();
+    expect(texts('#online button').filter((t) => t === 'Invite')).toHaveLength(1);
+    // The table's code is on no part of the screen, and it is what the link ends in.
+    await press('Invite');
+    await settle();
+    expect(copy).toHaveBeenCalledTimes(1);
+    const link = copy.mock.calls[0]?.[0] ?? '';
+    const code = link.slice(linkOf('').length);
+    expect(link).toBe(linkOf(code));
+    expect(code).toMatch(CODE);
+    expect($('#online')?.textContent).not.toContain(code);
+    expect(texts('#online .on-crew button')).toContain('Copied');
+    closePage();
+
+    // A guest who sits down at it from the public list has the same button, and the same link.
+    copy.mockClear();
+    page = recording(server.browser());
+    await openAt('/skull-king/online/public');
+    await press('Join');
+    expect(texts('#online .member small')).toEqual(['Host · away', 'You']);
+    expect($('#online .on-code')).toBeNull();
+    expect(texts('#online button').filter((t) => t === 'Invite')).toHaveLength(1);
+    await press('Invite');
+    await settle();
+    expect(copy.mock.calls).toEqual([[link]]);
+  });
+
+  it('is not on a standing house table, which has no code plate either', async () => {
+    browserHas({ copy: () => Promise.resolve() });
+    await tableOf(await someone(), 'public');
+    house = true;
+    await openAt('/skull-king/online/public');
+    await press('Join');
+    expect($('#online h1, #online h2')?.textContent).toBe('Public table');
+    expect($('#online .on-crew .label')?.textContent).toBe('Crew · 2 of 4');
+    expect(texts('#online button')).not.toContain('Invite');
+    expect($('#online .on-code')).toBeNull();
+    expect($('#online .code')).toBeNull();
+  });
+
+  it('opens the join screen with its code, and asks for the seat only when Join table is pressed', async () => {
+    const code = await tableOf(await someone(), 'private');
+    // A link typed in lower case is the same invite.
+    await openAt(`/skull-king/online/join/${code.toLowerCase()}`);
+    expect(places.path()).toBe(`/skull-king/online/join/${code}`);
+    expect($('#online h1, #online h2')?.textContent).toBe('Join a table');
+    expect(codeField()?.value).toBe(code);
+    expect($('#table-code-help')?.textContent).toBe('This invite is for one table.');
+    await settle(5000);
+    expect(sentOf('lobby.join')).toEqual([]);
+
+    await press('Join table');
+    expect(sentOf('lobby.join')).toEqual([{ t: 'lobby.join', id: expect.any(Number), code }]);
+    expect($('#online h1, #online h2')?.textContent).toBe('Table');
+    expect(texts('#online .member small')).toEqual(['Host', 'You']);
+    expect($('#online .code')?.textContent).toBe(code);
+    expect(places.entries()).toEqual({ paths: ['/skull-king/online'], at: 0 });
+  });
+
+  it('opens the empty join screen for anything that is not a code', async () => {
+    for (const suffix of ['ABC', 'ABCDEFG', 'ABCDE1', 'ABC%20EF', 'ABCDEF/more']) {
+      await openAt(`/skull-king/online/join/${suffix}`);
+      expect(places.path()).toBe('/skull-king/online/join');
+      expect(codeField()?.value).toBe('');
+      expect($('#table-code-help')?.textContent).toBe('Ask the host for the 6-character code.');
+      closePage();
+    }
+    expect(sentOf('lobby.join')).toEqual([]);
+  });
+
+  it('says what the server says about a table that is gone, and asks the host again once the code is another', async () => {
+    await openAt('/skull-king/online/join/ZZZZZZ');
+    await press('Join table');
+    expect(sentOf('lobby.join')).toHaveLength(1);
+    expect($('#table-code-help')?.textContent).toBe('No table has that code. Check it with the host.');
+    expect($('#online h1, #online h2')?.textContent).toBe('Join a table');
+    // The address stays the invite's: nothing was joined.
+    expect(places.path()).toBe('/skull-king/online/join/ZZZZZZ');
+    const input = codeField();
+    if (!input) throw new Error('No code field');
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set?.call(input, 'ZZZZZ');
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect($('#table-code-help')?.textContent).toBe('Ask the host for the 6-character code.');
+  });
+
+  it('leaves a player who is already at a table, or in the queue, where they are', async () => {
+    const code = await tableOf(await someone(), 'private');
+    await openAt('/skull-king/online/new');
+    await press('Open table');
+    const own = $('#online .code')?.textContent;
+    closePage();
+    // The same browser opens the invite: the server's welcome says it sits at its own table.
+    await openAt(`/skull-king/online/join/${code}`);
+    await settle(5000);
+    expect($('#online h1, #online h2')?.textContent).toBe('Your table');
+    expect($('#online .code')?.textContent).toBe(own);
+    expect($('#table-code')).toBeNull();
+    expect(sentOf('lobby.join')).toEqual([]);
+    expect(sentOf('lobby.leave')).toEqual([]);
+    closePage();
+
+    // Another browser, waiting in the queue.
+    page = recording(server.browser());
+    sent = [];
+    await openAt('/skull-king/online');
+    await press('Quick play');
+    expect(sentOf('queue.join')).toHaveLength(1);
+    closePage();
+    await openAt(`/skull-king/online/join/${code}`);
+    await settle(1000);
+    expect($('#table-code')).toBeNull();
+    expect($('#online .searching')).not.toBeNull();
+    expect(sentOf('lobby.join')).toEqual([]);
+    expect(sentOf('queue.leave')).toEqual([]);
   });
 });

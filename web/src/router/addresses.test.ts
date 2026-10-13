@@ -1,6 +1,6 @@
 /* The address table: which page each address shows, and where an address leads that has none. */
 import { describe, expect, it } from 'vite-plus/test';
-import { AT, isFrame, isLegacy, isOnline, playerAt, routeOf, settle } from './addresses';
+import { AT, isFrame, isLegacy, isOnline, joinAt, playerAt, routeOf, settle } from './addresses';
 
 const ID = '018f6b4a-6a2e-7c3a-8b1d-9e0f1a2b3c4d';
 
@@ -59,6 +59,36 @@ describe('the addresses', () => {
     expect(playerAt('<b>Remy</b>')).toBeNull();
     expect(settle('/players/someone')).toBe('/skull-king');
     expect(settle(`/players/${ID}/more`)).toBe('/skull-king');
+  });
+
+  it("reads a table's code out of an invite's address, in upper case, and nothing else", () => {
+    expect(joinAt('ABCDEF')).toBe('/skull-king/online/join/ABCDEF');
+    expect(joinAt('k7mq2x')).toBe('/skull-king/online/join/K7MQ2X');
+    expect(routeOf('/skull-king/online/join/K7MQ2X')).toEqual({ page: 'join', code: 'K7MQ2X' });
+    expect(settle('/skull-king/online/join/k7mq2x')).toBe('/skull-king/online/join/K7MQ2X');
+    expect(routeOf('/skull-king/online/join/k7mq2x/')).toEqual({ page: 'join', code: 'K7MQ2X' });
+    expect(isOnline(routeOf('/skull-king/online/join/K7MQ2X'))).toBe(true);
+    // Six characters of the code's alphabet: it has no I, L, O, 0 or 1.
+    for (const not of [
+      '',
+      'ABCDE',
+      'ABCDEFG',
+      'ABCDEI',
+      'ABCDEL',
+      'ABCDEO',
+      'ABCDE0',
+      'ABCDE1',
+      'ABC-EF',
+      '<b>x</b>',
+    ]) {
+      expect(joinAt(not)).toBeNull();
+      expect(settle(`/skull-king/online/join/${not}`)).toBe('/skull-king/online/join');
+      expect(routeOf(`/skull-king/online/join/${not}`)).toEqual({ page: 'join' });
+    }
+    expect(settle('/skull-king/online/join/ABCDEF/more')).toBe('/skull-king/online/join');
+    expect(settle('/skull-king/online/join/../../api')).toBe('/skull-king/online/join');
+    // A letter that only becomes one of the alphabet's in upper case is not a code.
+    expect(joinAt('abcdeß')).toBeNull();
   });
 
   it("tells the renderer's pages, the frame's and the online screens apart", () => {

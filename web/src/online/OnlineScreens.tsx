@@ -257,8 +257,14 @@ function Hub(props: { online: Online; state: OnlineState; onExit: () => void; go
   );
 }
 
-function Join(props: { live: boolean; onBack: () => void; onJoin: (code: string) => Promise<Outcome> }) {
-  const [code, setCode] = useState('');
+function Join(props: {
+  live: boolean;
+  /** The code of an invite's address. The screen starts with it, and asks for nothing until Join table is pressed. */
+  invite?: string;
+  onBack: () => void;
+  onJoin: (code: string) => Promise<Outcome>;
+}) {
+  const [code, setCode] = useState(props.invite ?? '');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const submit = (e: FormEvent): void => {
@@ -302,7 +308,11 @@ function Join(props: { live: boolean; onBack: () => void; onJoin: (code: string)
             </p>
           ) : (
             <p id="table-code-help" className="muted" role={props.live ? undefined : 'status'}>
-              {props.live ? 'Ask the host for the 6-character code.' : 'Not connected. Trying again…'}
+              {!props.live
+                ? 'Not connected. Trying again…'
+                : props.invite != null && code === props.invite
+                  ? 'This invite is for one table.'
+                  : 'Ask the host for the 6-character code.'}
             </p>
           )}
         </div>
@@ -434,7 +444,10 @@ export function OnlineScreens({ online, state, route, go, up, onExit, sit, onSat
   if (route.page === 'join')
     return (
       <Join
+        // Another invite is another screen: it starts with that code.
+        key={route.code ?? ''}
         live={live}
+        invite={route.code}
         onBack={hub}
         onJoin={async (code) => {
           const r = await online.joinLobby(code);

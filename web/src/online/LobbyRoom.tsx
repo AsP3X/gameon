@@ -1,11 +1,12 @@
 /* A table before its game, as design/skt.pen draws it (`Friends · waiting`, `Public · waiting` and
-   their states): who is at it, who is ready, the rules, and the host's start. Everything on it is
-   the lobby the server sent. */
+   their states): who is at it, who is ready, the rules, the invite to a table a player opened, and
+   the host's start. Everything on it is the lobby the server sent. */
 import { useEffect, useState } from 'react';
 import type { Go } from '../gameon/Frame';
 import type { Online, Outcome } from '../net/online';
 import type { LinkStatus } from '../net/socket';
 import type { Lobby, Me, Member, UserId } from '../protocol/generated';
+import { joinAt } from '../router/addresses';
 import { Sound } from '../sound/sound';
 import { cssColor } from '../tableview/dom';
 import { failureText } from './copy';
@@ -14,6 +15,19 @@ import { Bar, initialOf, Page } from './parts';
 import { describeRules } from './settings';
 
 const nameOf = (m: Member): string => (m.kind === 'bot' ? m.name : m.user.name);
+
+/** The link a friend opens to join: the join screen with the table's code in it, on the origin this
+    page is on. A table a player opened has one. A standing house table has none, and neither has a
+    table the queue made. */
+const inviteOf = (lobby: Lobby): string | null => {
+  if (lobby.standing === true || lobby.mode !== 'custom') return null;
+  const at = joinAt(lobby.code);
+  return at == null ? null : location.origin + at;
+};
+
+/** The player closed the share sheet without sending anything. Told by its name: what a browser throws here is not always an Error. */
+const dismissed = (e: unknown): boolean =>
+  typeof e === 'object' && e !== null && 'name' in e && e.name === 'AbortError';
 
 /** How many of the two a table waits for are there. A public table waits for two people, and a bot
     is not one of them. A private one waits for two seats, and a bot fills one. */
@@ -30,8 +44,8 @@ function hint(lobby: Lobby, me: Me, host: boolean): string {
     if (!host) return 'Waiting for more pirates.';
     if (lobby.visibility === 'public') return 'A public table can start once a second pirate sits down.';
     return lobby.allowBots !== false
-      ? 'Add a bot, or share the code.'
-      : 'Share the code. The table can start once a second pirate sits down.';
+      ? 'Add a bot, or send the invite.'
+      : 'Send the invite. The table can start once a second pirate sits down.';
   }
   if (!mine?.ready) return host ? 'Say you are ready, then start the game.' : 'Say you are ready when you are set.';
   if (waiting) return `Waiting for ${waiting.user.name} to be ready.`;
@@ -80,14 +94,32 @@ export function LobbyRoom({ online, go, lobby, me, status, notice, onRules, onPl
       if (!r.ok) setError(failureText(r));
     });
   };
-  const copy = (): void => {
+  const url = inviteOf(lobby);
+  const invite = async (): Promise<void> => {
+    if (url == null) return;
     Sound.play('tap');
-    // Copying is a convenience: where the browser refuses, the code is still on the screen to read out.
-    navigator.clipboard?.writeText(lobby.code).then(
-      () => setCopied(true),
-      () => {},
-    );
+    if (typeof navigator.share === 'function') {
+      try {
+        return await navigator.share({ title: 'Skull King Tavern', text: 'Join my table', url });
+      } catch (e) {
+        if (dismissed(e)) return;
+      }
+    }
+    // No sheet, or one that failed: the link is copied. Where the browser refuses that too, the
+    // button stays as it is, and a private table's code is still on the screen to read out.
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+    } catch {
+      /* Nothing was copied, and the button does not say so. */
+    }
   };
+  const inviteButton = (className: string) =>
+    url != null && (
+      <button type="button" className={className} disabled={!open} onClick={() => void invite()}>
+        {copied ? 'Copied' : 'Invite'}
+      </button>
+    );
 
   return (
     <Page go={go}>
@@ -129,9 +161,7 @@ export function LobbyRoom({ online, go, lobby, me, status, notice, onRules, onPl
                 <span className="label">Table code</span>
                 <b className="code">{lobby.code}</b>
               </span>
-              <button type="button" className="mini" onClick={copy}>
-                {copied ? 'Copied' : 'Copy'}
-              </button>
+              {inviteButton('mini')}
             </div>
           )}
           <section className="on-crew" aria-labelledby="on-crew">
@@ -219,6 +249,8 @@ export function LobbyRoom({ online, go, lobby, me, status, notice, onRules, onPl
                 Add a bot
               </button>
             )}
+            {/* A public table a player opened has no code to read out: the link is the whole invite. */}
+            {listed && inviteButton('btn ghost')}
           </section>
           <section className="on-rules" aria-labelledby="on-rules">
             <h2 className="label" id="on-rules">

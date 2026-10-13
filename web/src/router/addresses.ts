@@ -46,6 +46,16 @@ const PLAYERS = '/players/';
 /** The address of another player's page, or null for an id that is not one of the server's. */
 export const playerAt = (id: UserId): string | null => (USER_ID.test(id) ? PLAYERS + id.toLowerCase() : null);
 
+/** A table's code as the server makes them (docs/protocol.md §5.3). Nothing else is put into an address or read out of one. */
+const TABLE_CODE = /^[ABCDEFGHJKMNPQRSTUVWXYZ23456789]{6}$/;
+const JOIN = '/skull-king/online/join/';
+
+/** The address of the join screen with a table's code in it: what an invite links to. null for anything that is not a code. */
+export function joinAt(code: string): string | null {
+  const upper = code.toUpperCase();
+  return TABLE_CODE.test(upper) ? JOIN + upper : null;
+}
+
 /** What an address shows. */
 export type Route =
   /* The frame around the game. */
@@ -76,7 +86,8 @@ export type Route =
   | { page: 'online' }
   | { page: 'ranked' }
   | { page: 'newTable'; visibility: 'private' | 'public' }
-  | { page: 'join' }
+  /** Joining by code. An invite's address carries the code, and the screen starts with it. */
+  | { page: 'join'; code?: string }
   | { page: 'publicTables' };
 
 /** The pages the legacy renderer draws. */
@@ -147,12 +158,14 @@ const PAGES: Record<string, Route> = {
 
 /**
  * The address a path stands for: itself when it has a page, and Skull King's home for a path that
- * is nobody's. A slash at the end is dropped.
+ * is nobody's. A slash at the end is dropped. What follows the join screen's address and is not a
+ * table's code leads to the join screen without one.
  */
 export function settle(path: string): string {
   const bare = path.length > 1 ? path.replace(/\/+$/, '') : path;
   if (Object.hasOwn(PAGES, bare)) return bare;
   if (bare.startsWith(PLAYERS)) return playerAt(bare.slice(PLAYERS.length)) ?? AT.home;
+  if (bare.startsWith(JOIN)) return joinAt(bare.slice(JOIN.length)) ?? AT.join;
   return AT.home;
 }
 
@@ -160,5 +173,6 @@ export function settle(path: string): string {
 export function routeOf(path: string): Route {
   const at = settle(path);
   if (Object.hasOwn(PAGES, at)) return PAGES[at];
-  return at.startsWith(PLAYERS) ? { page: 'player', id: at.slice(PLAYERS.length) } : { page: 'home' };
+  if (at.startsWith(PLAYERS)) return { page: 'player', id: at.slice(PLAYERS.length) };
+  return at.startsWith(JOIN) ? { page: 'join', code: at.slice(JOIN.length) } : { page: 'home' };
 }
