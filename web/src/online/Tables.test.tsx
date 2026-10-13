@@ -286,13 +286,32 @@ describe('the public list', () => {
     ...over,
   });
 
-  it('titles a table nobody hosts by the name the server sent, and says of every table whether it seats bots', async () => {
+  it('leads every table with what it plays, titles one nobody hosts by the name the server sent, and says whether it seats bots', async () => {
     listed = [
-      // The two tables the server keeps open: no host, so no colour, nobody seated, and no word about bots.
+      // The five tables the server keeps open, one for each length of game: no host, so no colour, nobody seated, and no word about bots.
       row({ id: '00000000-0000-4000-8000-000000000001', hostName: 'Open table' }),
-      row({ id: '00000000-0000-4000-8000-000000000002', hostName: 'Open table' }),
+      row({
+        id: '00000000-0000-4000-8000-000000000002',
+        hostName: 'Open table',
+        settings: { ...STANDARD, format: 'brawl' },
+      }),
       row({
         id: '00000000-0000-4000-8000-000000000003',
+        hostName: 'Open table',
+        settings: { ...STANDARD, format: 'swift' },
+      }),
+      row({
+        id: '00000000-0000-4000-8000-000000000004',
+        hostName: 'Open table',
+        settings: { ...STANDARD, format: 'even' },
+      }),
+      row({
+        id: '00000000-0000-4000-8000-000000000005',
+        hostName: 'Open table',
+        settings: { ...STANDARD, format: 'whirl' },
+      }),
+      row({
+        id: '00000000-0000-4000-8000-000000000006',
         hostName: 'Calico Jack',
         hostColor: '#ce82ff',
         players: 1,
@@ -300,7 +319,7 @@ describe('the public list', () => {
         allowBots: false,
       }),
       row({
-        id: '00000000-0000-4000-8000-000000000004',
+        id: '00000000-0000-4000-8000-000000000007',
         hostName: 'Kidd',
         hostColor: '#58cc02',
         players: 3,
@@ -308,7 +327,7 @@ describe('the public list', () => {
         allowBots: true,
       }),
       row({
-        id: '00000000-0000-4000-8000-000000000005',
+        id: '00000000-0000-4000-8000-000000000008',
         hostName: 'Mary Read',
         hostColor: '#ff4b4b',
         players: 4,
@@ -320,17 +339,40 @@ describe('the public list', () => {
     const rows = Array.from(document.querySelectorAll<HTMLElement>('#online .tables li'));
     expect(
       rows.map((li) => [
+        li.querySelector('.on-row-head')?.firstElementChild?.textContent,
         li.querySelector('b')?.textContent,
-        li.querySelector('.on-row-line')?.firstChild?.textContent,
+        ...Array.from(li.querySelectorAll('.on-row-line'), (line) => line.firstChild?.textContent),
         li.querySelector('.on-row-line .pill')?.textContent,
         li.querySelector(':scope > .mini, :scope > .pill')?.textContent,
       ]),
     ).toEqual([
-      ['Open table', '0 of 4 seats · Classic', 'Bots', 'Join'],
-      ['Open table', '0 of 4 seats · Classic', 'Bots', 'Join'],
-      ['Calico Jack’s table', '1 of 4 seats · Swift', 'No bots', 'Join'],
-      ['Kidd’s table', '3 of 4 seats · Brawl', 'Bots', 'Join'],
-      ['Mary Read’s table', '4 of 4 seats · Classic', 'No bots', 'Full'],
+      ['Classic', 'Open table', '10 rounds · 1 to 10 cards', '0 of 4 seats', 'Bots', 'Join'],
+      ['Brawl', 'Open table', '5 rounds · 6 to 10 cards', '0 of 4 seats', 'Bots', 'Join'],
+      ['Swift', 'Open table', '5 rounds · 5 cards each', '0 of 4 seats', 'Bots', 'Join'],
+      ['Even', 'Open table', '10 rounds · 2, 4, 6, 8, 10 twice', '0 of 4 seats', 'Bots', 'Join'],
+      ['Whirl', 'Open table', '10 rounds · 9, 7, 5, 3, 1 twice', '0 of 4 seats', 'Bots', 'Join'],
+      ['Swift', 'Calico Jack’s table', '5 rounds · 5 cards each', '1 of 4 seats', 'No bots', 'Join'],
+      ['Brawl', 'Kidd’s table', '5 rounds · 6 to 10 cards', '3 of 4 seats', 'Bots', 'Join'],
+      ['Classic', 'Mary Read’s table', '10 rounds · 1 to 10 cards', '4 of 4 seats', 'No bots', 'Full'],
+    ]);
+    // What a table plays is a pill of its own, and Join is told apart by it: five rows have the same title.
+    expect(rows.map((li) => li.querySelector('.on-row-head')?.firstElementChild?.className)).toEqual(
+      rows.map(() => 'pill format'),
+    );
+    expect(
+      rows
+        .slice(0, 5)
+        .map((li) =>
+          (li.querySelector('.mini')?.getAttribute('aria-describedby') ?? '')
+            .split(' ')
+            .map((id) => document.getElementById(id)?.textContent),
+        ),
+    ).toEqual([
+      ['Classic', 'Open table'],
+      ['Brawl', 'Open table'],
+      ['Swift', 'Open table'],
+      ['Even', 'Open table'],
+      ['Whirl', 'Open table'],
     ]);
     // A row is the name the server sent and nothing else of the host's: no colour is made up for it.
     expect(document.querySelectorAll('#online .tables .avatar')).toHaveLength(0);

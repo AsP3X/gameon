@@ -362,10 +362,10 @@ describe('public tables', () => {
     hidden.socket.send({ t: 'lobby.create', visibility: 'private', settings: SETTINGS });
     await settle();
     await press('Refresh');
-    // A table somebody hosts is theirs by name. The seats, the length of the game, and that it seats bots.
+    // A table somebody hosts is theirs by name. The length of the game leads, then its rounds, the seats, and that it seats bots.
     expect(texts('#online .tables .plate b')).toEqual(['Mary Read’s table']);
-    expect(texts('#online .tables .on-row-line')).toEqual(['1 of 3 seats · SwiftBots']);
-    expect(texts('#online .tables .pill')).toEqual(['Bots']);
+    expect(texts('#online .tables .on-row-line')).toEqual(['5 rounds · 5 cards each', '1 of 3 seatsBots']);
+    expect(texts('#online .tables .pill')).toEqual(['Swift', 'Bots']);
 
     await press('Join');
     expect($('#online h1, #online h2')?.textContent).toBe('Public table');
@@ -390,7 +390,7 @@ describe('public tables', () => {
     await settle();
     await press('Join');
     expect($('#online [role="alert"]')?.textContent).toBe('That table is full.');
-    expect(texts('#online .tables .pill')).toEqual(['Bots', 'Full']);
+    expect(texts('#online .tables .pill')).toEqual(['Swift', 'Bots', 'Full']);
     expect(document.querySelector('#online .tables button')).toBeNull();
     expect($('#online h1, #online h2')?.textContent).toBe('Public tables');
   });

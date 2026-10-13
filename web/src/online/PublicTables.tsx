@@ -111,7 +111,13 @@ export function PublicTables({ online, go, me, live, onBack, onCreate, sit = nul
               return (
                 <li className="plate" key={lobby.id}>
                   <span className="grow">
-                    <b id={`table-host-${i}`}>{row.title}</b>
+                    <span className="on-row-head">
+                      <span className="pill format" id={`table-format-${i}`}>
+                        {row.format}
+                      </span>
+                      <b id={`table-host-${i}`}>{row.title}</b>
+                    </span>
+                    <span className="on-row-line">{row.rounds}</span>
                     <span className="on-row-line">
                       {row.seats}
                       <span className={row.bots ? 'pill soft' : 'pill blue'}>{row.bots ? 'Bots' : 'No bots'}</span>
@@ -123,7 +129,7 @@ export function PublicTables({ online, go, me, live, onBack, onCreate, sit = nul
                     <button
                       type="button"
                       className="mini"
-                      aria-describedby={`table-host-${i}`}
+                      aria-describedby={`table-format-${i} table-host-${i}`}
                       disabled={!live || joining != null}
                       onClick={() => join(lobby.id)}
                     >

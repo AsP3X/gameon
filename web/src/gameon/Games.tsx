@@ -5,10 +5,10 @@
    tables is what the server said (`Me`, `GET /lobbies`). The game saved on this device is read from
    where the renderer keeps it. Sitting down at a table is not done here: the online screens do it. */
 import { useEffect, useState } from 'react';
-import { Rules } from '../game';
 import type { Online } from '../net/online';
-import type { LobbyId, LobbySummary, Me, Season } from '../protocol/generated';
+import type { Format, LobbyId, LobbySummary, Me, Season } from '../protocol/generated';
 import { initialOf } from '../online/parts';
+import { describeRow } from '../online/settings';
 import { AT } from '../router/addresses';
 import { cssColor, whole } from '../tableview/dom';
 import { CardFan, SkullKingKey } from './art';
@@ -22,7 +22,19 @@ import { savedGame, savedTitle } from './saved';
 import { Choice, Option } from '../skullking/parts';
 
 /** How many open tables the card lists. The rest are behind "All public tables". */
-const TABLES_SHOWN = 3;
+const TABLES_SHOWN = 6;
+
+/**
+ * The open tables the card lists, in the server's order: the first of each length of game, so that
+ * none of the five is missing while it has a table with room, and then the others for as long as
+ * there are rows left. The length is the row's own (`settings.format`), not its place in the list.
+ */
+function shown(open: LobbySummary[]): LobbySummary[] {
+  const first = new Map<Format, LobbySummary>();
+  for (const lobby of open) if (!first.has(lobby.settings.format)) first.set(lobby.settings.format, lobby);
+  let rest = TABLES_SHOWN - first.size;
+  return open.filter((lobby) => first.get(lobby.settings.format) === lobby || rest-- > 0);
+}
 
 type Tables = { state: 'loading' } | { state: 'failed' } | { state: 'ready'; open: LobbySummary[] };
 
@@ -233,33 +245,40 @@ function OpenTables({
       ) : (
         <>
           <ul>
-            {tables.open.slice(0, TABLES_SHOWN).map((lobby, i) => (
-              <li key={lobby.id}>
-                {/* The host's colour when the server sent one. No other is put in its place. */}
-                <span
-                  className={lobby.hostColor ? 'avatar' : 'avatar plain'}
-                  style={lobby.hostColor ? { background: cssColor(lobby.hostColor) } : undefined}
-                  aria-hidden="true"
-                >
-                  {initialOf(lobby.hostName)}
-                </span>
-                <span className="go-table-text">
-                  {/* A row without its host's colour has no host: the server's name for it is the whole title. */}
-                  <b id={`go-table-${i}`}>{lobby.hostColor ? `${lobby.hostName}’s table` : lobby.hostName}</b>
-                  <small>
-                    {lobby.players} of {lobby.settings.maxPlayers} seats · {Rules.FORMATS[lobby.settings.format].name}
-                  </small>
-                </span>
-                <button
-                  type="button"
-                  className="btn ghost go-btn small"
-                  aria-describedby={`go-table-${i}`}
-                  onClick={() => onJoin(lobby.id)}
-                >
-                  Join
-                </button>
-              </li>
-            ))}
+            {shown(tables.open).map((lobby, i) => {
+              const row = describeRow(lobby);
+              return (
+                <li key={lobby.id}>
+                  {/* The host's colour when the server sent one. No other is put in its place. */}
+                  <span
+                    className={lobby.hostColor ? 'avatar' : 'avatar plain'}
+                    style={lobby.hostColor ? { background: cssColor(lobby.hostColor) } : undefined}
+                    aria-hidden="true"
+                  >
+                    {initialOf(lobby.hostName)}
+                  </span>
+                  <span className="go-table-text">
+                    <span className="pill format" id={`go-table-format-${i}`}>
+                      {row.format}
+                    </span>
+                    {/* A row without its host's colour has no host: the server's name for it is the whole title. */}
+                    <b id={`go-table-${i}`}>{row.title}</b>
+                  </span>
+                  <button
+                    type="button"
+                    className="btn ghost go-btn small"
+                    aria-describedby={`go-table-format-${i} go-table-${i}`}
+                    onClick={() => onJoin(lobby.id)}
+                  >
+                    Join
+                  </button>
+                  <span className="go-table-more">
+                    <small>{row.rounds}</small>
+                    <small>{row.seats}</small>
+                  </span>
+                </li>
+              );
+            })}
           </ul>
           <p className="go-tables-foot">
             <Link to={AT.publicTables} className="go-text-link">

@@ -261,6 +261,11 @@ p {
   background: var(--soft);
   color: var(--muted);
 }
+/* What a table plays. The one filled pill of a row, so that it is read first. */
+.pill.format {
+  background: var(--gold);
+  color: var(--gold-ink);
+}
 .pill.wrap {
   white-space: normal;
   text-align: center;

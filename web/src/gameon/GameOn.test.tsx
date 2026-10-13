@@ -15,7 +15,7 @@ import type { RawClient } from '../net/mock/raw';
 import { MockServer, STANDARD } from '../net/mock/server';
 import { Online } from '../net/online';
 import { SocketClient } from '../net/socket';
-import type { GameSettings, LadderEntry, Me, ServerConfig } from '../protocol/generated';
+import type { GameSettings, LadderEntry, LobbySummary, Me, ServerConfig } from '../protocol/generated';
 import { isFrame, routeOf } from '../router/addresses';
 import { memoryPlaces } from '../router/places';
 import type { MemoryPlaces } from '../router/places';
@@ -477,7 +477,9 @@ describe('Games', () => {
     await openAt('/games');
     expect($('.go-tables-head .pill')?.textContent).toBe('1');
     expect(texts('.go-table-text b')).toEqual(['<i>Mary</i>’s table']);
-    expect(texts('.go-table-text small')).toEqual(['1 of 3 seats · Swift-n-Salty']);
+    // What the table plays leads the row, by its short name, then its rounds and its seats.
+    expect(texts('.go-table-text .pill')).toEqual(['Swift']);
+    expect(texts('.go-table-more small')).toEqual(['5 rounds · 5 cards each', '1 of 3 seats']);
     // The avatar is the host's own colour, as the server sent it.
     expect($('.go-tables li .avatar')?.className).toBe('avatar');
     expect($('.go-tables li .avatar')?.style.background).toBe('rgb(206, 130, 255)');
@@ -530,42 +532,99 @@ describe('Games', () => {
     // This row came without a host's colour, as a table nobody hosts does: the name the server gave
     // it is the whole title, the avatar is plain, and no colour is made up for it.
     expect(texts('.go-table-text b')).toEqual(['Teo']);
-    expect(texts('.go-table-text small')).toEqual(['2 of 3 seats · Swift-n-Salty']);
+    expect(texts('.go-table-more small')).toEqual(['5 rounds · 5 cards each', '2 of 3 seats']);
     expect($('.go-tables li .avatar')?.className).toBe('avatar plain');
     expect($('.go-tables li .avatar')?.getAttribute('style')).toBeNull();
   });
 
-  it("lists the server's own open tables, which nobody hosts yet, next to a player's", async () => {
+  /** A table the server keeps open, which nobody hosts yet: no colour, nobody seated. */
+  const house = (format: GameSettings['format']): LobbySummary => ({
+    id: `house-${format}`,
+    hostName: 'Open table',
+    settings: { ...STANDARD, format },
+    players: 0,
+  });
+  const mira: LobbySummary = { id: 'lobby-1', hostName: 'Mira', hostColor: '#ce82ff', settings: SETTINGS, players: 1 };
+  const listing = async (lobbies: LobbySummary[]): Promise<void> => {
     const guest = await aGuest();
-    const house = { id: 'house-1', hostName: 'Open table', settings: { ...SETTINGS, maxPlayers: 4 }, players: 0 };
-    await openFrame(
-      {
-        'POST /auth/guest': () => ok(guest),
-        'GET /lobbies': () =>
-          ok({
-            lobbies: [
-              house,
-              { ...house, id: 'house-2' },
-              { id: 'lobby-1', hostName: 'Mira', hostColor: '#ce82ff', settings: SETTINGS, players: 1 },
-            ],
-          }),
-      },
-      '/games',
-    );
-    expect($('.go-tables-head .pill')?.textContent).toBe('3');
-    expect(texts('.go-table-text b')).toEqual(['Open table', 'Open table', 'Mira’s table']);
-    expect(texts('.go-table-text small')).toEqual([
-      '0 of 4 seats · Swift-n-Salty',
-      '0 of 4 seats · Swift-n-Salty',
-      '1 of 3 seats · Swift-n-Salty',
+    await openFrame({ 'POST /auth/guest': () => ok(guest), 'GET /lobbies': () => ok({ lobbies }) }, '/games');
+  };
+
+  it("lists the server's own open tables, one for each length of game, and a player's as one more", async () => {
+    await listing([house('classic'), house('brawl'), house('swift'), house('even'), house('whirl'), mira]);
+    expect($('.go-tables-head .pill')?.textContent).toBe('6');
+    expect(
+      Array.from(document.querySelectorAll('.go-tables li'), (row) =>
+        Array.from(row.querySelectorAll('.pill, b, small'), (c) => c.textContent),
+      ),
+    ).toEqual([
+      ['Classic', 'Open table', '10 rounds · 1 to 10 cards', '0 of 4 seats'],
+      ['Brawl', 'Open table', '5 rounds · 6 to 10 cards', '0 of 4 seats'],
+      ['Swift', 'Open table', '5 rounds · 5 cards each', '0 of 4 seats'],
+      ['Even', 'Open table', '10 rounds · 2, 4, 6, 8, 10 twice', '0 of 4 seats'],
+      ['Whirl', 'Open table', '10 rounds · 9, 7, 5, 3, 1 twice', '0 of 4 seats'],
+      ['Swift', 'Mira’s table', '5 rounds · 5 cards each', '1 of 3 seats'],
     ]);
+    // A table nobody hosts has the plain avatar: no colour is made up for it.
     expect(Array.from(document.querySelectorAll('.go-tables li .avatar'), (a) => a.className)).toEqual([
+      'avatar plain',
+      'avatar plain',
+      'avatar plain',
       'avatar plain',
       'avatar plain',
       'avatar',
     ]);
-    // Each can be sat down at.
-    expect(document.querySelectorAll('.go-tables li button')).toHaveLength(3);
+    // Each can be sat down at, and Join is told apart by what the table plays: five rows have the same title.
+    expect(
+      Array.from(document.querySelectorAll('.go-tables li button'), (join) =>
+        (join.getAttribute('aria-describedby') ?? '').split(' ').map((id) => document.getElementById(id)?.textContent),
+      ),
+    ).toEqual([
+      ['Classic', 'Open table'],
+      ['Brawl', 'Open table'],
+      ['Swift', 'Open table'],
+      ['Even', 'Open table'],
+      ['Whirl', 'Open table'],
+      ['Swift', 'Mira’s table'],
+    ]);
+  });
+
+  it('leaves out none of the lengths of game, wherever its table is in the list and whoever hosts it', async () => {
+    const hosted = (n: number, format: GameSettings['format']): LobbySummary => ({
+      id: `lobby-${n}`,
+      hostName: `Pirate ${n}`,
+      hostColor: '#58cc02',
+      settings: { ...STANDARD, format },
+      players: 1,
+    });
+    // Classic filled up and was opened again at the end of the list, behind six tables of players. Somebody sat down at Even.
+    await listing([
+      house('brawl'),
+      house('swift'),
+      { ...house('even'), hostName: 'Anne', hostColor: '#ff4b4b', players: 1 },
+      house('whirl'),
+      hosted(1, 'swift'),
+      hosted(2, 'swift'),
+      hosted(3, 'brawl'),
+      hosted(4, 'whirl'),
+      hosted(5, 'even'),
+      hosted(6, 'brawl'),
+      house('classic'),
+    ]);
+    expect($('.go-tables-head .pill')?.textContent).toBe('11');
+    // The five lengths, and one row more: the rest are behind "All public tables".
+    expect(
+      Array.from(document.querySelectorAll('.go-table-text'), (row) =>
+        Array.from(row.querySelectorAll('.pill, b'), (c) => c.textContent),
+      ),
+    ).toEqual([
+      ['Brawl', 'Open table'],
+      ['Swift', 'Open table'],
+      ['Even', 'Anne’s table'],
+      ['Whirl', 'Open table'],
+      ['Swift', 'Pirate 1’s table'],
+      ['Classic', 'Open table'],
+    ]);
   });
 
   it('filters the shelf, and counts what is coming', async () => {

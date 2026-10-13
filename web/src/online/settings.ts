@@ -2,7 +2,7 @@
    The last settings are a per-device convenience (localStorage): the server has the real ones. */
 import { Rules } from '../game';
 import type { GameSettings, LobbySummary, Pace } from '../protocol/generated';
-import { EXTRAS, formatName, scoringName } from '../skullking/rulesets';
+import { EXTRAS, formatName, ROUNDS, scoringName } from '../skullking/rulesets';
 import { isFormat, isLevel, isScoring } from '../tableview/state';
 import { Store } from '../tableview/store';
 
@@ -69,13 +69,23 @@ export function describeRules(s: GameSettings): { title: string; detail: string 
 }
 
 /**
- * A row of the public list. A table somebody hosts is theirs by name. One nobody hosts is titled
- * by the name the server sent, and nothing is added to it. The seat count is humans and bots.
+ * A row of the public list, and of the open tables on Games. The length of the game leads, by its
+ * short name, with its rounds in a line. A table somebody hosts is theirs by name. One nobody hosts
+ * is titled by the name the server sent, and nothing is added to it. The seat count is humans and
+ * bots. All of it is the row's own settings: a table the server keeps open may have been changed.
  */
-export function describeRow(lobby: LobbySummary): { title: string; seats: string; bots: boolean } {
+export function describeRow(lobby: LobbySummary): {
+  format: string;
+  rounds: string;
+  title: string;
+  seats: string;
+  bots: boolean;
+} {
   return {
+    format: formatName(lobby.settings.format),
+    rounds: ROUNDS[lobby.settings.format],
     title: lobby.hostColor ? `${lobby.hostName}’s table` : lobby.hostName,
-    seats: `${lobby.players} of ${lobby.settings.maxPlayers} seats · ${formatName(lobby.settings.format)}`,
+    seats: `${lobby.players} of ${lobby.settings.maxPlayers} seats`,
     // Left out, the table seats bots.
     bots: lobby.allowBots !== false,
   };

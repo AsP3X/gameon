@@ -1028,12 +1028,14 @@
 }
 .go-seat-who b,
 .go-table-text b,
-.go-seat-who small,
-.go-table-text small {
+.go-seat-who small {
   display: block;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+.go-table-more small {
+  display: block;
 }
 .go-seat-who b {
   font-size: 20px;
@@ -1041,7 +1043,7 @@
   line-height: 1.2;
 }
 .go-seat-who small,
-.go-table-text small {
+.go-table-more small {
   font-size: 13px;
   line-height: 1.3;
   color: var(--muted);
@@ -1116,11 +1118,17 @@
 .go-tables-wait span {
   border-top: 2px solid var(--line);
 }
+/* A table: whose it is and what it plays, next to the way in. Its rounds and seats go under both,
+   so that the rounds are read on one line. */
 .go-tables li {
-  display: flex;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
-  gap: 12px;
+  gap: 2px 12px;
   padding: 12px 14px 14px 16px;
+}
+.go-table-more {
+  grid-column: 2 / -1;
 }
 /* A table whose row came without its host's colour. */
 .go-tables .avatar.plain {
@@ -1129,13 +1137,16 @@
   box-shadow: inset 0 -4px 0 var(--line);
 }
 .go-table-text {
-  flex: 1;
   min-width: 0;
 }
 .go-table-text b {
   font-size: 16px;
   font-weight: 800;
   line-height: 1.3;
+}
+/* What the table plays leads its row. */
+.go-table-text .pill {
+  margin-bottom: 4px;
 }
 .go-tables-foot {
   display: flex;

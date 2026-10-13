@@ -714,11 +714,24 @@ ul.tables {
   gap: 10px;
 }
 
-/* The public list: a table, how full it is and what it plays, and whether it seats bots. */
+/* The public list: what a table plays and whose it is, the rounds of that, then how full it is and
+   whether it seats bots. A long name goes under the pill instead of being cut short beside it. */
 .on-list .tables {
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+.on-row-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+}
+.on-row-head b {
+  min-width: 0;
+}
+.on-row-head + .on-row-line {
+  margin-top: 4px;
 }
 .on-row-line {
   display: flex;

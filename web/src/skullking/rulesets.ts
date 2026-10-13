@@ -15,6 +15,14 @@ export const FORMATS: [Format, string][] = [
   ['even', 'Even'],
   ['whirl', 'Whirl'],
 ];
+/** The rounds of each length in a line, for where there is no room to draw them: how many, and the cards dealt. */
+export const ROUNDS: Record<Format, string> = {
+  classic: '10 rounds · 1 to 10 cards',
+  brawl: '5 rounds · 6 to 10 cards',
+  swift: '5 rounds · 5 cards each',
+  even: '10 rounds · 2, 4, 6, 8, 10 twice',
+  whirl: '10 rounds · 9, 7, 5, 3, 1 twice',
+};
 export type Extra = 'loot' | 'kraken' | 'whale' | 'abilities';
 export const EXTRAS: [Extra, string, string][] = [
   ['loot', 'Loot', 'Win a Loot to form an alliance: +20 each if both make their bids.'],
