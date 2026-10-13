@@ -343,29 +343,68 @@ describe('lobbies', () => {
     expect(await code(late, { t: 'lobby.join', code: table })).toBe('LOBBY_STARTED');
   });
 
-  it('starts a table only with two people at it, public or private: a bot is not the second', async () => {
+  it('starts a public table only with two people at it, and a private one with two seats taken', async () => {
     for (const visibility of ['public', 'private'] as const) {
       const host = await connect(),
         guest = await connect();
       expect(await code(host, { t: 'lobby.create', visibility, settings: SETTINGS })).toBe('ok');
       const table = last(host, 'ok').lobby?.code;
-      expect(await code(host, { t: 'lobby.addBot' })).toBe('ok');
       expect(await code(host, { t: 'lobby.ready', ready: true })).toBe('ok');
-      // Two seats, and every human ready: the bot is not the second person a table waits for.
-      const refused = host.send({ t: 'lobby.start' });
+      // One seat is not a table, whoever may see it.
+      const alone = host.send({ t: 'lobby.start' });
       await flush();
-      expect(answer(host, refused).reply).toMatchObject({ t: 'err', code: 'NOT_READY' });
+      expect(answer(host, alone).reply).toMatchObject({ t: 'err', code: 'NOT_READY' });
+      expect(await code(host, { t: 'lobby.addBot' })).toBe('ok');
+      // A seat that fills starts nothing: the host sends `lobby.start`.
       expect(lobbyOf(host)).toMatchObject({ visibility, state: 'open', gameId: null });
       expect(framesOf(host, 'game.start')).toEqual([]);
 
+      if (visibility === 'public') {
+        // Two seats, and every human ready: the bot is not the second person a public table waits for.
+        const refused = host.send({ t: 'lobby.start' });
+        await flush();
+        expect(answer(host, refused).reply).toEqual({
+          t: 'err',
+          re: refused,
+          code: 'NOT_READY',
+          message: 'Everyone has to be ready, and a public table needs two pirates. A bot is not one of them.',
+        });
+        expect(answer(host, alone).reply).toEqual({ ...answer(host, refused).reply, re: alone });
+        expect(lobbyOf(host)).toMatchObject({ visibility, state: 'open', gameId: null });
+        expect(framesOf(host, 'game.start')).toEqual([]);
+      } else {
+        // The refusal of a private table does not say a bot is no use: there, it is the second seat.
+        expect(answer(host, alone).reply).toEqual({
+          t: 'err',
+          re: alone,
+          code: 'NOT_READY',
+          message: 'Everyone has to be ready, and your table needs two seats taken. A bot can take one.',
+        });
+      }
+
       expect(await code(guest, { t: 'lobby.join', code: table })).toBe('ok');
       expect(await code(host, { t: 'lobby.start' })).toBe('NOT_READY'); // the second human is not ready
+      expect(lobbyOf(host).state).toBe('open');
       expect(await code(guest, { t: 'lobby.ready', ready: true })).toBe('ok');
       // Two people and a bot: the table starts, and the bot has its seat.
       expect(await code(host, { t: 'lobby.start' })).toBe('ok');
       expect(lobbyOf(guest).state).toBe('inGame');
       expect(last(guest, 'game.update').table.status).toEqual(['online', 'bot', 'online']);
     }
+  });
+
+  it('starts a private table for its host and a bot, when the host says so', async () => {
+    const host = await connect();
+    expect(await code(host, { t: 'lobby.create', visibility: 'private', settings: SETTINGS })).toBe('ok');
+    expect(await code(host, { t: 'lobby.addBot' })).toBe('ok');
+    expect(await code(host, { t: 'lobby.start' })).toBe('NOT_READY'); // the host is not ready
+    expect(await code(host, { t: 'lobby.ready', ready: true })).toBe('ok');
+    expect(lobbyOf(host).state).toBe('open');
+    expect(framesOf(host, 'game.start')).toEqual([]);
+    expect(await code(host, { t: 'lobby.start' })).toBe('ok');
+    expect(lobbyOf(host).state).toBe('inGame');
+    expect(framesOf(host, 'game.start')).toHaveLength(1);
+    expect(last(host, 'game.update').table.status).toEqual(['online', 'bot']);
   });
 
   it('keeps a table that seats no bots as it was asked for, and refuses a bot at it', async () => {

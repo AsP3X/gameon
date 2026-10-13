@@ -215,7 +215,7 @@ const MESSAGES: Partial<Record<ErrorCode, string>> = {
   ALREADY_SEATED: 'You are already at a table.',
   NOT_IN_LOBBY: 'You are not at a table.',
   NOT_HOST: 'Only the host can do that.',
-  NOT_READY: 'Everyone has to be ready, and a table needs two pirates. A bot is not one of them.',
+  NOT_READY: 'Everyone has to be ready, and a public table needs two pirates. A bot is not one of them.',
   NOT_IN_GAME: 'You are not in a game.',
   NOT_YOUR_TURN: 'It is not your turn.',
   STALE_ACTION: 'The table has moved on.',
@@ -223,6 +223,8 @@ const MESSAGES: Partial<Record<ErrorCode, string>> = {
   BID_OUT_OF_RANGE: 'That bid is out of range.',
   INTERNAL: 'Something went wrong.',
 };
+/** What `NOT_READY` says at a private table, where a bot is one of the two. */
+const NOT_READY_PRIVATE = 'Everyone has to be ready, and your table needs two seats taken. A bot can take one.';
 
 export interface MockOptions {
   now?: () => number;
@@ -1085,10 +1087,13 @@ export class MockServer {
         return ok();
       }
       case 'lobby.start': {
-        const humansReady = lobby.members.every((x) => x.kind === 'bot' || x.ready);
-        // A table waits for two people: a bot fills a seat, but is not one of the two.
-        if (lobby.members.filter((x) => x.kind === 'human').length < 2 || !humansReady)
-          return this.fail(conn, m.id, 'NOT_READY');
+        const humansReady = lobby.members.every((x) => x.kind === 'bot' || x.ready),
+          listed = lobby.visibility === 'public';
+        // A public table waits for two people: a bot fills a seat, but is not one of the two.
+        // A private one waits for two seats, and a bot fills one.
+        const seated = listed ? lobby.members.filter((x) => x.kind === 'human').length : lobby.members.length;
+        if (seated < 2 || !humansReady)
+          return this.fail(conn, m.id, 'NOT_READY', listed ? MESSAGES.NOT_READY : NOT_READY_PRIVATE);
         ok();
         lobby.state = 'inGame';
         this.openTable(lobby.members, room.humans, lobby.settings, lobby.mode, room);

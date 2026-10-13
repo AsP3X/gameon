@@ -215,11 +215,21 @@ describe('a new table', () => {
   );
 
   it.each([
-    { door: 'friends', at: '/skull-king/online/new', submit: 'Open table', share: ' Share the code.' },
-    { door: 'public', at: '/skull-king/online/public/new', submit: 'List table', share: '' },
+    {
+      door: 'friends',
+      at: '/skull-king/online/new',
+      submit: 'Open table',
+      waiting: 'Share the code. The table can start once a second pirate sits down.',
+    },
+    {
+      door: 'public',
+      at: '/skull-king/online/public/new',
+      submit: 'List table',
+      waiting: 'A public table can start once a second pirate sits down.',
+    },
   ])(
     'of $door with Seat bots off is asked for with allowBots false, and has no way to add or remove a bot',
-    async ({ at, submit, share }) => {
+    async ({ at, submit, waiting }) => {
       await openAt(at);
       await press('Seat bots');
       expect(button('Seat bots').getAttribute('aria-pressed')).toBe('false');
@@ -237,8 +247,7 @@ describe('a new table', () => {
       expect(texts('#online .member.open')).toHaveLength(3);
       expect(texts('#online button')).not.toContain('Add a bot');
       expect($('#online [aria-label^="Remove "]')).toBeNull();
-      // The same start rule as any table: it waits for a second pirate.
-      const waiting = `${at.includes('public') ? 'A public table' : 'The table'} can start once a second pirate sits down.${share}`;
+      // With no bot to fill a seat, a private table waits for a second pirate as a public one does.
       expect($('#online .foot-hint')?.textContent).toBe(waiting);
       await press("I'm ready");
       expect(button('Start').disabled).toBe(true);

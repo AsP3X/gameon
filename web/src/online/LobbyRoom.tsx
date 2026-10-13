@@ -15,18 +15,23 @@ import { describeRules } from './settings';
 
 const nameOf = (m: Member): string => (m.kind === 'bot' ? m.name : m.user.name);
 
+/** How many of the two a table waits for are there. A public table waits for two people, and a bot
+    is not one of them. A private one waits for two seats, and a bot fills one. */
+const seated = (lobby: Lobby): number =>
+  lobby.visibility === 'public' ? lobby.members.filter((m) => m.kind === 'human').length : lobby.members.length;
+
 /** The line by the buttons: what the table is waiting for. */
 function hint(lobby: Lobby, me: Me, host: boolean): string {
   if (lobby.state !== 'open') return 'The game is starting…';
   const humans = lobby.members.flatMap((m) => (m.kind === 'human' ? [m] : []));
   const mine = humans.find((m) => m.user.id === me.user.id);
   const waiting = humans.find((m) => !m.ready && m.user.id !== me.user.id);
-  // A bot fills a seat, but it is not one of the two people a table waits for.
-  if (humans.length < 2) {
+  if (seated(lobby) < 2) {
     if (!host) return 'Waiting for more pirates.';
-    return lobby.visibility === 'public'
-      ? 'A public table can start once a second pirate sits down.'
-      : 'The table can start once a second pirate sits down. Share the code.';
+    if (lobby.visibility === 'public') return 'A public table can start once a second pirate sits down.';
+    return lobby.allowBots !== false
+      ? 'Add a bot, or share the code.'
+      : 'Share the code. The table can start once a second pirate sits down.';
   }
   if (!mine?.ready) return host ? 'Say you are ready, then start the game.' : 'Say you are ready when you are set.';
   if (waiting) return `Waiting for ${waiting.user.name} to be ready.`;
@@ -65,10 +70,8 @@ export function LobbyRoom({ online, go, lobby, me, status, notice, onRules, onPl
     max = lobby.settings.maxPlayers;
   const mine = lobby.members.find((m) => m.kind === 'human' && m.user.id === me.user.id);
   const ready = mine?.kind === 'human' && mine.ready;
-  // For feedback only: the server decides. A table waits for two people, and a bot is not one of them.
-  const canStart =
-    lobby.members.filter((m) => m.kind === 'human').length >= 2 &&
-    lobby.members.every((m) => m.kind === 'bot' || m.ready);
+  // For feedback only: the server decides. Nothing here starts the table: the host presses Start.
+  const canStart = seated(lobby) >= 2 && lobby.members.every((m) => m.kind === 'bot' || m.ready);
   const rules = describeRules(lobby.settings);
 
   const ask = (what: Promise<Outcome>): void => {

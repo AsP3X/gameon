@@ -443,7 +443,7 @@ describe('public tables', () => {
     expect(texts('#online .on-intro .pill')).toEqual(['Private']);
     expect($('#online .on-intro p')?.textContent).toBe('Friends only, with a code. You pick the rules.');
     expect($('#online .sk-hints')?.textContent).toBe(
-      'The table starts when two pirates are seated and ready. A bot is not the second.',
+      'You start the table once two seats are taken and everyone is ready. A bot can take a seat.',
     );
     // Who can join is not a choice on this page: the other door is the public one.
     expect(texts('#online .label')).toEqual(['Bots', 'Rounds', 'Scoring', 'Advanced']);

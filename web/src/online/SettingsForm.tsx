@@ -22,7 +22,7 @@ const NEW: Record<Visibility, { title: string; pill: string; intro: string; subm
     pill: 'Private',
     intro: 'Friends only, with a code. You pick the rules.',
     submit: 'Open table',
-    hint: 'The table starts when two pirates are seated and ready. A bot is not the second.',
+    hint: 'You start the table once two seats are taken and everyone is ready. A bot can take a seat.',
   },
   public: {
     title: 'Public table',

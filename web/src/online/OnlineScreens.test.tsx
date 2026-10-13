@@ -186,7 +186,7 @@ describe('playing online', () => {
     expect(wanted()).toBe(true);
   });
 
-  it('creates a private table, waits for a second pirate, starts with a bot in the third seat and bids', async () => {
+  it('creates a private table the host may start with a bot, seats a friend as well, starts and bids', async () => {
     await renderApp();
     await createTable();
 
@@ -199,23 +199,24 @@ describe('playing online', () => {
     expect(texts('#online .member.open')).toHaveLength(3);
     expect($('#online .on-rules b')?.textContent).toBe('Swift · 5 rounds');
     expect($('#online .on-rules small')?.textContent).toBe('Classic scoring');
-    const waiting = 'The table can start once a second pirate sits down. Share the code.';
-    expect($('#online .foot-hint')?.textContent).toBe(waiting);
+    expect($('#online .foot-hint')?.textContent).toBe('Add a bot, or share the code.');
     expect(button('Start').disabled).toBe(true);
 
-    // A bot takes a seat, but it is not the second pirate: ready or not, the host cannot start.
+    // A bot takes the second seat: once the host is ready, the table is theirs to start.
     await press('Add a bot');
     expect(texts('#online .member small')).toEqual(['Host · you', 'Bot']);
     expect($('#online .on-crew .label')?.textContent).toBe('Crew · 2 of 4');
-    expect($('#online .foot-hint')?.textContent).toBe(waiting);
+    expect($('#online .foot-hint')?.textContent).toBe('Say you are ready, then start the game.');
     expect(button('Start').disabled).toBe(true);
     await press("I'm ready");
     expect(texts('#online .member .pill')).toEqual(['Ready']);
     expect(button('Not ready')).toBeDefined();
-    expect($('#online .foot-hint')?.textContent).toBe(waiting);
-    expect(button('Start').disabled).toBe(true);
+    expect($('#online .foot-hint')?.textContent).toBe('Everyone is ready. Start when you like.');
+    expect(button('Start').disabled).toBe(false);
+    // Nothing starts the table but the host: two seats taken and ready, and the lobby is still open.
+    expect($('#online h1, #online h2')?.textContent).toBe('Your table');
 
-    // Somebody sits down: the table waits for them to be ready, and then the host may start.
+    // Somebody sits down who is not ready: the table waits for them, and then the host may start.
     const friend = await connectRaw(server.transport());
     await settle();
     friend.send({ t: 'lobby.join', code: $('#online .code')?.textContent ?? '' });
@@ -226,6 +227,7 @@ describe('playing online', () => {
     friend.send({ t: 'lobby.ready', ready: true });
     await settle();
     expect($('#online .foot-hint')?.textContent).toBe('Everyone is ready. Start when you like.');
+    expect(button('Start').disabled).toBe(false);
 
     await press('Start');
     // The game is played at the renderer's table: the online screens step aside.
@@ -254,6 +256,27 @@ describe('playing online', () => {
     expect(tableView().bids.every((b) => b != null && b >= 0)).toBe(true);
     // None of this is the offline game's: nothing was saved on the device for it.
     expect(localStorage.getItem('skullking-tavern.game.v2')).toBeNull();
+  });
+
+  it('starts your table for the host and a bot, once the host presses Start', async () => {
+    await renderApp();
+    await createTable();
+    await press("I'm ready");
+    // Ready and alone: one seat is not a table.
+    expect($('#online .foot-hint')?.textContent).toBe('Add a bot, or share the code.');
+    expect(button('Start').disabled).toBe(true);
+    await press('Add a bot');
+    await settle();
+    // The second seat is taken, and the page is still the lobby: a seat that fills starts nothing.
+    expect($('#online h1, #online h2')?.textContent).toBe('Your table');
+    expect(ui.screen).not.toBe('game');
+    expect(button('Start').disabled).toBe(false);
+
+    await press('Start');
+    expect($('#online')).toBeNull();
+    expect(ui.screen).toBe('game');
+    expect(texts('#app .seat .sname')).toEqual(['Anne']);
+    expect($('#app .bidsheet')).not.toBeNull();
   });
 
   it('changes the rules as host, which clears every ready, and removes a bot again', async () => {

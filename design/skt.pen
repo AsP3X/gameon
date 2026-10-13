@@ -147012,7 +147012,7 @@
         {
           "type": "frame",
           "id": "IwLBD",
-          "name": "State · Table (private) · waiting for a second pirate",
+          "name": "State · Table (private) · one pirate and a bot",
           "width": "fill_container",
           "layout": "vertical",
           "gap": 8,
@@ -147036,7 +147036,7 @@
               "fill": "$muted",
               "textGrowth": "fixed-width",
               "width": "fill_container",
-              "content": "The table can start once a second pirate sits down. Share the code.",
+              "content": "Everyone is ready. Start when you like.",
               "lineHeight": 1.4,
               "textAlign": "center",
               "fontFamily": "$f-ui",
@@ -147064,13 +147064,13 @@
                   }
                 },
                 {
-                  "id": "CmlmJ",
+                  "id": "S0ej2",
                   "type": "ref",
-                  "ref": "ELQqO",
+                  "ref": "kMpaU",
                   "name": "Start game",
                   "width": "fill_container",
                   "descendants": {
-                    "iZ2T9": {
+                    "K2spjd": {
                       "content": "START GAME"
                     }
                   }
@@ -148171,7 +148171,7 @@
         {
           "type": "frame",
           "id": "R2H3Ld",
-          "name": "State · Table (private) · waiting for a second pirate",
+          "name": "State · Table (private) · one pirate and a bot",
           "width": "fill_container",
           "layout": "vertical",
           "gap": 8,
@@ -148195,7 +148195,7 @@
               "fill": "$muted",
               "textGrowth": "fixed-width",
               "width": "fill_container",
-              "content": "The table can start once a second pirate sits down. Share the code.",
+              "content": "Everyone is ready. Start when you like.",
               "lineHeight": 1.4,
               "textAlign": "center",
               "fontFamily": "$f-ui",
@@ -148223,13 +148223,13 @@
                   }
                 },
                 {
-                  "id": "j0VRd",
+                  "id": "pmDDQ",
                   "type": "ref",
-                  "ref": "ELQqO",
+                  "ref": "kMpaU",
                   "name": "Start game",
                   "width": "fill_container",
                   "descendants": {
-                    "iZ2T9": {
+                    "K2spjd": {
                       "content": "START GAME"
                     }
                   }
@@ -524157,7 +524157,7 @@
                   "fill": "$muted",
                   "textGrowth": "fixed-width",
                   "width": "fill_container",
-                  "content": "The table starts when two pirates are seated and ready. A bot is not the second.",
+                  "content": "You start the table once two seats are taken and everyone is ready. A bot can take a seat.",
                   "lineHeight": 1.4,
                   "fontFamily": "$f-ui",
                   "fontSize": 14,
@@ -524746,7 +524746,7 @@
               "fill": "$muted",
               "textGrowth": "fixed-width",
               "width": "fill_container",
-              "content": "The table can start once a second pirate sits down. Share the code.",
+              "content": "Everyone is ready. Start when you like.",
               "lineHeight": 1.4,
               "textAlign": "center",
               "fontFamily": "$f-ui",
@@ -524774,13 +524774,13 @@
                   }
                 },
                 {
-                  "id": "HIJW7",
+                  "id": "MdEMY",
                   "type": "ref",
-                  "ref": "ELQqO",
-                  "name": "Start · disabled",
+                  "ref": "kMpaU",
+                  "name": "Start · enabled",
                   "width": "fill_container",
                   "descendants": {
-                    "iZ2T9": {
+                    "K2spjd": {
                       "content": "START"
                     }
                   }
@@ -525119,6 +525119,305 @@
         },
         {
           "type": "frame",
+          "id": "BhMw5",
+          "name": "State · Host alone · a bot or the code",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 14,
+          "children": [
+            {
+              "type": "text",
+              "id": "s0Offn",
+              "fill": "$faint",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "STATE · HOST ALONE · A BOT OR THE CODE",
+              "lineHeight": 1.4,
+              "fontFamily": "$f-ui",
+              "fontSize": 12,
+              "fontWeight": "900",
+              "letterSpacing": 1
+            },
+            {
+              "type": "frame",
+              "id": "KB0YF",
+              "name": "Seats",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 10,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "NpD2Z",
+                  "fill": "$muted",
+                  "content": "CREW · 1 OF 4",
+                  "lineHeight": 1.4,
+                  "fontFamily": "$f-ui",
+                  "fontSize": 13,
+                  "fontWeight": "800",
+                  "letterSpacing": 1.04
+                },
+                {
+                  "type": "frame",
+                  "id": "XPy10",
+                  "name": "Seat · Anne",
+                  "width": "fill_container",
+                  "height": 44,
+                  "gap": 10,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "id": "IC6CP",
+                      "type": "ref",
+                      "ref": "Ls1pY",
+                      "fill": "$blue",
+                      "descendants": {
+                        "ad0hV": {
+                          "content": "A"
+                        }
+                      }
+                    },
+                    {
+                      "type": "frame",
+                      "id": "WWP6m",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "wU1Am",
+                          "fill": "$fg",
+                          "content": "Anne",
+                          "lineHeight": 1.4,
+                          "fontFamily": "$f-ui",
+                          "fontSize": 15,
+                          "fontWeight": "900"
+                        },
+                        {
+                          "type": "text",
+                          "id": "qds3W",
+                          "fill": "$muted",
+                          "content": "Host · you",
+                          "lineHeight": 1.4,
+                          "fontFamily": "$f-ui",
+                          "fontSize": 12,
+                          "fontWeight": "700"
+                        }
+                      ]
+                    },
+                    {
+                      "id": "Jg8KD",
+                      "type": "ref",
+                      "ref": "gvnYI",
+                      "descendants": {
+                        "E9Vot": {
+                          "content": "Ready"
+                        }
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "a0H8e",
+                  "name": "Open seat",
+                  "width": "fill_container",
+                  "height": 44,
+                  "gap": 10,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "Ci0My",
+                      "width": 30,
+                      "height": 30,
+                      "cornerRadius": 50,
+                      "stroke": "$line",
+                      "strokeWidth": 2,
+                      "strokeAlignment": "inner",
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "k3X1Y",
+                          "fill": "$faint",
+                          "content": "?",
+                          "lineHeight": 1.4,
+                          "fontFamily": "$f-ui",
+                          "fontSize": 13,
+                          "fontWeight": "900"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "JWVTG",
+                      "fill": "$muted",
+                      "content": "Open seat",
+                      "lineHeight": 1.4,
+                      "fontFamily": "$f-ui",
+                      "fontSize": 15,
+                      "fontWeight": "800"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "R2yHGd",
+                  "name": "Open seat",
+                  "width": "fill_container",
+                  "height": 44,
+                  "gap": 10,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "YBY7C",
+                      "width": 30,
+                      "height": 30,
+                      "cornerRadius": 50,
+                      "stroke": "$line",
+                      "strokeWidth": 2,
+                      "strokeAlignment": "inner",
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "D8UnEr",
+                          "fill": "$faint",
+                          "content": "?",
+                          "lineHeight": 1.4,
+                          "fontFamily": "$f-ui",
+                          "fontSize": 13,
+                          "fontWeight": "900"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "VNm1p",
+                      "fill": "$muted",
+                      "content": "Open seat",
+                      "lineHeight": 1.4,
+                      "fontFamily": "$f-ui",
+                      "fontSize": 15,
+                      "fontWeight": "800"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "eUeSb",
+                  "name": "Open seat",
+                  "width": "fill_container",
+                  "height": 44,
+                  "gap": 10,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "pFDM9",
+                      "width": 30,
+                      "height": 30,
+                      "cornerRadius": 50,
+                      "stroke": "$line",
+                      "strokeWidth": 2,
+                      "strokeAlignment": "inner",
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "aepZN",
+                          "fill": "$faint",
+                          "content": "?",
+                          "lineHeight": 1.4,
+                          "fontFamily": "$f-ui",
+                          "fontSize": 13,
+                          "fontWeight": "900"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "sATGs",
+                      "fill": "$muted",
+                      "content": "Open seat",
+                      "lineHeight": 1.4,
+                      "fontFamily": "$f-ui",
+                      "fontSize": 15,
+                      "fontWeight": "800"
+                    }
+                  ]
+                },
+                {
+                  "id": "D58hIw",
+                  "type": "ref",
+                  "ref": "h9ic3",
+                  "name": "Add a bot",
+                  "width": "fill_container",
+                  "descendants": {
+                    "s5ytI": {
+                      "content": "ADD A BOT"
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "id": "kahTJ",
+              "name": "Hint",
+              "fill": "$muted",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "Add a bot, or share the code.",
+              "lineHeight": 1.4,
+              "textAlign": "center",
+              "fontFamily": "$f-ui",
+              "fontSize": 14,
+              "fontWeight": "700"
+            },
+            {
+              "type": "frame",
+              "id": "ycIyB",
+              "name": "Buttons",
+              "width": "fill_container",
+              "gap": 12,
+              "alignItems": "center",
+              "children": [
+                {
+                  "id": "FiCpC",
+                  "type": "ref",
+                  "ref": "h9ic3",
+                  "name": "Not ready",
+                  "width": "fill_container",
+                  "descendants": {
+                    "s5ytI": {
+                      "content": "NOT READY"
+                    }
+                  }
+                },
+                {
+                  "id": "z0Mek",
+                  "type": "ref",
+                  "ref": "ELQqO",
+                  "name": "Start · disabled",
+                  "width": "fill_container",
+                  "descendants": {
+                    "iZ2T9": {
+                      "content": "START"
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
           "id": "L7iSS8",
           "name": "State · Seat bots off · no bot can be added",
           "width": "fill_container",
@@ -525361,7 +525660,7 @@
               "fill": "$muted",
               "textGrowth": "fixed-width",
               "width": "fill_container",
-              "content": "The table can start once a second pirate sits down. Share the code.",
+              "content": "Share the code. The table can start once a second pirate sits down.",
               "lineHeight": 1.4,
               "textAlign": "center",
               "fontFamily": "$f-ui",
@@ -527667,7 +527966,7 @@
                           "fill": "$muted",
                           "textGrowth": "fixed-width",
                           "width": "fill_container",
-                          "content": "The table starts when two pirates are seated and ready. A bot is not the second.",
+                          "content": "You start the table once two seats are taken and everyone is ready. A bot can take a seat.",
                           "lineHeight": 1.4,
                           "fontFamily": "$f-ui",
                           "fontSize": 14,
@@ -528348,13 +528647,13 @@
                           }
                         },
                         {
-                          "id": "Zhgtf",
+                          "id": "XbLsm",
                           "type": "ref",
-                          "ref": "ELQqO",
-                          "name": "Start · disabled",
+                          "ref": "kMpaU",
+                          "name": "Start · enabled",
                           "width": "fill_container",
                           "descendants": {
-                            "iZ2T9": {
+                            "K2spjd": {
                               "content": "START"
                             }
                           }
@@ -528368,7 +528667,7 @@
                       "fill": "$muted",
                       "textGrowth": "fixed-width",
                       "width": "fill_container",
-                      "content": "The table can start once a second pirate sits down. Share the code.",
+                      "content": "Everyone is ready. Start when you like.",
                       "lineHeight": 1.4,
                       "fontFamily": "$f-ui",
                       "fontSize": 14,
@@ -531827,7 +532126,7 @@
                   "fill": "$muted",
                   "textGrowth": "fixed-width",
                   "width": "fill_container",
-                  "content": "The table starts when two pirates are seated and ready. A bot is not the second.",
+                  "content": "You start the table once two seats are taken and everyone is ready. A bot can take a seat.",
                   "lineHeight": 1.4,
                   "fontFamily": "$f-ui",
                   "fontSize": 14,
@@ -532416,7 +532715,7 @@
               "fill": "$muted",
               "textGrowth": "fixed-width",
               "width": "fill_container",
-              "content": "The table can start once a second pirate sits down. Share the code.",
+              "content": "Everyone is ready. Start when you like.",
               "lineHeight": 1.4,
               "textAlign": "center",
               "fontFamily": "$f-ui",
@@ -532444,13 +532743,13 @@
                   }
                 },
                 {
-                  "id": "w2f6q",
+                  "id": "Z47ZiV",
                   "type": "ref",
-                  "ref": "ELQqO",
-                  "name": "Start · disabled",
+                  "ref": "kMpaU",
+                  "name": "Start · enabled",
                   "width": "fill_container",
                   "descendants": {
-                    "iZ2T9": {
+                    "K2spjd": {
                       "content": "START"
                     }
                   }
@@ -532789,6 +533088,305 @@
         },
         {
           "type": "frame",
+          "id": "a1VSaq",
+          "name": "State · Host alone · a bot or the code",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 14,
+          "children": [
+            {
+              "type": "text",
+              "id": "o8TqA",
+              "fill": "$faint",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "STATE · HOST ALONE · A BOT OR THE CODE",
+              "lineHeight": 1.4,
+              "fontFamily": "$f-ui",
+              "fontSize": 12,
+              "fontWeight": "900",
+              "letterSpacing": 1
+            },
+            {
+              "type": "frame",
+              "id": "iMStL",
+              "name": "Seats",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 10,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "ltHlm",
+                  "fill": "$muted",
+                  "content": "CREW · 1 OF 4",
+                  "lineHeight": 1.4,
+                  "fontFamily": "$f-ui",
+                  "fontSize": 13,
+                  "fontWeight": "800",
+                  "letterSpacing": 1.04
+                },
+                {
+                  "type": "frame",
+                  "id": "l6E2Z",
+                  "name": "Seat · Anne",
+                  "width": "fill_container",
+                  "height": 44,
+                  "gap": 10,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "id": "r1zf9",
+                      "type": "ref",
+                      "ref": "Ls1pY",
+                      "fill": "$blue",
+                      "descendants": {
+                        "ad0hV": {
+                          "content": "A"
+                        }
+                      }
+                    },
+                    {
+                      "type": "frame",
+                      "id": "B1ObJJ",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "utXpQ",
+                          "fill": "$fg",
+                          "content": "Anne",
+                          "lineHeight": 1.4,
+                          "fontFamily": "$f-ui",
+                          "fontSize": 15,
+                          "fontWeight": "900"
+                        },
+                        {
+                          "type": "text",
+                          "id": "Y7FHnx",
+                          "fill": "$muted",
+                          "content": "Host · you",
+                          "lineHeight": 1.4,
+                          "fontFamily": "$f-ui",
+                          "fontSize": 12,
+                          "fontWeight": "700"
+                        }
+                      ]
+                    },
+                    {
+                      "id": "zQyuY",
+                      "type": "ref",
+                      "ref": "gvnYI",
+                      "descendants": {
+                        "E9Vot": {
+                          "content": "Ready"
+                        }
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "fHUFx",
+                  "name": "Open seat",
+                  "width": "fill_container",
+                  "height": 44,
+                  "gap": 10,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "ADgx6",
+                      "width": 30,
+                      "height": 30,
+                      "cornerRadius": 50,
+                      "stroke": "$line",
+                      "strokeWidth": 2,
+                      "strokeAlignment": "inner",
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "y174C",
+                          "fill": "$faint",
+                          "content": "?",
+                          "lineHeight": 1.4,
+                          "fontFamily": "$f-ui",
+                          "fontSize": 13,
+                          "fontWeight": "900"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "e7BUj",
+                      "fill": "$muted",
+                      "content": "Open seat",
+                      "lineHeight": 1.4,
+                      "fontFamily": "$f-ui",
+                      "fontSize": 15,
+                      "fontWeight": "800"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "E9jVR5",
+                  "name": "Open seat",
+                  "width": "fill_container",
+                  "height": 44,
+                  "gap": 10,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "bZdov",
+                      "width": 30,
+                      "height": 30,
+                      "cornerRadius": 50,
+                      "stroke": "$line",
+                      "strokeWidth": 2,
+                      "strokeAlignment": "inner",
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "aJF3a",
+                          "fill": "$faint",
+                          "content": "?",
+                          "lineHeight": 1.4,
+                          "fontFamily": "$f-ui",
+                          "fontSize": 13,
+                          "fontWeight": "900"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "Uza2K",
+                      "fill": "$muted",
+                      "content": "Open seat",
+                      "lineHeight": 1.4,
+                      "fontFamily": "$f-ui",
+                      "fontSize": 15,
+                      "fontWeight": "800"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "IXf9k",
+                  "name": "Open seat",
+                  "width": "fill_container",
+                  "height": 44,
+                  "gap": 10,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "dnCqS",
+                      "width": 30,
+                      "height": 30,
+                      "cornerRadius": 50,
+                      "stroke": "$line",
+                      "strokeWidth": 2,
+                      "strokeAlignment": "inner",
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "g0RYl",
+                          "fill": "$faint",
+                          "content": "?",
+                          "lineHeight": 1.4,
+                          "fontFamily": "$f-ui",
+                          "fontSize": 13,
+                          "fontWeight": "900"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "v3WFdj",
+                      "fill": "$muted",
+                      "content": "Open seat",
+                      "lineHeight": 1.4,
+                      "fontFamily": "$f-ui",
+                      "fontSize": 15,
+                      "fontWeight": "800"
+                    }
+                  ]
+                },
+                {
+                  "id": "Hmx0V",
+                  "type": "ref",
+                  "ref": "h9ic3",
+                  "name": "Add a bot",
+                  "width": "fill_container",
+                  "descendants": {
+                    "s5ytI": {
+                      "content": "ADD A BOT"
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "id": "z4E7y",
+              "name": "Hint",
+              "fill": "$muted",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "Add a bot, or share the code.",
+              "lineHeight": 1.4,
+              "textAlign": "center",
+              "fontFamily": "$f-ui",
+              "fontSize": 14,
+              "fontWeight": "700"
+            },
+            {
+              "type": "frame",
+              "id": "glwW0",
+              "name": "Buttons",
+              "width": "fill_container",
+              "gap": 12,
+              "alignItems": "center",
+              "children": [
+                {
+                  "id": "rCk8m",
+                  "type": "ref",
+                  "ref": "h9ic3",
+                  "name": "Not ready",
+                  "width": "fill_container",
+                  "descendants": {
+                    "s5ytI": {
+                      "content": "NOT READY"
+                    }
+                  }
+                },
+                {
+                  "id": "loHIn",
+                  "type": "ref",
+                  "ref": "ELQqO",
+                  "name": "Start · disabled",
+                  "width": "fill_container",
+                  "descendants": {
+                    "iZ2T9": {
+                      "content": "START"
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
           "id": "x1bps",
           "name": "State · Seat bots off · no bot can be added",
           "width": "fill_container",
@@ -533031,7 +533629,7 @@
               "fill": "$muted",
               "textGrowth": "fixed-width",
               "width": "fill_container",
-              "content": "The table can start once a second pirate sits down. Share the code.",
+              "content": "Share the code. The table can start once a second pirate sits down.",
               "lineHeight": 1.4,
               "textAlign": "center",
               "fontFamily": "$f-ui",
@@ -535337,7 +535935,7 @@
                           "fill": "$muted",
                           "textGrowth": "fixed-width",
                           "width": "fill_container",
-                          "content": "The table starts when two pirates are seated and ready. A bot is not the second.",
+                          "content": "You start the table once two seats are taken and everyone is ready. A bot can take a seat.",
                           "lineHeight": 1.4,
                           "fontFamily": "$f-ui",
                           "fontSize": 14,
@@ -536018,13 +536616,13 @@
                           }
                         },
                         {
-                          "id": "RLvGP",
+                          "id": "Q0WzAQ",
                           "type": "ref",
-                          "ref": "ELQqO",
-                          "name": "Start · disabled",
+                          "ref": "kMpaU",
+                          "name": "Start · enabled",
                           "width": "fill_container",
                           "descendants": {
-                            "iZ2T9": {
+                            "K2spjd": {
                               "content": "START"
                             }
                           }
@@ -536038,7 +536636,7 @@
                       "fill": "$muted",
                       "textGrowth": "fixed-width",
                       "width": "fill_container",
-                      "content": "The table can start once a second pirate sits down. Share the code.",
+                      "content": "Everyone is ready. Start when you like.",
                       "lineHeight": 1.4,
                       "fontFamily": "$f-ui",
                       "fontSize": 14,

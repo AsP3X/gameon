@@ -165085,7 +165085,7 @@
         {
           "type": "frame",
           "id": "IwLBD",
-          "name": "State · Table (private) · waiting for a second pirate",
+          "name": "State · Table (private) · one pirate and a bot",
           "width": "fill_container",
           "layout": "vertical",
           "gap": 8,
@@ -165109,7 +165109,7 @@
               "fill": "$muted",
               "textGrowth": "fixed-width",
               "width": "fill_container",
-              "content": "The table can start once a second pirate sits down. Share the code.",
+              "content": "Everyone is ready. Start when you like.",
               "lineHeight": 1.4,
               "textAlign": "center",
               "fontFamily": "$f-ui",
@@ -165137,13 +165137,13 @@
                   }
                 },
                 {
-                  "id": "CmlmJ",
+                  "id": "XG7dA",
                   "type": "ref",
-                  "ref": "ELQqO",
+                  "ref": "kMpaU",
                   "name": "Start game",
                   "width": "fill_container",
                   "descendants": {
-                    "iZ2T9": {
+                    "K2spjd": {
                       "content": "START GAME"
                     }
                   }
@@ -166244,7 +166244,7 @@
         {
           "type": "frame",
           "id": "R2H3Ld",
-          "name": "State · Table (private) · waiting for a second pirate",
+          "name": "State · Table (private) · one pirate and a bot",
           "width": "fill_container",
           "layout": "vertical",
           "gap": 8,
@@ -166268,7 +166268,7 @@
               "fill": "$muted",
               "textGrowth": "fixed-width",
               "width": "fill_container",
-              "content": "The table can start once a second pirate sits down. Share the code.",
+              "content": "Everyone is ready. Start when you like.",
               "lineHeight": 1.4,
               "textAlign": "center",
               "fontFamily": "$f-ui",
@@ -166296,13 +166296,13 @@
                   }
                 },
                 {
-                  "id": "j0VRd",
+                  "id": "v0QK6v",
                   "type": "ref",
-                  "ref": "ELQqO",
+                  "ref": "kMpaU",
                   "name": "Start game",
                   "width": "fill_container",
                   "descendants": {
-                    "iZ2T9": {
+                    "K2spjd": {
                       "content": "START GAME"
                     }
                   }

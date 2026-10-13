@@ -294,8 +294,9 @@ frame ([The profile and the ladder](#the-profile-and-the-ladder)).
   who can join or whether bots are seated, and the seats, pace and skill stay what the table has.
 - **A waiting table** (`LobbyRoom.tsx`) shows the code of a private table and none of a public one.
   "Add a bot" and the mark that removes a bot are the host's, and only at a table whose
-  `Lobby.allowBots` is not `false`. Start is enabled when two people are seated and every person
-  is ready. That is for feedback: the server decides.
+  `Lobby.allowBots` is not `false`. Start is enabled when every person is ready and two seats are
+  taken at a private table, where a bot counts, or two people are seated at a public one, where it
+  does not. That is for feedback: the server decides, and only the host's Start sends `lobby.start`.
 - **The public list** (`PublicTables.tsx`) is `GET /lobbies` as it came. A row with `hostColor` is
   "{hostName}'s table". A row without one is the name the server sent and nothing else. Each row
   says how many seats are taken, the length of the game, and "Bots" or "No bots" (`allowBots`
@@ -365,9 +366,10 @@ table that seats bots, and the page says so.
   server runs Weng-Lin the mock moves a rating by a fixed step per place, and it seats the first
   four in the ranked queue with no skill window. It has no emotes and no away detection. It does
   close a dropped seat after two missed turns in a row. Every page has a mock of its own: two tabs
-  cannot meet in one lobby or one queue, so a ranked table never forms under `?mock`, and a lobby
-  never starts there either: it needs two people, and a bot is not one of them. Casual quick play,
-  which fills the open seats with bots, is the way to a table under `?mock`. Behind `?mock` it keeps its
+  cannot meet in one lobby or one queue, so a ranked table never forms under `?mock`, and a public
+  lobby never starts there either: it needs two people, and a bot is not one of them. A private
+  table starts with two seats taken, so the host and a bot are enough. That and casual quick play,
+  which fills the open seats with bots, are the ways to a table under `?mock`. Behind `?mock` it keeps its
   state in sessionStorage and comes back with it after a reload, with every seat offline, as a
   server would find them.
 - The real backend (`src/net/transport.ts`) asks `POST /api/v1/auth/guest` for a session once,
