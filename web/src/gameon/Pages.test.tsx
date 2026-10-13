@@ -245,6 +245,16 @@ describe('privacy', () => {
     );
     expect($('.go-doc-note a')?.getAttribute('href')).toBe('/imprint');
   });
+
+  it('says a ranked leave is kept: how often this season, and until when ranked is closed', async () => {
+    await openAt('/privacy');
+    const stored = Array.from(document.querySelectorAll('.go-doc-block')).find(
+      (block) => block.querySelector('h2')?.textContent === 'The games the server stores',
+    );
+    expect(Array.from(stored?.querySelectorAll('p') ?? [], (p) => p.textContent)[1]).toBe(
+      'When you walk out of a ranked game, the server keeps how often you have done so this season, and until when ranked stays closed for you. The ladder shows neither.',
+    );
+  });
 });
 
 describe('the imprint', () => {

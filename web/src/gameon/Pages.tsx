@@ -210,6 +210,10 @@ export function PrivacyPage({ who, onBack }: TextPageProps) {
             exactly. Your results, your stats and your rating come from those games. Your finished games are listed on
             your profile, and only the players who sat in a game can open its record.
           </p>
+          <p>
+            When you walk out of a ranked game, the server keeps how often you have done so this season, and until when
+            ranked stays closed for you. The ladder shows neither.
+          </p>
         </Block>
         <Block title="What other players see">
           <p>

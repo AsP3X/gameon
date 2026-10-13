@@ -187,7 +187,8 @@ connection.
   friends, ranked). It is not a rulebook. Every number is on the rules sheet, which the "How to
   play" button on Skull King's home still opens.
 - **Privacy** says what is kept: the account (name, colour, username, password hash), the session
-  cookie, the games the server stores, what other players see, and what stays in this browser. It
+  cookie, the games the server stores and the count and the cooldown of a ranked leave, what other
+  players see, and what stays in this browser. It
   claims nothing the code and `docs/protocol.md` do not do. When what is stored changes, this page
   changes with it.
 - **Imprint** names nobody: no frame and no file names a publisher, so the page says "The imprint
