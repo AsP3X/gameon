@@ -5,7 +5,7 @@ Read `docs/agent-rules/ownership-and-handover.md` first. You own `web/`, `design
 
 ## State
 
-Branch `dev`. Grok added a terminal pass that plays bots against bots. It does not change `bots.rs`, the protocol, or any client file.
+Branch `dev`, commit `9fae17c`. Grok added a terminal pass that plays bots against bots. It does not change `bots.rs`, the protocol, or any client file.
 
 From `server/`: `cargo fmt -p skt-bot-pass`, `cargo clippy -p skt-bot-pass --all-targets -- -D warnings`, and `cargo test -p skt-bot-pass` (12 passed). A release run of the default pass finished 4000 of 4000 games in 1.9s with 0 faults. The same seed `5eed5a11` repeats those games.
 
