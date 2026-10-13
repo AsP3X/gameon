@@ -3,7 +3,10 @@
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
 
-use skt_engine::{BotLevel, BotSight, Expansions, GameState, Phase, Ruleset, Seat};
+use skt_engine::{
+    Ability, AbilityChoice, BotLevel, BotSight, Card, Expansions, GameState, Phase, PlayedAs,
+    Ruleset, Seat,
+};
 use skt_protocol::{
     ClientMessage, Deadline, DeadlineKind, EngineView, ErrMessage, ErrTag, ErrorCode,
     GameEmotePush, GameEmoteTag, GameEvent, GameId, GameOver, GameOverTag, GameResult, GameStart,
@@ -639,12 +642,14 @@ impl Tables {
         // Agent: WRITES misses on every connect and drop. Out is left closed.
         running.seats[index].misses = 0;
         running.status[index] = next;
+        // Human: Coming and going changes who the clock waits for. This update carries that clock.
+        // Agent: WRITES status, step_at, bot_at, shown; publish reads shown. Rev bumps with the seatStatus event.
+        running.arm(now);
         let events = vec![GameEvent::Online(OnlineEvent::SeatStatus {
             seat,
             status: next,
         })];
         running.publish(&events, None, live);
-        running.arm(now);
     }
 
     /// Broadcast one emote. The sender gets `ok` and then the push. Other seats get the push only.
@@ -731,19 +736,7 @@ impl Tables {
         match message {
             ClientMessage::GameLeave { id: msg } => self.leave_seat(user, seat, msg, now, live),
             ClientMessage::GameReady { id: msg } => {
-                if running.state.phase() != Phase::RoundEnd {
-                    fail(live, user, msg, ErrorCode::NotYourTurn);
-                    return (Vec::new(), false);
-                }
-                running.ready[seat.index()] = true;
-                running.seats[seat.index()].misses = 0;
-                ok(live, user, msg);
-                running.publish(&[], Some(user), live);
-                if running.humans_ready() {
-                    let _ = running.advance(now, live);
-                } else {
-                    running.arm(now);
-                }
+                running.mark_ready(seat, user, msg, now, live);
                 (Vec::new(), false)
             }
             ClientMessage::GameBid { id: msg, at, bid } => (
@@ -839,13 +832,15 @@ impl Tables {
         let ranked = running.mode == TableMode::Ranked;
         ok(live, user, msg);
         running.status[seat.index()] = SeatStatus::Bot;
+        running.forfeited.push(seat);
+        // Human: The seat is a bot from this update on, so the clock in the update is the bot's.
+        // Agent: WRITES status Bot, step_at, bot_at, shown; publish reads shown.
+        running.arm(now);
         let events = vec![GameEvent::Online(OnlineEvent::SeatStatus {
             seat,
             status: SeatStatus::Bot,
         })];
         running.publish(&events, Some(user), live);
-        running.forfeited.push(seat);
-        running.arm(now);
         self.seat_of.remove(user);
         (vec![user.clone()], ranked)
     }
@@ -984,7 +979,9 @@ impl Tables {
         running.publish(&wire, Some(hit.user), hit.live);
         if running.step_at == Some(hit.now) {
             running.step_at = None;
-            let _ = running.advance(hit.now, hit.live);
+            if !running.advance(hit.now, hit.live) {
+                running.rearm(hit.now, hit.live);
+            }
         }
         if running.state.phase() == Phase::GameOver {
             running.finish(hit.live);
@@ -1009,6 +1006,36 @@ impl Running {
 
     fn returns_to_lobby(&self) -> bool {
         self.kind != Some(TableKind::Solo) && !self.matchmade
+    }
+
+    /// `game.ready` during round end. Everyone ready starts the next round; otherwise the clock restarts.
+    fn mark_ready(
+        &mut self,
+        seat: Seat,
+        user: &UserId,
+        msg: MessageId,
+        now: Instant,
+        live: &HashMap<UserId, super::Live>,
+    ) {
+        if self.state.phase() != Phase::RoundEnd {
+            fail(live, user, msg, ErrorCode::NotYourTurn);
+            return;
+        }
+        self.ready[seat.index()] = true;
+        self.seats[seat.index()].misses = 0;
+        ok(live, user, msg);
+        if self.humans_ready() {
+            // The ready flags go out first. The next round, when it starts, is its own update.
+            self.publish(&[], Some(user), live);
+            if !self.advance(now, live) {
+                self.rearm(now, live);
+            }
+        } else {
+            // Human: One ready vote restarts the round-end clock. The ring has to show that new time.
+            // Agent: WRITES ready, step_at, shown; publish reads shown. Rev bumps because the actor is set.
+            self.arm(now);
+            self.publish(&[], Some(user), live);
+        }
     }
 
     fn arm(&mut self, now: Instant) {
@@ -1191,8 +1218,20 @@ impl Running {
         }
         self.ready.fill(false);
         let wire: Vec<GameEvent> = events.into_iter().map(GameEvent::Engine).collect();
+        // Human: The update that collects a trick or starts a round carries the clock for the phase it opened.
+        // Agent: WRITES step_at, bot_at, shown, then publish reads shown. An empty follow-up would not be a new rev on its own.
+        self.arm(now);
         self.publish(&wire, None, live);
-        self.after_step(now, live);
+        if self.state.phase() == Phase::GameOver {
+            self.finish(live);
+            return true;
+        }
+        if self.step_at == Some(now) {
+            self.step_at = None;
+            if !self.advance(now, live) {
+                self.rearm(now, live);
+            }
+        }
         true
     }
 
@@ -1200,7 +1239,9 @@ impl Running {
     fn fire_clock(&mut self, now: Instant, live: &HashMap<UserId, super::Live>) {
         match self.state.phase() {
             Phase::TrickEnd | Phase::RoundEnd => {
-                let _ = self.advance(now, live);
+                if !self.advance(now, live) {
+                    self.rearm(now, live);
+                }
             }
             Phase::Bidding | Phase::Playing | Phase::Ability => self.timeout_due(now, live),
             Phase::GameOver => {}
@@ -1230,11 +1271,14 @@ impl Running {
             if !on_clock || !self.waiting(seat) {
                 continue;
             }
-            let _ = self.apply_auto(seat, live, true, &mut mark_away);
+            let _ = self.apply_auto(seat, now, live, true, &mut mark_away);
         }
         self.after_step(now, live);
         self.publish_away(&mark_away, live);
         self.schedule_bot_if_idle(now);
+        if self.step_at.is_none() && self.bot_at.is_none() && !self.over {
+            self.rearm(now, live);
+        }
     }
 
     fn bot_move(&mut self, now: Instant, live: &HashMap<UserId, super::Live>) {
@@ -1242,9 +1286,17 @@ impl Running {
             return;
         };
         let mut mark_away = Vec::new();
-        if self.apply_auto(seat, live, false, &mut mark_away) {
+        if self.apply_auto(seat, now, live, false, &mut mark_away) {
             self.after_step(now, live);
             self.publish_away(&mark_away, live);
+            return;
+        }
+        // Human: One bot choice that the engine refuses must not freeze the table with no clock.
+        // Agent: WRITES bot_at, and step_at/shown when no human clock is already running. Publishes only a restored human deadline.
+        if self.step_at.is_none() && !self.over {
+            self.rearm(now, live);
+        } else {
+            self.schedule_bot_if_idle(now);
         }
     }
 
@@ -1307,11 +1359,83 @@ impl Running {
         skt_engine::choose_ability(view, self.state.deck(), rules, level, sight, rng).ok()
     }
 
+    /// Put the clock back after a step that did not land. A human deadline is sent;
+    /// a bot delay is not a deadline, so it is not an update by itself.
+    fn rearm(&mut self, now: Instant, live: &HashMap<UserId, super::Live>) {
+        self.arm(now);
+        if self.shown.is_some() {
+            self.publish(&[], None, live);
+        }
+    }
+
+    /// Play the bot's card, or the first legal card when that choice does not land.
+    fn auto_play(
+        &mut self,
+        seat: Seat,
+        view: &skt_engine::EngineView,
+        rules: Ruleset,
+        level: BotLevel,
+        rng: &mut impl skt_engine::Rng,
+        seat_no: Option<u8>,
+    ) -> Option<Vec<skt_engine::GameEvent>> {
+        let fallback = plain_card(self.state.deck(), view);
+        let choice = self.bot_play(seat, view, rules, level, rng).or(fallback);
+        let (card, played_as) = choice?;
+        if let Ok(events) = self.state.play(seat, card, played_as) {
+            self.push_log("play", seat_no, play_body(card, played_as));
+            return Some(events);
+        }
+        let plain = plain_card(self.state.deck(), view)?;
+        if plain == (card, played_as) {
+            return None;
+        }
+        let events = self.state.play(seat, plain.0, plain.1).ok()?;
+        self.push_log("play", seat_no, play_body(plain.0, plain.1));
+        Some(events)
+    }
+
+    /// Answer with the bot's choice, or a plain legal choice when that answer does not land.
+    fn auto_ability(
+        &mut self,
+        seat: Seat,
+        view: &skt_engine::EngineView,
+        rules: Ruleset,
+        level: BotLevel,
+        rng: &mut impl skt_engine::Rng,
+        seat_no: Option<u8>,
+    ) -> Option<Vec<skt_engine::GameEvent>> {
+        let mut choice = self.bot_ability(seat, view, rules, level, rng);
+        if choice.is_none() {
+            choice = plain_ability(view);
+        }
+        let first = choice?;
+        if let Ok(events) = self.state.ability(seat, &first) {
+            self.push_log(
+                "ability",
+                seat_no,
+                serde_json::to_string(&first).unwrap_or_else(|_| "{}".to_owned()),
+            );
+            return Some(events);
+        }
+        let plain = plain_ability(view)?;
+        if plain == first {
+            return None;
+        }
+        let events = self.state.ability(seat, &plain).ok()?;
+        self.push_log(
+            "ability",
+            seat_no,
+            serde_json::to_string(&plain).unwrap_or_else(|_| "{}".to_owned()),
+        );
+        Some(events)
+    }
+
     // Human: A bot, a takeover, or a missed deadline plays from that seat's own view, the cards everyone has seen, and the pile only if this seat was the Seer.
     // Agent: READS EngineView for `seat`, deck, rules, shown plays, peeked[seat]; WRITES one engine step; never serialises GameState or another seat's peek.
     fn apply_auto(
         &mut self,
         seat: Seat,
+        now: Instant,
         live: &HashMap<UserId, super::Live>,
         timed_out: bool,
         mark_away: &mut Vec<Seat>,
@@ -1329,40 +1453,21 @@ impl Running {
         let mut rng = OsRandom;
         let played = match view.phase {
             Phase::Bidding => {
-                let Some(bid) = self.bot_bid(seat, &view, rules, level, &mut rng) else {
-                    return false;
-                };
-                let events = self.state.bid(seat, i64::from(bid)).ok();
+                let mut bid = self
+                    .bot_bid(seat, &view, rules, level, &mut rng)
+                    .unwrap_or(0);
+                let mut events = self.state.bid(seat, i64::from(bid)).ok();
+                if events.is_none() && bid != 0 {
+                    bid = 0;
+                    events = self.state.bid(seat, 0).ok();
+                }
                 if events.is_some() {
                     self.push_log("bid", seat_no, format!(r#"{{"bid":{bid}}}"#));
                 }
                 events
             }
-            Phase::Playing => {
-                let Some((card, played_as)) = self.bot_play(seat, &view, rules, level, &mut rng)
-                else {
-                    return false;
-                };
-                let events = self.state.play(seat, card, played_as).ok();
-                if events.is_some() {
-                    self.push_log("play", seat_no, play_body(card, played_as));
-                }
-                events
-            }
-            Phase::Ability => {
-                let Some(choice) = self.bot_ability(seat, &view, rules, level, &mut rng) else {
-                    return false;
-                };
-                let events = self.state.ability(seat, &choice).ok();
-                if events.is_some() {
-                    self.push_log(
-                        "ability",
-                        seat_no,
-                        serde_json::to_string(&choice).unwrap_or_else(|_| "{}".to_owned()),
-                    );
-                }
-                events
-            }
+            Phase::Playing => self.auto_play(seat, &view, rules, level, &mut rng, seat_no),
+            Phase::Ability => self.auto_ability(seat, &view, rules, level, &mut rng, seat_no),
             _ => None,
         };
         let Some(events) = played else {
@@ -1392,6 +1497,7 @@ impl Running {
                 }
             }
         }
+        self.arm(now);
         self.publish(&wire, None, live);
         true
     }
@@ -1419,10 +1525,13 @@ impl Running {
         if self.state.phase() != Phase::RoundEnd {
             self.ready.fill(false);
         }
-        self.arm(now);
+        // Human: The move already published the clock for this phase. Arming again would restart it in secret.
+        // Agent: READS step_at; does not write a new deadline here. A zero-delay step calls advance, which arms and publishes.
         if self.step_at == Some(now) {
             self.step_at = None;
-            let _ = self.advance(now, live);
+            if !self.advance(now, live) {
+                self.rearm(now, live);
+            }
         }
     }
 
@@ -1662,9 +1771,9 @@ impl Running {
         actor: Option<&UserId>,
         live: &HashMap<UserId, super::Live>,
     ) {
-        if !events.is_empty() || actor.is_some() {
-            self.rev = self.rev.saturating_add(1);
-        }
+        // Human: A clock with no engine event is still a step. The client drops an update whose rev did not move.
+        // Agent: WRITES rev on every publish, including an empty event list and no actor. The update carries `shown`.
+        self.rev = self.rev.saturating_add(1);
         // Human: Each socket gets only that seat's view. Other hands stay inside GameState.
         // Agent: READS GameState::view; WRITES one GameUpdate per seated socket; never serialises GameState.
         for index in 0..self.players() {
@@ -1759,6 +1868,30 @@ fn deal_body(round: u32, cards: &[u8]) -> String {
 
 fn play_body(card: skt_engine::CardId, played_as: Option<skt_engine::PlayedAs>) -> String {
     serde_json::json!({ "card": card.index(), "as": played_as }).to_string()
+}
+
+/// The first legal card. The Tigress is declared a pirate. Used when the bot returns nothing.
+fn plain_card(
+    deck: &[Card],
+    view: &skt_engine::EngineView,
+) -> Option<(skt_engine::CardId, Option<PlayedAs>)> {
+    let card = *view.legal.first()?;
+    let played_as = match deck.get(card.index()) {
+        Some(Card::Tigress { .. }) => Some(PlayedAs::Pirate),
+        _ => None,
+    };
+    Some((card, played_as))
+}
+
+/// A legal answer that does not chase the bid: seat 0 leads, no stake, no giant change,
+/// the Seer passes, and the Smuggler puts back the cards it just drew.
+fn plain_ability(view: &skt_engine::EngineView) -> Option<AbilityChoice> {
+    let pending = view.pending.as_ref()?;
+    Some(match pending.kind {
+        Ability::Helm | Ability::Gambler | Ability::Giant => AbilityChoice::Number(0),
+        Ability::Seer => AbilityChoice::Pass(()),
+        Ability::Smuggler => AbilityChoice::Cards(pending.drawn.clone().unwrap_or_default()),
+    })
 }
 
 fn kind_of(kind: &str) -> Option<&'static str> {

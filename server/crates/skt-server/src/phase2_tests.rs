@@ -820,6 +820,69 @@ async fn a_ranked_result_does_not_change_casual_stats(pool: sqlx::PgPool) {
     assert!(me.contains("\"wins\":0"), "{me}");
 }
 
+#[sqlx::test(migrations = "../../migrations/postgres")]
+async fn a_finished_round_publishes_its_clock_and_the_next_one_starts(pool: sqlx::PgPool) {
+    let state = AppState::for_tests(pool, Duration::ZERO, budgets());
+    let port = serve(state.clone()).await;
+    let (cookie, _) = guest(port).await;
+    let mut socket = open_socket(port, &cookie).await;
+    greet(&mut socket).await;
+    send(&mut socket, r#"{"t":"queue.join","id":2,"mode":"casual"}"#).await;
+    let _ = read_text(&mut socket).await;
+    state.tick().await;
+
+    let mut saw_round_end = false;
+    let mut saw_next_round = false;
+    let mut tail = String::new();
+    for _ in 0..70 {
+        state.advance(Duration::from_secs(3)).await;
+        for frame in drain(&mut socket).await {
+            assert!(
+                !frame.contains("\"t\":\"err\""),
+                "the table rejected a clock step: {frame}"
+            );
+            if frame.contains("\"type\":\"roundEnded\"") && frame.contains("\"kind\":\"nextRound\"")
+            {
+                saw_round_end = true;
+            }
+            // The human may already be away, so the next bid has no ring. The round still has to start.
+            if saw_round_end && frame.contains("\"type\":\"roundStarted\"") {
+                saw_next_round = true;
+            }
+            tail = frame;
+        }
+        if saw_next_round {
+            break;
+        }
+    }
+    assert!(
+        saw_round_end,
+        "the round-end update must carry the next-round clock, last frame: {tail}"
+    );
+    assert!(
+        saw_next_round,
+        "the next round must start after that clock, last frame: {tail}"
+    );
+}
+
+async fn drain(
+    socket: &mut tokio_tungstenite::WebSocketStream<tokio_tungstenite::MaybeTlsStream<TcpStream>>,
+) -> Vec<String> {
+    let mut frames = Vec::new();
+    let Ok(text) = tokio::time::timeout(Duration::from_millis(200), read_text(socket)).await else {
+        return frames;
+    };
+    frames.push(text);
+    loop {
+        let Ok(text) = tokio::time::timeout(Duration::from_millis(30), read_text(socket)).await
+        else {
+            break;
+        };
+        frames.push(text);
+    }
+    frames
+}
+
 async fn account(port: u16, username: &str) -> (String, Socket) {
     let (cookie, _) = guest(port).await;
     let body = format!(r#"{{"username":"{username}","password":"secret"}}"#);
