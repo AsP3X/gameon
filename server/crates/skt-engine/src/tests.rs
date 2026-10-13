@@ -715,6 +715,80 @@ fn hard_lets_the_next_seat_keep_a_trick_that_busts_a_zero() {
 }
 
 #[test]
+fn normal_smuggler_keeps_the_cards_it_needs_and_easy_sometimes_throws_them() {
+    let needing = smuggler_table(3);
+    assert_eq!(
+        smuggler_choice(&needing, BotLevel::Normal, 0.99),
+        vec![56, 3]
+    );
+    let made = smuggler_table(1);
+    assert_eq!(smuggler_choice(&made, BotLevel::Normal, 0.0), vec![67, 4]);
+    assert_eq!(smuggler_choice(&needing, BotLevel::Easy, 0.0), vec![67, 4]);
+}
+
+/// Swift, abilities on, the three-card hands the device test uses. The pile starts at green 4.
+fn smuggler_table(bid: u8) -> GameState {
+    let mut game = dealt(
+        vec![vec![0, 1, 2], vec![62, 67, 56]],
+        0,
+        true,
+        Expansions::none(),
+    );
+    let held = [0_u8, 1, 2, 62, 67, 56];
+    game.hands = vec![
+        vec![
+            CardId::from_index(0),
+            CardId::from_index(1),
+            CardId::from_index(2),
+        ],
+        vec![
+            CardId::from_index(62),
+            CardId::from_index(67),
+            CardId::from_index(56),
+        ],
+    ];
+    game.pile = (0..game.deck.len())
+        .filter_map(|index| {
+            let id = u8::try_from(index).expect("id");
+            (!held.contains(&id)).then_some(CardId::from_index(id))
+        })
+        .collect();
+    bid_seats(&mut game, &[0, bid]);
+    play_id(&mut game, 1, 62);
+    play_id(&mut game, 0, 0);
+    let mut deals = Scripted { rounds: Vec::new() };
+    game.advance(&mut deals).expect("smuggler");
+    game
+}
+
+fn smuggler_choice(game: &GameState, level: BotLevel, roll: f64) -> Vec<u8> {
+    let seat = Seat::from_index(1);
+    let view = game.view(seat).expect("view");
+    let drawn = view
+        .pending
+        .as_ref()
+        .and_then(|pending| pending.drawn.as_ref())
+        .expect("drawn");
+    assert_eq!(
+        drawn.iter().map(|id| id.get()).collect::<Vec<_>>(),
+        vec![3, 4]
+    );
+    let choice = choose_ability(
+        &view,
+        game.deck(),
+        game.rules(),
+        level,
+        sight_of(game, seat),
+        &mut FixedRng(roll),
+    )
+    .expect("ability");
+    match choice {
+        AbilityChoice::Cards(cards) => cards.into_iter().map(CardId::get).collect(),
+        other => panic!("smuggler returned {other:?}"),
+    }
+}
+
+#[test]
 fn normal_giant_steps_the_bid_onto_the_trick_it_took() {
     let hands = vec![vec![0, 1], vec![65, 56]];
     let order = deal_hands(Expansions::none(), &hands);

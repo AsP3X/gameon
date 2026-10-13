@@ -897,7 +897,8 @@ fn smuggler_discards(
     }
     let invert = level == BotLevel::Easy && rng.next_f64() < 0.30;
     let keep_winners = plan.target > 0;
-    let discard_low = keep_winners == invert;
+    // Keep the cards that can win while tricks are still needed. Easy, under 0.30, does the opposite.
+    let discard_low = keep_winners != invert;
     if discard_low {
         ranked.sort_by(|left, right| left.1.cmp(&right.1).then(left.0.get().cmp(&right.0.get())));
     } else {
