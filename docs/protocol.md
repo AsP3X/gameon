@@ -301,7 +301,12 @@ The public list does not carry it. A public table's rules are fixed when it open
 | `lobby.leave` | | member of an open lobby | `ok`. While the lobby is `inGame`, `LOBBY_STARTED`; leaving the seat is `game.leave`. |
 | `lobby.ready` | `{ ready: boolean }` | member | `ok` |
 | `lobby.settings` | `{ settings }` | host of a private table | `ok`; clears everyone's ready. On an open public table, `RULES_LOCKED` for anyone, and nothing is written. `maxPlayers` outside 2..8 is still `VALIDATION`. |
-| `lobby.addBot` | | host | `ok`. On a table with `allowBots: false`, `BOTS_DISABLED`. Ranked and casual never read `allowBots`. |
+| `lobby.addBot` | | host | `ok`. The new bot's `level` is `settings.botLevel`. On a table with `allowBots: false`, `BOTS_DISABLED`. Ranked and casual never read `allowBots`. |
+
+`settings.botLevel` is the skill of every bot at that table. `lobby.addBot` seats the new bot at
+that skill. On a private table, `lobby.settings` moves every bot already seated to the new skill,
+in the same `lobby.state` that clears ready. A public table cannot change its rules, so its bots
+stay at the skill it opened with. Casual fills empty seats at `normal`. Ranked seats no bot.
 | `lobby.removeBot` | `{ index: number }` | host | `ok`. `index` is the index in `members` (join order), not a seat. |
 | `lobby.kick` | `{ userId }` | host | `ok` |
 | `lobby.start` | | host | `ok`. Every human must be ready. A private table needs at least two seats, and a bot counts as a seat. A public table needs at least two humans, and a bot does not. The host sends this. Seats filling up does not start the table. |

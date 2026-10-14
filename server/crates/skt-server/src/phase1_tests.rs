@@ -355,6 +355,73 @@ async fn the_host_starts_a_private_table_without_a_second_player() {
 }
 
 #[tokio::test]
+async fn a_private_table_keeps_every_bot_at_the_chosen_skill() {
+    let state = AppState::for_socket_tests(Duration::from_secs(5), Duration::from_secs(45));
+    let port = serve(state).await;
+    let mut host = open_socket(port, &guest(port).await).await;
+    hello(&mut host).await;
+
+    let hard = r#"{"maxPlayers":4,"scoring":"classic","format":"swift","loot":false,"kraken":false,"whale":false,"abilities":false,"botLevel":"hard","pace":"standard"}"#;
+    send(
+        &mut host,
+        &format!(r#"{{"t":"lobby.create","id":2,"visibility":"private","settings":{hard}}}"#),
+    )
+    .await;
+    let created = read_text(&mut host).await;
+    assert!(created.contains("\"botLevel\":\"hard\""), "{created}");
+    send(&mut host, r#"{"t":"lobby.ready","id":3,"ready":true}"#).await;
+    let _ = read_until(&mut host, "\"t\":\"ok\"").await;
+    send(&mut host, r#"{"t":"lobby.addBot","id":4}"#).await;
+    let seated = read_until(&mut host, "\"t\":\"lobby.state\"").await;
+    assert_eq!(bot_levels(&seated), ["hard"]);
+    let added = read_text(&mut host).await;
+    assert!(added.contains("\"t\":\"ok\""), "{added}");
+
+    let easy = r#"{"maxPlayers":4,"scoring":"classic","format":"swift","loot":false,"kraken":false,"whale":false,"abilities":false,"botLevel":"easy","pace":"standard"}"#;
+    send(
+        &mut host,
+        &format!(r#"{{"t":"lobby.settings","id":5,"settings":{easy}}}"#),
+    )
+    .await;
+    let changed = read_until(&mut host, "\"t\":\"lobby.state\"").await;
+    assert!(changed.contains("\"botLevel\":\"easy\""), "{changed}");
+    assert!(changed.contains("\"ready\":false"), "{changed}");
+    assert_eq!(bot_levels(&changed), ["easy"]);
+    let saved = read_text(&mut host).await;
+    assert!(saved.contains("\"t\":\"ok\""), "{saved}");
+
+    send(&mut host, r#"{"t":"lobby.addBot","id":6}"#).await;
+    let both = read_until(&mut host, "\"t\":\"lobby.state\"").await;
+    assert_eq!(bot_levels(&both), ["easy", "easy"]);
+    let second = read_text(&mut host).await;
+    assert!(second.contains("\"t\":\"ok\""), "{second}");
+
+    send(&mut host, r#"{"t":"lobby.ready","id":7,"ready":true}"#).await;
+    let _ = read_until(&mut host, "\"t\":\"ok\"").await;
+    send(&mut host, r#"{"t":"lobby.start","id":8}"#).await;
+    let started = read_until(&mut host, "\"t\":\"game.start\"").await;
+    assert!(started.contains("\"botLevel\":\"easy\""), "{started}");
+    assert!(!started.contains("\"botLevel\":\"hard\""), "{started}");
+}
+
+fn bot_levels(frame: &str) -> Vec<String> {
+    let value: serde_json::Value =
+        serde_json::from_str(frame).unwrap_or_else(|err| panic!("{err} in {frame}"));
+    value["lobby"]["members"]
+        .as_array()
+        .unwrap_or_else(|| panic!("members in {frame}"))
+        .iter()
+        .filter(|member| member["kind"] == "bot")
+        .map(|member| {
+            member["level"]
+                .as_str()
+                .unwrap_or_else(|| panic!("level in {frame}"))
+                .to_owned()
+        })
+        .collect()
+}
+
+#[tokio::test]
 async fn a_drop_stays_offline_and_one_miss_can_return() {
     let state = AppState::for_socket_tests(Duration::from_secs(5), Duration::from_secs(45));
     let port = serve(state.clone()).await;

@@ -708,10 +708,14 @@ impl World {
             if lobby.members.len() > usize::from(settings.max_players) {
                 return false;
             }
+            // Human: One skill for the whole table. A bot already sitting moves to the new one.
+            // Agent: WRITES every Member::Bot.level from settings.bot_level and clears human ready. A public lobby never reaches here.
+            let level = settings.bot_level;
             lobby.settings = settings;
             for member in &mut lobby.members {
-                if let Member::Human { ready, .. } = member {
-                    *ready = false;
+                match member {
+                    Member::Human { ready, .. } => *ready = false,
+                    Member::Bot { level: seated, .. } => *seated = level,
                 }
             }
             true
