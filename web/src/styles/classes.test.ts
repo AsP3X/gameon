@@ -100,3 +100,29 @@ describe('the bar at the foot of a screen', () => {
     expect(bar).toBe(wrap - 2 * pad);
   });
 });
+
+describe('the final scores on a desk window', () => {
+  /** The body of the rule for `selector` inside the desk block of responsive.css. */
+  const desk = sheet('responsive.css').split('@media (min-width: 1024px) {')[1] ?? '';
+  const rule = (selector: string): string => new RegExp(`${selector} \\{([^}]*)\\}`).exec(desk)?.[1] ?? '';
+  const row = (selector: string): number[] =>
+    (/grid-row: ([^;]+);/.exec(rule(selector))?.[1] ?? '').split('/').map((n) => Number(n.trim()));
+
+  it('give the solo note a place of its own and do not stretch its pill', () => {
+    // The note had no place in the grid: it fell into a row that takes up the room, and its pill
+    // was stretched into a green disc above the winner.
+    expect(/\.end-rating,\s*\.end-note \{[^}]*grid-column: 2;[^}]*grid-row: 5;/.test(desk)).toBe(true);
+    expect(/\.end-note \{[^}]*align-items: center;/.test(sheet('skullking.css'))).toBe(true);
+  });
+
+  it('share their rows with the winner, so the awards never push the buttons away', () => {
+    // Six awards are three rows. They had rows of their own under the winner's, and the buttons in
+    // the last of them: the buttons came out 200 px under the winner.
+    const [hero, heroEnd] = row('\\.hero-win'),
+      [awards, awardsEnd] = row('\\.awards'),
+      [actions] = row('\\.end-actions');
+    expect(heroEnd).toBeGreaterThan(awards);
+    expect(awards).toBeGreaterThan(hero);
+    expect(awardsEnd).toBeGreaterThan(actions);
+  });
+});

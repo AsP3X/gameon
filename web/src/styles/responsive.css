@@ -727,15 +727,22 @@
     width: 320px;
   }
 
-  /* ---------- final scores: the winner on the left, the standings and awards on the right ---------- */
+  /* ---------- final scores: the winner on the left, the standings and awards on the right ----------
+     Both columns start on the same row and end on the same row: the winner spans the rows of the
+     standings and the first of the awards, and the awards run down beside the note and the buttons.
+     So however many awards there are, they never push the buttons away from the winner.
+     The bar runs across the whole window, its buttons where the table had them; the two columns
+     share at most 1152 px in the middle (the second carries the gap between them as its margin). */
   .end {
-    max-width: 1200px;
+    --end-gap: clamp(40px, 6vw, 96px);
+    max-width: none;
     padding: 6px 24px 24px;
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 480px);
-    grid-template-rows: auto minmax(0, 1fr) auto auto auto minmax(0, 1fr) auto;
-    column-gap: clamp(40px, 6vw, 96px);
-    gap: 12px clamp(40px, 6vw, 96px);
+    grid-template-columns:
+      minmax(0, 1fr) minmax(0, calc(672px - var(--end-gap))) calc(480px + var(--end-gap))
+      minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr) auto auto auto auto minmax(0, 1fr) auto;
+    gap: 12px 0;
   }
   .end-top {
     grid-column: 1 / -1;
@@ -745,8 +752,8 @@
     display: contents;
   }
   .hero-win {
-    grid-column: 1;
-    grid-row: 3;
+    grid-column: 2;
+    grid-row: 3 / 5;
     min-height: 300px;
   }
   .end .avatar.lg {
@@ -758,29 +765,33 @@
     font-size: 38px;
   }
   .standings {
-    grid-column: 2;
+    grid-column: 3;
     grid-row: 3;
+    margin-left: var(--end-gap);
     align-self: end;
   }
   .awards {
-    grid-column: 2;
-    grid-row: 4 / 6;
+    grid-column: 3;
+    grid-row: 4 / 7;
+    margin-left: var(--end-gap);
     align-self: start;
   }
-  .end-rating {
-    grid-column: 1;
-    grid-row: 4;
+  /* The rating of a ranked game, or whether a solo game counted, between the winner and the buttons. */
+  .end-rating,
+  .end-note {
+    grid-column: 2;
+    grid-row: 5;
   }
   .end-actions {
-    grid-column: 1;
-    grid-row: 5;
+    grid-column: 2;
+    grid-row: 6;
     justify-self: center;
     width: min(100%, 400px);
     margin-top: 12px;
   }
   .skip-hint {
     grid-column: 1 / -1;
-    grid-row: 7;
+    grid-row: 8;
     text-align: center;
   }
 }
