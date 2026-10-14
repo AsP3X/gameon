@@ -21,17 +21,12 @@ import { cssColor } from '../tableview/dom';
 import { COLORS, prefs } from '../tableview/state';
 import { Store } from '../tableview/store';
 import { LegacyIcon, Player } from './parts';
-import { EXTRAS, FORMATS, isFormat, isScoring, SCORINGS } from './rulesets';
+import { EXTRAS, FORMATS, isFormat, isScoring, LEVELS, SCORINGS } from './rulesets';
 
 /** The fewest and the most bots a solo table has: the whole table is that many and the player. */
 export const MIN_BOTS = 1;
 export const MAX_BOTS = 7;
 
-const LEVELS: [BotLevel, string, string][] = [
-  ['easy', 'Easy', 'Makes mistakes'],
-  ['normal', 'Normal', 'Solid play'],
-  ['hard', 'Hard', 'Counts cards'],
-];
 /** What the setup is set to. */
 export interface SoloChoice {
   bots: number;

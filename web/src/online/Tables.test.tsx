@@ -179,19 +179,33 @@ afterEach(() => {
 
 describe('a new table', () => {
   it.each([
-    { door: 'friends', at: '/skull-king/online/new', visibility: 'private', submit: 'Open table' },
-    { door: 'public', at: '/skull-king/online/public/new', visibility: 'public', submit: 'List table' },
+    {
+      door: 'friends',
+      at: '/skull-king/online/new',
+      visibility: 'private',
+      submit: 'Open table',
+      botLevel: 'hard',
+      labels: ['Bots', 'Bot skill', 'Rounds', 'Scoring', 'Advanced'],
+    },
+    {
+      door: 'public',
+      at: '/skull-king/online/public/new',
+      visibility: 'public',
+      submit: 'List table',
+      botLevel: 'normal',
+      labels: ['Bots', 'Rounds', 'Scoring', 'Advanced'],
+    },
   ])(
-    'of $door is asked for with four seats, the standard pace and normal bots, whatever the device remembers',
-    async ({ at, visibility, submit }) => {
+    'of $door is asked for with four seats, the standard pace and $botLevel bots, whatever the device remembers',
+    async ({ at, visibility, submit, botLevel, labels }) => {
       localStorage.setItem('skullking-tavern.lobby.v1', JSON.stringify(REMEMBERED));
       await openAt(at);
       // The rules the device remembers are the ones the cards start on.
       expect(button('Even').getAttribute('aria-pressed')).toBe('true');
       expect(button('Rascal').getAttribute('aria-pressed')).toBe('true');
       expect(button('Loot').getAttribute('aria-pressed')).toBe('true');
-      // No seats, no pace and no bot skill to choose, and nothing that makes the table ranked.
-      expect(texts('#online .label')).toEqual(['Bots', 'Rounds', 'Scoring', 'Advanced']);
+      // No seats, no pace, and nothing that makes the table ranked. Only Your table picks the bots' skill.
+      expect(texts('#online .label')).toEqual(labels);
       expect(texts('#online .sk-formats button').map((t) => t.replace(/\d.*$/, ''))).toEqual([
         'Classic',
         'Brawl',
@@ -206,7 +220,12 @@ describe('a new table', () => {
         'Whale',
         'Abilities',
       ]);
-      expect($('#online')?.textContent).not.toMatch(/Pace|Bot skill|Ranked|Seats/);
+      expect($('#online')?.textContent).not.toMatch(/Pace|Ranked|Seats/);
+      // Your table starts on the skill the device remembers. A public one offers none.
+      expect(texts('#online .on-level button')).toEqual(
+        visibility === 'private' ? ['EasyMakes mistakes', 'NormalSolid play', 'HardCounts cards'] : [],
+      );
+      if (visibility === 'private') expect(button('Hard').getAttribute('aria-pressed')).toBe('true');
       // The switch is on as the page opens.
       expect(button('Seat bots').getAttribute('aria-pressed')).toBe('true');
 
@@ -219,7 +238,7 @@ describe('a new table', () => {
           settings: {
             maxPlayers: 4,
             pace: 'standard',
-            botLevel: 'normal',
+            botLevel,
             format: 'even',
             scoring: 'rascal',
             loot: true,
@@ -237,35 +256,99 @@ describe('a new table', () => {
       expect(sentOf('lobby.addBot')).toHaveLength(1);
       expect(texts('#online .member small')).toEqual(['Host · you', 'Bot']);
       expect($('#online [aria-label^="Remove "]')).not.toBeNull();
+      // The plate names the skill the table was opened with.
+      expect($('#online .on-rules small')?.textContent).toBe(
+        `Rascal scoring · Loot · ${botLevel === 'hard' ? 'Hard' : 'Normal'} bots`,
+      );
+      // A public table does not make the device forget the skill it last picked for Your table.
+      expect(JSON.parse(localStorage.getItem('skullking-tavern.lobby.v1') ?? '{}')).toMatchObject({
+        botLevel: 'hard',
+      });
     },
   );
+
+  it('of friends is asked for at the skill the host picks, and changes it with the rules', async () => {
+    await openAt('/skull-king/online/new');
+    // A device that remembers nothing starts on Normal.
+    expect(button('Normal').getAttribute('aria-pressed')).toBe('true');
+    await press('Hard');
+    expect(button('Hard').getAttribute('aria-pressed')).toBe('true');
+    expect(button('Normal').getAttribute('aria-pressed')).toBe('false');
+    await press('Open table');
+    expect(sentOf('lobby.create')).toMatchObject([
+      { visibility: 'private', settings: { maxPlayers: 4, pace: 'standard', botLevel: 'hard' } },
+    ]);
+    await press('Add a bot');
+    await press("I'm ready");
+    expect($('#online .on-rules small')?.textContent).toBe('Classic scoring · Hard bots');
+
+    // The host's rules offer the same three buttons, on the skill the table has.
+    await press('Change');
+    expect(texts('#online .label')).toEqual(['Bot skill', 'Rounds', 'Scoring', 'Advanced']);
+    expect(button('Hard').getAttribute('aria-pressed')).toBe('true');
+    await press('Easy');
+    await press('Save rules');
+    // The seats and the pace stay what the table has. The server moves the seated bot.
+    expect(sentOf('lobby.settings')).toMatchObject([
+      { settings: { maxPlayers: 4, pace: 'standard', botLevel: 'easy' } },
+    ]);
+    expect($('#online .on-rules small')?.textContent).toBe('Classic scoring · Easy bots');
+    expect($('#online .on-crew .label')?.textContent).toBe('Crew · 2 of 4');
+    expect(texts('#online .member small')).toEqual(['Host · you', 'Bot']);
+    // New rules clear the host's ready.
+    expect(texts('#online .member .pill')).toEqual(['Not ready']);
+    expect(JSON.parse(localStorage.getItem('skullking-tavern.lobby.v1') ?? '{}')).toMatchObject({ botLevel: 'easy' });
+  });
 
   it.each([
     {
       door: 'friends',
       at: '/skull-king/online/new',
       submit: 'Open table',
+      botLevel: 'hard',
       waiting: 'Send the invite. The table can start once a second pirate sits down.',
     },
     {
       door: 'public',
       at: '/skull-king/online/public/new',
       submit: 'List table',
+      botLevel: 'normal',
       waiting: 'A public table can start once a second pirate sits down.',
     },
   ])(
     'of $door with Seat bots off is asked for with allowBots false, and has no way to add or remove a bot',
-    async ({ at, submit, waiting }) => {
+    async ({ at, submit, botLevel, waiting }) => {
       await openAt(at);
+      if (botLevel === 'hard') {
+        await press('Hard');
+        // The skill is hidden while the switch is off, and comes back as it was.
+        await press('Seat bots');
+        expect(texts('#online .label')).toEqual(['Bots', 'Rounds', 'Scoring', 'Advanced']);
+        await press('Seat bots');
+        expect(button('Hard').getAttribute('aria-pressed')).toBe('true');
+      }
       await press('Seat bots');
       expect(button('Seat bots').getAttribute('aria-pressed')).toBe('false');
+      expect($('#online .on-level')).toBeNull();
       await press(submit);
       expect(sentOf('lobby.create')).toHaveLength(1);
       // The bot skill is sent all the same: the settings have no place to leave it out.
       expect(sentOf('lobby.create')[0]).toMatchObject({
         allowBots: false,
-        settings: { maxPlayers: 4, pace: 'standard', botLevel: 'normal' },
+        settings: { maxPlayers: 4, pace: 'standard', botLevel },
       });
+      // A table that seats no bots does not name their skill.
+      expect($('#online .on-rules small')?.textContent).toBe('Classic scoring');
+      if (botLevel === 'hard') {
+        // Its rules do not offer the skill either.
+        await press('Change');
+        expect(texts('#online .label')).toEqual(['Rounds', 'Scoring', 'Advanced']);
+        await act(async () => {
+          $('#online [aria-label="Back"]')?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+          await vi.advanceTimersByTimeAsync(0);
+        });
+        expect($('#online .on-crew')).not.toBeNull();
+      }
 
       // The waiting table: the host, three empty seats, and nothing that asks for a bot.
       expect($('#online .on-crew .label')?.textContent).toBe('Crew · 1 of 4');
@@ -318,7 +401,7 @@ describe('a new table', () => {
       await press("I'm ready");
       // The rules the table opened with are on the plate, for a public table as for a private one.
       expect($('#online .on-rules b')?.textContent).toBe('Classic · 10 rounds');
-      expect($('#online .on-rules small')?.textContent).toBe('Rascal scoring');
+      expect($('#online .on-rules small')?.textContent).toBe('Rascal scoring · Normal bots');
       expect(texts('#online .on-rules button')).toEqual(change ? ['Change'] : []);
       expect(texts('#online button')).toContain('Start');
       if (!change) {
@@ -332,7 +415,7 @@ describe('a new table', () => {
       await press('Kraken');
       await press('Save rules');
       expect(sentOf('lobby.settings')).toMatchObject([{ settings: { scoring: 'rascal', kraken: true } }]);
-      expect($('#online .on-rules small')?.textContent).toBe('Rascal scoring · Kraken');
+      expect($('#online .on-rules small')?.textContent).toBe('Rascal scoring · Kraken · Normal bots');
       // New rules clear the host's ready.
       expect(texts('#online .member .pill')).toEqual(['Not ready']);
     },

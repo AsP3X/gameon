@@ -2,15 +2,16 @@
    the same cards the solo setup has, and for a new table the switch that says whether it seats
    bots. A table of friends and a public table are the same form with other words.
 
-   There is no control for the seats, the pace or the bots' skill. A new table is sent with the
-   fixed ones (`FIXED`), and a table whose rules are changed keeps the ones it has. */
+   There is no control for the seats or the pace. A new table is sent with the fixed ones (`FIXED`),
+   and a table whose rules are changed keeps the ones it has. Your table also picks the bots' skill,
+   with the solo setup's three buttons: one skill for every bot. */
 import { useState } from 'react';
 import type { FormEvent } from 'react';
 import type { Go } from '../gameon/Frame';
 import { Rules } from '../game';
 import type { Outcome } from '../net/online';
 import type { GameSettings, Me, Visibility } from '../protocol/generated';
-import { EXTRAS, FORMATS, SCORINGS } from '../skullking/rulesets';
+import { EXTRAS, FORMATS, LEVELS, SCORINGS } from '../skullking/rulesets';
 import { Sound } from '../sound/sound';
 import { failureText } from './copy';
 import { Bar, Page } from './parts';
@@ -43,13 +44,18 @@ export interface SettingsFormProps {
    */
   visibility?: Visibility;
   initial: GameSettings;
+  /**
+   * The form offers the bots' skill: Your table, and the rules of a private table that seats bots.
+   * On a new table it is hidden while Seat bots is off, and the last choice is still sent.
+   */
+  skill: boolean;
   disabled: boolean;
   onBack: () => void;
   /** `seatBots` is the switch of a new table. It is true where the form does not ask. */
   onSubmit: (settings: GameSettings, seatBots: boolean) => Promise<Outcome>;
 }
 
-export function SettingsForm({ go, me, visibility, initial, disabled, onBack, onSubmit }: SettingsFormProps) {
+export function SettingsForm({ go, me, visibility, initial, skill, disabled, onBack, onSubmit }: SettingsFormProps) {
   const [settings, setSettings] = useState(initial);
   const [seatBots, setSeatBots] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -77,29 +83,53 @@ export function SettingsForm({ go, me, visibility, initial, disabled, onBack, on
       <Bar title={words?.title ?? 'Table rules'} onBack={onBack} me={me} />
       <form className={words ? 'on-body wide on-grid on-setup' : 'on-body wide on-grid on-setup rules'} onSubmit={send}>
         {words && (
-          <>
-            <div className="on-intro">
-              <span className="pill blue">{words.pill}</span>
-              <p>{words.intro}</p>
-            </div>
-            <section className="on-bots" aria-labelledby="on-bots">
-              <h2 className="label" id="on-bots">
-                Bots
-              </h2>
-              <button
-                type="button"
-                className="toggle"
-                aria-pressed={seatBots}
-                onClick={() => {
-                  Sound.play(seatBots ? 'toggleOff' : 'toggleOn');
-                  setSeatBots(!seatBots);
-                }}
-              >
-                <span className="grow">Seat bots</span>
-                <span className="switch"></span>
-              </button>
-            </section>
-          </>
+          <div className="on-intro">
+            <span className="pill blue">{words.pill}</span>
+            <p>{words.intro}</p>
+          </div>
+        )}
+        {(words || skill) && (
+          <section className="on-bots" aria-labelledby={words ? 'on-bots' : 'on-level'}>
+            {words && (
+              <>
+                <h2 className="label" id="on-bots">
+                  Bots
+                </h2>
+                <button
+                  type="button"
+                  className="toggle"
+                  aria-pressed={seatBots}
+                  onClick={() => {
+                    Sound.play(seatBots ? 'toggleOff' : 'toggleOn');
+                    setSeatBots(!seatBots);
+                  }}
+                >
+                  <span className="grow">Seat bots</span>
+                  <span className="switch"></span>
+                </button>
+              </>
+            )}
+            {skill && seatBots && (
+              <div className="on-level">
+                <h2 className="label" id="on-level">
+                  Bot skill
+                </h2>
+                <div className="seg" role="group" aria-labelledby="on-level">
+                  {LEVELS.map(([botLevel, name, note]) => (
+                    <button
+                      key={botLevel}
+                      type="button"
+                      aria-pressed={settings.botLevel === botLevel}
+                      onClick={() => set({ botLevel })}
+                    >
+                      {name}
+                      <small>{note}</small>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </section>
         )}
         <section className="sk-rounds" aria-labelledby="on-format">
           <h2 className="label" id="on-format">

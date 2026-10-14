@@ -198,7 +198,7 @@ describe('playing online', () => {
     expect(texts('#online .member small')).toEqual(['Host · you']);
     expect(texts('#online .member.open')).toHaveLength(3);
     expect($('#online .on-rules b')?.textContent).toBe('Swift · 5 rounds');
-    expect($('#online .on-rules small')?.textContent).toBe('Classic scoring');
+    expect($('#online .on-rules small')?.textContent).toBe('Classic scoring · Normal bots');
     expect($('#online .foot-hint')?.textContent).toBe('Add a bot, or send the invite.');
     expect(button('Start').disabled).toBe(true);
 
@@ -290,13 +290,13 @@ describe('playing online', () => {
     // The rules are the cards of a new table. Who can join, and whether bots are seated, is not asked again.
     expect($('#online .on-intro')).toBeNull();
     expect(texts('#online .toggle .grow').map((t) => t.split(/(?=[A-Z])/)[0])).not.toContain('Seat bots');
-    expect(texts('#online .label')).toEqual(['Rounds', 'Scoring', 'Advanced']);
+    expect(texts('#online .label')).toEqual(['Bot skill', 'Rounds', 'Scoring', 'Advanced']);
     await press('Rascal');
     await press('Kraken');
     await press('Save rules');
     expect($('#online h1, #online h2')?.textContent).toBe('Your table');
     expect($('#online .on-rules b')?.textContent).toBe('Swift · 5 rounds');
-    expect($('#online .on-rules small')?.textContent).toBe('Rascal scoring · Kraken');
+    expect($('#online .on-rules small')?.textContent).toBe('Rascal scoring · Kraken · Normal bots');
     expect(texts('#online .member small')).toEqual(['Host · you', 'Bot']);
     expect(texts('#online .member .pill')).toEqual(['Not ready']);
     // The table is as large as it was: the form has no control for its seats.

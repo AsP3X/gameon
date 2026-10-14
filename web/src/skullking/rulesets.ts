@@ -1,7 +1,7 @@
 /* The rules a table can be set to, by the names design/skt.pen gives them: the five lengths of a
-   game, the two scorings and the four extras. The solo setup and the online tables offer the same
-   cards. The rounds of a length are the rules' own (`Rules.FORMATS`). */
-import type { Format, Scoring } from '../protocol/generated';
+   game, the two scorings, the four extras and the bots' three skills. The solo setup and the online
+   tables offer the same cards. The rounds of a length are the rules' own (`Rules.FORMATS`). */
+import type { BotLevel, Format, Scoring } from '../protocol/generated';
 
 export const SCORINGS: [Scoring, string, string][] = [
   ['classic', 'Classic', 'Classic, high risk'],
@@ -23,6 +23,12 @@ export const ROUNDS: Record<Format, string> = {
   even: '10 rounds · 2, 4, 6, 8, 10 twice',
   whirl: '10 rounds · 9, 7, 5, 3, 1 twice',
 };
+/** One skill for every bot at a table: solo, and Your table online. */
+export const LEVELS: [BotLevel, string, string][] = [
+  ['easy', 'Easy', 'Makes mistakes'],
+  ['normal', 'Normal', 'Solid play'],
+  ['hard', 'Hard', 'Counts cards'],
+];
 export type Extra = 'loot' | 'kraken' | 'whale' | 'abilities';
 export const EXTRAS: [Extra, string, string][] = [
   ['loot', 'Loot', 'Win a Loot to form an alliance: +20 each if both make their bids.'],

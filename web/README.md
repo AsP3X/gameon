@@ -286,17 +286,23 @@ frame ([The profile and the ladder](#the-profile-and-the-ladder)).
   the server's clock reads "Ranked is closed for you." and cannot join. No time is drawn: the page
   only looks again when that time has come (`src/online/ahead.ts`).
 - **A new table** (`SettingsForm.tsx`) is the solo setup's cards: the five lengths, the two
-  scorings and the four extras (`src/skullking/rulesets.ts`). It has no control for the seats, the
-  pace or the bots' skill, and always sends `maxPlayers: 4`, `pace: 'standard'` and
-  `botLevel: 'normal'` (`FIXED` in `settings.ts`), whatever the device remembers. "Seat bots" is on
-  as the page opens. On, `lobby.create` leaves `allowBots` out. Off, it sends `allowBots: false`.
-  The host's "Table rules" is the same form without the pill and the switch: no message changes
-  who can join or whether bots are seated, and the seats, pace and skill stay what the table has.
+  scorings and the four extras (`src/skullking/rulesets.ts`). It has no control for the seats or
+  the pace, and always sends `maxPlayers: 4` and `pace: 'standard'` (`FIXED` in `settings.ts`),
+  whatever the device remembers. "Seat bots" is on as the page opens. On, `lobby.create` leaves
+  `allowBots` out. Off, it sends `allowBots: false`. Your table picks the bots' skill under the
+  switch with solo's three buttons (Easy, Normal, Hard), starting on the one the device last sent;
+  the buttons are hidden while "Seat bots" is off, and that choice is still sent. A public table has
+  no skill to pick and always sends `botLevel: 'normal'` (`tableSettings`). The host's "Table
+  rules" is the same form without the pill and the switch: no message changes who can join or
+  whether bots are seated, and the seats and pace stay what the table has. At a table that seats
+  bots it offers the skill too, and the server moves the bots already seated to it.
 - **A waiting table** (`LobbyRoom.tsx`) shows the code of a private table and none of a public one.
   "Add a bot" and the mark that removes a bot are the host's, and only at a table whose
   `Lobby.allowBots` is not `false`. Start is enabled when every person is ready and two seats are
   taken at a private table, where a bot counts, or two people are seated at a public one, where it
   does not. That is for feedback: the server decides, and only the host's Start sends `lobby.start`.
+  The rules plate names the bots' skill ("Hard bots") at a table that seats bots, and none at one
+  that does not.
 - **The public list** (`PublicTables.tsx`) is `GET /lobbies` as it came. A row with `hostColor` is
   "{hostName}'s table". A row without one is the name the server sent and nothing else. Each row
   says how many seats are taken, the length of the game, and "Bots" or "No bots" (`allowBots`

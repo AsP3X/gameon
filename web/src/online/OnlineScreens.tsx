@@ -30,7 +30,7 @@ import { PublicTables } from './PublicTables';
 import { QueueScreen } from './Queue';
 import { reloadPage } from './reload';
 import { RankedScreen } from './Ranked';
-import { FIXED, loadTable, saveSettings } from './settings';
+import { FIXED, loadTable, saveSettings, tableSettings } from './settings';
 import { SettingsForm } from './SettingsForm';
 
 /** The characters a table code is made of (docs/protocol.md §5.3). Everything else is dropped as it is typed. */
@@ -360,8 +360,10 @@ export function OnlineScreens({ online, state, route, go, up, onExit, sit, onSat
         <SettingsForm
           go={go}
           me={me}
-          // The seats, the pace and the bots' skill stay what the table has: the form has no control for them.
+          // The seats and the pace stay what the table has: the form has no control for them.
           initial={lobby.settings}
+          // The skill of the bots the table seats. Saved, the server moves the ones already seated.
+          skill={lobby.allowBots !== false}
           disabled={!live}
           onBack={back}
           onSubmit={async (settings) => {
@@ -427,14 +429,16 @@ export function OnlineScreens({ online, state, route, go, up, onExit, sit, onSat
         me={me}
         visibility={visibility}
         initial={loadTable()}
+        // Only Your table picks the bots' skill: a public table's play at Normal.
+        skill={visibility === 'private'}
         disabled={!live}
         onBack={() => up(from)}
         onSubmit={async (chosen, seatBots) => {
-          // Whatever the device remembers, a new table has the fixed seats, pace and bot skill.
-          const settings = { ...chosen, ...FIXED };
-          const r = await online.createLobby(visibility, settings, seatBots);
+          // Whatever the device remembers, a new table has the fixed seats and pace.
+          const r = await online.createLobby(visibility, tableSettings(visibility, chosen), seatBots);
           if (r.ok) {
-            saveSettings(settings);
+            // A public table keeps the skill the device last picked for Your table.
+            saveSettings({ ...chosen, ...FIXED });
             hub();
           }
           return r;

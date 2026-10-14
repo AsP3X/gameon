@@ -446,7 +446,7 @@ describe('public tables', () => {
       'You start the table once two seats are taken and everyone is ready. A bot can take a seat.',
     );
     // Who can join is not a choice on this page: the other door is the public one.
-    expect(texts('#online .label')).toEqual(['Bots', 'Rounds', 'Scoring', 'Advanced']);
+    expect(texts('#online .label')).toEqual(['Bots', 'Bot skill', 'Rounds', 'Scoring', 'Advanced']);
     await press('Open table');
     expect(texts('#online .on-bar .pill')).toEqual(['Private']);
     expect(await list()).toEqual([]);

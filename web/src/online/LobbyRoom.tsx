@@ -86,7 +86,7 @@ export function LobbyRoom({ online, go, lobby, me, status, notice, onRules, onPl
   const ready = mine?.kind === 'human' && mine.ready;
   // For feedback only: the server decides. Nothing here starts the table: the host presses Start.
   const canStart = seated(lobby) >= 2 && lobby.members.every((m) => m.kind === 'bot' || m.ready);
-  const rules = describeRules(lobby.settings);
+  const rules = describeRules(lobby.settings, { bots: seatsBots });
 
   const ask = (what: Promise<Outcome>): void => {
     setError(null);

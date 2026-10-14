@@ -1,7 +1,7 @@
 /* The rules of an online table as the player last set them, and how they read in a sentence.
    The last settings are a per-device convenience (localStorage): the server has the real ones. */
 import { Rules } from '../game';
-import type { GameSettings, LobbySummary, Pace } from '../protocol/generated';
+import type { GameSettings, LobbySummary, Pace, Visibility } from '../protocol/generated';
 import { EXTRAS, formatName, ROUNDS, scoringName } from '../skullking/rulesets';
 import { isFormat, isLevel, isScoring } from '../tableview/state';
 import { Store } from '../tableview/store';
@@ -50,21 +50,36 @@ export const saveSettings = (settings: GameSettings): void => Store.set(KEY, set
 
 /**
  * What a table of friends or a public table is always opened with. The page has no control for
- * the seats, the pace or the bots' skill (docs/handover/075, 071 question 1). The skill is sent
- * for a table without bots too: the settings have no place to leave it out.
+ * the seats or the pace (docs/handover/075, 071 question 1).
  */
-export const FIXED = { maxPlayers: 4, pace: 'standard', botLevel: 'normal' } as const;
-/** The rules a new table opens set to: the last ones chosen on this device, at the fixed size and pace. */
+export const FIXED = { maxPlayers: 4, pace: 'standard' } as const;
+/**
+ * The rules a new table is sent with. Your table sends the bots' skill the host picked (handover
+ * 148). A public table's bots play at Normal, whatever the device remembers. The skill is sent for a
+ * table without bots too: the settings have no place to leave it out.
+ */
+export const tableSettings = (visibility: Visibility, chosen: GameSettings): GameSettings =>
+  visibility === 'public' ? { ...chosen, ...FIXED, botLevel: 'normal' } : { ...chosen, ...FIXED };
+/** The rules a new table's form opens set to: the last ones chosen on this device, at the fixed size and pace. */
 export const loadTable = (): GameSettings => ({ ...loadSettings(), ...FIXED });
 
-/** The two lines of the rules card at a waiting table: how long the game is, then how it is scored and what is in the deck. */
-export function describeRules(s: GameSettings): { title: string; detail: string } {
+const LEVEL = { easy: 'Easy', normal: 'Normal', hard: 'Hard' } as const;
+
+/**
+ * The two lines of the rules card at a waiting table: how long the game is, then how it is scored,
+ * what is in the deck and, at a table that seats bots, how well they play.
+ */
+export function describeRules(s: GameSettings, { bots = true } = {}): { title: string; detail: string } {
   const rounds = Rules.FORMATS[s.format].seq.length;
   return {
     title: `${formatName(s.format)} · ${rounds} rounds`,
-    detail: [`${scoringName(s.scoring)} scoring`, ...EXTRAS.filter(([key]) => s[key]).map(([, name]) => name)].join(
-      ' · ',
-    ),
+    detail: [
+      `${scoringName(s.scoring)} scoring`,
+      ...EXTRAS.filter(([key]) => s[key]).map(([, name]) => name),
+      bots ? `${LEVEL[s.botLevel]} bots` : '',
+    ]
+      .filter(Boolean)
+      .join(' · '),
   };
 }
 
@@ -90,8 +105,6 @@ export function describeRow(lobby: LobbySummary): {
     bots: lobby.allowBots !== false,
   };
 }
-
-const LEVEL = { easy: 'Easy', normal: 'Normal', hard: 'Hard' } as const;
 
 /**
  * The two lines of the rules card in the lobby. A ranked table starts without bots, so its card
