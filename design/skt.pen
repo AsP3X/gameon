@@ -364525,7 +364525,6 @@
               "context": "div",
               "clip": true,
               "width": 480,
-              "height": 426.98,
               "fill": "$bg",
               "cornerRadius": 22,
               "effect": {
@@ -364914,105 +364913,6 @@
                             {
                               "type": "ellipse",
                               "id": "ux4Wv",
-                              "x": 3,
-                              "y": 3,
-                              "name": "Icon",
-                              "fill": "$white",
-                              "width": 22,
-                              "height": 22,
-                              "effect": {
-                                "type": "shadow",
-                                "shadowType": "outer",
-                                "color": "#0000001f",
-                                "offset": {
-                                  "x": 0,
-                                  "y": 2
-                                }
-                              }
-                            }
-                          ]
-                        }
-                      ]
-                    },
-                    {
-                      "type": "frame",
-                      "id": "siEt3",
-                      "name": "button",
-                      "context": "button",
-                      "width": "fill_container",
-                      "fill": "$bg",
-                      "cornerRadius": 16,
-                      "stroke": "$green",
-                      "strokeWidth": 2,
-                      "strokeAlignment": "inner",
-                      "effect": {
-                        "type": "shadow",
-                        "shadowType": "outer",
-                        "color": "$green",
-                        "offset": {
-                          "x": 0,
-                          "y": 3
-                        }
-                      },
-                      "gap": 12,
-                      "padding": [
-                        14,
-                        16
-                      ],
-                      "alignItems": "center",
-                      "children": [
-                        {
-                          "type": "frame",
-                          "id": "Vui2w",
-                          "name": "span",
-                          "context": "span",
-                          "width": "fill_container",
-                          "height": 58.79,
-                          "layout": "vertical",
-                          "gap": 0.9,
-                          "children": [
-                            {
-                              "type": "text",
-                              "id": "A3pwe",
-                              "name": "Vibration",
-                              "fill": "$fg",
-                              "content": "Vibration",
-                              "lineHeight": 1.4,
-                              "fontFamily": "$f-ui",
-                              "fontSize": 16,
-                              "fontWeight": "700"
-                            },
-                            {
-                              "type": "text",
-                              "id": "M8ItfV",
-                              "name": "A short buzz when you play a card or win",
-                              "context": "small",
-                              "fill": "$muted",
-                              "textGrowth": "fixed-width-height",
-                              "width": "fill_container",
-                              "height": 36.39,
-                              "content": "A short buzz when you play a card or win a trick.",
-                              "lineHeight": 1.4,
-                              "fontFamily": "$f-ui",
-                              "fontSize": 13,
-                              "fontWeight": "700"
-                            }
-                          ]
-                        },
-                        {
-                          "type": "frame",
-                          "id": "RFXXg",
-                          "name": "span",
-                          "context": "span",
-                          "width": 46,
-                          "height": 28,
-                          "fill": "$green",
-                          "cornerRadius": 99,
-                          "layout": "none",
-                          "children": [
-                            {
-                              "type": "ellipse",
-                              "id": "v2anHC",
                               "x": 3,
                               "y": 3,
                               "name": "Icon",
@@ -371029,7 +370929,6 @@
               "context": "div",
               "clip": true,
               "width": 480,
-              "height": 426.98,
               "fill": "$bg",
               "cornerRadius": 22,
               "effect": {
@@ -371418,105 +371317,6 @@
                             {
                               "type": "ellipse",
                               "id": "akamF",
-                              "x": 3,
-                              "y": 3,
-                              "name": "Icon",
-                              "fill": "$white",
-                              "width": 22,
-                              "height": 22,
-                              "effect": {
-                                "type": "shadow",
-                                "shadowType": "outer",
-                                "color": "#0000001f",
-                                "offset": {
-                                  "x": 0,
-                                  "y": 2
-                                }
-                              }
-                            }
-                          ]
-                        }
-                      ]
-                    },
-                    {
-                      "type": "frame",
-                      "id": "CJzK4",
-                      "name": "button",
-                      "context": "button",
-                      "width": "fill_container",
-                      "fill": "$bg",
-                      "cornerRadius": 16,
-                      "stroke": "$green",
-                      "strokeWidth": 2,
-                      "strokeAlignment": "inner",
-                      "effect": {
-                        "type": "shadow",
-                        "shadowType": "outer",
-                        "color": "$green",
-                        "offset": {
-                          "x": 0,
-                          "y": 3
-                        }
-                      },
-                      "gap": 12,
-                      "padding": [
-                        14,
-                        16
-                      ],
-                      "alignItems": "center",
-                      "children": [
-                        {
-                          "type": "frame",
-                          "id": "r1JBcs",
-                          "name": "span",
-                          "context": "span",
-                          "width": "fill_container",
-                          "height": 58.79,
-                          "layout": "vertical",
-                          "gap": 0.9,
-                          "children": [
-                            {
-                              "type": "text",
-                              "id": "q7KvZ",
-                              "name": "Vibration",
-                              "fill": "$fg",
-                              "content": "Vibration",
-                              "lineHeight": 1.4,
-                              "fontFamily": "$f-ui",
-                              "fontSize": 16,
-                              "fontWeight": "700"
-                            },
-                            {
-                              "type": "text",
-                              "id": "uz1Ti",
-                              "name": "A short buzz when you play a card or win",
-                              "context": "small",
-                              "fill": "$muted",
-                              "textGrowth": "fixed-width-height",
-                              "width": "fill_container",
-                              "height": 36.39,
-                              "content": "A short buzz when you play a card or win a trick.",
-                              "lineHeight": 1.4,
-                              "fontFamily": "$f-ui",
-                              "fontSize": 13,
-                              "fontWeight": "700"
-                            }
-                          ]
-                        },
-                        {
-                          "type": "frame",
-                          "id": "TMoqN",
-                          "name": "span",
-                          "context": "span",
-                          "width": 46,
-                          "height": 28,
-                          "fill": "$green",
-                          "cornerRadius": 99,
-                          "layout": "none",
-                          "children": [
-                            {
-                              "type": "ellipse",
-                              "id": "CI6JM",
                               "x": 3,
                               "y": 3,
                               "name": "Icon",
