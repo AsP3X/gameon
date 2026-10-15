@@ -756,6 +756,33 @@
   font-weight: 800;
   color: var(--muted);
 }
+/* When drawing is the move, the pile is the button: its top card is ringed in gold. */
+.oc-pile-btn {
+  display: block;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: none;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: transform 0.16s var(--ease-out);
+}
+.oc-pile-btn:not([disabled]):hover {
+  transform: translateY(-3px);
+}
+.oc-pile-btn .oc-pile-top .oc-card,
+.oc-pile-btn .oc-pile-empty {
+  outline: 3px solid var(--gold);
+  outline-offset: 1px;
+}
+.oc-pile-btn:focus-visible {
+  outline: 3px solid var(--blue);
+  outline-offset: 4px;
+}
+.oc-pile-tap figcaption {
+  color: var(--fg);
+}
 .oc-xray-card {
   display: inline-flex;
 }
@@ -809,19 +836,14 @@
 .oc-hand-card:not([disabled]) {
   cursor: pointer;
 }
-/* A card that may be played stands a little out of the fan; the picked one, and the one just drawn
-   that plays, stand out further. */
+/* A card that may be played stands a little out of the fan; the lifted one stands out further, and a
+   second tap plays it. The card just drawn that plays starts lifted. */
 .oc-hand-card.oc-can {
   transform: translateY(-6px);
 }
 .oc-hand-card:not([disabled]):hover,
-.oc-hand-card.oc-on,
-.oc-hand-card.oc-raised {
+.oc-hand-card.oc-on {
   transform: translateY(-16px);
-}
-.oc-hand-card.oc-raised .oc-card {
-  outline: 3px solid var(--gold);
-  outline-offset: 1px;
 }
 .oc-hand-card.oc-on .oc-card {
   outline: 3px solid var(--gold);
@@ -1297,14 +1319,14 @@
     animation: none;
   }
   .oc-hand-card:not([disabled]):hover,
+  .oc-pile-btn:not([disabled]):hover,
   .oc-specials li:hover .oc-mini {
     transform: none;
   }
   .oc-hand-card.oc-can {
     transform: translateY(-6px);
   }
-  .oc-hand-card.oc-on,
-  .oc-hand-card.oc-raised {
+  .oc-hand-card.oc-on {
     transform: translateY(-16px);
   }
 }

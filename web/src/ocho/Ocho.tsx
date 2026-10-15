@@ -540,7 +540,10 @@ function DrawPile({ count }: { count: number }) {
   );
 }
 
-function Centre({ view }: { view: View }) {
+/** The pile is the control when taking from it is the move: a tap draws one, or takes the stack. */
+type PileTap = { label: string; busy: boolean; onTap: () => void } | null;
+
+function Centre({ view, tap }: { view: View; tap: PileTap }) {
   return (
     <div className="oc-centre">
       <div className="oc-centre-pills">
@@ -556,9 +559,21 @@ function Centre({ view }: { view: View }) {
         </span>
       </div>
       <div className="oc-piles">
-        <figure className="oc-pile">
-          <DrawPile count={view.drawCount} />
-          <figcaption>Draw · {view.drawCount}</figcaption>
+        <figure className={tap ? 'oc-pile oc-pile-tap' : 'oc-pile'}>
+          {tap ? (
+            <button
+              type="button"
+              className="oc-pile-btn"
+              aria-label={tap.label}
+              disabled={tap.busy}
+              onClick={tap.onTap}
+            >
+              <DrawPile count={view.drawCount} />
+            </button>
+          ) : (
+            <DrawPile count={view.drawCount} />
+          )}
+          <figcaption>{tap ? tap.label : `Draw · ${view.drawCount}`}</figcaption>
         </figure>
         <figure className="oc-pile">
           <span data-oc="discard">
@@ -659,7 +674,10 @@ function Table({ ocho, view, nameOf }: { ocho: OchoClient; view: View; nameOf: (
   const { busy, error, send } = useSender(ocho);
   const legal = new Set(view.legal);
   const mine = view.must !== 'none';
-  const selected = view.hand.find((c) => c.id === picked && legal.has(c.id)) ?? null;
+  const drawn = view.must === 'playDrawnOrKeep' ? (view.hand.find((c) => legal.has(c.id)) ?? null) : null;
+  // The card just drawn starts lifted: one tap plays it.
+  const lifted = picked ?? drawn?.id ?? null;
+  const selected = mine ? (view.hand.find((c) => c.id === lifted && legal.has(c.id)) ?? null) : null;
   const words = matchWords(view.color, view.symbol);
   const seats = others(view);
   const slots = SLOTS[seats.length] ?? [];
@@ -757,72 +775,41 @@ function Table({ ocho, view, nameOf }: { ocho: OchoClient; view: View; nameOf: (
     if (isWild(card)) setWild(card.id);
     else void send({ t: 'ocho.play', card: card.id });
   };
-  const drawn = view.must === 'playDrawnOrKeep' ? (view.hand.find((c) => legal.has(c.id)) ?? null) : null;
+  /** A tap on a card in the hand: the first lifts it, a tap on the lifted one plays it. */
+  const tapCard = (card: Card): void => {
+    if (card.id === selected?.id) play(card);
+    else setPicked(card.id);
+  };
+  const draw = (): void => void send({ t: 'ocho.draw' });
+  const take = view.stack ?? 0;
 
   let status: string;
   let actions: ReactNode = null;
+  let pile: PileTap = null;
   switch (view.must) {
     case 'playOrDraw':
       status = selected
-        ? `Match ${words} · ${cardName(selected)} plays`
+        ? `Match ${words} · tap ${cardName(selected)} again to play`
         : legal.size > 0
-          ? `Match ${words} · pick a card`
-          : `Nothing in your hand matches ${words}`;
-      actions =
-        legal.size > 0 ? (
-          <>
-            <button
-              type="button"
-              className="btn"
-              disabled={busy || !selected}
-              onClick={() => selected && play(selected)}
-            >
-              {selected ? `Play ${cardName(selected)}` : 'Play'}
-            </button>
-            <button type="button" className="btn ghost" disabled={busy} onClick={() => void send({ t: 'ocho.draw' })}>
-              Draw
-            </button>
-          </>
-        ) : (
-          <button type="button" className="btn" disabled={busy} onClick={() => void send({ t: 'ocho.draw' })}>
-            Draw one
-          </button>
-        );
+          ? `Match ${words} · tap a card`
+          : `Nothing in your hand matches ${words} · tap the pile to draw`;
+      if (legal.size === 0) pile = { label: 'Draw one', busy, onTap: draw };
       break;
     case 'playDrawnOrKeep':
-      status = drawn ? `You drew ${cardName(drawn)} · it plays` : 'You drew a card';
+      status = drawn ? `You drew ${cardName(drawn)} · tap it to play, or keep it` : 'You drew a card';
       actions = (
-        <>
-          {drawn && (
-            <button type="button" className="btn" disabled={busy} onClick={() => play(drawn)}>
-              Play it
-            </button>
-          )}
-          <button type="button" className="btn ghost" disabled={busy} onClick={() => void send({ t: 'ocho.keep' })}>
-            End turn
-          </button>
-        </>
+        <button type="button" className="btn ghost" disabled={busy} onClick={() => void send({ t: 'ocho.keep' })}>
+          Keep
+        </button>
       );
       break;
     case 'answerStack':
-      status = `Play Draw 2, Wild Draw 4 or Shield · or take ${view.stack ?? 0}`;
-      actions = (
-        <>
-          {legal.size > 0 && (
-            <button
-              type="button"
-              className="btn"
-              disabled={busy || !selected}
-              onClick={() => selected && play(selected)}
-            >
-              {selected ? `Play ${cardName(selected)}` : 'Play'}
-            </button>
-          )}
-          <button type="button" className="btn gold" disabled={busy} onClick={() => void send({ t: 'ocho.draw' })}>
-            Take {view.stack ?? 0}
-          </button>
-        </>
-      );
+      status = selected
+        ? `Tap ${cardName(selected)} again to play · or tap the pile to take ${take}`
+        : legal.size > 0
+          ? `Play Draw 2, Wild Draw 4 or Shield · or tap the pile to take ${take}`
+          : `Nothing in your hand answers · tap the pile to take ${take}`;
+      pile = { label: `Take ${take}`, busy, onTap: draw };
       break;
     case 'chooseColor':
       status = `Opening card: ${cardName(view.top)} · name the color`;
@@ -853,7 +840,7 @@ function Table({ ocho, view, nameOf }: { ocho: OchoClient; view: View; nameOf: (
               <Seat key={seat} view={view} seat={seat} name={nameOf(seat)} slot={slots[i] ?? 't2'} />
             ))}
           </ul>
-          <Centre view={view} />
+          <Centre view={view} tap={naming ? null : pile} />
           {namerCardOf && (
             <Namer
               key={namerKey}
@@ -881,8 +868,8 @@ function Table({ ocho, view, nameOf }: { ocho: OchoClient; view: View; nameOf: (
         <div className="oc-play">
           <ul className="oc-hand" aria-label="Your hand">
             {view.hand.map((card, i) => {
-              const can = mine && legal.has(card.id) && view.must !== 'playDrawnOrKeep';
-              const on = picked === card.id && can;
+              const can = mine && legal.has(card.id);
+              const on = selected?.id === card.id;
               const away = card.id === wild || card.id === sent;
               return (
                 <li
@@ -893,11 +880,11 @@ function Table({ ocho, view, nameOf }: { ocho: OchoClient; view: View; nameOf: (
                 >
                   <button
                     type="button"
-                    className={`oc-hand-card${can ? ' oc-can' : ''}${on ? ' oc-on' : ''}${drawn?.id === card.id ? ' oc-raised' : ''}${mine && !legal.has(card.id) ? ' oc-dim' : ''}`}
+                    className={`oc-hand-card${can ? ' oc-can' : ''}${on ? ' oc-on' : ''}${mine && !legal.has(card.id) ? ' oc-dim' : ''}`}
                     aria-label={cardName(card)}
                     aria-pressed={can ? on : undefined}
                     disabled={!can || busy}
-                    onClick={() => setPicked(on ? null : card.id)}
+                    onClick={() => tapCard(card)}
                   >
                     <CardFace card={card} />
                   </button>

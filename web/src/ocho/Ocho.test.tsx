@@ -249,22 +249,34 @@ describe('the table', () => {
     expect($('.oc-stack')).toBeNull();
   });
 
-  it('lights up only the cards the view lists, and plays the one picked', async () => {
+  it('lights up only the cards the view lists, lifts one with a tap, and plays it with a second', async () => {
     await atTable(aView());
     const hand = $$('.oc-hand-card');
     expect(hand.map((b) => b.getAttribute('aria-label'))).toEqual(['Red 3', 'Yellow 7', 'Blue Skip', 'Ocho Wild']);
     expect(hand.map((b) => (b as HTMLButtonElement).disabled)).toEqual([true, false, true, false]);
-    expect(button('Play').disabled).toBe(true);
+    // No buttons beside the hand, and the pile is not one while a card can be played.
+    expect($('.oc-buttons')).toBeNull();
+    expect($('.oc-pile-btn')).toBeNull();
+    expect($('.oc-status')?.textContent).toBe('Match yellow or 4 · tap a card');
     await press('Yellow 7');
-    expect($('.oc-status')?.textContent).toBe('Match yellow or 4 · Yellow 7 plays');
-    await press('Play Yellow 7');
+    expect(button('Yellow 7').getAttribute('aria-pressed')).toBe('true');
+    expect($('.oc-status')?.textContent).toBe('Match yellow or 4 · tap Yellow 7 again to play');
+    expect(sent()).toEqual([]);
+    // A tap on another legal card moves the lift; it does not play.
+    await press('Ocho Wild');
+    expect(button('Yellow 7').getAttribute('aria-pressed')).toBe('false');
+    expect(button('Ocho Wild').getAttribute('aria-pressed')).toBe('true');
+    expect($('.oc-namer')).toBeNull();
+    await press('Yellow 7');
+    expect(sent()).toEqual([]);
+    await press('Yellow 7');
     expect(sent()).toEqual([{ t: 'ocho.play', card: 11 }]);
   });
 
   it('grows a wild into the colour card and sends the quadrant pressed with the card', async () => {
     await atTable(aView());
     await press('Ocho Wild');
-    await press('Play Ocho Wild');
+    await press('Ocho Wild');
     expect($('[role="dialog"]')).toBeNull();
     const wheel = $('.oc-namer [role="group"]');
     expect(wheel?.getAttribute('aria-label')).toBe('Name a color');
@@ -287,7 +299,7 @@ describe('the table', () => {
   it('puts a wild back in the hand with a click outside it or Escape, and sends nothing', async () => {
     await atTable(aView());
     await press('Ocho Wild');
-    await press('Play Ocho Wild');
+    await press('Ocho Wild');
     expect(Array.from(document.querySelectorAll('button')).some((b) => b.textContent === 'Back')).toBe(false);
     // The black middle is not a colour.
     await act(async () => {
@@ -298,8 +310,10 @@ describe('the table', () => {
     await clickOutside();
     expect($('.oc-namer')).toBeNull();
     expect($('[data-card="13"]')?.classList.contains('oc-away')).toBe(false);
-    // Still picked: the card came back, and Play names its colour again.
-    await press('Play Ocho Wild');
+    // Still lifted: the card came back, and a tap on it names its colour again.
+    expect(button('Ocho Wild').getAttribute('aria-pressed')).toBe('true');
+    await press('Ocho Wild');
+    expect($('.oc-namer')).not.toBeNull();
     await act(async () => {
       document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
       await vi.advanceTimersByTimeAsync(0);
@@ -308,31 +322,58 @@ describe('the table', () => {
     expect(sent()).toEqual([]);
   });
 
-  it('draws one when nothing matches, and plays or keeps the card just drawn', async () => {
+  const justDrawn = (): View =>
+    aView({
+      phase: 'drawn',
+      must: 'playDrawnOrKeep',
+      legal: [14],
+      hand: [...aView().hand, card(14, 'yellow', { number: 2 })],
+    });
+
+  it('draws one from the pile when nothing matches, and keeps the card just drawn', async () => {
     await atTable(aView({ legal: [] }));
-    expect($('.oc-status')?.textContent).toBe('Nothing in your hand matches yellow or 4');
+    expect($('.oc-status')?.textContent).toBe('Nothing in your hand matches yellow or 4 · tap the pile to draw');
+    expect($('.oc-pile-btn')?.closest('.oc-pile')?.querySelector('figcaption')?.textContent).toBe('Draw one');
     await press('Draw one');
     expect(sent()).toEqual([{ t: 'ocho.draw' }]);
     await answer();
-    await push({
-      t: 'ocho.view',
-      view: aView({
-        phase: 'drawn',
-        must: 'playDrawnOrKeep',
-        legal: [14],
-        hand: [...aView().hand, card(14, 'yellow', { number: 2 })],
-      }),
-    });
-    expect($('.oc-status')?.textContent).toBe('You drew Yellow 2 · it plays');
-    await press('End turn');
+    await push({ t: 'ocho.view', view: justDrawn() });
+    expect($('.oc-pile-btn')).toBeNull();
+    expect($('.oc-status')?.textContent).toBe('You drew Yellow 2 · tap it to play, or keep it');
+    // Keep is the only button under the hand.
+    expect(texts('.oc-buttons button')).toEqual(['Keep']);
+    await press('Keep');
     expect(sent()[1]).toEqual({ t: 'ocho.keep' });
   });
 
-  it('shows an open stack, and takes it', async () => {
+  it('plays the card just drawn with one tap: it starts lifted', async () => {
+    await atTable(justDrawn());
+    expect(button('Yellow 2').getAttribute('aria-pressed')).toBe('true');
+    expect($$('.oc-hand-card.oc-on').map((b) => b.getAttribute('aria-label'))).toEqual(['Yellow 2']);
+    await press('Yellow 2');
+    expect(sent()).toEqual([{ t: 'ocho.play', card: 14 }]);
+  });
+
+  it('shows an open stack, and takes it from the pile', async () => {
     await atTable(aView({ must: 'answerStack', stack: 6, legal: [] }));
     expect($('.oc-stack')?.textContent).toBe('+6 to draw');
-    expect($('.oc-status')?.textContent).toBe('Play Draw 2, Wild Draw 4 or Shield · or take 6');
+    expect($('.oc-status')?.textContent).toBe('Nothing in your hand answers · tap the pile to take 6');
+    expect($('.oc-buttons')).toBeNull();
     await press('Take 6');
+    expect(sent()).toEqual([{ t: 'ocho.draw' }]);
+  });
+
+  it('answers a stack with a second tap, or takes it from the pile', async () => {
+    await atTable(aView({ must: 'answerStack', stack: 2, legal: [13] }));
+    expect($('.oc-status')?.textContent).toBe('Play Draw 2, Wild Draw 4 or Shield · or tap the pile to take 2');
+    await press('Ocho Wild');
+    expect($('.oc-status')?.textContent).toBe('Tap Ocho Wild again to play · or tap the pile to take 2');
+    await press('Ocho Wild');
+    expect($('.oc-namer')).not.toBeNull();
+    // While the wild is large, the pile is not a button.
+    expect($('.oc-pile-btn')).toBeNull();
+    await clickOutside();
+    await press('Take 2');
     expect(sent()).toEqual([{ t: 'ocho.draw' }]);
   });
 
@@ -373,19 +414,12 @@ describe('the table', () => {
     expect($('.oc-pile-empty')).not.toBeNull();
   });
 
-  it('raises the card just drawn that plays, and lifts only the legal cards', async () => {
+  it('lifts the card just drawn that plays, and lets only the legal cards be tapped', async () => {
     await atTable(aView());
     expect($$('.oc-hand-card.oc-can').map((b) => b.getAttribute('aria-label'))).toEqual(['Yellow 7', 'Ocho Wild']);
-    await push({
-      t: 'ocho.view',
-      view: aView({
-        phase: 'drawn',
-        must: 'playDrawnOrKeep',
-        legal: [14],
-        hand: [...aView().hand, card(14, 'yellow', { number: 2 })],
-      }),
-    });
-    expect($$('.oc-hand-card.oc-raised').map((b) => b.getAttribute('aria-label'))).toEqual(['Yellow 2']);
+    await push({ t: 'ocho.view', view: justDrawn() });
+    expect($$('.oc-hand-card.oc-can').map((b) => b.getAttribute('aria-label'))).toEqual(['Yellow 2']);
+    expect($$('.oc-hand-card.oc-on').map((b) => b.getAttribute('aria-label'))).toEqual(['Yellow 2']);
   });
 
   it("shows a partner's hand only when the server sent it", async () => {
