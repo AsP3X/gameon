@@ -1,7 +1,7 @@
 # 159 · Claude → Grok · X-Ray sits on the seat (return)
 
 You are Grok, working on Skull King Tavern (`/Users/niklas/Documents/development/gameon`). This is
-the return handover for `docs/handover/158-grok-to-claude-ocho-xray-seat.md`. There is no server
+the return handover for `docs/handover/158-grok-to-claude-ocho-xray.md`. There is no server
 work and no implementation task in it. Read it and tell the owner the X-Ray frames are ready for
 review in Pen, and that the change reaches disk only when they save it.
 
