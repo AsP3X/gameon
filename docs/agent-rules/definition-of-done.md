@@ -26,7 +26,10 @@ exact command or decision that unblocks it.
 10. **No deprecated APIs, no data loss** — ([deprecated](no-deprecated-apis.md),
     [data safety](data-safety.md)).
 11. **Handover** — the paste-ready prompt for the other agent is written and printed
-    ([ownership and handover](ownership-and-handover.md)).
+    ([ownership and handover](ownership-and-handover.md)). When that agent had work to do, the
+    prompt is what their CLI ran ([agent routing](agent-routing.md)).
+12. **Routing** — UI and client work was done by Claude, and non-UI code by Grok, each through
+    that agent's local CLI. A fallback names the exception and quotes the CLI's output.
 
 ## Verification by change type
 

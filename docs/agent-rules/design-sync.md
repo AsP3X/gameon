@@ -18,5 +18,5 @@ left behind as a stale frame. New screens are designed there first, then built.
   writes other sessions' unsaved edits.
 - If a UI change deliberately skips the design (a pure bug fix with no visible difference, say),
   say so in the summary instead of silently leaving it out.
-- Grok never edits a `.pen` file. A visible change that server work requires is described in the
-  handover ([ownership and handover](ownership-and-handover.md)).
+- Grok never edits a `.pen` file. A visible change is UI, so it goes to Claude through
+  [agent routing](agent-routing.md). The handover describes the screen, the state and the copy.
