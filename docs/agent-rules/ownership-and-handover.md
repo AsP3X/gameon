@@ -51,9 +51,11 @@ wasn't there.
 
 **Applies when:** the handover is from Grok to Claude.
 
-The CLI is `claude` on `PATH` (`C:\Users\asp3x\.local\bin\claude.exe` on this machine). Run it
-from the repo root after the handover file is written, and wait until it exits. The prompt is
-the file and nothing else.
+The CLI is `claude` on `PATH` (`C:\Users\asp3x\.local\bin\claude.exe` on this machine). Before
+the run, `claude auth status` must report `loggedIn: true`. If it does not, stop and tell the
+owner to run `claude auth login`. Do not ask them to paste the handover. Run the delivery from
+the repo root after the handover file is written, and wait until it exits. The prompt is the
+file and nothing else.
 
 ```
 Get-Content -Raw docs/handover/NNN-grok-to-claude-<slug>.md | claude -p --permission-mode bypassPermissions --dangerously-skip-permissions --output-format text
