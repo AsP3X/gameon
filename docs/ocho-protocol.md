@@ -10,10 +10,10 @@ A frame is one JSON object. `t` is the kind.
 
 | `t` | Fields | Who |
 | --- | --- | --- |
-| `hello` | `id` | first frame |
+| `hello` | `id` | first frame. If this account is already at a table, the server then sends `ocho.lobby`, and `ocho.view` once a hand has been dealt. |
 | `ocho.create` | `id`, `players` (2–8), `teams` (only with 4), `match` (`one` or `to500`) | anyone not seated |
 | `ocho.join` | `id`, `code` | anyone not seated |
-| `ocho.leave` | `id` | a member, before the deal |
+| `ocho.leave` | `id` | a member, before the deal, or after the match is over |
 | `ocho.ready` | `id`, `ready` | a member, before the deal |
 | `ocho.start` | `id` | the host, when every seat is filled and ready |
 | `ocho.play` | `id`, `card`, `color` (required for a wild) | the seat whose turn it is |

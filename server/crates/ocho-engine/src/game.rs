@@ -226,6 +226,12 @@ impl Game {
         Ok(())
     }
 
+    /// True once the match is over and `ocho.leave` may drop the table.
+    #[must_use]
+    pub const fn is_over(&self) -> bool {
+        matches!(self.phase, Phase::Over)
+    }
+
     /// The view for `seat`.
     ///
     /// # Errors
@@ -337,7 +343,10 @@ impl Game {
         if !self.legal_ids()?.is_empty() {
             return Err(Rejection::IllegalMove.into());
         }
-        let drawn = self.take_one(rng)?;
+        let Some(drawn) = self.take_one(rng)? else {
+            self.advance(1)?;
+            return Ok(());
+        };
         let card = lookup(&self.deck, drawn)?;
         if matches(card, self.color, self.symbol) {
             self.drawn = Some(drawn);
@@ -576,11 +585,15 @@ impl Game {
         }
         for _ in 0..8 {
             for seat in 0..self.players {
-                let id = self.take_one(rng)?;
+                let Some(id) = self.take_one(rng)? else {
+                    return Err(StepError::Broken);
+                };
                 self.hands[usize::from(seat)].push(id);
             }
         }
-        let opening = self.take_one(rng)?;
+        let Some(opening) = self.take_one(rng)? else {
+            return Err(StepError::Broken);
+        };
         self.discard.push(opening);
         let card = lookup(&self.deck, opening)?;
         self.turn = self.step(self.dealer, 1)?;
@@ -596,15 +609,17 @@ impl Game {
         Ok(())
     }
 
-    fn take_one(&mut self, rng: &mut impl Rng) -> Result<CardId, StepError> {
+    fn take_one(&mut self, rng: &mut impl Rng) -> Result<Option<CardId>, StepError> {
         self.refill(rng)?;
-        self.draw.pop().ok_or(StepError::Broken)
+        Ok(self.draw.pop())
     }
 
     fn give(&mut self, seat: u8, count: u8, rng: &mut impl Rng) -> Result<(), StepError> {
         let index = self.seat_index(seat)?;
         for _ in 0..count {
-            let id = self.take_one(rng)?;
+            let Some(id) = self.take_one(rng)? else {
+                break;
+            };
             self.hands[index].push(id);
         }
         Ok(())

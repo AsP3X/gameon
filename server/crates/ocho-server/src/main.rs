@@ -84,7 +84,7 @@ async fn socket(
 
 async fn drive(room: Arc<Room>, user: room::User, mut socket: WebSocket) {
     let (tx, mut rx) = mpsc::unbounded_channel::<String>();
-    room.attach(user.id.clone(), tx).await;
+    let generation = room.attach(user.id.clone(), tx).await;
     loop {
         tokio::select! {
             outgoing = rx.recv() => {
@@ -105,7 +105,7 @@ async fn drive(room: Arc<Room>, user: room::User, mut socket: WebSocket) {
             }
         }
     }
-    room.detach(&user.id).await;
+    room.detach(&user.id, generation).await;
 }
 
 fn session_cookie(headers: &HeaderMap) -> Option<String> {

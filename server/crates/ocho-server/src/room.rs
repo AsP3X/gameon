@@ -27,8 +27,14 @@ pub struct Room {
     inner: Mutex<Inner>,
 }
 
+struct Socket {
+    tx: mpsc::UnboundedSender<String>,
+    generation: u64,
+}
+
 struct Inner {
-    sockets: HashMap<String, mpsc::UnboundedSender<String>>,
+    sockets: HashMap<String, Socket>,
+    next_socket: u64,
     lobbies: HashMap<String, Lobby>,
     codes: HashMap<String, String>,
     seated: HashMap<String, String>,
@@ -256,6 +262,7 @@ impl Room {
             db: client,
             inner: Mutex::new(Inner {
                 sockets: HashMap::new(),
+                next_socket: 0,
                 lobbies: HashMap::new(),
                 codes: HashMap::new(),
                 seated: HashMap::new(),
@@ -291,14 +298,19 @@ impl Room {
         Ok(User { id: user_id, name })
     }
 
-    /// Remember where to push frames for `user`.
-    pub async fn attach(&self, user: String, tx: mpsc::UnboundedSender<String>) {
-        self.inner.lock().await.sockets.insert(user, tx);
+    /// Remember where to push frames for `user`. A newer socket replaces an older one.
+    pub async fn attach(&self, user: String, tx: mpsc::UnboundedSender<String>) -> u64 {
+        let mut inner = self.inner.lock().await;
+        inner.next_socket = inner.next_socket.saturating_add(1);
+        let generation = inner.next_socket;
+        inner.sockets.insert(user, Socket { tx, generation });
+        generation
     }
 
-    /// Forget the socket.
-    pub async fn detach(&self, user: &str) {
-        self.inner.lock().await.sockets.remove(user);
+    /// Forget the socket, but only if it is still the current one.
+    pub async fn detach(&self, user: &str, generation: u64) {
+        let mut inner = self.inner.lock().await;
+        detach_socket(&mut inner, user, generation);
     }
 
     /// Drop lobbies whose members are all disconnected and that have not dealt.
@@ -335,7 +347,13 @@ impl Room {
         let Some(text) = serde_json::to_string(msg).ok() else {
             return;
         };
-        let tx = self.inner.lock().await.sockets.get(user).cloned();
+        let tx = self
+            .inner
+            .lock()
+            .await
+            .sockets
+            .get(user)
+            .map(|socket| socket.tx.clone());
         if let Some(tx) = tx {
             let _ = tx.send(text);
         }
@@ -344,6 +362,27 @@ impl Room {
 
 type StepOk = (u64, Option<LobbyView>, bool);
 type StepErr = (u64, &'static str, &'static str);
+
+fn detach_socket(inner: &mut Inner, user: &str, generation: u64) {
+    let current = inner
+        .sockets
+        .get(user)
+        .is_some_and(|socket| socket.generation == generation);
+    if current {
+        inner.sockets.remove(user);
+    }
+}
+
+fn hello(inner: &Inner, user: &str, id: u64) -> StepOk {
+    let Some(lobby_id) = inner.seated.get(user) else {
+        return (id, None, false);
+    };
+    let Some(lobby) = inner.lobbies.get(lobby_id) else {
+        return (id, None, false);
+    };
+    let started = lobby.table.is_some();
+    (id, Some(lobby_view(lobby)), started)
+}
 
 fn create(
     inner: &mut Inner,
@@ -416,7 +455,11 @@ fn leave(inner: &mut Inner, user: &User, id: u64) -> Result<StepOk, StepErr> {
     let Some(lobby) = inner.lobbies.get_mut(&lobby_id) else {
         return Ok((id, None, false));
     };
-    if lobby.table.is_some() {
+    let still_playing = lobby
+        .table
+        .as_ref()
+        .is_some_and(|table| !table.game.is_over());
+    if still_playing {
         inner.seated.insert(user.id.clone(), lobby_id);
         return Err((id, "GAME_RUNNING", "The hand is still going."));
     }
@@ -553,8 +596,7 @@ fn sockets_for(
             inner
                 .sockets
                 .get(&member.user)
-                .cloned()
-                .map(|tx| (member.user.clone(), tx))
+                .map(|socket| (member.user.clone(), socket.tx.clone()))
         })
         .collect()
 }
@@ -627,8 +669,8 @@ impl Room {
                 let Ok(view) = table.game.view(seat) else {
                     continue;
                 };
-                if let Some(tx) = inner.sockets.get(user_id) {
-                    views.push((tx.clone(), view));
+                if let Some(socket) = inner.sockets.get(user_id) {
+                    views.push((socket.tx.clone(), view));
                 }
             }
             views
@@ -677,7 +719,7 @@ impl Room {
 
 fn dispatch(inner: &mut Inner, user: &User, msg: ClientMsg) -> Result<StepOk, StepErr> {
     match msg {
-        ClientMsg::Hello { id } => Ok((id, None, false)),
+        ClientMsg::Hello { id } => Ok(hello(inner, &user.id, id)),
         ClientMsg::Create {
             id,
             players,
@@ -708,5 +750,88 @@ fn dispatch(inner: &mut Inner, user: &User, msg: ClientMsg) -> Result<StepOk, St
         ClientMsg::Keep { id } => act(inner, user, id, Intent::Keep),
         ClientMsg::Opening { id, color } => act(inner, user, id, Intent::Choose { color }),
         ClientMsg::Next { id } => act(inner, user, id, Intent::Next),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{Inner, Socket, Table, User, create, detach_socket, hello, leave};
+    use ocho_engine::Game;
+    use std::collections::HashMap;
+    use tokio::sync::mpsc;
+
+    fn empty() -> Inner {
+        Inner {
+            sockets: HashMap::new(),
+            next_socket: 0,
+            lobbies: HashMap::new(),
+            codes: HashMap::new(),
+            seated: HashMap::new(),
+        }
+    }
+
+    fn user(id: &str) -> User {
+        User {
+            id: id.to_owned(),
+            name: id.to_owned(),
+        }
+    }
+
+    struct Seq(u32);
+    impl ocho_engine::Rng for Seq {
+        fn next_u32(&mut self) -> u32 {
+            let value = self.0;
+            self.0 = self.0.wrapping_add(1);
+            value
+        }
+    }
+
+    #[test]
+    fn hello_repeats_a_lobby_that_has_not_dealt() {
+        let mut inner = empty();
+        create(&mut inner, &user("host"), 1, 2, false, false).expect("create");
+        let (_id, lobby, views) = hello(&inner, "host", 2);
+        assert!(lobby.is_some());
+        assert!(!views);
+    }
+
+    #[test]
+    fn an_old_socket_does_not_drop_the_new_one() {
+        let mut inner = empty();
+        let (older, _) = mpsc::unbounded_channel();
+        let (newer, _) = mpsc::unbounded_channel();
+        inner.sockets.insert(
+            "host".to_owned(),
+            Socket {
+                tx: older,
+                generation: 1,
+            },
+        );
+        inner.sockets.insert(
+            "host".to_owned(),
+            Socket {
+                tx: newer,
+                generation: 2,
+            },
+        );
+        detach_socket(&mut inner, "host", 1);
+        assert!(inner.sockets.contains_key("host"));
+        detach_socket(&mut inner, "host", 2);
+        assert!(!inner.sockets.contains_key("host"));
+    }
+
+    #[test]
+    fn leave_refuses_a_live_hand() {
+        let mut inner = empty();
+        let host = user("host");
+        create(&mut inner, &host, 1, 2, false, false).expect("create");
+        let lobby_id = inner.seated[&host.id].clone();
+        inner.lobbies.get_mut(&lobby_id).expect("lobby").table = Some(Table {
+            game: Game::create(2, false, true, &mut Seq(0)).expect("game"),
+            seats: vec!["host".to_owned(), "other".to_owned()],
+        });
+        let err = leave(&mut inner, &host, 4);
+        assert!(err.is_err());
+        assert!(inner.seated.contains_key("host"));
     }
 }
