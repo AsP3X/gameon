@@ -24,6 +24,7 @@ COPY deploy/nginx/api-proxy.conf /etc/nginx/api-proxy.conf
 # The nginx image substitutes only environment variables that are set.
 # skt-api, not the service name api: that short name is shared on proxy-network.
 ENV API_UPSTREAM=http://skt-api:8080
+ENV OCHO_UPSTREAM=http://ocho:8091
 # notice matches the nginx image. Compose sets this from the Logging dialog.
 ENV NGINX_LOG_LEVEL=notice
 

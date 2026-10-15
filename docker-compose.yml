@@ -106,6 +106,43 @@ services:
         max-file: "${SKT_LOG_FILES_API:-3}"
     restart: unless-stopped
 
+  # Ocho lobby and tables. Accounts stay on api. The page proxies /ocho/ here.
+  ocho:
+    build:
+      context: ./server
+      dockerfile: Dockerfile.ocho
+    container_name: ocho
+    environment:
+      OCHO_HOST: 0.0.0.0
+      OCHO_PORT: "8091"
+      RUST_LOG: ${RUST_LOG:-info}
+      DATABASE_URL: postgres://${POSTGRES_USER:-skt}:${POSTGRES_PASSWORD:-skt}@postgres:5432/${POSTGRES_DB:-skt}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - skt-internal
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "curl",
+          "-fsS",
+          "http://127.0.0.1:8091/ocho/v1/health",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 20s
+    restart: unless-stopped
+
   web:
     build:
       context: .
@@ -114,9 +151,12 @@ services:
     depends_on:
       api:
         condition: service_healthy
+      ocho:
+        condition: service_healthy
     environment:
       # Container name. The service name api collides on a shared proxy-network.
       API_UPSTREAM: http://skt-api:8080
+      OCHO_UPSTREAM: http://ocho:8091
       # notice matches the nginx image. The setup screen can set another level.
       NGINX_LOG_LEVEL: ${SKT_LOG_WEB:-notice}
     networks:

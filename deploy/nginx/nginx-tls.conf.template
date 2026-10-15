@@ -37,6 +37,12 @@ server {
         proxy_pass $skt_api;
     }
 
+    location /ocho/ {
+        include /etc/nginx/api-proxy.conf;
+        set $ocho ${OCHO_UPSTREAM};
+        proxy_pass $ocho;
+    }
+
     location /assets/ {
         include /etc/nginx/security-headers.conf;
         expires 1y;

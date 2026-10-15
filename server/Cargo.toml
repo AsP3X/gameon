@@ -5,6 +5,8 @@ members = [
     "crates/skt-protocol",
     "crates/skt-server",
     "crates/skt-bot-pass",
+    "crates/ocho-engine",
+    "crates/ocho-server",
 ]
 default-members = ["crates/skt-server"]
 
