@@ -11,7 +11,7 @@ import { initialOf } from '../online/parts';
 import { describeRow } from '../online/settings';
 import { AT } from '../router/addresses';
 import { cssColor, whole } from '../tableview/dom';
-import { CardFan, SkullKingKey } from './art';
+import { CardFan, OchoFan, OchoKey, SkullKingKey } from './art';
 import { showsOcho, showsSkullKing, soonOn } from './catalog';
 import type { Shelf } from './catalog';
 import { Footer, Link, Nav, useTitle } from './Frame';
@@ -20,8 +20,6 @@ import { Icon } from './icons';
 import { Shelves, SoonTile, SuggestTile } from './Landing';
 import { savedGame, savedTitle } from './saved';
 import { Choice, Option } from '../skullking/parts';
-import { CardBack, CardFace } from '../ocho/cards';
-import type { Card } from '../ocho/wire';
 
 /** How many open tables the card lists. The rest are behind "All public tables". */
 const TABLES_SHOWN = 6;
@@ -152,31 +150,16 @@ function SkullKing({ season }: { season: Season | null | undefined }) {
   );
 }
 
-/** A few of Ocho's cards, fanned, with its back in front. Decoration: the text beside says what the game is. */
-const OCHO_FAN: Card[] = [
-  { id: 0, color: 'red', kind: { number: 3 } },
-  { id: 1, color: 'blue', kind: { number: 7 } },
-  { id: 2, color: 'green', kind: { number: 5 } },
-  { id: 3, color: 'yellow', kind: { number: 8 } },
-];
-
 /** Ocho on the shelf: its two ways open sit-down, Teams with Teams chosen. */
 function Ocho() {
   return (
     <section className="go-game" aria-labelledby="go-ocho-title">
       <div className="go-game-art">
-        <div className="oc-fan" aria-hidden="true">
-          <CardBack />
-          {OCHO_FAN.map((card) => (
-            <CardFace key={card.id} card={card} />
-          ))}
-        </div>
+        <OchoFan />
       </div>
       <div className="go-game-info">
         <div className="go-game-title">
-          <span className="go-key oc-key" aria-hidden="true">
-            8
-          </span>
+          <OchoKey />
           <span className="go-game-name">
             <b id="go-ocho-title">Ocho</b>
             <small>2–8 players · Cards</small>

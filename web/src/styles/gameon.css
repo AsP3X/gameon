@@ -323,10 +323,73 @@
   padding-block: 28px;
 }
 .go-hero .go-in,
+.go-slide,
 .go-hero-copy {
   display: flex;
   flex-direction: column;
   gap: 18px;
+}
+/* The hero is a carousel of the live games. A slide that comes in fades in, unless the visitor
+   asked for less motion. */
+@media (prefers-reduced-motion: no-preference) {
+  .go-slide {
+    animation: go-slide-in 0.4s ease-out;
+  }
+}
+@keyframes go-slide-in {
+  from {
+    opacity: 0;
+  }
+}
+.go-carousel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.go-turn {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 2px solid var(--line);
+  border-radius: 50%;
+  background: var(--card);
+  color: var(--fg);
+}
+.go-turn .go-icon {
+  width: 20px;
+  height: 20px;
+}
+.go-dots {
+  display: flex;
+}
+/* A dot is small to the eye and 44 px to the finger. The one that shows is long and green. */
+.go-dot {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  background: none;
+}
+.go-dot i {
+  width: 10px;
+  height: 10px;
+  border-radius: 5px;
+  background: var(--line);
+  transition: width 0.2s;
+}
+.go-dot[aria-current='true'] i {
+  width: 26px;
+  background: var(--green);
+}
+@media (prefers-reduced-motion: reduce) {
+  .go-dot i {
+    transition: none;
+  }
 }
 .go-hero-copy {
   align-items: flex-start;
@@ -1410,6 +1473,9 @@
     padding-block: 72px 64px;
   }
   .go-hero .go-in {
+    gap: 28px;
+  }
+  .go-slide {
     display: grid;
     grid-template-columns: minmax(0, 500px) minmax(0, 564px);
     align-items: center;

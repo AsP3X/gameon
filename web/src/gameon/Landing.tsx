@@ -1,14 +1,15 @@
-/* The landing: what GameOn is, the one game that is live, the ranked season, and the games that are
+/* The landing: what GameOn is, the games that are live, the ranked season, and the games that are
    announced. It is the page a visitor with no session sees, and it gives them none: it asks the
    server who they are and nothing more. The season is the server's (`GET /config`), and so are the
    three at the top of the ladder (`GET /ladder`, which anybody may read). */
 import { useEffect, useRef, useState } from 'react';
+import type { FocusEvent, ReactNode, RefObject } from 'react';
 import type { Online } from '../net/online';
 import type { LadderEntry, Season } from '../protocol/generated';
 import { initialOf } from '../online/parts';
 import { AT } from '../router/addresses';
 import { cssColor, reduced, whole } from '../tableview/dom';
-import { CardFan, IconKey, Mascot, SkullKingKey } from './art';
+import { CardFan, IconKey, Mascot, OchoFan, OchoKey, SkullKingKey } from './art';
 import { KIND_NAME, SHELVES, showsSkullKing, soonOn, TIERS } from './catalog';
 import type { Shelf, SoonGame } from './catalog';
 import { accountOf, Footer, Link, Nav, useTitle } from './Frame';
@@ -17,6 +18,224 @@ import { Icon } from './icons';
 
 /** The podium has three steps: with fewer players on the ladder there is none. */
 const PODIUM = 3;
+/** How long a slide of the hero stays before the next one comes, while nobody is using it. */
+export const SLIDE_MS = 6000;
+
+/** A game the hero shows: what its slide says, and where Play goes. */
+interface Slide {
+  name: string;
+  to: string;
+  /** The wide page's lead, under the heading. */
+  lead: string;
+  /** The phone's lead. */
+  short: string;
+  /** The line on the featured card. */
+  line: string;
+  /** The line on the game's card on a phone. */
+  phone: string;
+  /** The facts on the featured card, and the one under the name on a phone. */
+  pills: string[];
+  sub: string;
+  badge: ReactNode;
+  head: ReactNode;
+  fan: ReactNode;
+}
+
+const SLIDES: Slide[] = [
+  {
+    name: 'Skull King',
+    to: AT.home,
+    lead: 'Card and board games in your browser. Play alone against bots, pass one phone around the table, or sit down online with friends.',
+    short: 'Card and board games in your browser. Play alone or with friends.',
+    line: 'The pirate trick-taking game',
+    phone: 'The pirate trick-taking game. Bid your tricks, then hit that number exactly.',
+    pills: ['2–8 players', 'Solo', 'One screen', 'Online'],
+    sub: '2–8 players · 30 min',
+    badge: <SkullKingKey />,
+    head: (
+      <span className="go-sk-name">
+        <Mascot />
+        <span className="logo">
+          Skull <span>King</span>
+        </span>
+      </span>
+    ),
+    fan: <CardFan />,
+  },
+  {
+    name: 'Ocho',
+    to: AT.ocho,
+    lead: 'Card and board games in your browser. Open a table and share the code, or play two against two.',
+    short: 'Card and board games in your browser. Play with friends.',
+    line: 'Match a colour or a number, then be the first to play your last card.',
+    phone: 'Match a colour or a number, then be the first to play your last card.',
+    pills: ['2–8 players', 'A table', 'Teams'],
+    sub: '2–8 players · Cards',
+    badge: <OchoKey />,
+    head: (
+      <span className="go-sk-name">
+        <OchoKey />
+        <span className="logo">Ocho</span>
+      </span>
+    ),
+    fan: <OchoFan />,
+  },
+];
+
+/** One game in the hero: the copy, its featured card on a wide page, and its game card on a phone. */
+function HeroSlide({
+  slide,
+  at,
+  shown,
+  title,
+}: {
+  slide: Slide;
+  at: number;
+  shown: boolean;
+  title: RefObject<HTMLHeadingElement | null> | undefined;
+}) {
+  return (
+    <div
+      className="go-slide"
+      role="group"
+      aria-roledescription="slide"
+      aria-label={`${slide.name}, ${at + 1} of ${SLIDES.length}`}
+      hidden={!shown}
+    >
+      <div className="go-hero-copy">
+        <span className="pill green wide-only">{slide.name} is live</span>
+        <h1 tabIndex={-1} ref={title}>
+          Game night, <span className="go-accent">switched on.</span>
+        </h1>
+        <p className="go-lead wide-only">{slide.lead}</p>
+        <p className="go-lead narrow-only">{slide.short}</p>
+        <div className="go-actions wide-only">
+          <Link to={slide.to} className="btn go-btn">
+            Play {slide.name}
+          </Link>
+          <Link to={AT.games} className="btn ghost go-btn">
+            Browse the games
+          </Link>
+        </div>
+        <ul className="go-facts wide-only">
+          {['Free to play', 'No download', 'No account needed'].map((fact) => (
+            <li key={fact}>
+              <Icon name="check" />
+              {fact}
+            </li>
+          ))}
+        </ul>
+      </div>
+      <div className="go-featured wide-only">
+        <div className="go-featured-head">
+          {slide.head}
+          <span className="pill gold caps">Featured game</span>
+        </div>
+        {slide.fan}
+        <div className="go-featured-foot">
+          <b>{slide.line}</b>
+          <span className="go-pills">
+            {slide.pills.map((fact) => (
+              <span className="pill soft" key={fact}>
+                {fact}
+              </span>
+            ))}
+          </span>
+        </div>
+      </div>
+      <div className="go-game narrow-only">
+        <div className="go-game-art">{slide.fan}</div>
+        <div className="go-game-info">
+          <div className="go-game-title">
+            {slide.badge}
+            <span className="go-game-name">
+              <b>{slide.name}</b>
+              <small>{slide.sub}</small>
+            </span>
+            <span className="pill green caps">Live</span>
+          </div>
+          <p>{slide.phone}</p>
+          <Link to={slide.to} className="btn go-btn full" label={`Play ${slide.name} now`}>
+            Play now
+          </Link>
+          <small className="go-game-facts">Free · No download · No account needed</small>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * The top of the landing: the live games, one slide each. It moves on by itself while nobody is
+ * using it: never under the pointer, never with focus inside, never when the visitor asked for less
+ * motion. The buttons and the dots always work. Only the slide that shows is in the tab order.
+ */
+function Hero({ title }: { title: RefObject<HTMLHeadingElement | null> }) {
+  const [at, setAt] = useState(0);
+  const [over, setOver] = useState(false);
+  const [inside, setInside] = useState(false);
+  const still = over || inside;
+
+  useEffect(() => {
+    if (still) return;
+    const timer = setInterval(() => {
+      if (!reduced()) setAt((i) => (i + 1) % SLIDES.length);
+    }, SLIDE_MS);
+    return () => clearInterval(timer);
+  }, [still]);
+
+  const step = (by: number): void => setAt((i) => (i + by + SLIDES.length) % SLIDES.length);
+  // The page puts focus on its title, which is in the slide. That is where reading starts, not a
+  // visitor using the hero: only a control they can tab to holds it still.
+  const enter = (e: FocusEvent<HTMLElement>): void => {
+    if (e.target.tabIndex >= 0) setInside(true);
+  };
+  const leave = (e: FocusEvent<HTMLElement>): void => {
+    if (!(e.relatedTarget instanceof Node && e.currentTarget.contains(e.relatedTarget))) setInside(false);
+  };
+
+  return (
+    <section
+      className="go-hero"
+      aria-roledescription="carousel"
+      aria-label="Live games"
+      onPointerEnter={() => setOver(true)}
+      onPointerLeave={() => setOver(false)}
+      onFocus={enter}
+      onBlur={leave}
+    >
+      <div className="go-in">
+        <div className="go-slides" aria-live={still || reduced() ? 'polite' : 'off'}>
+          {SLIDES.map((slide, i) => (
+            <HeroSlide key={slide.name} slide={slide} at={i} shown={i === at} title={i === at ? title : undefined} />
+          ))}
+        </div>
+        <div className="go-carousel">
+          <button type="button" className="go-turn" aria-label="Previous game" onClick={() => step(-1)}>
+            <Icon name="chevronLeft" />
+          </button>
+          <span className="go-dots">
+            {SLIDES.map((slide, i) => (
+              <button
+                key={slide.name}
+                type="button"
+                className="go-dot"
+                aria-label={`Show ${slide.name}`}
+                aria-current={i === at ? 'true' : undefined}
+                onClick={() => setAt(i)}
+              >
+                <i />
+              </button>
+            ))}
+          </span>
+          <button type="button" className="go-turn" aria-label="Next game" onClick={() => step(1)}>
+            <Icon name="chevronRight" />
+          </button>
+        </div>
+      </div>
+    </section>
+  );
+}
 
 export function Shelves({ shelf, onPick }: { shelf: Shelf; onPick: (shelf: Shelf) => void }) {
   return (
@@ -139,79 +358,7 @@ export function Landing({ online, who, season }: LandingProps) {
     <>
       <Nav page="landing" who={who} onWays={toWays} />
       <main>
-        <section className="go-hero">
-          <div className="go-in">
-            <div className="go-hero-copy">
-              <span className="pill green wide-only">First game live: Skull King</span>
-              <h1 tabIndex={-1} ref={title}>
-                Game night, <span className="go-accent">switched on.</span>
-              </h1>
-              <p className="go-lead wide-only">
-                Card and board games in your browser. Play alone against bots, pass one phone around the table, or sit
-                down online with friends.
-              </p>
-              <p className="go-lead narrow-only">Card and board games in your browser. Play alone or with friends.</p>
-              <div className="go-actions wide-only">
-                <Link to={AT.home} className="btn go-btn">
-                  Play Skull King
-                </Link>
-                <Link to={AT.games} className="btn ghost go-btn">
-                  Browse the games
-                </Link>
-              </div>
-              <ul className="go-facts wide-only">
-                {['Free to play', 'No download', 'No account needed'].map((fact) => (
-                  <li key={fact}>
-                    <Icon name="check" />
-                    {fact}
-                  </li>
-                ))}
-              </ul>
-            </div>
-            <div className="go-featured wide-only">
-              <div className="go-featured-head">
-                <span className="go-sk-name">
-                  <Mascot />
-                  <span className="logo">
-                    Skull <span>King</span>
-                  </span>
-                </span>
-                <span className="pill gold caps">Featured game</span>
-              </div>
-              <CardFan />
-              <div className="go-featured-foot">
-                <b>The pirate trick-taking game</b>
-                <span className="go-pills">
-                  {['2–8 players', 'Solo', 'One screen', 'Online'].map((fact) => (
-                    <span className="pill soft" key={fact}>
-                      {fact}
-                    </span>
-                  ))}
-                </span>
-              </div>
-            </div>
-            <div className="go-game narrow-only">
-              <div className="go-game-art">
-                <CardFan />
-              </div>
-              <div className="go-game-info">
-                <div className="go-game-title">
-                  <SkullKingKey />
-                  <span className="go-game-name">
-                    <b>Skull King</b>
-                    <small>2–8 players · 30 min</small>
-                  </span>
-                  <span className="pill green caps">Live</span>
-                </div>
-                <p>The pirate trick-taking game. Bid your tricks, then hit that number exactly.</p>
-                <Link to={AT.home} className="btn go-btn full" label="Play Skull King now">
-                  Play now
-                </Link>
-                <small className="go-game-facts">Free · No download · No account needed</small>
-              </div>
-            </div>
-          </div>
-        </section>
+        <Hero title={title} />
 
         {season !== null && (
           <section className="go-ranked" aria-labelledby="go-ranked-title">
