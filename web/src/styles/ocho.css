@@ -244,17 +244,45 @@
   color: var(--muted);
 }
 
-/* Sit down, and the table waiting: one card in the middle of the page. */
+/* Sit down, and the table waiting: one column on a phone, two side by side on a desk. */
 .oc-sit {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
   gap: 16px;
+  width: 100%;
+  max-width: 552px;
+  margin: 0 auto;
   padding: 8px 16px 40px;
 }
-.oc-sit > * {
-  width: 100%;
-  max-width: 520px;
+.oc-sit > .oc-banner {
+  grid-column: 1 / -1;
+}
+.oc-wait-head {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.oc-levels {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.oc-levels .oc-choice {
+  padding: 10px;
+}
+.oc-skill-text {
+  font-size: 15px;
+  color: var(--muted);
+}
+.oc-skill-text b {
+  color: var(--fg);
+  font-weight: 900;
+}
+.oc-row .oc-remove {
+  margin: -6px -8px -6px 0;
+}
+.oc-row .oc-remove .go-icon {
+  width: 20px;
+  height: 20px;
 }
 .oc-panel {
   display: flex;
@@ -1191,7 +1219,8 @@
     padding: 0 4px;
     border: 0;
   }
-  .oc-sit .oc-join {
+  .oc-sit .oc-join,
+  .oc-sit .oc-wait-side {
     padding-top: 18px;
     border-top: 2px solid var(--line);
     border-radius: 0;
@@ -1224,7 +1253,18 @@
     flex-basis: 68px;
   }
   .oc-sit {
-    padding-top: 40px;
+    grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+    gap: 24px;
+    max-width: 1040px;
+    padding: 40px 32px 48px;
+  }
+  .oc-sit > .oc-wait-side {
+    position: sticky;
+    top: 16px;
+  }
+  .oc-table {
+    max-width: 1200px;
+    padding: 16px 24px 32px;
   }
   .oc-rules-cols {
     display: grid;

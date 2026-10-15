@@ -82,7 +82,7 @@ export interface Lobby {
   players: number;
   teams: boolean;
   firstTo500: boolean;
-  /** The level of every bot at the table. Absent: a friends table, with no bots. */
+  /** The level of every bot at the table. Absent until the host picks one or the first bot sits down. */
   bots?: BotLevel;
   /** In seat order: the first member is seat 0 once the hand is dealt. */
   members: Member[];
@@ -116,6 +116,9 @@ export type Intent =
   | { t: 'ocho.leave' }
   | { t: 'ocho.ready'; ready: boolean }
   | { t: 'ocho.start' }
+  | { t: 'ocho.addBot' }
+  | { t: 'ocho.removeBot'; index: number }
+  | { t: 'ocho.bots'; bots: BotLevel }
   | { t: 'ocho.play'; card: number; color?: Color }
   | { t: 'ocho.draw' }
   | { t: 'ocho.keep' }

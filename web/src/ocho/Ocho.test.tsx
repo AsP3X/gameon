@@ -116,29 +116,9 @@ describe('sitting down at Ocho', () => {
     expect(sent()[1]).toEqual({ t: 'ocho.ready', ready: true });
   });
 
-  it('offers no bots first, and sends the level picked with the create', async () => {
-    await render(page());
-    const bots = $$('.oc-field').find((f) => f.querySelector('h2')?.textContent === 'Bots');
-    expect(Array.from(bots?.querySelectorAll('.oc-choice') ?? []).map((b) => b.textContent)).toEqual([
-      'No botsFriends join with the code',
-      'EasyMakes mistakes',
-      'NormalSolid play',
-      'HardReads the table',
-    ]);
-    expect(button('No bots').getAttribute('aria-pressed')).toBe('true');
-    await press('Hard');
-    expect(button('Hard').getAttribute('aria-pressed')).toBe('true');
-    expect(button('No bots').getAttribute('aria-pressed')).toBe('false');
-    await press('Start');
-    expect(sent()).toEqual([{ t: 'ocho.create', players: 4, teams: false, match: 'one', bots: 'hard' }]);
-    await answer();
-    expect(sent()[1]).toEqual({ t: 'ocho.ready', ready: true });
-  });
-
-  it('keeps teams at four with bots, and leaves the field out again for no bots', async () => {
+  it('has no bots to pick: the host adds them at the table', async () => {
     await render(page(true));
-    await press('Easy');
-    await press('No bots');
+    expect(texts('.oc-field h2')).toEqual(['Players', 'Table', 'Match']);
     await press('Start');
     expect(sent()).toEqual([{ t: 'ocho.create', players: 4, teams: true, match: 'to500' }]);
   });
@@ -177,38 +157,73 @@ describe('the table waiting', () => {
     await render(page());
     await push({ t: 'ocho.lobby', lobby: aLobby({ players: 4 }, 2, 4) });
     expect($('.oc-code-value')?.textContent).toBe('K7QX2P');
-    expect(texts('.oc-rows .oc-row-text b')).toEqual(['You', 'Ana', 'Waiting for a player', 'Waiting for a player']);
+    expect($('#oc-players')?.textContent).toBe('Players · 2 of 4');
+    expect(texts('.oc-rows .oc-row-text b')).toEqual(['You', 'Ana', 'Open seat', 'Open seat']);
+    expect(texts('.oc-rows .oc-row-text small')).toEqual(['Host', 'Player']);
+    expect($('.oc-code .oc-muted')?.textContent).toBe(
+      'Give this code to the others. They join from Ocho’s sit-down page.',
+    );
     expect(button('Start').disabled).toBe(true);
-    expect($('.oc-panel > p[role="status"]')?.textContent).toBe('Waiting for 2 more players');
+    expect($('.oc-wait-side > p[role="status"]')?.textContent).toBe('Waiting for 2 more players');
     await push({ t: 'ocho.lobby', lobby: aLobby({ players: 4 }, 4, 4) });
+    expect(Array.from(document.querySelectorAll('button')).some((b) => b.textContent === 'Add a bot')).toBe(false);
     await press('Start');
     expect(sent()).toEqual([{ t: 'ocho.start' }]);
   });
 
-  it('names the bot seats and their level, and gives no code to pass on', async () => {
+  it('lets the host add a bot to an open seat, and remove it by its place in the list', async () => {
     await render(page());
-    const lobby = aLobby({ players: 4, bots: 'hard' }, 4, 4);
-    lobby.members = lobby.members.map((m, i) => ({ ...m, ready: i > 0, bot: i > 0 }));
+    await push({ t: 'ocho.lobby', lobby: aLobby({ players: 4 }, 2, 4) });
+    expect($('.oc-panel .oc-field > p.oc-muted')?.textContent).toBe('Add a bot, or give them the code.');
+    await press('Add a bot');
+    expect(sent()).toEqual([{ t: 'ocho.addBot' }]);
+    await answer();
+    const lobby = aLobby({ players: 4, bots: 'normal' }, 2, 4);
+    lobby.members = [...lobby.members, { user: 'b2', name: 'Nico', ready: true, bot: true }];
     await push({ t: 'ocho.lobby', lobby });
-    expect($('.oc-panel > p.oc-muted')?.textContent).toBe('Free-for-all · 4 players · One hand · Hard bots');
-    expect($('.oc-code .oc-muted')?.textContent).toBe('The other seats are Hard bots.');
-    expect(texts('.oc-rows .oc-row-text small')).toEqual(['Host', 'Hard bot', 'Hard bot', 'Hard bot']);
-    await press('Ready');
-    expect(sent()).toEqual([{ t: 'ocho.ready', ready: true }]);
+    expect(texts('.oc-rows .oc-row-text b')).toEqual(['You', 'Ana', 'Nico', 'Open seat']);
+    expect(texts('.oc-rows .oc-row-text small')).toEqual(['Host', 'Player', 'Bot']);
+    // A bot has no Ready pill: it is always ready.
+    expect($$('.oc-rows .oc-row')[2]?.querySelector('.pill')).toBeNull();
+    await press('Remove Nico');
+    expect(sent()[1]).toEqual({ t: 'ocho.removeBot', index: 2 });
   });
 
-  it('puts the team after the level for a teams table with bots', async () => {
+  it('shows Normal until the host picks a skill, and sends the one picked', async () => {
+    await render(page());
+    await push({ t: 'ocho.lobby', lobby: aLobby({ players: 4 }, 1, 4) });
+    const skill = $$('.oc-levels .oc-choice');
+    expect(skill.map((b) => b.textContent)).toEqual(['EasyMakes mistakes', 'NormalSolid play', 'HardReads the table']);
+    expect(button('Normal').getAttribute('aria-pressed')).toBe('true');
+    await press('Normal');
+    expect(sent()).toEqual([]);
+    await press('Hard');
+    expect(sent()).toEqual([{ t: 'ocho.bots', bots: 'hard' }]);
+  });
+
+  it('shows a guest the skill as words, with no Add, Remove or Start', async () => {
+    await render(page());
+    const lobby = aLobby({ players: 4, host: 'u1', bots: 'hard' }, 2, 4);
+    lobby.members = [...lobby.members, { user: 'b2', name: 'Luz', ready: true, bot: true }];
+    await push({ t: 'ocho.lobby', lobby });
+    expect($('.oc-skill-text')?.textContent).toBe('Hard · Reads the table');
+    expect($$('.oc-levels')).toEqual([]);
+    const labels = Array.from(document.querySelectorAll('button')).map(
+      (b) => b.getAttribute('aria-label') ?? b.textContent,
+    );
+    expect(labels).not.toContain('Add a bot');
+    expect(labels).not.toContain('Remove Luz');
+    expect(labels).not.toContain('Start');
+    expect($('.oc-panel .oc-field > p.oc-muted')).toBeNull();
+  });
+
+  it('puts the team on each seat of a teams table, bots too', async () => {
     await render(page());
     const lobby = aLobby({ players: 4, teams: true, firstTo500: true, bots: 'normal' }, 4, 4);
-    lobby.members = lobby.members.map((m, i) => ({ ...m, bot: i > 0 }));
+    lobby.members = lobby.members.map((m, i) => ({ ...m, bot: i > 1 }));
     await push({ t: 'ocho.lobby', lobby });
-    expect($('.oc-panel > p.oc-muted')?.textContent).toBe('Teams · 4 players · First to 500 · Normal bots');
-    expect(texts('.oc-rows .oc-row-text small')).toEqual([
-      'Host',
-      'Normal bot · Team 2',
-      'Normal bot · Team 1',
-      'Normal bot · Team 2',
-    ]);
+    expect($('.oc-wait-head p')?.textContent).toBe('Teams · 4 players · First to 500');
+    expect(texts('.oc-rows .oc-row-text small')).toEqual(['Host', 'Team 2', 'Bot · Team 1', 'Bot · Team 2']);
   });
 
   it('has no Start for a player who is not the host, only their own Ready', async () => {

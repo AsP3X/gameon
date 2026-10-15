@@ -132,22 +132,12 @@ function ChoiceButton(props: { label: string; sub?: string; on: boolean; onPick:
   );
 }
 
-/** The bot choices on the sit-down page, as Skull King words its skills. */
-const BOT_CHOICES: [BotLevel | null, string, string][] = [
-  [null, 'No bots', 'Friends join with the code'],
-  ['easy', 'Easy', 'Makes mistakes'],
-  ['normal', 'Normal', 'Solid play'],
-  ['hard', 'Hard', 'Reads the table'],
-];
-const LEVEL_NAME: Record<BotLevel, string> = { easy: 'Easy', normal: 'Normal', hard: 'Hard' };
-
 function SitDown({ ocho, who, teams: teamsAtFirst }: { ocho: OchoClient; who: Who; teams: boolean }) {
   const title = useTitle('GameOn · Ocho');
   const state = useSyncExternalStore(ocho.subscribe, ocho.getState);
   const [players, setPlayers] = useState(4);
   const [teams, setTeams] = useState(teamsAtFirst);
   const [to500, setTo500] = useState(teamsAtFirst);
-  const [bots, setBots] = useState<BotLevel | null>(null);
   const [code, setCode] = useState('');
   const [seated, setSeated] = useState(false);
   const { busy, error, setError, send } = useSender(ocho);
@@ -160,7 +150,6 @@ function SitDown({ ocho, who, teams: teamsAtFirst }: { ocho: OchoClient; who: Wh
       players: teams ? 4 : players,
       teams,
       match: to500 ? 'to500' : 'one',
-      ...(bots && { bots }),
     });
     sat(r);
     if (r.ok) await send({ t: 'ocho.ready', ready: true });
@@ -212,14 +201,6 @@ function SitDown({ ocho, who, teams: teamsAtFirst }: { ocho: OchoClient; who: Wh
               <ChoiceButton label="First to 500" on={to500} onPick={() => setTo500(true)} />
             </div>
           </div>
-          <div className="oc-field">
-            <h2 className="oc-label">Bots</h2>
-            <div className="oc-choices">
-              {BOT_CHOICES.map(([level, label, sub]) => (
-                <ChoiceButton key={label} label={label} sub={sub} on={bots === level} onPick={() => setBots(level)} />
-              ))}
-            </div>
-          </div>
           {error && (
             <p className="alert" role="alert">
               {error}
@@ -267,15 +248,22 @@ function SitDown({ ocho, who, teams: teamsAtFirst }: { ocho: OchoClient; who: Wh
 
 /* ---------- waiting for the players ---------- */
 
-const settingsLine = (lobby: Lobby): string =>
-  `${lobby.teams ? 'Teams' : 'Free-for-all'} · ${lobby.players} players · ${lobby.firstTo500 ? 'First to 500' : 'One hand'}` +
-  (lobby.bots ? ` · ${LEVEL_NAME[lobby.bots]} bots` : '');
+/** The bot skills, as Skull King words them. */
+const LEVELS: [BotLevel, string, string][] = [
+  ['easy', 'Easy', 'Makes mistakes'],
+  ['normal', 'Normal', 'Solid play'],
+  ['hard', 'Hard', 'Reads the table'],
+];
+const LEVEL_NAME: Record<BotLevel, string> = { easy: 'Easy', normal: 'Normal', hard: 'Hard' };
 
-/** The small line under a member: Host, the bot's level, and the team when there are teams. */
+const settingsLine = (lobby: Lobby): string =>
+  `${lobby.teams ? 'Teams' : 'Free-for-all'} · ${lobby.players} players · ${lobby.firstTo500 ? 'First to 500' : 'One hand'}`;
+
+/** The small line under a member: Host, Bot, or Player, and the team when there are teams. */
 function memberLine(lobby: Lobby, seat: number, user: string, bot: boolean): string {
   if (user === lobby.host) return 'Host';
   const team = lobby.teams ? (seat % 2 === 0 ? 'Team 1' : 'Team 2') : null;
-  if (bot && lobby.bots) return team ? `${LEVEL_NAME[lobby.bots]} bot · ${team}` : `${LEVEL_NAME[lobby.bots]} bot`;
+  if (bot) return team ? `Bot · ${team}` : 'Bot';
   return team ?? 'Player';
 }
 
@@ -287,46 +275,109 @@ function Waiting({ ocho, lobby, meId }: { ocho: OchoClient; lobby: Lobby; meId: 
   const missing = lobby.players - lobby.members.length;
   const allReady = missing === 0 && lobby.members.every((m) => m.ready);
   const empty = Array.from({ length: Math.max(0, missing) }, (_, i) => i);
+  // Until the host picks one, the first bot plays Normal: the server says so (docs/ocho-protocol.md).
+  const level = lobby.bots ?? 'normal';
+  const hasBots = lobby.members.some((m) => m.bot);
   return (
     <div className="oc-page">
       <BackHeader />
-      <main className="oc-sit">
+      <main className="oc-sit oc-wait">
         <section className="oc-panel" aria-labelledby="oc-wait-title">
-          <h1 id="oc-wait-title" tabIndex={-1} ref={title}>
-            Ocho
-          </h1>
-          <p className="oc-muted">{settingsLine(lobby)}</p>
+          <div className="oc-wait-head">
+            <h1 id="oc-wait-title" tabIndex={-1} ref={title}>
+              Ocho
+            </h1>
+            <p className="oc-muted">{settingsLine(lobby)}</p>
+          </div>
+          <div className="oc-field">
+            <h2 className="oc-label" id="oc-players">
+              Players · {lobby.members.length} of {lobby.players}
+            </h2>
+            <ul className="oc-rows" aria-labelledby="oc-players">
+              {lobby.members.map((m, seat) => (
+                <li key={m.bot ? `bot-${seat}` : m.user} className="oc-row">
+                  <span className={`avatar oc-tone-${toneOf(seat)}`} aria-hidden="true">
+                    {initialOf(m.name)}
+                  </span>
+                  <span className="oc-row-text">
+                    <b>{m.user === meId ? 'You' : m.name}</b>
+                    <small>{memberLine(lobby, seat, m.user, m.bot)}</small>
+                  </span>
+                  {!m.bot ? (
+                    <span className={m.ready ? 'pill green' : 'pill soft'}>{m.ready ? 'Ready' : 'Not ready'}</span>
+                  ) : (
+                    host && (
+                      <button
+                        type="button"
+                        className="icon-btn oc-remove"
+                        aria-label={`Remove ${m.name}`}
+                        disabled={busy}
+                        onClick={() => void send({ t: 'ocho.removeBot', index: seat })}
+                      >
+                        <Icon name="x" />
+                      </button>
+                    )
+                  )}
+                </li>
+              ))}
+              {empty.map((i) => (
+                <li key={`open-${i}`} className="oc-row oc-empty">
+                  <span className="avatar empty" aria-hidden="true"></span>
+                  <span className="oc-row-text">
+                    <b>Open seat</b>
+                  </span>
+                </li>
+              ))}
+            </ul>
+            {host && missing > 0 && (
+              <button
+                type="button"
+                className="btn ghost"
+                disabled={busy}
+                onClick={() => void send({ t: 'ocho.addBot' })}
+              >
+                Add a bot
+              </button>
+            )}
+            {host && missing > 0 && <p className="oc-muted">Add a bot, or give them the code.</p>}
+          </div>
+        </section>
+        <section className="oc-panel oc-wait-side" aria-label="The table">
           <div className="oc-code">
             <h2 className="oc-label">Table code</h2>
             <b className="oc-code-value">{lobby.code}</b>
-            <p className="oc-muted">
-              {lobby.bots
-                ? `The other seats are ${LEVEL_NAME[lobby.bots]} bots.`
-                : 'Give this code to the others. They join from Ocho’s sit-down page.'}
-            </p>
+            <p className="oc-muted">Give this code to the others. They join from Ocho&rsquo;s sit-down page.</p>
           </div>
-          <ul className="oc-rows" aria-label="Players">
-            {lobby.members.map((m, seat) => (
-              <li key={m.user} className="oc-row">
-                <span className={`avatar oc-tone-${toneOf(seat)}`} aria-hidden="true">
-                  {initialOf(m.name)}
-                </span>
-                <span className="oc-row-text">
-                  <b>{m.user === meId ? 'You' : m.name}</b>
-                  <small>{memberLine(lobby, seat, m.user, m.bot)}</small>
-                </span>
-                <span className={m.ready ? 'pill green' : 'pill soft'}>{m.ready ? 'Ready' : 'Not ready'}</span>
-              </li>
-            ))}
-            {empty.map((i) => (
-              <li key={`empty-${i}`} className="oc-row oc-empty">
-                <span className="avatar empty" aria-hidden="true"></span>
-                <span className="oc-row-text">
-                  <b>Waiting for a player</b>
-                </span>
-              </li>
-            ))}
-          </ul>
+          {host ? (
+            <div className="oc-field">
+              <h2 className="oc-label" id="oc-skill">
+                Bot skill
+              </h2>
+              <div className="oc-choices oc-levels" role="group" aria-labelledby="oc-skill">
+                {LEVELS.map(([value, label, sub]) => (
+                  <ChoiceButton
+                    key={value}
+                    label={label}
+                    sub={sub}
+                    on={level === value}
+                    onPick={() => {
+                      // The same skill again would only mark everyone not ready.
+                      if (value !== level) void send({ t: 'ocho.bots', bots: value });
+                    }}
+                  />
+                ))}
+              </div>
+            </div>
+          ) : (
+            hasBots && (
+              <div className="oc-field">
+                <h2 className="oc-label">Bot skill</h2>
+                <p className="oc-skill-text">
+                  <b>{LEVEL_NAME[level]}</b> · {LEVELS.find(([v]) => v === level)?.[2]}
+                </p>
+              </div>
+            )
+          )}
           <p className="oc-muted" role="status">
             {missing > 0
               ? `Waiting for ${missing} more ${missing === 1 ? 'player' : 'players'}`
