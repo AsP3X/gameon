@@ -1,4 +1,4 @@
-# Nginx Proxy Manager overlay: no host ports. NPM talks to skt-web and skt-api on
+# Nginx Proxy Manager overlay: no host ports. NPM talks to gameon-web and gameon-api on
 # proxy-network, so publishing a host port is not required. The API and the page
 # join that network. The setup screen can replace these lists; ./deploy.sh then
 # passes .deploy/networks.yml last.
@@ -7,14 +7,14 @@
 #   PROXY_MODE=npm ./deploy.sh
 #
 # NPM proxy hosts:
-#   web → http://skt-web:80
-#   api → http://skt-api:8080    only if a client should reach the API without the page
-# The page proxies /api to http://skt-api:8080. Do not point that upstream at
+#   web → http://gameon-web:80
+#   api → http://gameon-api:8080    only if a client should reach the API without the page
+# The page proxies /api to http://gameon-api:8080. Do not point that upstream at
 # the service name api: other stacks on proxy-network publish the same name.
 #
 # Set SKT_PUBLIC_ORIGIN to the page's origin (https://tavern.example) and
 # SKT_SECURE_COOKIE=1 when that origin is https.
-# The API trusts X-Forwarded-For only from SKT_TRUSTED_PROXIES. skt-web is on the
+# The API trusts X-Forwarded-For only from SKT_TRUSTED_PROXIES. gameon-web is on the
 # Docker bridge (172.16.0.0/12). If proxy-network uses another range, add that CIDR
 # too. Until it is listed, players behind that hop share one login budget.
 

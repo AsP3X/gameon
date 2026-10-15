@@ -106,7 +106,7 @@ show_help() {
   the shipped defaults, and s writes them. q quits and writes nothing. The r key
   does not touch the database. Storage is optional: left keeps the named volume
   skt_pg_data, right uses ./data, and enter on that line edits the path.
-  Enter on Networks opens a dialog that lists skt-postgres, skt-api and skt-web,
+  Enter on Networks opens a dialog that lists gameon-postgres, gameon-api and gameon-web,
   each with the networks it joins. Left and right there pick a container.
   a adds a Docker network and x removes one. skt-internal stays on every
   container. q in that dialog returns to this screen and writes nothing.
@@ -115,7 +115,7 @@ show_help() {
   to this screen and writes nothing. s on this screen writes the answers.
   A log change applies the next time that container starts. It does not
   touch the database.
-  While the database is only inside the skt-postgres container, the reach mode, the
+  While the database is only inside the gameon-postgres container, the reach mode, the
   Postgres port, the Postgres networks and the database user, password and name
   cannot be changed: that would recreate the container and delete what it stores.
   On the named volume or in a data folder, reach mode, host ports and networks can
@@ -151,8 +151,8 @@ show_help() {
     By default the API and the page join proxy-network, and Postgres stays on
     skt-internal. The Networks dialog can attach more, or take proxy-network off.
     ./deploy.sh creates a listed network when it is missing. Point Nginx Proxy
-    Manager at http://skt-web:80, turn websockets on, and set SKT_PUBLIC_ORIGIN.
-    The page reaches the API at http://skt-api:8080. Other stacks on
+    Manager at http://gameon-web:80, turn websockets on, and set SKT_PUBLIC_ORIGIN.
+    The page reaches the API at http://gameon-api:8080. Other stacks on
     proxy-network also register the short name api.
 
 EOF
@@ -274,7 +274,7 @@ SETUP_LOG_ERROR=""
 SETUP_PGUSER="skt"
 SETUP_PGDB="skt"
 SETUP_PICK=0
-# 1 when skt-postgres already exists. Reach mode and the database answers stay.
+# 1 when gameon-postgres already exists. Reach mode and the database answers stay.
 SETUP_PG_LOCKED=0
 
 load_setup_from() {
@@ -348,7 +348,7 @@ setup_check() {
     local|npm) ;;
     *) printf 'Reach it with "local" or "npm".\n' >&2; return 1 ;;
   esac
-  # NPM reaches skt-web and skt-api by container name. A published host port is
+  # NPM reaches gameon-web and gameon-api by container name. A published host port is
   # not required, and the setup does not ask for one. The stored ports stay in
   # .env for a later local start, where they are checked.
   if [[ "$SETUP_MODE" == "local" ]]; then
@@ -509,9 +509,9 @@ net_svc_name() {
 # The name Docker shows. The setup screen uses this so a network is tied to a container.
 net_container_name() {
   case "$1" in
-    postgres) printf 'skt-postgres' ;;
-    api) printf 'skt-api' ;;
-    web) printf 'skt-web' ;;
+    postgres) printf 'gameon-postgres' ;;
+    api) printf 'gameon-api' ;;
+    web) printf 'gameon-web' ;;
   esac
 }
 
@@ -827,7 +827,7 @@ setup_draw() {
     esac
     case "$field" in
       reach-local) setup_reach "$i" local "This machine            http://localhost:${SETUP_WEB}" ;;
-      reach-npm) setup_reach "$i" npm "NPM                     http://skt-web:80" ;;
+      reach-npm) setup_reach "$i" npm "NPM                     http://gameon-web:80" ;;
       web) setup_row "$i" "Web port              ${SETUP_WEB}" ;;
       api) setup_row "$i" "API port              ${SETUP_API}" ;;
       pg) setup_row "$i" "Postgres port         ${SETUP_PGPORT}" ;;
@@ -844,23 +844,23 @@ setup_draw() {
         ;;
       networks)
         setup_row "$i" "Networks"
-        printf '      %-14s %s\n' "skt-postgres" "$(net_join "$SETUP_NET_POSTGRES")"
-        printf '      %-14s %s\n' "skt-api" "$(net_join "$SETUP_NET_API")"
-        printf '      %-14s %s\n' "skt-web" "$(net_join "$SETUP_NET_WEB")"
+        printf '      %-18s %s\n' "gameon-postgres" "$(net_join "$SETUP_NET_POSTGRES")"
+        printf '      %-18s %s\n' "gameon-api" "$(net_join "$SETUP_NET_API")"
+        printf '      %-18s %s\n' "gameon-web" "$(net_join "$SETUP_NET_WEB")"
         ;;
       logging)
         setup_row "$i" "Logging"
-        printf '      %-14s %s\n' "skt-postgres" "$(log_summary postgres)"
-        printf '      %-14s %s\n' "skt-api" "$(log_summary api)"
-        printf '      %-14s %s\n' "skt-web" "$(log_summary web)"
+        printf '      %-18s %s\n' "gameon-postgres" "$(log_summary postgres)"
+        printf '      %-18s %s\n' "gameon-api" "$(log_summary api)"
+        printf '      %-18s %s\n' "gameon-web" "$(log_summary web)"
         ;;
     esac
     i=$((i + 1))
   done < <(setup_fields)
   printf '\n'
   if [[ "$SETUP_MODE" == "npm" ]]; then
-    printf '  %sNPM talks to skt-web and skt-api on the Docker network. No host port is published.%s\n' "$DIM" "$NC"
-    printf '  %sPoint Nginx Proxy Manager at skt-web port 80 and turn websockets on.%s\n' "$DIM" "$NC"
+    printf '  %sNPM talks to gameon-web and gameon-api on the Docker network. No host port is published.%s\n' "$DIM" "$NC"
+    printf '  %sPoint Nginx Proxy Manager at gameon-web port 80 and turn websockets on.%s\n' "$DIM" "$NC"
   else
     printf '  %sThe page is the only address the browser needs.%s\n' "$DIM" "$NC"
   fi
@@ -873,7 +873,7 @@ setup_draw() {
   fi
   printf '\n  %s↑↓ move    ←→ storage    enter select    s save and start    r reset answers    q quit%s\n' "$DIM" "$NC"
   printf '  %sOn Storage, left is the named volume and right is the data folder. Enter edits the path.%s\n' "$DIM" "$NC"
-  printf '  %sEnter on Networks lists skt-postgres, skt-api and skt-web with the networks each one joins.%s\n' "$DIM" "$NC"
+  printf '  %sEnter on Networks lists gameon-postgres, gameon-api and gameon-web with the networks each one joins.%s\n' "$DIM" "$NC"
   printf '  %sEnter on Logging lists those containers with the level and the Docker log files for each.%s\n' "$DIM" "$NC"
   printf '  %sOn a text line, enter keeps the shown value. Type - to clear the origin or the proxies.%s\n' "$DIM" "$NC"
 }
@@ -952,12 +952,21 @@ setup_reset() {
   [[ "$answer" == "y" || "$answer" == "Y" ]]
 }
 
-# skt-postgres keeps accounts and games. A database that lives only inside the container
+# gameon-postgres keeps accounts and games. A database that lives only inside the container
 # is deleted when the container is recreated. A volume or a data folder is not.
-postgres_container_exists() {
+# skt-postgres is the name from before the rename, so an update still finds that data.
+postgres_container_name() {
   local names
   names="$(docker ps -a --format '{{.Names}}' 2>/dev/null || true)"
-  printf '%s\n' "$names" | grep -qx 'skt-postgres'
+  if printf '%s\n' "$names" | grep -qx 'gameon-postgres'; then
+    printf 'gameon-postgres'
+  elif printf '%s\n' "$names" | grep -qx 'skt-postgres'; then
+    printf 'skt-postgres'
+  fi
+}
+
+postgres_container_exists() {
+  [[ -n "$(postgres_container_name)" ]]
 }
 
 # "volume <name>" or "bind <path>". Empty when the container is absent, or when the
@@ -968,7 +977,7 @@ postgres_container_exists() {
 postgres_storage() {
   local want="${1:-mount}" dest typ ref line
   postgres_container_exists || return 0
-  line="$(docker inspect --format '{{range .Mounts}}{{.Destination}}|{{.Type}}|{{if eq .Type "volume"}}{{.Name}}{{else}}{{.Source}}{{end}}{{"\n"}}{{end}}' skt-postgres 2>/dev/null || true)"
+  line="$(docker inspect --format '{{range .Mounts}}{{.Destination}}|{{.Type}}|{{if eq .Type "volume"}}{{.Name}}{{else}}{{.Source}}{{end}}{{"\n"}}{{end}}' "$(postgres_container_name)" 2>/dev/null || true)"
   while IFS='|' read -r dest typ ref; do
     case "$dest" in
       /var/lib/postgresql/data)
@@ -993,7 +1002,7 @@ guard_postgres() {
   local prev_mode prev_port prev_user prev_pass prev_db mount
   postgres_container_exists || return 0
   if [[ ! -f .env ]]; then
-    printf 'skt-postgres already exists, and there is no .env to compare with. Nothing was written.\n' >&2
+    printf 'gameon-postgres already exists, and there is no .env to compare with. Nothing was written.\n' >&2
     return 1
   fi
   prev_mode="$(canon_proxy_mode "$(file_value .env PROXY_MODE)")"
@@ -1016,7 +1025,7 @@ guard_postgres() {
     SETUP_PGUSER="$prev_user"
     SETUP_PASSWORD="$prev_pass"
     SETUP_PGDB="$prev_db"
-    printf 'skt-postgres already has a database. The user, password and database name were put back: Postgres applies them only when that data directory is first created. Nothing was written.\n' >&2
+    printf 'gameon-postgres already has a database. The user, password and database name were put back: Postgres applies them only when that data directory is first created. Nothing was written.\n' >&2
     return 1
   fi
   if [[ "$SETUP_MODE" == "$prev_mode" && "$SETUP_PGPORT" == "$prev_port" \
@@ -1033,7 +1042,7 @@ guard_postgres() {
     net_apply_mode_defaults
   fi
   SETUP_NET_POSTGRES="$prev_pgnet"
-  printf 'skt-postgres keeps the database inside the container. Changing how players reach the tavern, the Postgres port, the Postgres networks, or the database user, password or name would recreate that container and delete the accounts and games in it. Those answers were put back. Nothing was written.\n' >&2
+  printf 'gameon-postgres keeps the database inside the container. Changing how players reach the tavern, the Postgres port, the Postgres networks, or the database user, password or name would recreate that container and delete the accounts and games in it. Those answers were put back. Nothing was written.\n' >&2
   return 1
 }
 
@@ -1884,7 +1893,7 @@ data_where() {
   local mount
   mount="$(postgres_data_mount)"
   if postgres_container_exists && [[ -z "$mount" ]]; then
-    printf 'inside the skt-postgres container'
+    printf 'inside the gameon-postgres container'
     return 0
   fi
   if [[ -n "${SKT_DATA_DIR:-}" ]]; then
@@ -1934,7 +1943,7 @@ storage_change_is_safe() {
     if desired_has_data; then
       printf 'The container holds a database, and %s already has one. --migrate never overwrites data. Nothing was changed.\n' "$(desired_data_mount)" >&2
     else
-      printf 'skt-postgres keeps the database inside the container. Starting on %s would delete it.\n' "$(desired_data_mount)" >&2
+      printf 'gameon-postgres keeps the database inside the container. Starting on %s would delete it.\n' "$(desired_data_mount)" >&2
       printf 'Copy it, then start: %s --migrate\n' "$(switch_hint)" >&2
       printf 'Or delete it: ./deploy.sh --reset\n' >&2
       printf 'Nothing was changed.\n' >&2
@@ -1993,12 +2002,12 @@ migrate_database() {
   current="$(postgres_storage cluster)"
   step "Stopping Postgres so the files can be copied…"
   if [[ -z "$current" ]]; then
-    docker stop skt-postgres >/dev/null
+    docker stop "$(postgres_container_name)" >/dev/null
     if [[ -n "${SKT_DATA_DIR:-}" ]]; then
       copy_into_data_dir /var/lib/postgresql/data volumes
     else
-      docker volume create --label com.docker.compose.project=skt --label com.docker.compose.volume=skt_pg_data "$PG_VOLUME" >/dev/null
-      docker run --rm --volumes-from skt-postgres -v "${PG_VOLUME}:/to" postgres:16-alpine cp -a /var/lib/postgresql/data/. /to/
+      docker volume create --label com.docker.compose.project=gameon --label com.docker.compose.volume=skt_pg_data "$PG_VOLUME" >/dev/null
+      docker run --rm --volumes-from "$(postgres_container_name)" -v "${PG_VOLUME}:/to" postgres:16-alpine cp -a /var/lib/postgresql/data/. /to/
     fi
     echo "Copied. The next start uses the copy. The files inside the old container are removed when it is recreated."
   else
@@ -2007,7 +2016,7 @@ migrate_database() {
     if [[ -n "${SKT_DATA_DIR:-}" ]]; then
       copy_into_data_dir "$src" mount
     else
-      docker volume create --label com.docker.compose.project=skt --label com.docker.compose.volume=skt_pg_data "$PG_VOLUME" >/dev/null
+      docker volume create --label com.docker.compose.project=gameon --label com.docker.compose.volume=skt_pg_data "$PG_VOLUME" >/dev/null
       docker run --rm -v "${src}:/from:ro" -v "${PG_VOLUME}:/to" postgres:16-alpine cp -a /from/. /to/
     fi
     echo "Copied. The old copy is left where it was. Remove it once the tavern works from the new place."
@@ -2016,12 +2025,12 @@ migrate_database() {
 
 # Copy a cluster into <SKT_DATA_DIR>/database/pgdata. Postgres must own that
 # directory, so the postgres user creates it inside the mount.
-# $1 is a host path or, when $2 is volumes, the path inside skt-postgres.
+# $1 is a host path or, when $2 is volumes, the path inside gameon-postgres.
 copy_into_data_dir() {
   local from="$1" how="$2"
   make_data_dir || return 1
   if [[ "$how" == "volumes" ]]; then
-    docker run --rm --user postgres --volumes-from skt-postgres -v "${SKT_DATA_DIR}/database:/pgparent" postgres:16-alpine \
+    docker run --rm --user postgres --volumes-from "$(postgres_container_name)" -v "${SKT_DATA_DIR}/database:/pgparent" postgres:16-alpine \
       sh -c 'mkdir -p /pgparent/pgdata && cp -a /var/lib/postgresql/data/. /pgparent/pgdata/'
   else
     docker run --rm --user postgres -v "${from}:/from:ro" -v "${SKT_DATA_DIR}/database:/pgparent" postgres:16-alpine \
@@ -2080,7 +2089,7 @@ factory_reset() {
 safe_down() {
   local where
   if postgres_container_exists && [[ -z "$(postgres_data_mount)" ]]; then
-    die "skt-postgres keeps the database inside the container. ./deploy.sh --down would delete it.
+    die "gameon-postgres keeps the database inside the container. ./deploy.sh --down would delete it.
   Copy it: ./deploy.sh --migrate
   Or delete it: ./deploy.sh --reset
   Nothing was changed."
@@ -2180,8 +2189,8 @@ show_status() {
   local web_url api_url
   echo ""
   if [[ "$PROXY_MODE" == "npm" ]]; then
-    web_url="http://skt-web:80"
-    api_url="http://skt-api:8080/api/v1"
+    web_url="http://gameon-web:80"
+    api_url="http://gameon-api:8080/api/v1"
     echo "  Mode:  npm (no host ports; TLS is the proxy's job)"
   else
     web_url="http://localhost:${WEB_PORT}"
@@ -2195,13 +2204,13 @@ show_status() {
   fi
   load_data_dir
   echo "  Storage: $(data_where)"
-  printf '  Networks: %-14s %s\n' "skt-postgres" "$(net_effective postgres | tr ',' ' ')"
-  printf '            %-14s %s\n' "skt-api" "$(net_effective api | tr ',' ' ')"
-  printf '            %-14s %s\n' "skt-web" "$(net_effective web | tr ',' ' ')"
+  printf '  Networks: %-18s %s\n' "gameon-postgres" "$(net_effective postgres | tr ',' ' ')"
+  printf '            %-18s %s\n' "gameon-api" "$(net_effective api | tr ',' ' ')"
+  printf '            %-18s %s\n' "gameon-web" "$(net_effective web | tr ',' ' ')"
   echo "  Logging:"
-  printf '            %-14s %s\n' "skt-postgres" "$(log_status_line postgres)"
-  printf '            %-14s %s\n' "skt-api" "$(log_status_line api)"
-  printf '            %-14s %s\n' "skt-web" "$(log_status_line web)"
+  printf '            %-18s %s\n' "gameon-postgres" "$(log_status_line postgres)"
+  printf '            %-18s %s\n' "gameon-api" "$(log_status_line api)"
+  printf '            %-18s %s\n' "gameon-web" "$(log_status_line web)"
   echo "  Web:   ${web_url}"
   echo "  API:   ${api_url}"
   echo ""

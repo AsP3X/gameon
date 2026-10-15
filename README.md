@@ -418,9 +418,9 @@ rules, timers and season from `GET /api/v1/config`.
 flowchart LR
   user(["Browser"])
   subgraph stack["Compose project skt"]
-    web["skt-web<br/>nginx: the page, and a proxy for /api"]
-    api["skt-api<br/>skt-server on 8080"]
-    pg[("skt-postgres<br/>volume skt_pg_data")]
+    web["gameon-web<br/>nginx: the page, and a proxy for /api"]
+    api["gameon-api<br/>accounts on 8080"]
+    pg[("gameon-postgres<br/>volume skt_pg_data")]
     web -->|"/api/v1 and the socket"| api --> pg
   end
   user -->|"host port 8081, or Nginx Proxy Manager, or 443 with the TLS overlay"| web
@@ -459,7 +459,7 @@ with all capabilities dropped.
 | Mode | How | Result |
 | ---- | --- | ------ |
 | **This machine** | `PROXY_MODE=local` (the default) | Host ports for the page, the API and Postgres. |
-| **Nginx Proxy Manager** | `PROXY_MODE=npm` | No host ports. Point a proxy host at `http://skt-web:80`, turn websockets on, and set `SKT_PUBLIC_ORIGIN`. Set `SKT_SECURE_COOKIE=1` when that origin is https. |
+| **Nginx Proxy Manager** | `PROXY_MODE=npm` | No host ports. Point a proxy host at `http://gameon-web:80`, turn websockets on, and set `SKT_PUBLIC_ORIGIN`. Set `SKT_SECURE_COOKIE=1` when that origin is https. |
 | **TLS in the stack** | `docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build` | nginx on 80 and 443 with the certificate at `deploy/certs/fullchain.pem` and the key at `deploy/certs/privkey.pem`. Port 80 redirects to https. |
 
 Docker stop sends SIGTERM. The API finishes writing the open games and exits, and the next start

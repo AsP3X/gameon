@@ -22,10 +22,10 @@ COPY deploy/nginx/security-headers.conf /etc/nginx/security-headers.conf
 COPY deploy/nginx/api-proxy.conf /etc/nginx/api-proxy.conf
 
 # The nginx image substitutes only environment variables that are set.
-# skt-api, not the service name api: that short name is shared on proxy-network.
-ENV API_UPSTREAM=http://skt-api:8080
-ENV OCHO_UPSTREAM=http://ocho:8091
-ENV SKT_GAME_UPSTREAM=http://skt-game:8092
+# Container names, not the service name api: that short name is shared on proxy-network.
+ENV API_UPSTREAM=http://gameon-api:8080
+ENV OCHO_UPSTREAM=http://gameon-ocho:8091
+ENV SKT_GAME_UPSTREAM=http://gameon-skullking:8092
 # notice matches the nginx image. Compose sets this from the Logging dialog.
 ENV NGINX_LOG_LEVEL=notice
 
