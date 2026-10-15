@@ -1,5 +1,5 @@
 /* Ocho's pages: sit down, the table waiting for its players, the table, the match score between
-   hands and at the end, and how to play. They are drawn in design/ocho.pen (frames 01–20).
+   hands and at the end, and how to play. They are drawn in design/ocho.pen (frames 01–22).
 
    Ocho runs on its own server (docs/ocho-protocol.md). These pages send intents and draw the lobby
    and the per-seat view it pushes: which cards may be played, whose turn it is, who went out and
@@ -19,7 +19,7 @@ import { AT } from '../router/addresses';
 import { CardBack, CardFace, cardName, COLOR_NAME, isWild, matchLine, matchWords, MiniCard } from './cards';
 import type { OchoClient, OchoResult } from './client';
 import { COLORS } from './wire';
-import type { Card, Color, Intent, Lobby, View } from './wire';
+import type { BotLevel, Card, Color, Intent, Lobby, View } from './wire';
 
 /** A seat's avatar colour, by seat: the server sends no colours for Ocho. Tokens only. */
 const SEAT_TONES = ['purple', 'orange', 'blue', 'green', 'red', 'gold', 'cpurple', 'cgreen'];
@@ -119,12 +119,22 @@ function ChoiceButton(props: { label: string; sub?: string; on: boolean; onPick:
   );
 }
 
+/** The bot choices on the sit-down page, as Skull King words its skills. */
+const BOT_CHOICES: [BotLevel | null, string, string][] = [
+  [null, 'No bots', 'Friends join with the code'],
+  ['easy', 'Easy', 'Makes mistakes'],
+  ['normal', 'Normal', 'Solid play'],
+  ['hard', 'Hard', 'Reads the table'],
+];
+const LEVEL_NAME: Record<BotLevel, string> = { easy: 'Easy', normal: 'Normal', hard: 'Hard' };
+
 function SitDown({ ocho, who, teams: teamsAtFirst }: { ocho: OchoClient; who: Who; teams: boolean }) {
   const title = useTitle('GameOn · Ocho');
   const state = useSyncExternalStore(ocho.subscribe, ocho.getState);
   const [players, setPlayers] = useState(4);
   const [teams, setTeams] = useState(teamsAtFirst);
   const [to500, setTo500] = useState(teamsAtFirst);
+  const [bots, setBots] = useState<BotLevel | null>(null);
   const [code, setCode] = useState('');
   const [seated, setSeated] = useState(false);
   const { busy, error, setError, send } = useSender(ocho);
@@ -132,7 +142,13 @@ function SitDown({ ocho, who, teams: teamsAtFirst }: { ocho: OchoClient; who: Wh
 
   const sat = (r: OchoResult): void => setSeated(!r.ok && r.code === 'ALREADY_SEATED');
   const start = async (): Promise<void> => {
-    const r = await send({ t: 'ocho.create', players: teams ? 4 : players, teams, match: to500 ? 'to500' : 'one' });
+    const r = await send({
+      t: 'ocho.create',
+      players: teams ? 4 : players,
+      teams,
+      match: to500 ? 'to500' : 'one',
+      ...(bots && { bots }),
+    });
     sat(r);
     if (r.ok) await send({ t: 'ocho.ready', ready: true });
   };
@@ -183,6 +199,14 @@ function SitDown({ ocho, who, teams: teamsAtFirst }: { ocho: OchoClient; who: Wh
               <ChoiceButton label="First to 500" on={to500} onPick={() => setTo500(true)} />
             </div>
           </div>
+          <div className="oc-field">
+            <h2 className="oc-label">Bots</h2>
+            <div className="oc-choices">
+              {BOT_CHOICES.map(([level, label, sub]) => (
+                <ChoiceButton key={label} label={label} sub={sub} on={bots === level} onPick={() => setBots(level)} />
+              ))}
+            </div>
+          </div>
           {error && (
             <p className="alert" role="alert">
               {error}
@@ -231,7 +255,16 @@ function SitDown({ ocho, who, teams: teamsAtFirst }: { ocho: OchoClient; who: Wh
 /* ---------- waiting for the players ---------- */
 
 const settingsLine = (lobby: Lobby): string =>
-  `${lobby.teams ? 'Teams' : 'Free-for-all'} · ${lobby.players} players · ${lobby.firstTo500 ? 'First to 500' : 'One hand'}`;
+  `${lobby.teams ? 'Teams' : 'Free-for-all'} · ${lobby.players} players · ${lobby.firstTo500 ? 'First to 500' : 'One hand'}` +
+  (lobby.bots ? ` · ${LEVEL_NAME[lobby.bots]} bots` : '');
+
+/** The small line under a member: Host, the bot's level, and the team when there are teams. */
+function memberLine(lobby: Lobby, seat: number, user: string, bot: boolean): string {
+  if (user === lobby.host) return 'Host';
+  const team = lobby.teams ? (seat % 2 === 0 ? 'Team 1' : 'Team 2') : null;
+  if (bot && lobby.bots) return team ? `${LEVEL_NAME[lobby.bots]} bot · ${team}` : `${LEVEL_NAME[lobby.bots]} bot`;
+  return team ?? 'Player';
+}
 
 function Waiting({ ocho, lobby, meId }: { ocho: OchoClient; lobby: Lobby; meId: string | null }) {
   const title = useTitle('GameOn · Ocho · Your table');
@@ -253,7 +286,11 @@ function Waiting({ ocho, lobby, meId }: { ocho: OchoClient; lobby: Lobby; meId: 
           <div className="oc-code">
             <h2 className="oc-label">Table code</h2>
             <b className="oc-code-value">{lobby.code}</b>
-            <p className="oc-muted">Give this code to the others. They join from Ocho&rsquo;s sit-down page.</p>
+            <p className="oc-muted">
+              {lobby.bots
+                ? `The other seats are ${LEVEL_NAME[lobby.bots]} bots.`
+                : 'Give this code to the others. They join from Ocho’s sit-down page.'}
+            </p>
           </div>
           <ul className="oc-rows" aria-label="Players">
             {lobby.members.map((m, seat) => (
@@ -263,9 +300,7 @@ function Waiting({ ocho, lobby, meId }: { ocho: OchoClient; lobby: Lobby; meId: 
                 </span>
                 <span className="oc-row-text">
                   <b>{m.user === meId ? 'You' : m.name}</b>
-                  <small>
-                    {m.user === lobby.host ? 'Host' : lobby.teams ? (seat % 2 === 0 ? 'Team 1' : 'Team 2') : 'Player'}
-                  </small>
+                  <small>{memberLine(lobby, seat, m.user, m.bot)}</small>
                 </span>
                 <span className={m.ready ? 'pill green' : 'pill soft'}>{m.ready ? 'Ready' : 'Not ready'}</span>
               </li>

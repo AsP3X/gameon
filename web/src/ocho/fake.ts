@@ -93,7 +93,7 @@ export function aLobby(change: Partial<Lobby> = {}, seated = 8, players = 8): Lo
     players,
     teams: false,
     firstTo500: false,
-    members: NAMES.slice(0, seated).map((name, i) => ({ user: `u${i}`, name, ready: true })),
+    members: NAMES.slice(0, seated).map((name, i) => ({ user: `u${i}`, name, ready: true, bot: false })),
     started: false,
     ...change,
   };

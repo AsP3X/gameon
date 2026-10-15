@@ -108,6 +108,33 @@ describe('sitting down at Ocho', () => {
     expect(sent()[1]).toEqual({ t: 'ocho.ready', ready: true });
   });
 
+  it('offers no bots first, and sends the level picked with the create', async () => {
+    await render(page());
+    const bots = $$('.oc-field').find((f) => f.querySelector('h2')?.textContent === 'Bots');
+    expect(Array.from(bots?.querySelectorAll('.oc-choice') ?? []).map((b) => b.textContent)).toEqual([
+      'No botsFriends join with the code',
+      'EasyMakes mistakes',
+      'NormalSolid play',
+      'HardReads the table',
+    ]);
+    expect(button('No bots').getAttribute('aria-pressed')).toBe('true');
+    await press('Hard');
+    expect(button('Hard').getAttribute('aria-pressed')).toBe('true');
+    expect(button('No bots').getAttribute('aria-pressed')).toBe('false');
+    await press('Start');
+    expect(sent()).toEqual([{ t: 'ocho.create', players: 4, teams: false, match: 'one', bots: 'hard' }]);
+    await answer();
+    expect(sent()[1]).toEqual({ t: 'ocho.ready', ready: true });
+  });
+
+  it('keeps teams at four with bots, and leaves the field out again for no bots', async () => {
+    await render(page(true));
+    await press('Easy');
+    await press('No bots');
+    await press('Start');
+    expect(sent()).toEqual([{ t: 'ocho.create', players: 4, teams: true, match: 'to500' }]);
+  });
+
   it('locks the count at four for teams, with the note about partners', async () => {
     await render(page(true));
     expect(button('Teams').getAttribute('aria-pressed')).toBe('true');
@@ -148,6 +175,32 @@ describe('the table waiting', () => {
     await push({ t: 'ocho.lobby', lobby: aLobby({ players: 4 }, 4, 4) });
     await press('Start');
     expect(sent()).toEqual([{ t: 'ocho.start' }]);
+  });
+
+  it('names the bot seats and their level, and gives no code to pass on', async () => {
+    await render(page());
+    const lobby = aLobby({ players: 4, bots: 'hard' }, 4, 4);
+    lobby.members = lobby.members.map((m, i) => ({ ...m, ready: i > 0, bot: i > 0 }));
+    await push({ t: 'ocho.lobby', lobby });
+    expect($('.oc-panel > p.oc-muted')?.textContent).toBe('Free-for-all · 4 players · One hand · Hard bots');
+    expect($('.oc-code .oc-muted')?.textContent).toBe('The other seats are Hard bots.');
+    expect(texts('.oc-rows .oc-row-text small')).toEqual(['Host', 'Hard bot', 'Hard bot', 'Hard bot']);
+    await press('Ready');
+    expect(sent()).toEqual([{ t: 'ocho.ready', ready: true }]);
+  });
+
+  it('puts the team after the level for a teams table with bots', async () => {
+    await render(page());
+    const lobby = aLobby({ players: 4, teams: true, firstTo500: true, bots: 'normal' }, 4, 4);
+    lobby.members = lobby.members.map((m, i) => ({ ...m, bot: i > 0 }));
+    await push({ t: 'ocho.lobby', lobby });
+    expect($('.oc-panel > p.oc-muted')?.textContent).toBe('Teams · 4 players · First to 500 · Normal bots');
+    expect(texts('.oc-rows .oc-row-text small')).toEqual([
+      'Host',
+      'Normal bot · Team 2',
+      'Normal bot · Team 1',
+      'Normal bot · Team 2',
+    ]);
   });
 
   it('has no Start for a player who is not the host, only their own Ready', async () => {

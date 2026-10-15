@@ -63,10 +63,16 @@ export interface View {
   handPoints: number[] | null;
 }
 
+/** How well the bots at a table play. */
+export type BotLevel = 'easy' | 'normal' | 'hard';
+export const BOT_LEVELS: BotLevel[] = ['easy', 'normal', 'hard'];
+
 export interface Member {
   user: string;
   name: string;
   ready: boolean;
+  /** A seat the server plays. Absent on the wire means false. */
+  bot: boolean;
 }
 
 export interface Lobby {
@@ -76,6 +82,8 @@ export interface Lobby {
   players: number;
   teams: boolean;
   firstTo500: boolean;
+  /** The level of every bot at the table. Absent: a friends table, with no bots. */
+  bots?: BotLevel;
   /** In seat order: the first member is seat 0 once the hand is dealt. */
   members: Member[];
   started: boolean;
@@ -103,7 +111,7 @@ export type ServerFrame =
 
 /** A frame to the server, without its correlation id. */
 export type Intent =
-  | { t: 'ocho.create'; players: number; teams: boolean; match: 'one' | 'to500' }
+  | { t: 'ocho.create'; players: number; teams: boolean; match: 'one' | 'to500'; bots?: BotLevel }
   | { t: 'ocho.join'; code: string }
   | { t: 'ocho.leave' }
   | { t: 'ocho.ready'; ready: boolean }
@@ -241,8 +249,11 @@ export function parseLobby(v: unknown): Lobby | null {
   const members: Member[] = [];
   for (const m of v.members) {
     if (!isObj(m) || !isStr(m.user) || !isStr(m.name) || !isBool(m.ready)) return null;
-    members.push({ user: m.user, name: m.name, ready: m.ready });
+    if (m.bot !== undefined && !isBool(m.bot)) return null;
+    members.push({ user: m.user, name: m.name, ready: m.ready, bot: m.bot === true });
   }
+  const bots = BOT_LEVELS.find((b) => b === v.bots);
+  if (v.bots !== undefined && v.bots !== null && bots === undefined) return null;
   if (
     !isStr(v.id) ||
     !isStr(v.code) ||
@@ -260,6 +271,7 @@ export function parseLobby(v: unknown): Lobby | null {
     players: v.players,
     teams: v.teams,
     firstTo500: v.firstTo500,
+    ...(bots && { bots }),
     members,
     started: v.started,
   };

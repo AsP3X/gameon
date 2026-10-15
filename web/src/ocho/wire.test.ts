@@ -20,6 +20,16 @@ describe("Ocho's wire", () => {
     });
   });
 
+  it('reads the bots of a table, and an older lobby without them as a friends table', () => {
+    const lobby = aLobby({ bots: 'easy' }, 2, 2);
+    lobby.members[1] = { ...lobby.members[1], bot: true };
+    expect(parseFrame(frame({ t: 'ocho.lobby', lobby: { ...lobby, extra: 1 } }))).toEqual({ t: 'ocho.lobby', lobby });
+    const old = { ...aLobby({}, 2, 2), members: [{ user: 'u0', name: 'Remy', ready: true }] };
+    const read = parseFrame(frame({ t: 'ocho.lobby', lobby: old }));
+    expect(read?.t === 'ocho.lobby' && read.lobby.bots).toBeUndefined();
+    expect(read?.t === 'ocho.lobby' && read.lobby.members[0].bot).toBe(false);
+  });
+
   it('drops a frame it cannot read instead of drawing half of it', () => {
     expect(parseFrame('not json')).toBeNull();
     expect(parseFrame(frame({ t: 'welcome' }))).toBeNull();
@@ -31,6 +41,15 @@ describe("Ocho's wire", () => {
       parseFrame(frame({ t: 'ocho.view', view: { ...aView(), top: { id: 1, color: 'red', kind: { number: 12 } } } })),
     ).toBeNull();
     expect(parseFrame(frame({ t: 'ocho.lobby', lobby: { ...aLobby(), members: [{ user: 'u0' }] } }))).toBeNull();
+    expect(parseFrame(frame({ t: 'ocho.lobby', lobby: { ...aLobby(), bots: 'expert' } }))).toBeNull();
+    expect(
+      parseFrame(
+        frame({
+          t: 'ocho.lobby',
+          lobby: { ...aLobby(), members: [{ user: 'u0', name: 'R', ready: true, bot: 'yes' }] },
+        }),
+      ),
+    ).toBeNull();
   });
 
   it("names cards and the match the way the table's frames do", () => {
