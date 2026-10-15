@@ -16,6 +16,9 @@ A frame is one JSON object. `t` is the kind.
 | `ocho.leave` | `id` | a member, before the deal, or after the match is over |
 | `ocho.ready` | `id`, `ready` | a member, before the deal |
 | `ocho.start` | `id` | the host, when every seat is filled and ready |
+| `ocho.addBot` | `id` | the host, before the deal, while a seat is open. The bot is ready. Its level is `lobby.bots`, or `normal` when the table has not picked one yet |
+| `ocho.removeBot` | `id`, `index` (index in `members`) | the host, before the deal. That member must be a bot |
+| `ocho.bots` | `id`, `bots` (`easy`, `normal`, or `hard`) | the host, before the deal. Every bot already seated moves to that level, and every person is not ready |
 | `ocho.play` | `id`, `card`, `color` (required for a wild) | the seat whose turn it is |
 | `ocho.draw` | `id` | that seat, to draw one or take the stack |
 | `ocho.keep` | `id` | that seat, to decline the card just drawn |
@@ -33,9 +36,10 @@ The acting seat is the session. The message does not carry a seat or a user id.
 | `ocho.lobby` | `lobby`: `id`, `code`, `host`, `players`, `teams`, `firstTo500`, `bots` (the level, omitted when the table has no bots), `members` (`user`, `name`, `ready`, `bot`), `started` |
 | `ocho.view` | `view`: the per-seat view from `ocho-engine`. Another seat's hand is absent. X-Ray cards are present only for the seat who played X-Ray, and they stay until that seat's next intent. |
 
-`bots` on `ocho.create` is optional. Leave it out for a friends table. Set it and the server
-seats the host and fills every other seat with a bot of that level. Those seats are ready, and
-a person cannot take one. The host still readies and deals.
+`bots` on `ocho.create` is optional. Leave it out: the host is the only seat, and bots are
+added one at a time with `ocho.addBot`. Set it and the server still fills every other seat,
+for an older page. `lobby.bots` is the one skill for every bot. It is omitted until the host
+sets it or the first bot sits down.
 
 After the deal, and after every accepted intent, the server plays each bot from that seat's own
 view until a person must act. A bot who went out deals the next hand after 4 seconds, so the

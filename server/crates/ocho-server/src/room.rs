@@ -135,6 +135,28 @@ pub enum ClientMsg {
         /// Correlation id.
         id: u64,
     },
+    /// Host seats one bot in the next open seat. Its level is the table's.
+    #[serde(rename = "ocho.addBot")]
+    AddBot {
+        /// Correlation id.
+        id: u64,
+    },
+    /// Host removes the bot at this index in `members`.
+    #[serde(rename = "ocho.removeBot")]
+    RemoveBot {
+        /// Correlation id.
+        id: u64,
+        /// Index in the member list.
+        index: u32,
+    },
+    /// Host sets the skill of every bot at the table.
+    #[serde(rename = "ocho.bots")]
+    SetBots {
+        /// Correlation id.
+        id: u64,
+        /// `easy`, `normal`, or `hard`.
+        bots: BotLevel,
+    },
     /// Play a card. `color` is required for a wild.
     #[serde(rename = "ocho.play")]
     Play {
@@ -554,6 +576,91 @@ fn set_ready(inner: &mut Inner, user: &User, id: u64, ready: bool) -> Result<Ste
     Ok(done(id, Some(view), false))
 }
 
+/// The open lobby this host is in, before the deal.
+fn host_open<'a>(inner: &'a mut Inner, user: &User, id: u64) -> Result<&'a mut Lobby, StepErr> {
+    let lobby = lobby_of(inner, &user.id).ok_or((id, "NOT_SEATED", "You are not at a table."))?;
+    if lobby.host != user.id {
+        return Err((id, "NOT_HOST", "Only the host can do that."));
+    }
+    if lobby.table.is_some() {
+        return Err((id, "GAME_RUNNING", "The hand has already started."));
+    }
+    Ok(lobby)
+}
+
+fn add_bot(inner: &mut Inner, user: &User, id: u64) -> Result<StepOk, StepErr> {
+    let lobby = host_open(inner, user, id)?;
+    if lobby.members.len() >= usize::from(lobby.players) {
+        return Err((id, "LOBBY_FULL", "That table is full."));
+    }
+    // Human: One skill for the whole table. The first bot makes that skill Normal until the host picks.
+    // Agent: WRITES one ready Member with bot = lobby.bots. Does not insert the bot into seated.
+    let level = lobby.bots.unwrap_or(BotLevel::Normal);
+    lobby.bots = Some(level);
+    let names: Vec<String> = lobby
+        .members
+        .iter()
+        .map(|member| member.name.clone())
+        .collect();
+    let name = bot_name(&names);
+    let user_id = next_bot_id(lobby);
+    lobby.members.push(Member {
+        user: user_id,
+        name,
+        ready: true,
+        bot: Some(level),
+    });
+    let view = lobby_view(lobby);
+    Ok(done(id, Some(view), false))
+}
+
+fn remove_bot(inner: &mut Inner, user: &User, id: u64, index: u32) -> Result<StepOk, StepErr> {
+    let lobby = host_open(inner, user, id)?;
+    let Some(index) = usize::try_from(index).ok() else {
+        return Err((id, "VALIDATION", "That seat is not a bot."));
+    };
+    if lobby
+        .members
+        .get(index)
+        .is_none_or(|member| member.bot.is_none())
+    {
+        return Err((id, "VALIDATION", "That seat is not a bot."));
+    }
+    lobby.members.remove(index);
+    let view = lobby_view(lobby);
+    Ok(done(id, Some(view), false))
+}
+
+fn set_bots(inner: &mut Inner, user: &User, id: u64, level: BotLevel) -> Result<StepOk, StepErr> {
+    let lobby = host_open(inner, user, id)?;
+    // Human: Changing the skill moves every bot already sitting, and the people ready again.
+    // Agent: WRITES lobby.bots, every Member.bot, and human ready = false.
+    lobby.bots = Some(level);
+    for member in &mut lobby.members {
+        if member.bot.is_some() {
+            member.bot = Some(level);
+        } else {
+            member.ready = false;
+        }
+    }
+    let view = lobby_view(lobby);
+    Ok(done(id, Some(view), false))
+}
+
+fn next_bot_id(lobby: &Lobby) -> String {
+    let mut n = 1u8;
+    loop {
+        let id = format!("bot-{}-{n}", lobby.id);
+        if lobby.members.iter().all(|member| member.user != id) {
+            return id;
+        }
+        n = n.saturating_add(1);
+        if n == 0 {
+            return format!("bot-{}-extra", lobby.id);
+        }
+    }
+}
+
 fn start(inner: &mut Inner, user: &User, id: u64) -> Result<StepOk, StepErr> {
     let lobby_id =
         inner
@@ -871,6 +978,9 @@ fn dispatch(inner: &mut Inner, user: &User, msg: ClientMsg) -> Result<StepOk, St
         ClientMsg::Leave { id } => leave(inner, user, id),
         ClientMsg::Ready { id, ready } => set_ready(inner, user, id, ready),
         ClientMsg::Start { id } => start(inner, user, id),
+        ClientMsg::AddBot { id } => add_bot(inner, user, id),
+        ClientMsg::RemoveBot { id, index } => remove_bot(inner, user, id, index),
+        ClientMsg::SetBots { id, bots } => set_bots(inner, user, id, bots),
         ClientMsg::Play { id, card, color } => act(
             inner,
             user,
@@ -938,8 +1048,8 @@ fn bot_name(used: &[String]) -> String {
 #[cfg(test)]
 mod tests {
     use super::{
-        Inner, Socket, Table, User, bots_until_a_player, create, detach_socket, hello, join, leave,
-        set_ready, start,
+        Inner, Socket, Table, User, add_bot, bots_until_a_player, create, detach_socket, hello,
+        join, leave, remove_bot, set_bots, set_ready, start,
     };
     use ocho_engine::{BotLevel, Game, Phase};
     use std::collections::HashMap;
@@ -1058,6 +1168,47 @@ mod tests {
         leave(&mut inner, &host, 2).expect("leave");
         assert!(inner.seated.is_empty());
         assert!(inner.lobbies.is_empty());
+    }
+
+    #[test]
+    fn the_host_adds_and_removes_bots_and_sets_their_skill() {
+        let mut inner = empty();
+        let host = user("host");
+        let step = create(&mut inner, &host, 1, 4, false, false, None).expect("create");
+        let lobby = step.lobby.expect("lobby");
+        assert_eq!(lobby.members.len(), 1);
+        assert!(lobby.bots.is_none());
+        let seated = add_bot(&mut inner, &host, 2).expect("add");
+        let lobby = seated.lobby.expect("lobby");
+        assert_eq!(lobby.bots, Some(BotLevel::Normal));
+        assert!(lobby.members[1].bot && lobby.members[1].ready);
+        assert_eq!(lobby.members[1].name, "Nico");
+        add_bot(&mut inner, &host, 3).expect("second");
+        let err = add_bot(&mut inner, &user("guest"), 4);
+        assert!(err.is_err());
+        let skilled = set_bots(&mut inner, &host, 5, BotLevel::Hard).expect("skill");
+        let lobby = skilled.lobby.expect("lobby");
+        assert_eq!(lobby.bots, Some(BotLevel::Hard));
+        assert!(lobby.members.iter().skip(1).all(|member| member.bot));
+        assert!(!lobby.members[0].ready);
+        let stored = inner.seated[&host.id].clone();
+        assert!(
+            inner.lobbies[&stored]
+                .members
+                .iter()
+                .skip(1)
+                .all(|member| member.bot == Some(BotLevel::Hard))
+        );
+        remove_bot(&mut inner, &host, 6, 1).expect("remove");
+        let lobby_id = inner.seated[&host.id].clone();
+        let lobby = &inner.lobbies[&lobby_id];
+        assert_eq!(lobby.members.len(), 2);
+        let err = remove_bot(&mut inner, &host, 7, 0);
+        assert!(err.is_err());
+        add_bot(&mut inner, &host, 8).expect("fill");
+        add_bot(&mut inner, &host, 9).expect("full");
+        let err = add_bot(&mut inner, &host, 10);
+        assert!(err.is_err());
     }
 
     #[test]
