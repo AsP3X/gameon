@@ -61,6 +61,7 @@ services:
     build:
       context: ./server
       dockerfile: Dockerfile
+    image: skt-server:local
     container_name: skt-api
     environment:
       HOST: 0.0.0.0
@@ -104,6 +105,49 @@ services:
       options:
         max-size: ${SKT_LOG_SIZE_API:-10m}
         max-file: "${SKT_LOG_FILES_API:-3}"
+    restart: unless-stopped
+
+  # Skull King lobby and tables. Same image as api, different command.
+  skt:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    image: skt-server:local
+    container_name: skt-game
+    command: ["skt-game"]
+    environment:
+      SKT_GAME_HOST: 0.0.0.0
+      SKT_GAME_PORT: "8092"
+      RUST_LOG: ${RUST_LOG:-info}
+      RUST_LOG_FORMAT: ${RUST_LOG_FORMAT:-text}
+      SKT_PUBLIC_ORIGIN: ${SKT_PUBLIC_ORIGIN:-}
+      SKT_SECURE_COOKIE: ${SKT_SECURE_COOKIE:-}
+      DATABASE_URL: postgres://${POSTGRES_USER:-skt}:${POSTGRES_PASSWORD:-skt}@postgres:5432/${POSTGRES_DB:-skt}
+      SKT_TRUSTED_PROXIES: ${SKT_TRUSTED_PROXIES:-172.16.0.0/12}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - skt-internal
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "curl",
+          "-fsS",
+          "http://127.0.0.1:8092/api/v1/health",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 20s
     restart: unless-stopped
 
   # Ocho lobby and tables. Accounts stay on api. The page proxies /ocho/ here.
@@ -151,12 +195,15 @@ services:
     depends_on:
       api:
         condition: service_healthy
+      skt:
+        condition: service_healthy
       ocho:
         condition: service_healthy
     environment:
       # Container name. The service name api collides on a shared proxy-network.
       API_UPSTREAM: http://skt-api:8080
       OCHO_UPSTREAM: http://ocho:8091
+      SKT_GAME_UPSTREAM: http://skt-game:8092
       # notice matches the nginx image. The setup screen can set another level.
       NGINX_LOG_LEVEL: ${SKT_LOG_WEB:-notice}
     networks:

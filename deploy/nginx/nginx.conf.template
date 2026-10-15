@@ -28,6 +28,25 @@ server {
 
     resolver 127.0.0.11 valid=10s ipv6=off;
 
+    # Skull King lobby and socket. Accounts stay on the API.
+    location /api/v1/ws {
+        include /etc/nginx/api-proxy.conf;
+        set $skt_game ${SKT_GAME_UPSTREAM};
+        proxy_pass $skt_game;
+    }
+
+    location /api/v1/lobbies {
+        include /etc/nginx/api-proxy.conf;
+        set $skt_game ${SKT_GAME_UPSTREAM};
+        proxy_pass $skt_game;
+    }
+
+    location /api/v1/metrics {
+        include /etc/nginx/api-proxy.conf;
+        set $skt_game ${SKT_GAME_UPSTREAM};
+        proxy_pass $skt_game;
+    }
+
     location /api/ {
         include /etc/nginx/api-proxy.conf;
         set $skt_api ${API_UPSTREAM};

@@ -75,6 +75,22 @@ impl AppState {
         Ok(Self::with_store(store, world, Budgets::standard(), trusted))
     }
 
+    /// Accounts only. Open games stay for the Skull King game server to resume.
+    ///
+    /// # Errors
+    ///
+    /// The database is unreachable or a migration fails.
+    pub async fn connect_accounts(url: &str) -> Result<Self, String> {
+        let store = Store::connect(url).await?;
+        let trusted = TrustedProxies::from_env()?;
+        Ok(Self::with_store(
+            store,
+            World::new(),
+            Budgets::standard(),
+            trusted,
+        ))
+    }
+
     /// A migrated pool, a queue wait, and rate budgets. Tests use this.
     #[must_use]
     pub fn for_tests(pool: sqlx::PgPool, fill: std::time::Duration, budgets: Budgets) -> Self {

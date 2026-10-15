@@ -15,6 +15,7 @@ COPY crates/ocho-server/Cargo.toml crates/ocho-server/Cargo.toml
 RUN mkdir -p crates/skt-engine/src crates/skt-protocol/src crates/skt-server/src crates/skt-bot-pass/src \
         crates/ocho-engine/src crates/ocho-server/src \
     && echo 'fn main() {}' > crates/skt-server/src/main.rs \
+    && echo 'fn main() {}' > crates/skt-server/src/game_main.rs \
     && echo 'fn main() {}' > crates/skt-bot-pass/src/main.rs \
     && echo 'fn main() {}' > crates/ocho-server/src/main.rs \
     && echo '' > crates/skt-engine/src/lib.rs \

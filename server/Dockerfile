@@ -18,13 +18,14 @@ COPY crates/ocho-server/Cargo.toml crates/ocho-server/Cargo.toml
 RUN mkdir -p crates/skt-engine/src crates/skt-protocol/src crates/skt-server/src crates/skt-bot-pass/src \
         crates/ocho-engine/src crates/ocho-server/src \
     && echo 'fn main() {}' > crates/skt-server/src/main.rs \
+    && echo 'fn main() {}' > crates/skt-server/src/game_main.rs \
     && echo 'fn main() {}' > crates/skt-bot-pass/src/main.rs \
     && echo 'fn main() {}' > crates/ocho-server/src/main.rs \
     && echo '' > crates/skt-engine/src/lib.rs \
     && echo '' > crates/skt-protocol/src/lib.rs \
     && echo '' > crates/skt-server/src/lib.rs \
     && echo '' > crates/ocho-engine/src/lib.rs \
-    && cargo build --locked --release -p skt-server \
+    && cargo build --locked --release -p skt-server --bins \
     && rm -rf crates/skt-engine/src crates/skt-protocol/src crates/skt-server/src crates/skt-bot-pass/src \
         crates/ocho-engine/src crates/ocho-server/src
 
@@ -45,6 +46,7 @@ RUN apt-get update \
     && useradd --system --uid 10001 --no-create-home skt
 
 COPY --from=builder /app/target/release/skt-server /usr/local/bin/skt-server
+COPY --from=builder /app/target/release/skt-game /usr/local/bin/skt-game
 
 USER skt
 
