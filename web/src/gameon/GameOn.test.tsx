@@ -627,6 +627,33 @@ describe('Games', () => {
     ]);
   });
 
+  it('offers Ocho under Skull King, live, with its two ways, and not among what is coming', async () => {
+    await openAt('/games');
+    expect($('#go-ocho-title')?.textContent).toBe('Ocho');
+    const card = $('#go-ocho-title')?.closest('.go-game');
+    expect(card?.querySelector('.go-game-name small')?.textContent).toBe('2–8 players · Cards');
+    expect(card?.querySelector('.pill')?.textContent).toBe('Live');
+    expect(
+      Array.from(card?.querySelectorAll<HTMLAnchorElement>('.oc-shelf-ways a') ?? [], (a) => [
+        a.querySelector('b')?.textContent,
+        a.getAttribute('href'),
+      ]),
+    ).toEqual([
+      ['A table', '/games/ocho'],
+      ['Teams', '/games/ocho/teams'],
+    ]);
+    expect(card?.querySelector('a[aria-label="Play Ocho"]')?.getAttribute('href')).toBe('/games/ocho');
+    expect(card?.querySelector('a[aria-label="How to play Ocho"]')?.getAttribute('href')).toBe(
+      '/games/ocho/how-to-play',
+    );
+    expect(texts('.go-soon > b')).not.toContain('Ocho');
+    // Ocho is a card game: the board shelf has no room for it.
+    await press('Board');
+    expect($('#go-ocho-title')).toBeNull();
+    await press('Cards');
+    expect($('#go-ocho-title')).not.toBeNull();
+  });
+
   it('filters the shelf, and counts what is coming', async () => {
     await openAt('/games');
     expect($('#go-sk-title')).not.toBeNull();

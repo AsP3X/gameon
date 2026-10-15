@@ -8,6 +8,9 @@ import { Online } from './net/online';
 import type { OnlineMemory, SoloOutcome } from './net/online';
 import { SocketClient } from './net/socket';
 import { GameOn } from './gameon/GameOn';
+import { OchoClient } from './ocho/client';
+import { ochoTransport } from './ocho/transport';
+import type { Transport } from './net/socket';
 import { GameRecord } from './online/GameRecord';
 import { OnlineScreens } from './online/OnlineScreens';
 import { BOARDING_MS } from './online/Queue';
@@ -35,6 +38,8 @@ export interface AppProps {
   memory?: OnlineMemory;
   /** The browser's history, which holds the page's address. Tests hand in a list of their own. */
   places?: Places;
+  /** How Ocho's pages reach Ocho's server. Tests hand in their own. */
+  ochoSocket?: Transport;
 }
 
 /**
@@ -63,12 +68,14 @@ export interface AppProps {
  * A page that opens on a device whose last page was seated in a lobby or at a table connects by
  * itself: that is what a reload is. What it comes back to is whatever the server's `welcome` says.
  */
-export function App({ backend = appBackend, memory = appMemory, places }: AppProps) {
+export function App({ backend = appBackend, memory = appMemory, places, ochoSocket = ochoTransport }: AppProps) {
   const app = useRef<HTMLDivElement>(null);
   const fx = useRef<HTMLCanvasElement>(null);
   const [online] = useState(
     () => new Online(new SocketClient({ transport: backend.transport, build: BUILD }), new Api(backend.rest), memory),
   );
+  /** Ocho's connection: made at Ocho's pages, and kept for as long as the page lives. */
+  const [ocho] = useState(() => new OchoClient(ochoSocket));
   const [router] = useState(() => {
     const made = createRouter(places ?? browserPlaces());
     // An address without a page of its own leads to one, and a device that was seated comes back
@@ -310,6 +317,7 @@ export function App({ backend = appBackend, memory = appMemory, places }: AppPro
             setSitting(id);
             router.go(AT.publicTables);
           }}
+          ocho={ocho}
         />
       )}
     </>

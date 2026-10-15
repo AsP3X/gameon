@@ -12,6 +12,8 @@ const generated = ['dist/**', 'src/protocol/generated/**'];
 // Where /api goes. The Rust server (server/crates/skt-server) by default; the end-to-end script
 // points it at its own mock host while that server does not exist (e2e/README.md).
 const api = process.env.SKT_API_TARGET ?? 'http://127.0.0.1:8080';
+// Where /ocho goes: Ocho's own server, beside the API.
+const ocho = process.env.SKT_OCHO_TARGET ?? 'http://127.0.0.1:8091';
 // `npm run e2e` runs the browser script in e2e/ instead of the unit tests: it needs a browser.
 const e2e = process.env.SKT_E2E === '1';
 
@@ -99,6 +101,9 @@ export default defineConfig({
     // Same origin for the browser, WebSocket included.
     proxy: {
       '/api': { target: api, changeOrigin: true, ws: true },
+      // Ocho's lobby and table server (server/crates/ocho-server). The page's own Ocho addresses
+      // are under /games/ocho, so nothing of the page is sent there.
+      '/ocho/': { target: ocho, changeOrigin: true, ws: true },
     },
   },
   test: e2e

@@ -1,4 +1,4 @@
-/* What GameOn has on its shelf: one game that is live and the ones that are announced. This is the
+/* What GameOn has on its shelf: the games that are live and the ones that are announced. This is the
    page's own copy. Nothing here comes from the server, and nothing here is asked of it. */
 import type { KeyTone } from './art';
 import type { IconName } from './icons';
@@ -67,6 +67,8 @@ export const SOON: SoonGame[] = [
 ];
 /** Skull King is a card game: it is on the shelf under "All" and "Cards". */
 export const showsSkullKing = (shelf: Shelf): boolean => shelf === 'all' || shelf === 'cards';
+/** Ocho is a card game too. */
+export const showsOcho = showsSkullKing;
 export const soonOn = (shelf: Shelf): SoonGame[] => SOON.filter((game) => shelf === 'all' || game.kind === shelf);
 
 /**

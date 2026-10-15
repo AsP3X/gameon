@@ -29,6 +29,9 @@ describe('the addresses', () => {
     expect(routeOf('/privacy')).toEqual({ page: 'privacy' });
     expect(routeOf('/imprint')).toEqual({ page: 'imprint' });
     expect(routeOf('/suggest')).toEqual({ page: 'suggest' });
+    expect(routeOf('/games/ocho')).toEqual({ page: 'ocho' });
+    expect(routeOf('/games/ocho/teams')).toEqual({ page: 'ochoTeams' });
+    expect(routeOf('/games/ocho/how-to-play')).toEqual({ page: 'ochoRules' });
   });
 
   it('keeps an address that has a page, and both addresses of the new-game screen', () => {
@@ -45,11 +48,20 @@ describe('the addresses', () => {
   });
 
   it("claims nothing that is the server's or the build's", () => {
-    for (const path of ['/api', '/api/v1/me', '/assets/main.js', '/sw.js', '/index.html', '/manifest.json'])
+    for (const path of [
+      '/api',
+      '/api/v1/me',
+      '/ocho',
+      '/ocho/v1/ws',
+      '/assets/main.js',
+      '/sw.js',
+      '/index.html',
+      '/manifest.json',
+    ])
       expect(routeOf(path)).toEqual({ page: 'home' });
-    expect(Object.values(AT).some((at) => /^\/(api|assets|sw\.js|index\.html|manifest\.json)(\/|$)/.test(at))).toBe(
-      false,
-    );
+    expect(
+      Object.values(AT).some((at) => /^\/(api|ocho|assets|sw\.js|index\.html|manifest\.json)(\/|$)/.test(at)),
+    ).toBe(false);
   });
 
   it("puts only a server's user id into an address, and reads nothing else out of one", () => {
@@ -107,6 +119,9 @@ describe('the addresses', () => {
       expect(kind(path)).toBe('frame');
     // So are the four pages the footer leads to.
     for (const path of ['/how-to-play', '/privacy', '/imprint', '/suggest']) expect(kind(path)).toBe('frame');
+    // Ocho's pages are the frame's too: Skull King's connection is not theirs.
+    for (const path of ['/games/ocho', '/games/ocho/teams', '/games/ocho/how-to-play'])
+      expect(kind(path)).toBe('frame');
     for (const path of ['/skull-king/online', '/skull-king/online/join', '/skull-king/ranked'])
       expect(kind(path)).toBe('online');
   });

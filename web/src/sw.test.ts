@@ -110,6 +110,8 @@ describe('the service worker', () => {
     expect(fetched('/api/v1/lobbies')).toBeNull();
     expect(fetched('/api/v1/games/1/log')).toBeNull();
     expect(fetched('/api/v1/ws', { mode: 'websocket' })).toBeNull();
+    // Ocho's own server is the server too.
+    expect(fetched('/ocho/v1/health')).toBeNull();
     expect(fetched('/api/v1/auth/login', { method: 'POST' })).toBeNull();
     expect(network).not.toHaveBeenCalled();
   });

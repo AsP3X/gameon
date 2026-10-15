@@ -126,3 +126,23 @@ describe('the final scores on a desk window', () => {
     expect(awardsEnd).toBeGreaterThan(actions);
   });
 });
+
+/** The bare names Ocho's pages put next to an `oc-` class: a card's size and colour, the clock's way. */
+const OCHO_BARE = ['sm', 'md', 'lg', 'red', 'blue', 'green', 'yellow', 'black', 'back', 'ccw'];
+
+describe("the class names of Ocho's pages", () => {
+  it('are their own: no other stylesheet styles a bare name they use, and none of them is `oc-`', () => {
+    const ocho = sheet('ocho.css');
+    // A bare name styled by itself, not as part of another class's rule, would reach Ocho's cards.
+    const alone = (css: string, name: string): boolean =>
+      new RegExp(`(^|[\\s,>+~(])\\.${name}(?![\\w-])`, 'm').test(css);
+    for (const other of ['tavern.css', 'online.css', 'gameon.css', 'responsive.css', 'skullking.css']) {
+      const css = sheet(other);
+      expect(OCHO_BARE.filter((name) => alone(css, name))).toEqual([]);
+      expect(styles(css, 'oc-[a-z-]+')).toBe(false);
+    }
+    // The two that were taken: Skull King's `.lead` and `.num` once moved Ocho's leader over its top bar.
+    expect(alone(sheet('tavern.css'), 'lead') && alone(sheet('tavern.css'), 'num')).toBe(true);
+    expect(alone(ocho, 'lead') || alone(ocho, 'num') || /\.oc-[\w-]+\.(lead|num)(?![\w-])/.test(ocho)).toBe(false);
+  });
+});
