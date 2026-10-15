@@ -87,7 +87,7 @@ The table shows the running total while a stack is open.
 
 ### Scoring
 
-The hand ends when a player has no cards. The hand-end frame shows that player, the cards left in the other hands, and the point sum of those cards: a number is its face value, an action is 20, a wild or a special is 50. First to a target such as 500 wins the match, or the match is a fixed number of hands. The match score itself is not a screen in this pass.
+The hand ends when a player has no cards. The hand-end frame shows that player, the cards left in the other hands, and the point sum of those cards: a number is its face value, an action is 20, a wild or a special is 50. A match is one hand, or first to 500. Between hands the table shows each player's running total and who leads. When someone reaches 500, that player has won the match.
 
 ## Standard deck
 
