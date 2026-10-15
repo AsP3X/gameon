@@ -1271,8 +1271,75 @@
   .oc-piles {
     --pile-w: 80px;
   }
-  .oc-hand li {
-    flex-basis: 68px;
+  /* The match fills the window. Sit-down, waiting, the rules and the score stay in their columns. */
+  .oc-table-page {
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .oc-table-page .oc-top {
+    flex: none;
+    padding: 0 24px;
+  }
+  .oc-table-page .oc-menu {
+    right: 24px;
+  }
+  .oc-table-page .oc-table {
+    flex: 1;
+    min-height: 0;
+    max-width: none;
+    width: 100%;
+    margin: 0;
+    padding: 12px 12px 8px;
+    gap: 8px;
+  }
+  .oc-table-page .oc-felt {
+    flex: 1;
+    min-height: 0;
+    grid-template-columns:
+      clamp(148px, 13.9vw, 240px)
+      minmax(0, 1fr)
+      minmax(0, 1fr)
+      minmax(0, 1fr)
+      clamp(148px, 13.9vw, 240px);
+    grid-template-rows: auto minmax(0, 1fr) minmax(0, 1fr);
+  }
+  .oc-table-page .oc-seat[data-slot='l1'],
+  .oc-table-page .oc-seat[data-slot='l2'],
+  .oc-table-page .oc-seat[data-slot='r1'],
+  .oc-table-page .oc-seat[data-slot='r2'] {
+    align-self: center;
+  }
+  .oc-table-page .oc-partner-hand {
+    max-width: 100%;
+  }
+  .oc-table-page .oc-centre {
+    min-height: 0;
+  }
+  .oc-table-page .oc-you,
+  .oc-table-page .oc-play,
+  .oc-table-page .oc-xray-note {
+    flex: none;
+  }
+  .oc-table-page .oc-you {
+    padding-inline: 12px;
+  }
+  .oc-table-page .oc-piles {
+    --pile-w: clamp(80px, 6.67vw, 112px);
+  }
+  .oc-table-page .oc-card.lg {
+    --w: clamp(80px, 6.67vw, 112px);
+  }
+  .oc-table-page .oc-hand {
+    --hand: clamp(72px, 5.833vw, 96px);
+    padding: 16px 12px 2px;
+  }
+  .oc-table-page .oc-hand .oc-card {
+    --w: var(--hand);
+  }
+  .oc-table-page .oc-hand li {
+    flex-basis: calc(var(--hand) * 0.82);
   }
   .oc-sit {
     grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
@@ -1283,10 +1350,6 @@
   .oc-sit > .oc-wait-side {
     position: sticky;
     top: 16px;
-  }
-  .oc-table {
-    max-width: 1200px;
-    padding: 16px 24px 32px;
   }
   .oc-rules-cols {
     display: grid;
