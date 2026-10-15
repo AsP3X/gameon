@@ -238,14 +238,38 @@ describe('the table', () => {
     expect(sent()).toEqual([{ t: 'ocho.play', card: 11 }]);
   });
 
-  it('asks a wild for its colour and sends it with the card', async () => {
+  it('grows a wild into the colour card and sends the quadrant pressed with the card', async () => {
     await atTable(aView());
     await press('Ocho Wild');
     await press('Play Ocho Wild');
-    expect($('[role="dialog"] h2')?.textContent).toBe('Name a color');
+    expect($('[role="dialog"]')).toBeNull();
+    const wheel = $('.oc-namer [role="group"]');
+    expect(wheel?.getAttribute('aria-label')).toBe('Name a color');
+    expect(texts('.oc-namer .oc-quadrant')).toEqual(['Red', 'Blue', 'Green', 'Yellow']);
+    expect(document.activeElement?.textContent).toBe('Red');
+    expect($('.oc-status')?.textContent).toBe('You played Ocho Wild · name the next color');
+    expect($('[data-card="13"]')?.classList.contains('oc-away')).toBe(true);
     expect(sent()).toEqual([]);
     await press('Green');
     expect(sent()).toEqual([{ t: 'ocho.play', card: 13, color: 'green' }]);
+    expect($('.oc-namer')).toBeNull();
+  });
+
+  it('puts a wild back in the hand with Back or Escape, and sends nothing', async () => {
+    await atTable(aView());
+    await press('Ocho Wild');
+    await press('Play Ocho Wild');
+    await press('Back');
+    expect($('.oc-namer')).toBeNull();
+    expect($('[data-card="13"]')?.classList.contains('oc-away')).toBe(false);
+    // Still picked: the card came back, and Play names its colour again.
+    await press('Play Ocho Wild');
+    await act(async () => {
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect($('.oc-namer')).toBeNull();
+    expect(sent()).toEqual([]);
   });
 
   it('draws one when nothing matches, and plays or keeps the card just drawn', async () => {
@@ -276,8 +300,13 @@ describe('the table', () => {
     expect(sent()).toEqual([{ t: 'ocho.draw' }]);
   });
 
-  it('names the opening colour when the opening card is a wild', async () => {
+  it('names the opening colour on the opening card, which can be put down and taken up again', async () => {
     await atTable(aView({ phase: 'chooseColor', must: 'chooseColor', top: card(30, null, 'wild'), symbol: 'color' }));
+    expect($('.oc-namer [role="group"]')?.getAttribute('aria-label')).toBe('Name a color');
+    expect($('.oc-status')?.textContent).toBe('Opening card: Ocho Wild · name the color');
+    await press('Back');
+    expect($('.oc-namer')).toBeNull();
+    await press('Name the color');
     await press('Blue');
     expect(sent()).toEqual([{ t: 'ocho.color', color: 'blue' }]);
   });
@@ -289,13 +318,37 @@ describe('the table', () => {
     expect($('.oc-seat.oc-turn .oc-seat-name')?.textContent).toBe('Cleo');
   });
 
-  it("puts X-Ray's cards on their seats, and in rows for a narrow window", async () => {
+  it("puts X-Ray's cards on their seats, and nowhere else", async () => {
     await atTable(aView({ must: 'none', turn: 1, xray: [{ seat: 2, card: card(50, 'red', 'skip') }] }));
-    expect($('.oc-felt')?.classList.contains('oc-has-xray')).toBe(true);
     const ben = $$('.oc-seat').find((s) => s.querySelector('.oc-seat-name')?.textContent === 'Ben');
     expect(ben?.querySelector('.oc-mini')?.textContent).toBe('SKIP');
-    expect(texts('.oc-xray-rows .oc-row-text b')).toEqual(['Ana', 'Ben', 'Cleo', 'Dev', 'Eli', 'Fay', 'Gus']);
-    expect($$('.oc-xray-rows .oc-card')).toHaveLength(1);
+    expect($$('.oc-mini')).toHaveLength(1);
+    expect($('.oc-xray-note')?.textContent).toBe('X-Ray · one card from each hand. Only you see them.');
+  });
+
+  it('stacks the draw pile as thick as the pile is tall', async () => {
+    await atTable(aView({ drawCount: 95 }));
+    expect($$('.oc-stack-pile .oc-layer')).toHaveLength(9);
+    await push({ t: 'ocho.view', view: aView({ drawCount: 41 }) });
+    expect($$('.oc-stack-pile .oc-layer')).toHaveLength(4);
+    await push({ t: 'ocho.view', view: aView({ drawCount: 0 }) });
+    expect($('.oc-stack-pile .oc-card')).toBeNull();
+    expect($('.oc-pile-empty')).not.toBeNull();
+  });
+
+  it('raises the card just drawn that plays, and lifts only the legal cards', async () => {
+    await atTable(aView());
+    expect($$('.oc-hand-card.oc-can').map((b) => b.getAttribute('aria-label'))).toEqual(['Yellow 7', 'Ocho Wild']);
+    await push({
+      t: 'ocho.view',
+      view: aView({
+        phase: 'drawn',
+        must: 'playDrawnOrKeep',
+        legal: [14],
+        hand: [...aView().hand, card(14, 'yellow', { number: 2 })],
+      }),
+    });
+    expect($$('.oc-hand-card.oc-raised').map((b) => b.getAttribute('aria-label'))).toEqual(['Yellow 2']);
   });
 
   it("shows a partner's hand only when the server sent it", async () => {

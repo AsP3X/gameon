@@ -731,9 +731,6 @@
 .oc-xray-card {
   display: inline-flex;
 }
-.oc-xray-rows {
-  display: none;
-}
 .oc-xray-note {
   text-align: center;
   font-size: 13px;
@@ -756,16 +753,22 @@
 .oc-hand {
   display: flex;
   justify-content: center;
-  padding: 12px 8px 0;
+  padding: 22px 8px 10px;
   list-style: none;
 }
 /* A long hand overlaps instead of wrapping: each card's slot gives way, and the card keeps its size. */
 .oc-hand li {
   flex: 0 1 64px;
   min-width: 12px;
+  /* The fan: each card leans from the bottom of the hand; the page sets the angle and the drop. */
+  transform-origin: 50% 160%;
 }
 .oc-hand li:last-child {
   flex-shrink: 0;
+}
+/* The card being named, or just sent, has left the hand: its place stays until the view moves on. */
+.oc-hand li.oc-away {
+  visibility: hidden;
 }
 .oc-hand-card {
   display: block;
@@ -773,14 +776,24 @@
   border: 0;
   background: none;
   border-radius: 12px;
-  transition: transform 0.12s var(--ease-out);
+  transition: transform 0.16s var(--ease-out);
 }
 .oc-hand-card:not([disabled]) {
   cursor: pointer;
 }
+/* A card that may be played stands a little out of the fan; the picked one, and the one just drawn
+   that plays, stand out further. */
+.oc-hand-card.oc-can {
+  transform: translateY(-6px);
+}
 .oc-hand-card:not([disabled]):hover,
-.oc-hand-card.oc-on {
-  transform: translateY(-10px);
+.oc-hand-card.oc-on,
+.oc-hand-card.oc-raised {
+  transform: translateY(-16px);
+}
+.oc-hand-card.oc-raised .oc-card {
+  outline: 3px solid var(--gold);
+  outline-offset: 1px;
 }
 .oc-hand-card.oc-on .oc-card {
   outline: 3px solid var(--gold);
@@ -820,68 +833,6 @@
   flex: 1;
   min-width: 0;
 }
-.oc-scrim {
-  position: fixed;
-  inset: 0;
-  z-index: 20;
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  background: color-mix(in srgb, var(--c-sk) 45%, transparent);
-}
-.oc-sheet {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  width: 100%;
-  max-width: 480px;
-  padding: 20px 16px 24px;
-  border-radius: 22px 22px 0 0;
-  background: var(--card);
-}
-.oc-sheet h2 {
-  font-size: 18px;
-  font-weight: 900;
-}
-.oc-colors {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 8px;
-}
-.oc-color {
-  min-height: 56px;
-  border: 0;
-  border-radius: 14px;
-  color: var(--white);
-  font-size: 13px;
-  font-weight: 900;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-.oc-color.red {
-  background: var(--red);
-  box-shadow: 0 4px 0 var(--red-d);
-}
-.oc-color.blue {
-  background: var(--blue);
-  box-shadow: 0 4px 0 var(--blue-d);
-}
-.oc-color.green {
-  background: var(--c-green);
-  box-shadow: 0 4px 0 var(--green-d);
-}
-.oc-color.yellow {
-  background: var(--c-yellow);
-  color: var(--gold-ink);
-  box-shadow: 0 4px 0 var(--gold-d);
-}
-#gameon .oc-sheet-back {
-  align-self: center;
-  min-height: 44px;
-  color: var(--blue-ink);
-  font-weight: 800;
-}
-
 /* ---------- the match score ---------- */
 .oc-score {
   display: flex;
@@ -999,7 +950,299 @@
   color: var(--faint);
 }
 
-/* A phone: X-Ray's cards are rows, one per seat, in the felt's place; sit-down is the page itself. */
+/* ---------- the table in motion ---------- */
+.oc-table-page {
+  position: relative;
+}
+/* Flights: copies of cards over the table. motion.ts puts them here and takes them away. */
+.oc-fx {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  overflow: hidden;
+  pointer-events: none;
+}
+.oc-ghost {
+  position: absolute;
+  margin: 0;
+}
+.oc-ghost > .oc-card + .oc-card {
+  position: absolute;
+  inset: 0;
+}
+/* The draw pile: as many layers as the pile has tens of cards, up to ten. */
+.oc-stack-pile {
+  position: relative;
+  display: grid;
+  padding: 18px 0 0 9px;
+}
+.oc-stack-pile > * {
+  grid-area: 1 / 1;
+}
+.oc-layer,
+.oc-pile-empty {
+  width: var(--pile-w);
+  height: calc(var(--pile-w) * 1.433);
+  border-radius: calc(var(--pile-w) * 0.167);
+}
+.oc-layer {
+  border: 2px solid var(--white);
+  background: var(--c-black);
+  box-shadow: 0 1px 0 color-mix(in srgb, var(--c-sk) 25%, transparent);
+}
+.oc-pile-empty {
+  border: 2px dashed var(--line);
+}
+.oc-pile-top {
+  display: block;
+}
+.oc-piles {
+  --pile-w: 72px;
+  align-items: flex-end;
+}
+
+/* The colour card: the wild grown large in the middle of the felt, its wheel four buttons. */
+.oc-felt {
+  position: relative;
+}
+.oc-namer {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: grid;
+  place-items: center;
+}
+.oc-namer-dim {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: color-mix(in srgb, var(--c-sk) 50%, transparent);
+}
+.oc-felt .oc-namer-dim {
+  border-radius: 24px;
+}
+.oc-card.oc-namer-card {
+  --w: clamp(184px, 52vw, 230px);
+  height: auto;
+  min-height: calc(var(--w) * 1.433);
+  align-items: center;
+  gap: calc(var(--w) * 0.04);
+  padding: calc(var(--w) * 0.07);
+  border-width: 3px;
+  box-shadow: 0 14px 32px color-mix(in srgb, var(--c-sk) 35%, transparent);
+}
+.oc-card.oc-namer-card .oc-corner {
+  align-self: flex-start;
+  font-size: calc(var(--w) * 0.08);
+}
+.oc-namer-wheel {
+  position: relative;
+  display: grid;
+  grid-template: 1fr 1fr / 1fr 1fr;
+  grid-template-areas:
+    'yellow red'
+    'green  blue';
+  gap: 3px;
+  width: calc(var(--w) * 0.82);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  overflow: hidden;
+}
+.oc-quadrant {
+  display: grid;
+  place-items: center;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  color: var(--c-black);
+  font: inherit;
+  font-size: calc(var(--w) * 0.056);
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition:
+    filter 0.12s,
+    transform 0.12s var(--ease-out);
+}
+/* Each name sits in the open part of its quarter, nudged away from the black middle. */
+.oc-quadrant.red {
+  grid-area: red;
+  background: var(--red);
+  padding: 0 12% 6% 0;
+}
+.oc-quadrant.blue {
+  grid-area: blue;
+  background: var(--blue);
+  padding: 6% 12% 0 0;
+}
+.oc-quadrant.green {
+  grid-area: green;
+  background: var(--c-green);
+  padding: 6% 0 0 12%;
+}
+.oc-quadrant.yellow {
+  grid-area: yellow;
+  background: var(--c-yellow);
+  padding: 0 0 6% 12%;
+}
+.oc-quadrant:not([disabled]):hover {
+  filter: brightness(1.08);
+}
+.oc-quadrant:not([disabled]):active {
+  transform: scale(0.96);
+}
+.oc-quadrant[disabled] {
+  cursor: default;
+}
+.oc-quadrant:focus-visible {
+  outline: 4px solid var(--white);
+  outline-offset: -6px;
+}
+.oc-namer-sign {
+  position: absolute;
+  inset: 31%;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--c-black);
+  pointer-events: none;
+}
+.oc-namer-sign b {
+  font-size: calc(var(--w) * 0.15);
+}
+.oc-namer-sign svg {
+  width: 44%;
+  height: 44%;
+  fill: none;
+  stroke: var(--white);
+  stroke-width: 2.4;
+  stroke-linejoin: round;
+}
+.oc-namer-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 44px;
+  margin-top: auto;
+  padding: 0 18px;
+  border: 2px solid var(--white);
+  border-radius: 99px;
+  background: transparent;
+  color: var(--white);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 900;
+  cursor: pointer;
+  transition: transform 0.06s;
+}
+.oc-namer-back:active {
+  transform: translateY(2px);
+}
+.oc-namer-back:focus-visible {
+  outline: 3px solid var(--gold);
+  outline-offset: 2px;
+}
+.oc-namer-back .go-icon {
+  width: 16px;
+  height: 16px;
+}
+
+/* Whose turn it is: that seat stands on a card plate with the gold ring, and the ring breathes. */
+.oc-seat {
+  padding: 6px 4px;
+  border: 2px solid transparent;
+  border-radius: 16px;
+  transition:
+    transform 0.24s var(--ease-out),
+    background-color 0.24s,
+    border-color 0.24s;
+}
+.oc-seat.oc-turn {
+  transform: translateY(-3px);
+  border-color: var(--gold);
+  background: var(--card);
+  box-shadow: 0 3px 0 var(--gold-d);
+}
+.oc-seat.oc-turn .avatar {
+  animation: oc-breathe 1.6s ease-in-out infinite;
+}
+@keyframes oc-breathe {
+  50% {
+    outline-offset: 4px;
+  }
+}
+/* What X-Ray showed and a partner's hand settle onto the seat. */
+.oc-xray-card,
+.oc-partner-hand {
+  animation: oc-settle 0.36s var(--ease-out) both;
+}
+@keyframes oc-settle {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) rotate(-6deg);
+  }
+}
+
+/* The hand and what it can do are one block: the buttons rise in when what you must do changes. */
+.oc-play {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.oc-buttons {
+  animation: oc-rise 0.24s var(--ease-out) both;
+}
+.oc-top,
+.oc-score-head,
+.oc-score-actions {
+  animation: oc-rise 0.32s var(--ease-out) both;
+}
+.oc-score-rows .oc-row {
+  animation: oc-rise 0.36s var(--ease-out) both;
+}
+.oc-score-rows .oc-row:nth-child(2) {
+  animation-delay: 60ms;
+}
+.oc-score-rows .oc-row:nth-child(3) {
+  animation-delay: 120ms;
+}
+.oc-score-rows .oc-row:nth-child(4) {
+  animation-delay: 180ms;
+}
+.oc-score-rows .oc-row:nth-child(n + 5) {
+  animation-delay: 240ms;
+}
+@keyframes oc-rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+/* Sit down and the table waiting: the choices they have press in. */
+.oc-choice,
+.oc-step,
+#gameon .oc-way {
+  transition:
+    transform 0.06s,
+    box-shadow 0.06s;
+}
+.oc-choice:active,
+.oc-step:not([disabled]):active,
+#gameon .oc-way:active {
+  transform: translateY(2px);
+  box-shadow: 0 0 0 transparent;
+}
+/* How to play: a sample card tilts under the pointer. */
+.oc-specials .oc-mini {
+  transition: transform 0.2s var(--ease-out);
+}
+.oc-specials li:hover .oc-mini {
+  transform: rotate(-8deg) translateY(-2px);
+}
+
+/* A phone: sit-down is the page itself, and the piles are smaller. */
 @media (max-width: 719px) {
   .oc-sit .oc-panel {
     padding: 0 4px;
@@ -1010,33 +1253,11 @@
     border-top: 2px solid var(--line);
     border-radius: 0;
   }
-  .oc-felt.oc-has-xray {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-  }
-  .oc-felt.oc-has-xray .oc-seats,
-  .oc-felt.oc-has-xray .oc-piles {
-    display: none;
-  }
-  .oc-felt.oc-has-xray .oc-xray-rows {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    padding: 0;
-    list-style: none;
-  }
-  .oc-felt.oc-has-xray .oc-xray-rows .oc-row {
-    min-height: 52px;
-  }
-  .oc-xray-note {
-    order: -1;
-  }
-  .oc-seat .oc-xray-card {
-    display: none;
-  }
   .oc-card.lg {
     --w: 60px;
+  }
+  .oc-piles {
+    --pile-w: 60px;
   }
 }
 @media (min-width: 720px) {
@@ -1053,14 +1274,11 @@
   .oc-card.lg {
     --w: 80px;
   }
+  .oc-piles {
+    --pile-w: 80px;
+  }
   .oc-hand li {
     flex-basis: 68px;
-  }
-  .oc-scrim {
-    align-items: center;
-  }
-  .oc-sheet {
-    border-radius: 22px;
   }
   .oc-sit {
     padding-top: 40px;
@@ -1074,8 +1292,36 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+/* Reduced motion: nothing travels and nothing breathes; every state is there at once. */
 @media (prefers-reduced-motion: reduce) {
-  .oc-hand-card {
+  .oc-hand-card,
+  .oc-seat,
+  .oc-quadrant,
+  .oc-choice,
+  .oc-step,
+  #gameon .oc-way,
+  .oc-specials .oc-mini {
     transition: none;
+  }
+  .oc-seat.oc-turn .avatar,
+  .oc-xray-card,
+  .oc-partner-hand,
+  .oc-buttons,
+  .oc-top,
+  .oc-score-head,
+  .oc-score-actions,
+  .oc-score-rows .oc-row {
+    animation: none;
+  }
+  .oc-hand-card:not([disabled]):hover,
+  .oc-specials li:hover .oc-mini {
+    transform: none;
+  }
+  .oc-hand-card.oc-can {
+    transform: translateY(-6px);
+  }
+  .oc-hand-card.oc-on,
+  .oc-hand-card.oc-raised {
+    transform: translateY(-16px);
   }
 }

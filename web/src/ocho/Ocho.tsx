@@ -9,15 +9,28 @@
 
    Player names are text React escapes. Nothing a player typed is put into a class, a style or an
    address. */
-import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
-import type { ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
+import type { CSSProperties, ReactNode, RefObject } from 'react';
 import { Link, useTitle } from '../gameon/Frame';
 import type { Who } from '../gameon/Frame';
 import { Icon } from '../gameon/icons';
 import { initialOf } from '../online/parts';
 import { AT } from '../router/addresses';
-import { CardBack, CardFace, cardName, COLOR_NAME, isWild, matchLine, matchWords, MiniCard } from './cards';
+import {
+  CardBack,
+  CardFace,
+  cardName,
+  COLOR_NAME,
+  cornerOf,
+  isWild,
+  matchLine,
+  matchWords,
+  MiniCard,
+  WheelSign,
+} from './cards';
 import type { OchoClient, OchoResult } from './client';
+import { pileLayers, TableMotion } from './motion';
+import type { Box } from './motion';
 import { COLORS } from './wire';
 import type { BotLevel, Card, Color, Intent, Lobby, View } from './wire';
 
@@ -425,14 +438,14 @@ function Seat({ view, seat, name, slot }: { view: View; seat: number; name: stri
   const turn = view.turn === seat && view.phase !== 'between' && view.phase !== 'over';
   const count = view.counts[seat] ?? 0;
   return (
-    <li className={turn ? 'oc-seat oc-turn' : 'oc-seat'} data-slot={slot}>
+    <li className={turn ? 'oc-seat oc-turn' : 'oc-seat'} data-slot={slot} data-seat={seat}>
       <span className={`avatar oc-tone-${toneOf(seat)}`} aria-hidden="true">
         {initialOf(name)}
       </span>
       <b className="oc-seat-name">{name}</b>
       <span className="oc-count">
         <CardBack size="sm" />
-        <span>
+        <span data-n={count}>
           {count}
           <span className="oc-sr"> {count === 1 ? 'card' : 'cards'}</span>
         </span>
@@ -456,33 +469,23 @@ function Seat({ view, seat, name, slot }: { view: View; seat: number; name: stri
   );
 }
 
-function XrayRows({ view, nameOf }: { view: View; nameOf: (seat: number) => string }) {
+/** The draw pile: a stack of backs as thick as the pile is tall. */
+function DrawPile({ count }: { count: number }) {
+  const layers = pileLayers(count);
+  const lift = (i: number): string => `${-i}px ${-2 * i}px`;
   return (
-    <ul className="oc-xray-rows" aria-label="X-Ray · one card from each hand. Only you see them.">
-      {others(view).map((seat) => {
-        const shown = view.xray.find((x) => x.seat === seat);
-        const count = view.counts[seat] ?? 0;
-        return (
-          <li key={seat} className="oc-row">
-            <span className={`avatar oc-tone-${toneOf(seat)}`} aria-hidden="true">
-              {initialOf(nameOf(seat))}
-            </span>
-            <span className="oc-row-text">
-              <b>{nameOf(seat)}</b>
-              <small>
-                {count} {count === 1 ? 'card' : 'cards'}
-              </small>
-            </span>
-            {shown && (
-              <span className="oc-xray-card">
-                <span className="oc-sr">X-Ray shows {cardName(shown.card)}</span>
-                <CardFace card={shown.card} size="sm" />
-              </span>
-            )}
-          </li>
-        );
-      })}
-    </ul>
+    <span className="oc-stack-pile" data-oc="draw">
+      {Array.from({ length: Math.max(0, layers - 1) }, (_, i) => (
+        <span key={i} className="oc-layer" style={{ translate: lift(i) }} aria-hidden="true"></span>
+      ))}
+      {layers > 0 ? (
+        <span className="oc-pile-top" style={{ translate: lift(layers - 1) }}>
+          <CardBack size="lg" />
+        </span>
+      ) : (
+        <span className="oc-pile-empty" aria-hidden="true"></span>
+      )}
+    </span>
   );
 }
 
@@ -503,11 +506,13 @@ function Centre({ view }: { view: View }) {
       </div>
       <div className="oc-piles">
         <figure className="oc-pile">
-          <CardBack size="lg" />
+          <DrawPile count={view.drawCount} />
           <figcaption>Draw · {view.drawCount}</figcaption>
         </figure>
         <figure className="oc-pile">
-          <CardFace card={view.top} size="lg" />
+          <span data-oc="discard">
+            <CardFace card={view.top} size="lg" />
+          </span>
           <figcaption>
             Discard<span className="oc-sr">: {cardName(view.top)}</span>
           </figcaption>
@@ -522,31 +527,72 @@ function Centre({ view }: { view: View }) {
   );
 }
 
-function ColorSheet({ onPick, onBack }: { onPick: (c: Color) => void; onBack?: () => void }) {
-  const sheet = useRef<HTMLElement>(null);
-  // The sheet takes the keyboard: the card that asked for it is behind it.
+/** The four colours round the wheel, in the order they are read out: red, blue, green, yellow. */
+function Namer({
+  card,
+  busy,
+  onPick,
+  onBack,
+  cardRef,
+  dimRef,
+}: {
+  card: Card;
+  busy: boolean;
+  onPick: (c: Color) => void;
+  onBack: () => void;
+  cardRef: RefObject<HTMLDivElement | null>;
+  dimRef: RefObject<HTMLSpanElement | null>;
+}) {
+  const first = useRef<HTMLButtonElement>(null);
+  const back = useRef(onBack);
+  back.current = onBack;
+  // The card takes the keyboard while it is large; Escape puts it back.
   useEffect(() => {
-    sheet.current?.querySelector('button')?.focus();
+    first.current?.focus({ preventScroll: true });
+    const key = (e: KeyboardEvent): void => {
+      if (e.key === 'Escape') back.current();
+    };
+    document.addEventListener('keydown', key);
+    return () => document.removeEventListener('keydown', key);
   }, []);
   return (
-    <div className="oc-scrim">
-      <section ref={sheet} className="oc-sheet" role="dialog" aria-modal="true" aria-labelledby="oc-color-title">
-        <h2 id="oc-color-title">Name a color</h2>
-        <div className="oc-colors">
+    <div className="oc-namer">
+      <span ref={dimRef} className="oc-namer-dim" aria-hidden="true"></span>
+      <div ref={cardRef} className="oc-card black oc-namer-card">
+        <small className="oc-corner" aria-hidden="true">
+          {cornerOf(card.kind)}
+        </small>
+        <div className="oc-namer-wheel" role="group" aria-label="Name a color">
           {COLORS.map((c) => (
-            <button key={c} type="button" className={`oc-color ${c}`} onClick={() => onPick(c)}>
+            <button
+              key={c}
+              ref={c === 'red' ? first : undefined}
+              type="button"
+              className={`oc-quadrant ${c}`}
+              disabled={busy}
+              onClick={() => onPick(c)}
+            >
               {COLOR_NAME[c]}
             </button>
           ))}
+          <span className="oc-namer-sign" aria-hidden="true">
+            <WheelSign kind={card.kind} />
+          </span>
         </div>
-        {onBack && (
-          <button type="button" className="go-text-link oc-sheet-back" onClick={onBack}>
-            Back
-          </button>
-        )}
-      </section>
+        <button type="button" className="oc-namer-back" onClick={onBack}>
+          <Icon name="chevronLeft" />
+          Back
+        </button>
+      </div>
     </div>
   );
+}
+
+/** Where a card of the hand leans in the fan: a shallow arc, steeper the fewer cards there are. */
+function fanOf(i: number, n: number): CSSProperties {
+  const k = i - (n - 1) / 2;
+  const step = Math.min(3, 30 / Math.max(n, 1));
+  return { rotate: `${k * step}deg`, translate: `0 ${Math.round(k * k * step * 0.35)}px` };
 }
 
 function Table({ ocho, view, nameOf }: { ocho: OchoClient; view: View; nameOf: (seat: number) => string }) {
@@ -554,6 +600,10 @@ function Table({ ocho, view, nameOf }: { ocho: OchoClient; view: View; nameOf: (
   const [menu, setMenu] = useState(false);
   const [picked, setPicked] = useState<number | null>(null);
   const [wild, setWild] = useState<number | null>(null);
+  /** A wild sent with its colour: it has left the hand, and flies when the view comes back. */
+  const [sent, setSent] = useState<number | null>(null);
+  /** The opening card was put back small; the action line can make it large again. */
+  const [shut, setShut] = useState(false);
   const { busy, error, send } = useSender(ocho);
   const legal = new Set(view.legal);
   const mine = view.must !== 'none';
@@ -563,11 +613,93 @@ function Table({ ocho, view, nameOf }: { ocho: OchoClient; view: View; nameOf: (
   const slots = SLOTS[seats.length] ?? [];
   const partner = partnerOf(view);
 
+  const page = useRef<HTMLDivElement>(null);
+  const layer = useRef<HTMLDivElement>(null);
+  const namerCard = useRef<HTMLDivElement>(null);
+  const namerDim = useRef<HTMLSpanElement>(null);
+  const motion = useRef<TableMotion | null>(null);
+  const launched = useRef<{ id: number; box: Box } | null>(null);
+  const settle = useRef<{ selector: string; box: Box } | null>(null);
+
   // A new view is a new moment: what was picked for the last one is not picked for this one.
   useEffect(() => {
     setPicked(null);
     setWild(null);
+    setSent(null);
+    setShut(false);
   }, [view]);
+
+  useLayoutEffect(() => {
+    if (!page.current || !layer.current) return;
+    const m = new TableMotion(page.current, layer.current);
+    motion.current = m;
+    return () => {
+      m.stop();
+      motion.current = null;
+    };
+  }, []);
+  useLayoutEffect(() => {
+    motion.current?.view(view, launched.current);
+    launched.current = null;
+  }, [view]);
+
+  const naming = wild != null ? (view.hand.find((c) => c.id === wild) ?? null) : null;
+  const opening = view.must === 'chooseColor' && !shut && !busy;
+  const namerCardOf = naming ?? (opening ? view.top : null);
+  const namerKey = naming ? `hand-${naming.id}` : opening ? `top-${view.top.id}-${view.handNo}` : null;
+  useLayoutEffect(() => {
+    if (!namerKey || !motion.current) return;
+    const from =
+      wild != null
+        ? motion.current.handBox(wild)
+        : motion.current.box(page.current?.querySelector('[data-oc="discard"]') ?? null);
+    motion.current.grow(namerCard.current, namerDim.current, from);
+    // Only a new card grows: the key says which.
+  }, [namerKey]);
+  useLayoutEffect(() => {
+    const s = settle.current;
+    settle.current = null;
+    if (s && motion.current) motion.current.settle(page.current?.querySelector<HTMLElement>(s.selector) ?? null, s.box);
+  });
+  useLayoutEffect(() => {
+    motion.current?.remember();
+  });
+
+  const namerBox = (): Box | null => motion.current?.box(namerCard.current) ?? null;
+  const putBack = (): void => {
+    const box = namerBox();
+    if (wild != null) {
+      if (box) settle.current = { selector: `[data-card="${wild}"] .oc-card`, box };
+      const id = wild;
+      setWild(null);
+      // The card goes back into the hand, and so does the keyboard.
+      requestAnimationFrame(() => page.current?.querySelector<HTMLElement>(`[data-card="${id}"] button`)?.focus());
+    } else {
+      if (box) settle.current = { selector: '[data-oc="discard"] .oc-card', box };
+      setShut(true);
+    }
+  };
+  const name = (color: Color): void => {
+    const box = namerBox();
+    if (wild != null) {
+      const card = wild;
+      if (box) launched.current = { id: card, box };
+      setSent(card);
+      setWild(null);
+      void send({ t: 'ocho.play', card, color }).then((r) => {
+        if (!r.ok) {
+          launched.current = null;
+          setSent(null);
+        }
+      });
+    } else {
+      if (box) settle.current = { selector: '[data-oc="discard"] .oc-card', box };
+      setShut(true);
+      void send({ t: 'ocho.color', color }).then((r) => {
+        if (!r.ok) setShut(false);
+      });
+    }
+  };
 
   const play = (card: Card): void => {
     if (isWild(card)) setWild(card.id);
@@ -642,29 +774,45 @@ function Table({ ocho, view, nameOf }: { ocho: OchoClient; view: View; nameOf: (
       break;
     case 'chooseColor':
       status = `Opening card: ${cardName(view.top)} · name the color`;
+      if (shut)
+        actions = (
+          <button type="button" className="btn" disabled={busy} onClick={() => setShut(false)}>
+            Name the color
+          </button>
+        );
       break;
     default:
       status =
         view.phase === 'chooseColor' ? `${nameOf(view.turn)} names the opening color` : `${nameOf(view.turn)} to play`;
   }
-  if (wild != null)
-    status = `You played ${cardName(view.hand.find((c) => c.id === wild) ?? view.top)} · name the next color`;
+  if (naming) status = `You played ${cardName(naming)} · name the next color`;
+  if (naming) actions = null;
 
   return (
-    <div className="oc-page oc-table-page">
+    <div ref={page} className="oc-page oc-table-page">
       <TopBar hand={view.handNo} menu={menu} onMenu={() => setMenu((m) => !m)} />
       <main className="oc-table">
         <h1 className="oc-sr" tabIndex={-1} ref={title}>
           Ocho · Hand {view.handNo}
         </h1>
-        <div className={view.xray.length > 0 ? 'oc-felt oc-has-xray' : 'oc-felt'}>
+        <div className="oc-felt">
           <ul className="oc-seats" aria-label="The table">
             {seats.map((seat, i) => (
               <Seat key={seat} view={view} seat={seat} name={nameOf(seat)} slot={slots[i] ?? 't2'} />
             ))}
           </ul>
           <Centre view={view} />
-          {view.xray.length > 0 && <XrayRows view={view} nameOf={nameOf} />}
+          {namerCardOf && (
+            <Namer
+              key={namerKey}
+              card={namerCardOf}
+              busy={busy}
+              onPick={name}
+              onBack={putBack}
+              cardRef={namerCard}
+              dimRef={namerDim}
+            />
+          )}
         </div>
         {view.xray.length > 0 && <p className="oc-xray-note">X-Ray · one card from each hand. Only you see them.</p>}
         <div className="oc-you">
@@ -678,49 +826,51 @@ function Table({ ocho, view, nameOf }: { ocho: OchoClient; view: View; nameOf: (
           {mine && <span className="pill gold">Your turn</span>}
           {partner != null && <span className="pill blue">Team with {nameOf(partner)}</span>}
         </div>
-        <ul className="oc-hand" aria-label="Your hand">
-          {view.hand.map((card) => {
-            const can = mine && legal.has(card.id) && view.must !== 'playDrawnOrKeep';
-            const on = picked === card.id && can;
-            return (
-              <li key={card.id}>
-                <button
-                  type="button"
-                  className={`oc-hand-card${on ? ' oc-on' : ''}${mine && !legal.has(card.id) ? ' oc-dim' : ''}`}
-                  aria-label={cardName(card)}
-                  aria-pressed={can ? on : undefined}
-                  disabled={!can || busy}
-                  onClick={() => setPicked(on ? null : card.id)}
+        <div className="oc-play">
+          <ul className="oc-hand" aria-label="Your hand">
+            {view.hand.map((card, i) => {
+              const can = mine && legal.has(card.id) && view.must !== 'playDrawnOrKeep';
+              const on = picked === card.id && can;
+              const away = card.id === wild || card.id === sent;
+              return (
+                <li
+                  key={card.id}
+                  data-card={card.id}
+                  style={fanOf(i, view.hand.length)}
+                  className={away ? 'oc-away' : undefined}
                 >
-                  <CardFace card={card} />
-                </button>
-              </li>
-            );
-          })}
-        </ul>
-        <div className="oc-actions">
-          <p className="oc-status" role="status">
-            {status}
-          </p>
-          {error && (
-            <p className="alert" role="alert">
-              {error}
+                  <button
+                    type="button"
+                    className={`oc-hand-card${can ? ' oc-can' : ''}${on ? ' oc-on' : ''}${drawn?.id === card.id ? ' oc-raised' : ''}${mine && !legal.has(card.id) ? ' oc-dim' : ''}`}
+                    aria-label={cardName(card)}
+                    aria-pressed={can ? on : undefined}
+                    disabled={!can || busy}
+                    onClick={() => setPicked(on ? null : card.id)}
+                  >
+                    <CardFace card={card} />
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+          <div className="oc-actions">
+            <p className="oc-status" role="status">
+              {status}
             </p>
-          )}
-          {actions && <div className="oc-buttons">{actions}</div>}
+            {error && (
+              <p className="alert" role="alert">
+                {error}
+              </p>
+            )}
+            {actions && (
+              <div key={view.must} className="oc-buttons">
+                {actions}
+              </div>
+            )}
+          </div>
         </div>
       </main>
-      {view.must === 'chooseColor' && !busy && <ColorSheet onPick={(color) => void send({ t: 'ocho.color', color })} />}
-      {wild != null && !busy && (
-        <ColorSheet
-          onPick={(color) => {
-            const card = wild;
-            setWild(null);
-            void send({ t: 'ocho.play', card, color });
-          }}
-          onBack={() => setWild(null)}
-        />
-      )}
+      <div ref={layer} className="oc-fx" aria-hidden="true"></div>
     </div>
   );
 }
