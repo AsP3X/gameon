@@ -28,7 +28,7 @@ the rule.
 | Rule | Applies to | Summary |
 | ---- | ---------- | ------- |
 | [The server is the only authority](docs/agent-rules/server-authority.md) | Everything that touches online play | The server decides and hides; the client sends intents and renders what it is given. |
-| [Ownership and handover](docs/agent-rules/ownership-and-handover.md) | Every work package | Stay in your own paths; the handover file is the prompt the other agent's CLI runs, and the record. |
+| [Ownership and handover](docs/agent-rules/ownership-and-handover.md) | Every work package | Stay in your own paths. A handover is the prompt you run through the other agent's local CLI, and only when that agent has a task. |
 | [Route work to the owning agent](docs/agent-rules/agent-routing.md) | Every request, before any edit | UI and client work go through the local `claude` CLI. Non-UI code goes through the local `grok` CLI. Do the other side yourself only when that CLI is not installed, not available, or out of tokens. |
 | [The protocol is a contract](docs/agent-rules/protocol-contract.md) | Any change to a message, DTO, endpoint or error code | Change the doc, the Rust types, the generated TypeScript and the fixtures together, through a handover. |
 | [Keep the designs in sync with the UI](docs/agent-rules/design-sync.md) | Visible UI changes in `web/` | Every UI change also lands in `design/web.pen`, edited only through the Pencil MCP tools. |

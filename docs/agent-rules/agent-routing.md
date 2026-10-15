@@ -59,16 +59,19 @@ owner asks.
 
 1. Classify every part of the request as UI, non-UI code, or neither.
 2. Do the parts you own. Send the rest across, unless an exception applies to this run.
-3. Write the handover file first. It is the whole prompt. Use the shape in
-   [ownership and handover](ownership-and-handover.md), including the callee lines below.
-4. Run that agent's CLI from the repo root and wait until it exits. While it runs, do not edit,
-   stage, commit, or run a formatter that rewrites the tree. Reading is fine.
+3. Write the handover file first, and only when that agent has a task. It is the whole prompt.
+   Use the shape in [ownership and handover](ownership-and-handover.md), including the callee
+   lines below. No task means no file and no CLI call.
+4. Run that agent's local CLI from the repo root and wait until it exits. While it runs, do not
+   edit, stage, commit, or run a formatter that rewrites the tree. Reading is fine.
 5. One callee at a time, in this checkout. Do not pass `--worktree`. A new worktree exists only
    when the owner asks for one ([git](git.md)).
-6. Read the CLI's JSON and the callee's return handover before treating the task as done.
+6. Read the CLI's JSON before treating the task as done. Read a return handover only when the
+   callee wrote one because you still have a task.
 
-A callee that finds work outside its paths stops that part and puts it in the return handover.
-The initiator routes it.
+A callee that finds work outside its paths stops that part. It writes a return handover when
+the initiator has to do that work, and leaves it out when the task is finished. The initiator
+routes whatever work remains.
 
 ## The prompt
 
@@ -128,7 +131,9 @@ grok -p \
 - A non-zero exit or a failing gate is a result to send back to the same callee. It is an
   exception only when the output matches a case below.
 
-The callee also writes its return handover under `docs/handover/` and prints that text.
+The callee writes a return handover under `docs/handover/` only when the initiator still has a
+task. It does not print the prompt for anyone to paste. The CLI result is the report when the
+task is done.
 
 ## Exceptions
 
@@ -169,6 +174,7 @@ finish only the remainder under that exception.
 
 - Read the diff. Leave edits outside the callee's paths untouched: do not stage them and do
   not build on them. Resume the callee and tell it to revert those paths, or tell the owner.
-- The work is finished only when the gates that apply have run and the return handover is on
-  disk ([definition of done](definition-of-done.md)).
-- Tell the owner which agent did which part, the handover paths, and what the gates printed.
+- The work is finished when the gates that apply have run
+  ([definition of done](definition-of-done.md)). A return handover is on disk only when one
+  agent still has a task for the other.
+- Tell the owner which agent did which part, and what the gates printed.
