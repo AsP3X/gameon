@@ -3,7 +3,7 @@
 This is the single source of the project rules for every coding agent. Claude Code reads it through
 `CLAUDE.md`; other agents (Grok) read it directly. The rules are adapted from `../shroud`.
 
-Two agents work in this repo, relayed by the owner:
+Two agents work in this repo. Grok delivers work to Claude by running the Claude Code CLI:
 
 | Agent  | Owns                                                                 |
 | ------ | -------------------------------------------------------------------- |
@@ -22,7 +22,7 @@ the rule.
 | Rule | Applies to | Summary |
 | ---- | ---------- | ------- |
 | [The server is the only authority](docs/agent-rules/server-authority.md) | Everything that touches online play | The server decides and hides; the client sends intents and renders what it is given. |
-| [Ownership and handover](docs/agent-rules/ownership-and-handover.md) | Every work package | Stay in your own paths; end every package with a paste-ready handover prompt for the other agent. |
+| [Ownership and handover](docs/agent-rules/ownership-and-handover.md) | Every work package | Stay in your own paths. Grok delivers every handover to Claude by running the Claude Code CLI. The file is the record. |
 | [The protocol is a contract](docs/agent-rules/protocol-contract.md) | Any change to a message, DTO, endpoint or error code | Change the doc, the Rust types, the generated TypeScript and the fixtures together, through a handover. |
 | [Keep the designs in sync with the UI](docs/agent-rules/design-sync.md) | Visible UI changes in `web/` | Every UI change also lands in `design/web.pen`, edited only through the Pencil MCP tools. |
 | [No deprecated APIs](docs/agent-rules/no-deprecated-apis.md) | Every code change | Don't call, extend or suppress deprecated APIs; replace them or implement the behavior. |

@@ -25,7 +25,8 @@ exact command or decision that unblocks it.
    ([design sync](design-sync.md)).
 10. **No deprecated APIs, no data loss** — ([deprecated](no-deprecated-apis.md),
     [data safety](data-safety.md)).
-11. **Handover** — the paste-ready prompt for the other agent is written and printed
+11. **Handover** — the prompt is written and printed. When Grok is handing to Claude, it is
+    delivered by running the Claude Code CLI
     ([ownership and handover](ownership-and-handover.md)).
 
 ## Verification by change type
