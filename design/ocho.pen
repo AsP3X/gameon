@@ -41011,6 +41011,95 @@
                       "fill": "$white"
                     }
                   }
+                },
+                {
+                  "type": "frame",
+                  "id": "GE7cP",
+                  "name": "Join",
+                  "width": "fill_container",
+                  "stroke": "$line",
+                  "strokeWidth": {
+                    "top": 2
+                  },
+                  "layout": "vertical",
+                  "gap": 12,
+                  "padding": [
+                    18,
+                    0,
+                    0,
+                    0
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "nAA1T",
+                      "name": "Join title",
+                      "fill": "$fg",
+                      "content": "Join with a code",
+                      "fontFamily": "$f-ui",
+                      "fontSize": 18,
+                      "fontWeight": "900"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "LsWfq",
+                      "name": "Join row",
+                      "width": "fill_container",
+                      "gap": 12,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "Uu7Cu",
+                          "name": "Code input",
+                          "width": "fill_container",
+                          "height": 52,
+                          "fill": "$card",
+                          "cornerRadius": "$r",
+                          "stroke": "$line",
+                          "strokeWidth": 2,
+                          "padding": [
+                            0,
+                            14
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "u7a43",
+                              "name": "Placeholder",
+                              "fill": "$faint",
+                              "content": "CODE",
+                              "fontFamily": "$f-ui",
+                              "fontSize": 20,
+                              "fontWeight": "900",
+                              "letterSpacing": 4
+                            }
+                          ]
+                        },
+                        {
+                          "id": "kiLGV",
+                          "type": "ref",
+                          "ref": "m4uNX",
+                          "name": "Button Join",
+                          "width": 110,
+                          "fill": "$line",
+                          "effect": {
+                            "type": "shadow",
+                            "shadowType": "outer",
+                            "enabled": false,
+                            "color": "#000000"
+                          },
+                          "descendants": {
+                            "U2QTp": {
+                              "content": "JOIN",
+                              "fill": "$faint"
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  ]
                 }
               ]
             }
@@ -41053,6 +41142,7 @@
           "width": "fill_container",
           "height": "fill_container",
           "layout": "vertical",
+          "gap": 16,
           "justifyContent": "center",
           "alignItems": "center",
           "children": [
@@ -41286,6 +41376,93 @@
                       "fill": "$white"
                     }
                   }
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "lDK5Z",
+              "name": "Join card",
+              "width": 520,
+              "fill": "$card",
+              "cornerRadius": 24,
+              "stroke": "$line",
+              "strokeWidth": 2,
+              "layout": "vertical",
+              "gap": 14,
+              "padding": [
+                24,
+                32
+              ],
+              "children": [
+                {
+                  "type": "text",
+                  "id": "uHSpo",
+                  "name": "Join title",
+                  "fill": "$fg",
+                  "content": "Join with a code",
+                  "fontFamily": "$f-ui",
+                  "fontSize": 18,
+                  "fontWeight": "900"
+                },
+                {
+                  "type": "frame",
+                  "id": "c5M40j",
+                  "name": "Join row",
+                  "width": "fill_container",
+                  "gap": 12,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "Qk8Jh",
+                      "name": "Code input",
+                      "width": "fill_container",
+                      "height": 52,
+                      "fill": "$card",
+                      "cornerRadius": "$r",
+                      "stroke": "$line",
+                      "strokeWidth": 2,
+                      "padding": [
+                        0,
+                        14
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "yRNKF",
+                          "name": "Placeholder",
+                          "fill": "$faint",
+                          "content": "CODE",
+                          "fontFamily": "$f-ui",
+                          "fontSize": 20,
+                          "fontWeight": "900",
+                          "letterSpacing": 4
+                        }
+                      ]
+                    },
+                    {
+                      "id": "vFZUy",
+                      "type": "ref",
+                      "ref": "m4uNX",
+                      "name": "Button Join",
+                      "width": 110,
+                      "fill": "$line",
+                      "effect": {
+                        "type": "shadow",
+                        "shadowType": "outer",
+                        "enabled": false,
+                        "color": "#000000"
+                      },
+                      "descendants": {
+                        "U2QTp": {
+                          "content": "JOIN",
+                          "fill": "$faint"
+                        }
+                      }
+                    }
+                  ]
                 }
               ]
             }
@@ -41569,6 +41746,95 @@
                       "fill": "$white"
                     }
                   }
+                },
+                {
+                  "type": "frame",
+                  "id": "tsStD",
+                  "name": "Join",
+                  "width": "fill_container",
+                  "stroke": "$line",
+                  "strokeWidth": {
+                    "top": 2
+                  },
+                  "layout": "vertical",
+                  "gap": 12,
+                  "padding": [
+                    18,
+                    0,
+                    0,
+                    0
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "Ybx0W",
+                      "name": "Join title",
+                      "fill": "$fg",
+                      "content": "Join with a code",
+                      "fontFamily": "$f-ui",
+                      "fontSize": 18,
+                      "fontWeight": "900"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "ekHhh",
+                      "name": "Join row",
+                      "width": "fill_container",
+                      "gap": 12,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "i8CYV3",
+                          "name": "Code input",
+                          "width": "fill_container",
+                          "height": 52,
+                          "fill": "$card",
+                          "cornerRadius": "$r",
+                          "stroke": "$line",
+                          "strokeWidth": 2,
+                          "padding": [
+                            0,
+                            14
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "DcKZL",
+                              "name": "Placeholder",
+                              "fill": "$faint",
+                              "content": "CODE",
+                              "fontFamily": "$f-ui",
+                              "fontSize": 20,
+                              "fontWeight": "900",
+                              "letterSpacing": 4
+                            }
+                          ]
+                        },
+                        {
+                          "id": "V2mbBV",
+                          "type": "ref",
+                          "ref": "m4uNX",
+                          "name": "Button Join",
+                          "width": 110,
+                          "fill": "$line",
+                          "effect": {
+                            "type": "shadow",
+                            "shadowType": "outer",
+                            "enabled": false,
+                            "color": "#000000"
+                          },
+                          "descendants": {
+                            "U2QTp": {
+                              "content": "JOIN",
+                              "fill": "$faint"
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  ]
                 }
               ]
             }
@@ -41611,6 +41877,7 @@
           "width": "fill_container",
           "height": "fill_container",
           "layout": "vertical",
+          "gap": 16,
           "justifyContent": "center",
           "alignItems": "center",
           "children": [
@@ -41844,6 +42111,93 @@
                       "fill": "$white"
                     }
                   }
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "K6CERO",
+              "name": "Join card",
+              "width": 520,
+              "fill": "$card",
+              "cornerRadius": 24,
+              "stroke": "$line",
+              "strokeWidth": 2,
+              "layout": "vertical",
+              "gap": 14,
+              "padding": [
+                24,
+                32
+              ],
+              "children": [
+                {
+                  "type": "text",
+                  "id": "lpFB0",
+                  "name": "Join title",
+                  "fill": "$fg",
+                  "content": "Join with a code",
+                  "fontFamily": "$f-ui",
+                  "fontSize": 18,
+                  "fontWeight": "900"
+                },
+                {
+                  "type": "frame",
+                  "id": "SgYV6",
+                  "name": "Join row",
+                  "width": "fill_container",
+                  "gap": 12,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "y1gZcQ",
+                      "name": "Code input",
+                      "width": "fill_container",
+                      "height": 52,
+                      "fill": "$card",
+                      "cornerRadius": "$r",
+                      "stroke": "$line",
+                      "strokeWidth": 2,
+                      "padding": [
+                        0,
+                        14
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "ARZaD",
+                          "name": "Placeholder",
+                          "fill": "$faint",
+                          "content": "CODE",
+                          "fontFamily": "$f-ui",
+                          "fontSize": 20,
+                          "fontWeight": "900",
+                          "letterSpacing": 4
+                        }
+                      ]
+                    },
+                    {
+                      "id": "R9OKX0",
+                      "type": "ref",
+                      "ref": "m4uNX",
+                      "name": "Button Join",
+                      "width": 110,
+                      "fill": "$line",
+                      "effect": {
+                        "type": "shadow",
+                        "shadowType": "outer",
+                        "enabled": false,
+                        "color": "#000000"
+                      },
+                      "descendants": {
+                        "U2QTp": {
+                          "content": "JOIN",
+                          "fill": "$faint"
+                        }
+                      }
+                    }
+                  ]
                 }
               ]
             }
@@ -42186,6 +42540,95 @@
                       "fill": "$white"
                     }
                   }
+                },
+                {
+                  "type": "frame",
+                  "id": "WnXve",
+                  "name": "Join",
+                  "width": "fill_container",
+                  "stroke": "$line",
+                  "strokeWidth": {
+                    "top": 2
+                  },
+                  "layout": "vertical",
+                  "gap": 12,
+                  "padding": [
+                    18,
+                    0,
+                    0,
+                    0
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "AXRuO",
+                      "name": "Join title",
+                      "fill": "$fg",
+                      "content": "Join with a code",
+                      "fontFamily": "$f-ui",
+                      "fontSize": 18,
+                      "fontWeight": "900"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "bVLRT",
+                      "name": "Join row",
+                      "width": "fill_container",
+                      "gap": 12,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "RxXOW",
+                          "name": "Code input",
+                          "width": "fill_container",
+                          "height": 52,
+                          "fill": "$card",
+                          "cornerRadius": "$r",
+                          "stroke": "$line",
+                          "strokeWidth": 2,
+                          "padding": [
+                            0,
+                            14
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "d7N5T",
+                              "name": "Placeholder",
+                              "fill": "$faint",
+                              "content": "CODE",
+                              "fontFamily": "$f-ui",
+                              "fontSize": 20,
+                              "fontWeight": "900",
+                              "letterSpacing": 4
+                            }
+                          ]
+                        },
+                        {
+                          "id": "QhXUI",
+                          "type": "ref",
+                          "ref": "m4uNX",
+                          "name": "Button Join",
+                          "width": 110,
+                          "fill": "$line",
+                          "effect": {
+                            "type": "shadow",
+                            "shadowType": "outer",
+                            "enabled": false,
+                            "color": "#000000"
+                          },
+                          "descendants": {
+                            "U2QTp": {
+                              "content": "JOIN",
+                              "fill": "$faint"
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  ]
                 }
               ]
             }
@@ -42228,6 +42671,7 @@
           "width": "fill_container",
           "height": "fill_container",
           "layout": "vertical",
+          "gap": 16,
           "justifyContent": "center",
           "alignItems": "center",
           "children": [
@@ -42520,6 +42964,93 @@
                       "fill": "$white"
                     }
                   }
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "pzAdg",
+              "name": "Join card",
+              "width": 520,
+              "fill": "$card",
+              "cornerRadius": 24,
+              "stroke": "$line",
+              "strokeWidth": 2,
+              "layout": "vertical",
+              "gap": 14,
+              "padding": [
+                24,
+                32
+              ],
+              "children": [
+                {
+                  "type": "text",
+                  "id": "XZ81B",
+                  "name": "Join title",
+                  "fill": "$fg",
+                  "content": "Join with a code",
+                  "fontFamily": "$f-ui",
+                  "fontSize": 18,
+                  "fontWeight": "900"
+                },
+                {
+                  "type": "frame",
+                  "id": "TFDiO",
+                  "name": "Join row",
+                  "width": "fill_container",
+                  "gap": 12,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "dECTE",
+                      "name": "Code input",
+                      "width": "fill_container",
+                      "height": 52,
+                      "fill": "$card",
+                      "cornerRadius": "$r",
+                      "stroke": "$line",
+                      "strokeWidth": 2,
+                      "padding": [
+                        0,
+                        14
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "YKte2",
+                          "name": "Placeholder",
+                          "fill": "$faint",
+                          "content": "CODE",
+                          "fontFamily": "$f-ui",
+                          "fontSize": 20,
+                          "fontWeight": "900",
+                          "letterSpacing": 4
+                        }
+                      ]
+                    },
+                    {
+                      "id": "pejRS",
+                      "type": "ref",
+                      "ref": "m4uNX",
+                      "name": "Button Join",
+                      "width": 110,
+                      "fill": "$line",
+                      "effect": {
+                        "type": "shadow",
+                        "shadowType": "outer",
+                        "enabled": false,
+                        "color": "#000000"
+                      },
+                      "descendants": {
+                        "U2QTp": {
+                          "content": "JOIN",
+                          "fill": "$faint"
+                        }
+                      }
+                    }
+                  ]
                 }
               ]
             }
@@ -42862,6 +43393,95 @@
                       "fill": "$white"
                     }
                   }
+                },
+                {
+                  "type": "frame",
+                  "id": "zWEEM",
+                  "name": "Join",
+                  "width": "fill_container",
+                  "stroke": "$line",
+                  "strokeWidth": {
+                    "top": 2
+                  },
+                  "layout": "vertical",
+                  "gap": 12,
+                  "padding": [
+                    18,
+                    0,
+                    0,
+                    0
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "yErF2",
+                      "name": "Join title",
+                      "fill": "$fg",
+                      "content": "Join with a code",
+                      "fontFamily": "$f-ui",
+                      "fontSize": 18,
+                      "fontWeight": "900"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "OFJoJ",
+                      "name": "Join row",
+                      "width": "fill_container",
+                      "gap": 12,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "dofpd",
+                          "name": "Code input",
+                          "width": "fill_container",
+                          "height": 52,
+                          "fill": "$card",
+                          "cornerRadius": "$r",
+                          "stroke": "$line",
+                          "strokeWidth": 2,
+                          "padding": [
+                            0,
+                            14
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "NqtzQ",
+                              "name": "Placeholder",
+                              "fill": "$faint",
+                              "content": "CODE",
+                              "fontFamily": "$f-ui",
+                              "fontSize": 20,
+                              "fontWeight": "900",
+                              "letterSpacing": 4
+                            }
+                          ]
+                        },
+                        {
+                          "id": "nlUOV",
+                          "type": "ref",
+                          "ref": "m4uNX",
+                          "name": "Button Join",
+                          "width": 110,
+                          "fill": "$line",
+                          "effect": {
+                            "type": "shadow",
+                            "shadowType": "outer",
+                            "enabled": false,
+                            "color": "#000000"
+                          },
+                          "descendants": {
+                            "U2QTp": {
+                              "content": "JOIN",
+                              "fill": "$faint"
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  ]
                 }
               ]
             }
@@ -42904,6 +43524,7 @@
           "width": "fill_container",
           "height": "fill_container",
           "layout": "vertical",
+          "gap": 16,
           "justifyContent": "center",
           "alignItems": "center",
           "children": [
@@ -43196,6 +43817,93 @@
                       "fill": "$white"
                     }
                   }
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "i2ydvT",
+              "name": "Join card",
+              "width": 520,
+              "fill": "$card",
+              "cornerRadius": 24,
+              "stroke": "$line",
+              "strokeWidth": 2,
+              "layout": "vertical",
+              "gap": 14,
+              "padding": [
+                24,
+                32
+              ],
+              "children": [
+                {
+                  "type": "text",
+                  "id": "Y3F0SU",
+                  "name": "Join title",
+                  "fill": "$fg",
+                  "content": "Join with a code",
+                  "fontFamily": "$f-ui",
+                  "fontSize": 18,
+                  "fontWeight": "900"
+                },
+                {
+                  "type": "frame",
+                  "id": "Y2Kjl2",
+                  "name": "Join row",
+                  "width": "fill_container",
+                  "gap": 12,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "d5rt0J",
+                      "name": "Code input",
+                      "width": "fill_container",
+                      "height": 52,
+                      "fill": "$card",
+                      "cornerRadius": "$r",
+                      "stroke": "$line",
+                      "strokeWidth": 2,
+                      "padding": [
+                        0,
+                        14
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "IjBtC",
+                          "name": "Placeholder",
+                          "fill": "$faint",
+                          "content": "CODE",
+                          "fontFamily": "$f-ui",
+                          "fontSize": 20,
+                          "fontWeight": "900",
+                          "letterSpacing": 4
+                        }
+                      ]
+                    },
+                    {
+                      "id": "Z62Yr",
+                      "type": "ref",
+                      "ref": "m4uNX",
+                      "name": "Button Join",
+                      "width": 110,
+                      "fill": "$line",
+                      "effect": {
+                        "type": "shadow",
+                        "shadowType": "outer",
+                        "enabled": false,
+                        "color": "#000000"
+                      },
+                      "descendants": {
+                        "U2QTp": {
+                          "content": "JOIN",
+                          "fill": "$faint"
+                        }
+                      }
+                    }
+                  ]
                 }
               ]
             }
@@ -49814,6 +50522,1434 @@
                       "fill": "$white"
                     }
                   }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "cbQXe",
+      "x": 0,
+      "y": 24200,
+      "name": "21 Your table · waiting · Phone · Light",
+      "theme": {
+        "mode": "light"
+      },
+      "clip": true,
+      "width": 390,
+      "height": 844,
+      "fill": "$bg",
+      "layout": "vertical",
+      "alignItems": "center",
+      "children": [
+        {
+          "id": "EFmtt",
+          "type": "ref",
+          "ref": "Dtbcg",
+          "name": "Back Header",
+          "width": "fill_container",
+          "descendants": {
+            "YbTPf": {
+              "content": "Games"
+            }
+          }
+        },
+        {
+          "type": "frame",
+          "id": "hYkQv",
+          "name": "Main",
+          "width": "fill_container",
+          "height": "fill_container",
+          "layout": "vertical",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "M9TU2",
+              "name": "Body",
+              "width": "fill_container",
+              "height": "fill_container",
+              "layout": "vertical",
+              "gap": 14,
+              "padding": [
+                8,
+                20,
+                24,
+                20
+              ],
+              "children": [
+                {
+                  "type": "text",
+                  "id": "t5Ta9",
+                  "name": "Title",
+                  "fill": "$fg",
+                  "content": "Ocho",
+                  "fontFamily": "$f-ui",
+                  "fontSize": 34,
+                  "fontWeight": "900"
+                },
+                {
+                  "type": "text",
+                  "id": "O8FJp",
+                  "name": "Settings",
+                  "fill": "$muted",
+                  "content": "Free-for-all · 4 players · One hand",
+                  "fontFamily": "$f-ui",
+                  "fontSize": 14,
+                  "fontWeight": "700"
+                },
+                {
+                  "type": "frame",
+                  "id": "pF6tX",
+                  "name": "Code",
+                  "width": "fill_container",
+                  "fill": "$soft",
+                  "cornerRadius": 16,
+                  "layout": "vertical",
+                  "gap": 6,
+                  "padding": 16,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "mZNiF",
+                      "name": "Label Code",
+                      "fill": "$muted",
+                      "content": "TABLE CODE",
+                      "fontFamily": "$f-ui",
+                      "fontSize": 13,
+                      "fontWeight": "900",
+                      "letterSpacing": 1
+                    },
+                    {
+                      "type": "text",
+                      "id": "L28t1",
+                      "name": "Code value",
+                      "fill": "$fg",
+                      "content": "K7QX2P",
+                      "fontFamily": "$f-ui",
+                      "fontSize": 34,
+                      "fontWeight": "900",
+                      "letterSpacing": 6
+                    },
+                    {
+                      "type": "text",
+                      "id": "q68IP",
+                      "name": "Code line",
+                      "fill": "$muted",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Give this code to the others. They join from Ocho’s sit-down page.",
+                      "fontFamily": "$f-ui",
+                      "fontSize": 14,
+                      "fontWeight": "700"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "s6fG00",
+                  "name": "Players",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 6,
+                  "children": [
+                    {
+                      "id": "ZCHhw",
+                      "type": "ref",
+                      "ref": "q34fC1",
+                      "name": "Seat Row You",
+                      "width": "fill_container",
+                      "descendants": {
+                        "bgt4g": {
+                          "fill": "$purple"
+                        },
+                        "e8UAN5": {
+                          "content": "Y"
+                        },
+                        "gT6ck": {
+                          "content": "You"
+                        },
+                        "mIXNs": {
+                          "content": "Host"
+                        },
+                        "iz9G3": {
+                          "type": "frame",
+                          "id": "dgsP5",
+                          "name": "Pill Ready",
+                          "fill": "$green-bg",
+                          "cornerRadius": 999,
+                          "padding": [
+                            4,
+                            10
+                          ],
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "KIG9q",
+                              "name": "Pill text",
+                              "fill": "$green-ink",
+                              "content": "Ready",
+                              "fontFamily": "$f-ui",
+                              "fontSize": 13,
+                              "fontWeight": "900"
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    {
+                      "id": "xbvA3",
+                      "type": "ref",
+                      "ref": "q34fC1",
+                      "name": "Seat Row Ana",
+                      "width": "fill_container",
+                      "descendants": {
+                        "bgt4g": {
+                          "fill": "$orange"
+                        },
+                        "e8UAN5": {
+                          "content": "A"
+                        },
+                        "gT6ck": {
+                          "content": "Ana"
+                        },
+                        "mIXNs": {
+                          "content": "Player"
+                        },
+                        "iz9G3": {
+                          "type": "frame",
+                          "id": "lVklw",
+                          "name": "Pill Ready",
+                          "fill": "$green-bg",
+                          "cornerRadius": 999,
+                          "padding": [
+                            4,
+                            10
+                          ],
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "e1FreG",
+                              "name": "Pill text",
+                              "fill": "$green-ink",
+                              "content": "Ready",
+                              "fontFamily": "$f-ui",
+                              "fontSize": 13,
+                              "fontWeight": "900"
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    {
+                      "id": "bunO2",
+                      "type": "ref",
+                      "ref": "q34fC1",
+                      "name": "Seat Row Ben",
+                      "width": "fill_container",
+                      "descendants": {
+                        "bgt4g": {
+                          "fill": "$blue"
+                        },
+                        "e8UAN5": {
+                          "content": "B"
+                        },
+                        "gT6ck": {
+                          "content": "Ben"
+                        },
+                        "mIXNs": {
+                          "content": "Player"
+                        },
+                        "iz9G3": {
+                          "type": "frame",
+                          "id": "KLRD2",
+                          "name": "Pill Not ready",
+                          "fill": "$soft",
+                          "cornerRadius": 999,
+                          "padding": [
+                            4,
+                            10
+                          ],
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "cLv9T",
+                              "name": "Pill text",
+                              "fill": "$muted",
+                              "content": "Not ready",
+                              "fontFamily": "$f-ui",
+                              "fontSize": 13,
+                              "fontWeight": "900"
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    {
+                      "type": "frame",
+                      "id": "CKKju",
+                      "name": "Empty seat",
+                      "width": "fill_container",
+                      "cornerRadius": 12,
+                      "stroke": "$line",
+                      "strokeWidth": 1,
+                      "gap": 10,
+                      "padding": [
+                        6,
+                        12
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "ellipse",
+                          "id": "dkNDp",
+                          "name": "Empty avatar",
+                          "width": 32,
+                          "height": 32,
+                          "stroke": "$line",
+                          "strokeWidth": 2
+                        },
+                        {
+                          "type": "text",
+                          "id": "Yfp6p",
+                          "name": "Waiting",
+                          "fill": "$muted",
+                          "content": "Waiting for a player",
+                          "fontFamily": "$f-ui",
+                          "fontSize": 14,
+                          "fontWeight": "800"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "jtw0G",
+                  "name": "Status",
+                  "fill": "$muted",
+                  "content": "Waiting for 1 more player",
+                  "fontFamily": "$f-ui",
+                  "fontSize": 14,
+                  "fontWeight": "700"
+                },
+                {
+                  "type": "frame",
+                  "id": "FYvST",
+                  "name": "Spacer",
+                  "width": "fill_container",
+                  "height": "fill_container"
+                },
+                {
+                  "id": "k0oTl6",
+                  "type": "ref",
+                  "ref": "m4uNX",
+                  "name": "Button Start",
+                  "width": "fill_container",
+                  "fill": "$line",
+                  "effect": {
+                    "type": "shadow",
+                    "shadowType": "outer",
+                    "enabled": false,
+                    "color": "#000000"
+                  },
+                  "descendants": {
+                    "U2QTp": {
+                      "content": "START",
+                      "fill": "$faint"
+                    }
+                  }
+                },
+                {
+                  "type": "frame",
+                  "id": "lnH6X",
+                  "name": "Leave",
+                  "width": "fill_container",
+                  "height": 44,
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "ivBmX",
+                      "name": "Leave text",
+                      "fill": "$blue-ink",
+                      "content": "Leave the table",
+                      "fontFamily": "$f-ui",
+                      "fontSize": 15,
+                      "fontWeight": "800"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "kyzjY",
+      "x": 470,
+      "y": 24200,
+      "name": "21 Your table · waiting · Phone · Dark",
+      "theme": {
+        "mode": "dark"
+      },
+      "clip": true,
+      "width": 390,
+      "height": 844,
+      "fill": "$bg",
+      "layout": "vertical",
+      "alignItems": "center",
+      "children": [
+        {
+          "id": "P1aiIT",
+          "type": "ref",
+          "ref": "Dtbcg",
+          "name": "Back Header",
+          "width": "fill_container",
+          "descendants": {
+            "YbTPf": {
+              "content": "Games"
+            }
+          }
+        },
+        {
+          "type": "frame",
+          "id": "ziMrE",
+          "name": "Main",
+          "width": "fill_container",
+          "height": "fill_container",
+          "layout": "vertical",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "EsxWU",
+              "name": "Body",
+              "width": "fill_container",
+              "height": "fill_container",
+              "layout": "vertical",
+              "gap": 14,
+              "padding": [
+                8,
+                20,
+                24,
+                20
+              ],
+              "children": [
+                {
+                  "type": "text",
+                  "id": "xBbbb",
+                  "name": "Title",
+                  "fill": "$fg",
+                  "content": "Ocho",
+                  "fontFamily": "$f-ui",
+                  "fontSize": 34,
+                  "fontWeight": "900"
+                },
+                {
+                  "type": "text",
+                  "id": "nXbzC",
+                  "name": "Settings",
+                  "fill": "$muted",
+                  "content": "Free-for-all · 4 players · One hand",
+                  "fontFamily": "$f-ui",
+                  "fontSize": 14,
+                  "fontWeight": "700"
+                },
+                {
+                  "type": "frame",
+                  "id": "z5gnv",
+                  "name": "Code",
+                  "width": "fill_container",
+                  "fill": "$soft",
+                  "cornerRadius": 16,
+                  "layout": "vertical",
+                  "gap": 6,
+                  "padding": 16,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "GLIsz",
+                      "name": "Label Code",
+                      "fill": "$muted",
+                      "content": "TABLE CODE",
+                      "fontFamily": "$f-ui",
+                      "fontSize": 13,
+                      "fontWeight": "900",
+                      "letterSpacing": 1
+                    },
+                    {
+                      "type": "text",
+                      "id": "x6ZRON",
+                      "name": "Code value",
+                      "fill": "$fg",
+                      "content": "K7QX2P",
+                      "fontFamily": "$f-ui",
+                      "fontSize": 34,
+                      "fontWeight": "900",
+                      "letterSpacing": 6
+                    },
+                    {
+                      "type": "text",
+                      "id": "M4NPOl",
+                      "name": "Code line",
+                      "fill": "$muted",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Give this code to the others. They join from Ocho’s sit-down page.",
+                      "fontFamily": "$f-ui",
+                      "fontSize": 14,
+                      "fontWeight": "700"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "gyiwr",
+                  "name": "Players",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 6,
+                  "children": [
+                    {
+                      "id": "d20FY",
+                      "type": "ref",
+                      "ref": "q34fC1",
+                      "name": "Seat Row You",
+                      "width": "fill_container",
+                      "descendants": {
+                        "bgt4g": {
+                          "fill": "$purple"
+                        },
+                        "e8UAN5": {
+                          "content": "Y"
+                        },
+                        "gT6ck": {
+                          "content": "You"
+                        },
+                        "mIXNs": {
+                          "content": "Host"
+                        },
+                        "iz9G3": {
+                          "type": "frame",
+                          "id": "pzwdS",
+                          "name": "Pill Ready",
+                          "fill": "$green-bg",
+                          "cornerRadius": 999,
+                          "padding": [
+                            4,
+                            10
+                          ],
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "Kq9mC",
+                              "name": "Pill text",
+                              "fill": "$green-ink",
+                              "content": "Ready",
+                              "fontFamily": "$f-ui",
+                              "fontSize": 13,
+                              "fontWeight": "900"
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    {
+                      "id": "XIdAn",
+                      "type": "ref",
+                      "ref": "q34fC1",
+                      "name": "Seat Row Ana",
+                      "width": "fill_container",
+                      "descendants": {
+                        "bgt4g": {
+                          "fill": "$orange"
+                        },
+                        "e8UAN5": {
+                          "content": "A"
+                        },
+                        "gT6ck": {
+                          "content": "Ana"
+                        },
+                        "mIXNs": {
+                          "content": "Player"
+                        },
+                        "iz9G3": {
+                          "type": "frame",
+                          "id": "t0ECgB",
+                          "name": "Pill Ready",
+                          "fill": "$green-bg",
+                          "cornerRadius": 999,
+                          "padding": [
+                            4,
+                            10
+                          ],
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "jSYti",
+                              "name": "Pill text",
+                              "fill": "$green-ink",
+                              "content": "Ready",
+                              "fontFamily": "$f-ui",
+                              "fontSize": 13,
+                              "fontWeight": "900"
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    {
+                      "id": "ylw9H",
+                      "type": "ref",
+                      "ref": "q34fC1",
+                      "name": "Seat Row Ben",
+                      "width": "fill_container",
+                      "descendants": {
+                        "bgt4g": {
+                          "fill": "$blue"
+                        },
+                        "e8UAN5": {
+                          "content": "B"
+                        },
+                        "gT6ck": {
+                          "content": "Ben"
+                        },
+                        "mIXNs": {
+                          "content": "Player"
+                        },
+                        "iz9G3": {
+                          "type": "frame",
+                          "id": "sX9dc",
+                          "name": "Pill Not ready",
+                          "fill": "$soft",
+                          "cornerRadius": 999,
+                          "padding": [
+                            4,
+                            10
+                          ],
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "A2nnoQ",
+                              "name": "Pill text",
+                              "fill": "$muted",
+                              "content": "Not ready",
+                              "fontFamily": "$f-ui",
+                              "fontSize": 13,
+                              "fontWeight": "900"
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    {
+                      "type": "frame",
+                      "id": "Qdvp9",
+                      "name": "Empty seat",
+                      "width": "fill_container",
+                      "cornerRadius": 12,
+                      "stroke": "$line",
+                      "strokeWidth": 1,
+                      "gap": 10,
+                      "padding": [
+                        6,
+                        12
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "ellipse",
+                          "id": "F67HMA",
+                          "name": "Empty avatar",
+                          "width": 32,
+                          "height": 32,
+                          "stroke": "$line",
+                          "strokeWidth": 2
+                        },
+                        {
+                          "type": "text",
+                          "id": "fZtif",
+                          "name": "Waiting",
+                          "fill": "$muted",
+                          "content": "Waiting for a player",
+                          "fontFamily": "$f-ui",
+                          "fontSize": 14,
+                          "fontWeight": "800"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "anztR",
+                  "name": "Status",
+                  "fill": "$muted",
+                  "content": "Waiting for 1 more player",
+                  "fontFamily": "$f-ui",
+                  "fontSize": 14,
+                  "fontWeight": "700"
+                },
+                {
+                  "type": "frame",
+                  "id": "hvyLU",
+                  "name": "Spacer",
+                  "width": "fill_container",
+                  "height": "fill_container"
+                },
+                {
+                  "id": "kELtH",
+                  "type": "ref",
+                  "ref": "m4uNX",
+                  "name": "Button Start",
+                  "width": "fill_container",
+                  "fill": "$line",
+                  "effect": {
+                    "type": "shadow",
+                    "shadowType": "outer",
+                    "enabled": false,
+                    "color": "#000000"
+                  },
+                  "descendants": {
+                    "U2QTp": {
+                      "content": "START",
+                      "fill": "$faint"
+                    }
+                  }
+                },
+                {
+                  "type": "frame",
+                  "id": "UHhBF",
+                  "name": "Leave",
+                  "width": "fill_container",
+                  "height": 44,
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "TRSm4",
+                      "name": "Leave text",
+                      "fill": "$blue-ink",
+                      "content": "Leave the table",
+                      "fontFamily": "$f-ui",
+                      "fontSize": 15,
+                      "fontWeight": "800"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "bW10C",
+      "x": 940,
+      "y": 24200,
+      "name": "21 Your table · waiting · Desk · Light",
+      "theme": {
+        "mode": "light"
+      },
+      "clip": true,
+      "width": 1440,
+      "height": 900,
+      "fill": "$bg",
+      "layout": "vertical",
+      "alignItems": "center",
+      "children": [
+        {
+          "id": "dB7zV",
+          "type": "ref",
+          "ref": "Dtbcg",
+          "name": "Back Header",
+          "width": "fill_container",
+          "descendants": {
+            "YbTPf": {
+              "content": "Games"
+            }
+          }
+        },
+        {
+          "type": "frame",
+          "id": "b7Nhk",
+          "name": "Main",
+          "width": "fill_container",
+          "height": "fill_container",
+          "layout": "vertical",
+          "justifyContent": "center",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "PK6Ol",
+              "name": "Body",
+              "width": 520,
+              "fill": "$card",
+              "cornerRadius": 24,
+              "stroke": "$line",
+              "strokeWidth": 2,
+              "layout": "vertical",
+              "gap": 16,
+              "padding": 32,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "YwdMF",
+                  "name": "Title",
+                  "fill": "$fg",
+                  "content": "Ocho",
+                  "fontFamily": "$f-ui",
+                  "fontSize": 34,
+                  "fontWeight": "900"
+                },
+                {
+                  "type": "text",
+                  "id": "gJKHY",
+                  "name": "Settings",
+                  "fill": "$muted",
+                  "content": "Free-for-all · 4 players · One hand",
+                  "fontFamily": "$f-ui",
+                  "fontSize": 14,
+                  "fontWeight": "700"
+                },
+                {
+                  "type": "frame",
+                  "id": "O1IkRl",
+                  "name": "Code",
+                  "width": "fill_container",
+                  "fill": "$soft",
+                  "cornerRadius": 16,
+                  "layout": "vertical",
+                  "gap": 6,
+                  "padding": 16,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "XllDy",
+                      "name": "Label Code",
+                      "fill": "$muted",
+                      "content": "TABLE CODE",
+                      "fontFamily": "$f-ui",
+                      "fontSize": 13,
+                      "fontWeight": "900",
+                      "letterSpacing": 1
+                    },
+                    {
+                      "type": "text",
+                      "id": "KTEYE",
+                      "name": "Code value",
+                      "fill": "$fg",
+                      "content": "K7QX2P",
+                      "fontFamily": "$f-ui",
+                      "fontSize": 34,
+                      "fontWeight": "900",
+                      "letterSpacing": 6
+                    },
+                    {
+                      "type": "text",
+                      "id": "lYFij",
+                      "name": "Code line",
+                      "fill": "$muted",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Give this code to the others. They join from Ocho’s sit-down page.",
+                      "fontFamily": "$f-ui",
+                      "fontSize": 14,
+                      "fontWeight": "700"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "FotRw",
+                  "name": "Players",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 6,
+                  "children": [
+                    {
+                      "id": "XyN5Y",
+                      "type": "ref",
+                      "ref": "q34fC1",
+                      "name": "Seat Row You",
+                      "width": "fill_container",
+                      "descendants": {
+                        "bgt4g": {
+                          "fill": "$purple"
+                        },
+                        "e8UAN5": {
+                          "content": "Y"
+                        },
+                        "gT6ck": {
+                          "content": "You"
+                        },
+                        "mIXNs": {
+                          "content": "Host"
+                        },
+                        "iz9G3": {
+                          "type": "frame",
+                          "id": "N4soPh",
+                          "name": "Pill Ready",
+                          "fill": "$green-bg",
+                          "cornerRadius": 999,
+                          "padding": [
+                            4,
+                            10
+                          ],
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "VVBGG",
+                              "name": "Pill text",
+                              "fill": "$green-ink",
+                              "content": "Ready",
+                              "fontFamily": "$f-ui",
+                              "fontSize": 13,
+                              "fontWeight": "900"
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    {
+                      "id": "uBcWM",
+                      "type": "ref",
+                      "ref": "q34fC1",
+                      "name": "Seat Row Ana",
+                      "width": "fill_container",
+                      "descendants": {
+                        "bgt4g": {
+                          "fill": "$orange"
+                        },
+                        "e8UAN5": {
+                          "content": "A"
+                        },
+                        "gT6ck": {
+                          "content": "Ana"
+                        },
+                        "mIXNs": {
+                          "content": "Player"
+                        },
+                        "iz9G3": {
+                          "type": "frame",
+                          "id": "j4xBm",
+                          "name": "Pill Ready",
+                          "fill": "$green-bg",
+                          "cornerRadius": 999,
+                          "padding": [
+                            4,
+                            10
+                          ],
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "tAIHC",
+                              "name": "Pill text",
+                              "fill": "$green-ink",
+                              "content": "Ready",
+                              "fontFamily": "$f-ui",
+                              "fontSize": 13,
+                              "fontWeight": "900"
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    {
+                      "id": "FjjGx",
+                      "type": "ref",
+                      "ref": "q34fC1",
+                      "name": "Seat Row Ben",
+                      "width": "fill_container",
+                      "descendants": {
+                        "bgt4g": {
+                          "fill": "$blue"
+                        },
+                        "e8UAN5": {
+                          "content": "B"
+                        },
+                        "gT6ck": {
+                          "content": "Ben"
+                        },
+                        "mIXNs": {
+                          "content": "Player"
+                        },
+                        "iz9G3": {
+                          "type": "frame",
+                          "id": "HPKBD",
+                          "name": "Pill Not ready",
+                          "fill": "$soft",
+                          "cornerRadius": 999,
+                          "padding": [
+                            4,
+                            10
+                          ],
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "kcksB",
+                              "name": "Pill text",
+                              "fill": "$muted",
+                              "content": "Not ready",
+                              "fontFamily": "$f-ui",
+                              "fontSize": 13,
+                              "fontWeight": "900"
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    {
+                      "type": "frame",
+                      "id": "P2ws3",
+                      "name": "Empty seat",
+                      "width": "fill_container",
+                      "cornerRadius": 12,
+                      "stroke": "$line",
+                      "strokeWidth": 1,
+                      "gap": 10,
+                      "padding": [
+                        6,
+                        12
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "ellipse",
+                          "id": "C4IUl",
+                          "name": "Empty avatar",
+                          "width": 32,
+                          "height": 32,
+                          "stroke": "$line",
+                          "strokeWidth": 2
+                        },
+                        {
+                          "type": "text",
+                          "id": "F5YVr",
+                          "name": "Waiting",
+                          "fill": "$muted",
+                          "content": "Waiting for a player",
+                          "fontFamily": "$f-ui",
+                          "fontSize": 14,
+                          "fontWeight": "800"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "YUSSC",
+                  "name": "Status",
+                  "fill": "$muted",
+                  "content": "Waiting for 1 more player",
+                  "fontFamily": "$f-ui",
+                  "fontSize": 14,
+                  "fontWeight": "700"
+                },
+                {
+                  "id": "w7ygo",
+                  "type": "ref",
+                  "ref": "m4uNX",
+                  "name": "Button Start",
+                  "width": "fill_container",
+                  "fill": "$line",
+                  "effect": {
+                    "type": "shadow",
+                    "shadowType": "outer",
+                    "enabled": false,
+                    "color": "#000000"
+                  },
+                  "descendants": {
+                    "U2QTp": {
+                      "content": "START",
+                      "fill": "$faint"
+                    }
+                  }
+                },
+                {
+                  "type": "frame",
+                  "id": "KmZZY",
+                  "name": "Leave",
+                  "width": "fill_container",
+                  "height": 44,
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "rEE1H",
+                      "name": "Leave text",
+                      "fill": "$blue-ink",
+                      "content": "Leave the table",
+                      "fontFamily": "$f-ui",
+                      "fontSize": 15,
+                      "fontWeight": "800"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "q2pRw5",
+      "x": 2460,
+      "y": 24200,
+      "name": "21 Your table · waiting · Desk · Dark",
+      "theme": {
+        "mode": "dark"
+      },
+      "clip": true,
+      "width": 1440,
+      "height": 900,
+      "fill": "$bg",
+      "layout": "vertical",
+      "alignItems": "center",
+      "children": [
+        {
+          "id": "LQHMd",
+          "type": "ref",
+          "ref": "Dtbcg",
+          "name": "Back Header",
+          "width": "fill_container",
+          "descendants": {
+            "YbTPf": {
+              "content": "Games"
+            }
+          }
+        },
+        {
+          "type": "frame",
+          "id": "J8iwv",
+          "name": "Main",
+          "width": "fill_container",
+          "height": "fill_container",
+          "layout": "vertical",
+          "justifyContent": "center",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "Lwntb",
+              "name": "Body",
+              "width": 520,
+              "fill": "$card",
+              "cornerRadius": 24,
+              "stroke": "$line",
+              "strokeWidth": 2,
+              "layout": "vertical",
+              "gap": 16,
+              "padding": 32,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "Hx8M7",
+                  "name": "Title",
+                  "fill": "$fg",
+                  "content": "Ocho",
+                  "fontFamily": "$f-ui",
+                  "fontSize": 34,
+                  "fontWeight": "900"
+                },
+                {
+                  "type": "text",
+                  "id": "TZpjM",
+                  "name": "Settings",
+                  "fill": "$muted",
+                  "content": "Free-for-all · 4 players · One hand",
+                  "fontFamily": "$f-ui",
+                  "fontSize": 14,
+                  "fontWeight": "700"
+                },
+                {
+                  "type": "frame",
+                  "id": "HNJvc",
+                  "name": "Code",
+                  "width": "fill_container",
+                  "fill": "$soft",
+                  "cornerRadius": 16,
+                  "layout": "vertical",
+                  "gap": 6,
+                  "padding": 16,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "j9FAjp",
+                      "name": "Label Code",
+                      "fill": "$muted",
+                      "content": "TABLE CODE",
+                      "fontFamily": "$f-ui",
+                      "fontSize": 13,
+                      "fontWeight": "900",
+                      "letterSpacing": 1
+                    },
+                    {
+                      "type": "text",
+                      "id": "K622Nk",
+                      "name": "Code value",
+                      "fill": "$fg",
+                      "content": "K7QX2P",
+                      "fontFamily": "$f-ui",
+                      "fontSize": 34,
+                      "fontWeight": "900",
+                      "letterSpacing": 6
+                    },
+                    {
+                      "type": "text",
+                      "id": "o0DWc",
+                      "name": "Code line",
+                      "fill": "$muted",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Give this code to the others. They join from Ocho’s sit-down page.",
+                      "fontFamily": "$f-ui",
+                      "fontSize": 14,
+                      "fontWeight": "700"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "KGk1Y",
+                  "name": "Players",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 6,
+                  "children": [
+                    {
+                      "id": "SvTUd",
+                      "type": "ref",
+                      "ref": "q34fC1",
+                      "name": "Seat Row You",
+                      "width": "fill_container",
+                      "descendants": {
+                        "bgt4g": {
+                          "fill": "$purple"
+                        },
+                        "e8UAN5": {
+                          "content": "Y"
+                        },
+                        "gT6ck": {
+                          "content": "You"
+                        },
+                        "mIXNs": {
+                          "content": "Host"
+                        },
+                        "iz9G3": {
+                          "type": "frame",
+                          "id": "B3IgK",
+                          "name": "Pill Ready",
+                          "fill": "$green-bg",
+                          "cornerRadius": 999,
+                          "padding": [
+                            4,
+                            10
+                          ],
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "BYA4x",
+                              "name": "Pill text",
+                              "fill": "$green-ink",
+                              "content": "Ready",
+                              "fontFamily": "$f-ui",
+                              "fontSize": 13,
+                              "fontWeight": "900"
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    {
+                      "id": "H0YVJ",
+                      "type": "ref",
+                      "ref": "q34fC1",
+                      "name": "Seat Row Ana",
+                      "width": "fill_container",
+                      "descendants": {
+                        "bgt4g": {
+                          "fill": "$orange"
+                        },
+                        "e8UAN5": {
+                          "content": "A"
+                        },
+                        "gT6ck": {
+                          "content": "Ana"
+                        },
+                        "mIXNs": {
+                          "content": "Player"
+                        },
+                        "iz9G3": {
+                          "type": "frame",
+                          "id": "T9Pkba",
+                          "name": "Pill Ready",
+                          "fill": "$green-bg",
+                          "cornerRadius": 999,
+                          "padding": [
+                            4,
+                            10
+                          ],
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "bt55F",
+                              "name": "Pill text",
+                              "fill": "$green-ink",
+                              "content": "Ready",
+                              "fontFamily": "$f-ui",
+                              "fontSize": 13,
+                              "fontWeight": "900"
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    {
+                      "id": "P50rnR",
+                      "type": "ref",
+                      "ref": "q34fC1",
+                      "name": "Seat Row Ben",
+                      "width": "fill_container",
+                      "descendants": {
+                        "bgt4g": {
+                          "fill": "$blue"
+                        },
+                        "e8UAN5": {
+                          "content": "B"
+                        },
+                        "gT6ck": {
+                          "content": "Ben"
+                        },
+                        "mIXNs": {
+                          "content": "Player"
+                        },
+                        "iz9G3": {
+                          "type": "frame",
+                          "id": "PLpOf",
+                          "name": "Pill Not ready",
+                          "fill": "$soft",
+                          "cornerRadius": 999,
+                          "padding": [
+                            4,
+                            10
+                          ],
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "H6eYC3",
+                              "name": "Pill text",
+                              "fill": "$muted",
+                              "content": "Not ready",
+                              "fontFamily": "$f-ui",
+                              "fontSize": 13,
+                              "fontWeight": "900"
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    {
+                      "type": "frame",
+                      "id": "pww1H",
+                      "name": "Empty seat",
+                      "width": "fill_container",
+                      "cornerRadius": 12,
+                      "stroke": "$line",
+                      "strokeWidth": 1,
+                      "gap": 10,
+                      "padding": [
+                        6,
+                        12
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "ellipse",
+                          "id": "L0GYt",
+                          "name": "Empty avatar",
+                          "width": 32,
+                          "height": 32,
+                          "stroke": "$line",
+                          "strokeWidth": 2
+                        },
+                        {
+                          "type": "text",
+                          "id": "IhDUD",
+                          "name": "Waiting",
+                          "fill": "$muted",
+                          "content": "Waiting for a player",
+                          "fontFamily": "$f-ui",
+                          "fontSize": 14,
+                          "fontWeight": "800"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "l4ROEY",
+                  "name": "Status",
+                  "fill": "$muted",
+                  "content": "Waiting for 1 more player",
+                  "fontFamily": "$f-ui",
+                  "fontSize": 14,
+                  "fontWeight": "700"
+                },
+                {
+                  "id": "PYlRP",
+                  "type": "ref",
+                  "ref": "m4uNX",
+                  "name": "Button Start",
+                  "width": "fill_container",
+                  "fill": "$line",
+                  "effect": {
+                    "type": "shadow",
+                    "shadowType": "outer",
+                    "enabled": false,
+                    "color": "#000000"
+                  },
+                  "descendants": {
+                    "U2QTp": {
+                      "content": "START",
+                      "fill": "$faint"
+                    }
+                  }
+                },
+                {
+                  "type": "frame",
+                  "id": "IBAFP",
+                  "name": "Leave",
+                  "width": "fill_container",
+                  "height": 44,
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "cwFGM",
+                      "name": "Leave text",
+                      "fill": "$blue-ink",
+                      "content": "Leave the table",
+                      "fontFamily": "$f-ui",
+                      "fontSize": 15,
+                      "fontWeight": "800"
+                    }
+                  ]
                 }
               ]
             }
