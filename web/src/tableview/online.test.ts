@@ -601,6 +601,22 @@ describe('a table that moved on without saying so', () => {
     expect(app.querySelector('#bid')).not.toBeNull();
   });
 
+  it('keeps the round points on the results when somebody else is ready', async () => {
+    await toResults();
+    const pts = (): string[] => Array.from(app.querySelectorAll('.sheet .pts'), (el) => el.textContent ?? '');
+    const first = pts();
+    expect(first).toHaveLength(3);
+    // A round in which nobody scored would hide a sheet drawn with 0s.
+    expect(first.every((t) => t === '0')).toBe(false);
+    // Remy pressed Next round: the update carries the ready flags and nothing that happened.
+    tell({ ...present(), ready: [false, true, false] }, OTHERS);
+    await settle();
+    expect(state.phase).toBe('roundEnd');
+    expect(ui.sheet).toBe('results');
+    expect(app.querySelector('.sheet[aria-label="Round results"]')).not.toBeNull();
+    expect(pts()).toEqual(first);
+  });
+
   it('gives input back when the phase changes under an unanswered action', async () => {
     await toResults();
     click('[data-act="next"]');
