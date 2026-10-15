@@ -162,6 +162,8 @@ pub struct Game {
     hand_winner: Option<u8>,
     match_winner: Option<u8>,
     dealer: u8,
+    /// Turns in a row that could neither play nor draw. A full lap ends the hand.
+    dry: u8,
 }
 
 impl Game {
@@ -205,6 +207,7 @@ impl Game {
             hand_winner: None,
             match_winner: None,
             dealer: 0,
+            dry: 0,
         };
         game.deal(rng).map_err(|_| CreateError::Deal)?;
         Ok(game)
@@ -296,7 +299,11 @@ impl Game {
         if seat != self.turn {
             return Err(Rejection::NotYourTurn.into());
         }
-        self.xray = None;
+        // Human: The cards X-Ray showed stay until that player acts again, so the look is usable.
+        // Agent: WRITES xray = None only when `seat` is the seat the cards were shown to.
+        if self.xray.as_ref().is_some_and(|shown| shown.to == seat) {
+            self.xray = None;
+        }
         match intent {
             Intent::Choose { color } => self.choose_opening(color),
             Intent::Draw => self.draw_or_take(rng),
@@ -344,9 +351,20 @@ impl Game {
             return Err(Rejection::IllegalMove.into());
         }
         let Some(drawn) = self.take_one(rng)? else {
+            self.dry = self.dry.saturating_add(1);
+            if self.dry >= self.players {
+                let winner = self.fewest_seat()?;
+                self.close_hand(winner)?;
+                return Ok(());
+            }
             self.advance(1)?;
             return Ok(());
         };
+        // Human: The drawn card joins the hand. It may be played at once only when it matches.
+        // Agent: WRITES hands[turn] and, when the card matches, drawn and phase=Drawn. Otherwise CALLS advance.
+        self.dry = 0;
+        let index = self.seat_index(self.turn)?;
+        self.hands[index].push(drawn);
         let card = lookup(&self.deck, drawn)?;
         if matches(card, self.color, self.symbol) {
             self.drawn = Some(drawn);
@@ -394,6 +412,7 @@ impl Game {
         self.take_from_hand(id)?;
         self.discard.push(id);
         self.drawn = None;
+        self.dry = 0;
         self.phase = Phase::Turn;
         self.color = color;
         self.symbol = card.symbol();
@@ -510,6 +529,10 @@ impl Game {
         let Some(winner) = self.empty_seat() else {
             return Ok(());
         };
+        self.close_hand(winner)
+    }
+
+    fn close_hand(&mut self, winner: u8) -> Result<(), StepError> {
         let mut points = vec![0i32; usize::from(self.players)];
         for (seat, hand) in self.hands.iter().enumerate() {
             if seat == usize::from(winner) {
@@ -561,6 +584,25 @@ impl Game {
         }
     }
 
+    fn fewest_seat(&self) -> Result<u8, StepError> {
+        let mut best = 0u8;
+        let mut best_len = usize::MAX;
+        let mut best_points = i32::MAX;
+        for seat in 0..self.players {
+            let hand = &self.hands[usize::from(seat)];
+            let mut points = 0i32;
+            for id in hand {
+                points = points.saturating_add(lookup(&self.deck, *id)?.points());
+            }
+            if hand.len() < best_len || (hand.len() == best_len && points < best_points) {
+                best = seat;
+                best_len = hand.len();
+                best_points = points;
+            }
+        }
+        Ok(best)
+    }
+
     fn empty_seat(&self) -> Option<u8> {
         self.hands
             .iter()
@@ -580,6 +622,7 @@ impl Game {
         self.stack = None;
         self.drawn = None;
         self.xray = None;
+        self.dry = 0;
         for hand in &mut self.hands {
             hand.clear();
         }

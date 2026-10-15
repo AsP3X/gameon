@@ -4,11 +4,13 @@
 //! The game server passes a [`Rng`] for the shuffle, the draw pile, and X-Ray.
 //! [`Game`] does not implement `Serialize`. Hidden cards leave only through [`Game::view`].
 
+mod bots;
 mod card;
 mod error;
 mod game;
 mod rng;
 
+pub use bots::{BotLevel, choose};
 pub use card::{Card, CardId, Color, Kind, Symbol};
 pub use error::{CreateError, Rejection, StepError};
 pub use game::{Game, Intent, Must, Phase, PlayerView, XrayShown};

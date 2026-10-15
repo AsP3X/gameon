@@ -38,7 +38,8 @@ pub enum Color {
 }
 
 impl Color {
-    pub(crate) const ALL: [Self; 4] = [Self::Red, Self::Blue, Self::Green, Self::Yellow];
+    /// Red, blue, green, yellow.
+    pub const ALL: [Self; 4] = [Self::Red, Self::Blue, Self::Green, Self::Yellow];
 }
 
 /// What is printed on a card, apart from its colour.

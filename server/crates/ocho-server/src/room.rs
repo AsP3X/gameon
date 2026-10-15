@@ -4,8 +4,9 @@
 
 use std::collections::HashMap;
 use std::sync::Arc;
+use std::time::Duration;
 
-use ocho_engine::{Color, Game, Intent, PlayerView, Rng};
+use ocho_engine::{BotLevel, Color, Game, Intent, Must, Phase, PlayerView, Rng, choose};
 use rand::Rng as _;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -47,6 +48,10 @@ struct Lobby {
     players: u8,
     teams: bool,
     first_to_500: bool,
+    /// Set when the host asked for bots. Every other seat is one.
+    bots: Option<BotLevel>,
+    /// Hand number a bot is waiting to deal, so a second pause does not deal twice.
+    bot_deal: Option<u32>,
     members: Vec<Member>,
     table: Option<Table>,
 }
@@ -55,12 +60,18 @@ struct Member {
     user: String,
     name: String,
     ready: bool,
+    bot: Option<BotLevel>,
 }
 
 struct Table {
     game: Game,
     seats: Vec<String>,
+    /// `None` is a person. The index is the seat.
+    bots: Vec<Option<BotLevel>>,
 }
+
+/// How long a bot waits on the score before dealing the next hand.
+const BOT_DEAL_PAUSE: Duration = Duration::from_secs(4);
 
 struct OsRng;
 
@@ -92,6 +103,9 @@ pub enum ClientMsg {
         /// `one` or `to500`.
         #[serde(rename = "match")]
         match_kind: MatchKind,
+        /// Fill every seat but the host with a bot of this level. Absent means a friends table.
+        #[serde(default)]
+        bots: Option<BotLevel>,
     },
     /// Join with a code.
     #[serde(rename = "ocho.join")]
@@ -219,6 +233,9 @@ pub struct LobbyView {
     pub teams: bool,
     /// First to 500 when true. One hand when false.
     pub first_to_500: bool,
+    /// The bots' level, when the host filled the other seats with bots.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub bots: Option<BotLevel>,
     /// Who has sat down.
     pub members: Vec<MemberView>,
     /// True once the first hand is dealt.
@@ -235,6 +252,8 @@ pub struct MemberView {
     pub name: String,
     /// Ready for the deal.
     pub ready: bool,
+    /// This seat is a bot. A friends table sends false.
+    pub bot: bool,
 }
 
 impl ServerMsg {
@@ -339,7 +358,7 @@ impl Room {
     }
 
     /// Handle one command. The seat is `user`, never a field of the message.
-    pub async fn handle(&self, user: &User, msg: ClientMsg) {
+    pub async fn handle(self: &Arc<Self>, user: &User, msg: ClientMsg) {
         self.step_and_publish(user, msg).await;
     }
 
@@ -360,7 +379,23 @@ impl Room {
     }
 }
 
-type StepOk = (u64, Option<LobbyView>, bool);
+struct StepOk {
+    re: u64,
+    lobby: Option<LobbyView>,
+    publish: bool,
+    /// A bot went out on this hand and should deal after [`BOT_DEAL_PAUSE`].
+    bot_deal: Option<u32>,
+}
+
+fn done(re: u64, lobby: Option<LobbyView>, publish: bool) -> StepOk {
+    StepOk {
+        re,
+        lobby,
+        publish,
+        bot_deal: None,
+    }
+}
+
 type StepErr = (u64, &'static str, &'static str);
 
 fn detach_socket(inner: &mut Inner, user: &str, generation: u64) {
@@ -375,13 +410,13 @@ fn detach_socket(inner: &mut Inner, user: &str, generation: u64) {
 
 fn hello(inner: &Inner, user: &str, id: u64) -> StepOk {
     let Some(lobby_id) = inner.seated.get(user) else {
-        return (id, None, false);
+        return done(id, None, false);
     };
     let Some(lobby) = inner.lobbies.get(lobby_id) else {
-        return (id, None, false);
+        return done(id, None, false);
     };
     let started = lobby.table.is_some();
-    (id, Some(lobby_view(lobby)), started)
+    done(id, Some(lobby_view(lobby)), started)
 }
 
 fn create(
@@ -391,6 +426,7 @@ fn create(
     players: u8,
     teams: bool,
     first_to_500: bool,
+    bots: Option<BotLevel>,
 ) -> Result<StepOk, StepErr> {
     if inner.seated.contains_key(&user.id) {
         return Err((id, "ALREADY_SEATED", "You are already at a table."));
@@ -404,6 +440,27 @@ fn create(
     }
     let lobby_id = fresh_id();
     let code = fresh_code(&inner.codes);
+    let mut members = vec![Member {
+        user: user.id.clone(),
+        name: user.name.clone(),
+        ready: false,
+        bot: None,
+    }];
+    // Human: One person, and a bot in every other seat. Those seats are already ready.
+    // Agent: WRITES members for seats 1..players. Does not insert bot ids into seated.
+    if let Some(level) = bots {
+        let mut names = vec![user.name.clone()];
+        for seat in 1..players {
+            let name = bot_name(&names);
+            names.push(name.clone());
+            members.push(Member {
+                user: format!("bot-{lobby_id}-{seat}"),
+                name,
+                ready: true,
+                bot: Some(level),
+            });
+        }
+    }
     let lobby = Lobby {
         id: lobby_id.clone(),
         code: code.clone(),
@@ -411,18 +468,16 @@ fn create(
         players,
         teams,
         first_to_500,
-        members: vec![Member {
-            user: user.id.clone(),
-            name: user.name.clone(),
-            ready: false,
-        }],
+        bots,
+        bot_deal: None,
+        members,
         table: None,
     };
     inner.codes.insert(code, lobby_id.clone());
     inner.seated.insert(user.id.clone(), lobby_id.clone());
     let view = lobby_view(&lobby);
     inner.lobbies.insert(lobby_id, lobby);
-    Ok((id, Some(view), false))
+    Ok(done(id, Some(view), false))
 }
 
 fn join(inner: &mut Inner, user: &User, id: u64, code: &str) -> Result<StepOk, StepErr> {
@@ -442,10 +497,11 @@ fn join(inner: &mut Inner, user: &User, id: u64, code: &str) -> Result<StepOk, S
         user: user.id.clone(),
         name: user.name.clone(),
         ready: false,
+        bot: None,
     });
     inner.seated.insert(user.id.clone(), lobby_id);
     let view = lobby_view(lobby);
-    Ok((id, Some(view), false))
+    Ok(done(id, Some(view), false))
 }
 
 fn leave(inner: &mut Inner, user: &User, id: u64) -> Result<StepOk, StepErr> {
@@ -453,7 +509,7 @@ fn leave(inner: &mut Inner, user: &User, id: u64) -> Result<StepOk, StepErr> {
         return Err((id, "NOT_SEATED", "You are not at a table."));
     };
     let Some(lobby) = inner.lobbies.get_mut(&lobby_id) else {
-        return Ok((id, None, false));
+        return Ok(done(id, None, false));
     };
     let still_playing = lobby
         .table
@@ -464,22 +520,21 @@ fn leave(inner: &mut Inner, user: &User, id: u64) -> Result<StepOk, StepErr> {
         return Err((id, "GAME_RUNNING", "The hand is still going."));
     }
     lobby.members.retain(|member| member.user != user.id);
-    let empty = lobby.members.is_empty();
+    let no_human = lobby.members.iter().all(|member| member.bot.is_some());
     let code = lobby.code.clone();
-    let view = lobby_view(lobby);
-    if empty {
+    if no_human {
         inner.lobbies.remove(&lobby_id);
         inner.codes.remove(&code);
-        return Ok((id, None, false));
+        return Ok(done(id, None, false));
     }
-    if view.host == user.id
-        && let Some(lobby) = inner.lobbies.get_mut(&lobby_id)
-        && let Some(next) = lobby.members.first()
+    if let Some(lobby) = inner.lobbies.get_mut(&lobby_id)
+        && lobby.host == user.id
+        && let Some(next) = lobby.members.iter().find(|member| member.bot.is_none())
     {
         lobby.host = next.user.clone();
     }
     let view = inner.lobbies.get(&lobby_id).map(lobby_view);
-    Ok((id, view, false))
+    Ok(done(id, view, false))
 }
 
 fn set_ready(inner: &mut Inner, user: &User, id: u64, ready: bool) -> Result<StepOk, StepErr> {
@@ -496,7 +551,7 @@ fn set_ready(inner: &mut Inner, user: &User, id: u64, ready: bool) -> Result<Ste
     };
     member.ready = ready;
     let view = lobby_view(lobby);
-    Ok((id, Some(view), false))
+    Ok(done(id, Some(view), false))
 }
 
 fn start(inner: &mut Inner, user: &User, id: u64) -> Result<StepOk, StepErr> {
@@ -522,38 +577,49 @@ fn start(inner: &mut Inner, user: &User, id: u64) -> Result<StepOk, StepErr> {
     {
         return Err((id, "NOT_READY", "Every seat has to be filled and ready."));
     }
-    let game = Game::create(lobby.players, lobby.teams, lobby.first_to_500, &mut OsRng)
+    let mut game = Game::create(lobby.players, lobby.teams, lobby.first_to_500, &mut OsRng)
         .map_err(|_| (id, "VALIDATION", "Those settings cannot be dealt."))?;
-    let seats = lobby
+    let seats: Vec<String> = lobby
         .members
         .iter()
         .map(|member| member.user.clone())
         .collect();
-    lobby.table = Some(Table { game, seats });
+    let bots: Vec<Option<BotLevel>> = lobby.members.iter().map(|member| member.bot).collect();
+    let pause = bots_until_a_player(&mut game, &bots, &mut OsRng);
+    lobby.bot_deal = pause;
+    lobby.table = Some(Table { game, seats, bots });
     let view = lobby_view(lobby);
-    Ok((id, Some(view), true))
+    let mut step = done(id, Some(view), true);
+    step.bot_deal = pause;
+    Ok(step)
 }
 
 fn act(inner: &mut Inner, user: &User, id: u64, intent: Intent) -> Result<StepOk, StepErr> {
     let lobby = lobby_of(inner, &user.id).ok_or((id, "NOT_SEATED", "You are not at a table."))?;
-    let table = lobby
-        .table
-        .as_mut()
-        .ok_or((id, "NOT_STARTED", "The hand has not started."))?;
-    let Some(seat) = table.seats.iter().position(|seated| seated == &user.id) else {
-        return Err((id, "NOT_SEATED", "You are not at a table."));
+    let pause = {
+        let table = lobby
+            .table
+            .as_mut()
+            .ok_or((id, "NOT_STARTED", "The hand has not started."))?;
+        let Some(seat) = table.seats.iter().position(|seated| seated == &user.id) else {
+            return Err((id, "NOT_SEATED", "You are not at a table."));
+        };
+        let seat = u8::try_from(seat).map_err(|_| (id, "VALIDATION", "Seat is out of range."))?;
+        table
+            .game
+            .act(seat, intent, &mut OsRng)
+            .map_err(|err| match err {
+                ocho_engine::StepError::Rejected(rejection) => {
+                    (id, rejection.code(), "That move is not legal.")
+                }
+                ocho_engine::StepError::Broken => (id, "INTERNAL", "The hand could not continue."),
+            })?;
+        bots_until_a_player(&mut table.game, &table.bots, &mut OsRng)
     };
-    let seat = u8::try_from(seat).map_err(|_| (id, "VALIDATION", "Seat is out of range."))?;
-    table
-        .game
-        .act(seat, intent, &mut OsRng)
-        .map_err(|err| match err {
-            ocho_engine::StepError::Rejected(rejection) => {
-                (id, rejection.code(), "That move is not legal.")
-            }
-            ocho_engine::StepError::Broken => (id, "INTERNAL", "The hand could not continue."),
-        })?;
-    Ok((id, None, true))
+    lobby.bot_deal = pause;
+    let mut step = done(id, None, true);
+    step.bot_deal = pause;
+    Ok(step)
 }
 
 fn lobby_of<'a>(inner: &'a mut Inner, user: &str) -> Option<&'a mut Lobby> {
@@ -569,6 +635,7 @@ fn lobby_view(lobby: &Lobby) -> LobbyView {
         players: lobby.players,
         teams: lobby.teams,
         first_to_500: lobby.first_to_500,
+        bots: lobby.bots,
         members: lobby
             .members
             .iter()
@@ -576,6 +643,7 @@ fn lobby_view(lobby: &Lobby) -> LobbyView {
                 user: member.user.clone(),
                 name: member.name.clone(),
                 ready: member.ready,
+                bot: member.bot.is_some(),
             })
             .collect(),
         started: lobby.table.is_some(),
@@ -685,24 +753,32 @@ impl Room {
 
 // `step` cannot call `publish_views` while it holds the lock. `handle` does, when the flag is set.
 impl Room {
-    async fn step_and_publish(&self, user: &User, msg: ClientMsg) {
+    async fn step_and_publish(self: &Arc<Self>, user: &User, msg: ClientMsg) {
         let views = {
             let mut inner = self.inner.lock().await;
             match dispatch(&mut inner, user, msg) {
-                Ok((re, lobby, publish)) => {
-                    let sockets = sockets_for(&inner, lobby.as_ref());
-                    (re, lobby, sockets, publish, None)
+                Ok(step) => {
+                    let sockets = sockets_for(&inner, step.lobby.as_ref());
+                    (
+                        step.re,
+                        step.lobby,
+                        sockets,
+                        step.publish,
+                        step.bot_deal,
+                        None,
+                    )
                 }
                 Err((re, code, message)) => (
                     re,
                     None,
                     Vec::new(),
                     false,
+                    None,
                     Some(ServerMsg::err(re, code, message)),
                 ),
             }
         };
-        let (re, lobby, sockets, publish, err) = views;
+        let (re, lobby, sockets, publish, bot_deal, err) = views;
         if let Some(err) = err {
             self.send(&user.id, &err).await;
             return;
@@ -713,6 +789,62 @@ impl Room {
         }
         if publish {
             self.publish_views(&user.id).await;
+        }
+        if let Some(hand_no) = bot_deal {
+            self.schedule_bot_deal(&user.id, hand_no);
+        }
+    }
+
+    fn schedule_bot_deal(self: &Arc<Self>, user_id: &str, hand_no: u32) {
+        let room = Arc::clone(self);
+        let user_id = user_id.to_owned();
+        tokio::spawn(async move {
+            tokio::time::sleep(BOT_DEAL_PAUSE).await;
+            room.deal_for_bot(&user_id, hand_no).await;
+        });
+    }
+
+    /// Deal the next hand for a bot who went out, then play bots up to a person.
+    async fn deal_for_bot(self: &Arc<Self>, user_id: &str, hand_no: u32) {
+        // Human: The score stays up briefly. Then the bot deals, and bots play until a person must act.
+        // Agent: READS bot_deal and the per-seat view; WRITES the next hand; does not hold the lock across the pause.
+        let next = {
+            let mut inner = self.inner.lock().await;
+            let Some(lobby_id) = inner.seated.get(user_id).cloned() else {
+                return;
+            };
+            let Some(lobby) = inner.lobbies.get_mut(&lobby_id) else {
+                return;
+            };
+            if lobby.bot_deal != Some(hand_no) {
+                return;
+            }
+            let dealt = (|| {
+                let table = lobby.table.as_mut()?;
+                let probe = table.game.view(0).ok()?;
+                if probe.phase != Phase::Between || probe.hand_no != hand_no {
+                    return None;
+                }
+                let turn = probe.turn;
+                table.bots.get(usize::from(turn)).copied().flatten()?;
+                table.game.act(turn, Intent::Next, &mut OsRng).ok()?;
+                Some(bots_until_a_player(
+                    &mut table.game,
+                    &table.bots,
+                    &mut OsRng,
+                ))
+            })();
+            let Some(pause) = dealt else {
+                tracing::error!("ocho bot could not deal");
+                lobby.bot_deal = None;
+                return;
+            };
+            lobby.bot_deal = pause;
+            pause
+        };
+        self.publish_views(user_id).await;
+        if let Some(hand_no) = next {
+            self.schedule_bot_deal(user_id, hand_no);
         }
     }
 }
@@ -725,6 +857,7 @@ fn dispatch(inner: &mut Inner, user: &User, msg: ClientMsg) -> Result<StepOk, St
             players,
             teams,
             match_kind,
+            bots,
         } => create(
             inner,
             user,
@@ -732,6 +865,7 @@ fn dispatch(inner: &mut Inner, user: &User, msg: ClientMsg) -> Result<StepOk, St
             players,
             teams,
             matches!(match_kind, MatchKind::To500),
+            bots,
         ),
         ClientMsg::Join { id, code } => join(inner, user, id, &code),
         ClientMsg::Leave { id } => leave(inner, user, id),
@@ -753,10 +887,61 @@ fn dispatch(inner: &mut Inner, user: &User, msg: ClientMsg) -> Result<StepOk, St
     }
 }
 
+/// Play bot seats until a person must act, or a bot has to deal the next hand.
+fn bots_until_a_player(
+    game: &mut Game,
+    bots: &[Option<BotLevel>],
+    rng: &mut impl Rng,
+) -> Option<u32> {
+    // Human: Bots play through their turns. A bot who went out leaves the score up instead of dealing at once.
+    // Agent: READS one seat's PlayerView; CALLS choose and Game::act; never reads another seat's hand. RETURNS that hand number, or None.
+    for _ in 0..1_024 {
+        if game.is_over() {
+            return None;
+        }
+        let Ok(probe) = game.view(0) else {
+            tracing::error!("ocho bot could not see the table");
+            return None;
+        };
+        let level = bots.get(usize::from(probe.turn)).copied().flatten()?;
+        let Ok(view) = game.view(probe.turn) else {
+            tracing::error!("ocho bot could not see its seat");
+            return None;
+        };
+        if view.must == Must::None {
+            return None;
+        }
+        if view.must == Must::NextHand {
+            return Some(view.hand_no);
+        }
+        let Ok(intent) = choose(&view, level, rng) else {
+            tracing::error!("ocho bot could not choose");
+            return None;
+        };
+        if game.act(probe.turn, intent, rng).is_err() {
+            tracing::error!("ocho bot could not move");
+            return None;
+        }
+    }
+    tracing::error!("ocho bots did not reach a player");
+    None
+}
+
+fn bot_name(used: &[String]) -> String {
+    const NAMES: [&str; 8] = ["Nico", "Luz", "Sol", "Noor", "Jules", "Rio", "Quinn", "Ada"];
+    NAMES
+        .into_iter()
+        .find(|name| !used.iter().any(|taken| taken == *name))
+        .map_or_else(|| format!("Bot {}", used.len()), str::to_owned)
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{Inner, Socket, Table, User, create, detach_socket, hello, leave};
-    use ocho_engine::Game;
+    use super::{
+        Inner, Socket, Table, User, bots_until_a_player, create, detach_socket, hello, join, leave,
+        set_ready, start,
+    };
+    use ocho_engine::{BotLevel, Game, Phase};
     use std::collections::HashMap;
     use tokio::sync::mpsc;
 
@@ -789,10 +974,10 @@ mod tests {
     #[test]
     fn hello_repeats_a_lobby_that_has_not_dealt() {
         let mut inner = empty();
-        create(&mut inner, &user("host"), 1, 2, false, false).expect("create");
-        let (_id, lobby, views) = hello(&inner, "host", 2);
-        assert!(lobby.is_some());
-        assert!(!views);
+        create(&mut inner, &user("host"), 1, 2, false, false, None).expect("create");
+        let step = hello(&inner, "host", 2);
+        assert!(step.lobby.is_some());
+        assert!(!step.publish);
     }
 
     #[test]
@@ -824,14 +1009,71 @@ mod tests {
     fn leave_refuses_a_live_hand() {
         let mut inner = empty();
         let host = user("host");
-        create(&mut inner, &host, 1, 2, false, false).expect("create");
+        create(&mut inner, &host, 1, 2, false, false, None).expect("create");
         let lobby_id = inner.seated[&host.id].clone();
         inner.lobbies.get_mut(&lobby_id).expect("lobby").table = Some(Table {
             game: Game::create(2, false, true, &mut Seq(0)).expect("game"),
             seats: vec!["host".to_owned(), "other".to_owned()],
+            bots: vec![None, None],
         });
         let err = leave(&mut inner, &host, 4);
         assert!(err.is_err());
         assert!(inner.seated.contains_key("host"));
+    }
+
+    #[test]
+    fn bots_fill_every_other_seat_and_play_up_to_the_host() {
+        let mut inner = empty();
+        let host = user("host");
+        let step =
+            create(&mut inner, &host, 1, 4, true, true, Some(BotLevel::Hard)).expect("create");
+        let lobby = step.lobby.expect("lobby");
+        assert_eq!(lobby.bots, Some(BotLevel::Hard));
+        assert_eq!(lobby.members.len(), 4);
+        assert!(!lobby.members[0].bot);
+        assert!(lobby.members[1].bot && lobby.members[1].ready);
+        assert_ne!(lobby.members[2].name, lobby.members[3].name);
+        let err = join(&mut inner, &user("guest"), 2, &lobby.code);
+        assert!(err.is_err());
+        set_ready(&mut inner, &host, 3, true).expect("ready");
+        let started = start(&mut inner, &host, 4).expect("start");
+        assert!(started.publish);
+        let lobby_id = inner.seated[&host.id].clone();
+        let table = inner.lobbies[&lobby_id].table.as_ref().expect("table");
+        let view = table.game.view(0).expect("view");
+        match view.phase {
+            Phase::Between | Phase::Over => {}
+            Phase::ChooseColor | Phase::Turn | Phase::Drawn => {
+                assert!(table.bots[usize::from(view.turn)].is_none());
+            }
+        }
+        assert!(view.partner_hand.is_some());
+    }
+
+    #[test]
+    fn leaving_a_bot_table_drops_it_when_no_person_remains() {
+        let mut inner = empty();
+        let host = user("host");
+        create(&mut inner, &host, 1, 3, false, false, Some(BotLevel::Easy)).expect("create");
+        leave(&mut inner, &host, 2).expect("leave");
+        assert!(inner.seated.is_empty());
+        assert!(inner.lobbies.is_empty());
+    }
+
+    #[test]
+    fn bots_stop_on_the_human_for_a_pair_and_for_eight() {
+        for players in [2u8, 8] {
+            let mut game = Game::create(players, false, false, &mut Seq(4)).expect("game");
+            let bots: Vec<Option<BotLevel>> = (0..players)
+                .map(|seat| (seat > 0).then_some(BotLevel::Normal))
+                .collect();
+            let pause = bots_until_a_player(&mut game, &bots, &mut Seq(8));
+            let view = game.view(0).expect("view");
+            if pause.is_some() {
+                assert_eq!(view.phase, Phase::Between);
+            } else if view.phase != Phase::Over {
+                assert_eq!(view.turn, 0);
+            }
+        }
     }
 }
