@@ -527,7 +527,9 @@ function Centre({ view }: { view: View }) {
   );
 }
 
-/** The four colours round the wheel, in the order they are read out: red, blue, green, yellow. */
+/** The wild itself, grown large: the face of `CardFace`, and the four quarters of its wheel are the
+    buttons, in the order they are read out: red, blue, green, yellow. The black middle is not a
+    colour. A click on the dimmed table, or Escape, puts the card back. */
 function Namer({
   card,
   busy,
@@ -557,32 +559,31 @@ function Namer({
   }, []);
   return (
     <div className="oc-namer">
-      <span ref={dimRef} className="oc-namer-dim" aria-hidden="true"></span>
+      <span ref={dimRef} className="oc-namer-dim" aria-hidden="true" onClick={onBack}></span>
       <div ref={cardRef} className="oc-card black oc-namer-card">
         <small className="oc-corner" aria-hidden="true">
           {cornerOf(card.kind)}
         </small>
-        <div className="oc-namer-wheel" role="group" aria-label="Name a color">
-          {COLORS.map((c) => (
-            <button
-              key={c}
-              ref={c === 'red' ? first : undefined}
-              type="button"
-              className={`oc-quadrant ${c}`}
-              disabled={busy}
-              onClick={() => onPick(c)}
-            >
-              {COLOR_NAME[c]}
-            </button>
-          ))}
-          <span className="oc-namer-sign" aria-hidden="true">
-            <WheelSign kind={card.kind} />
+        <span className="oc-mid">
+          <span className="oc-wheel oc-namer-wheel">
+            <span className="oc-namer-slices" role="group" aria-label="Name a color">
+              {COLORS.map((c) => (
+                <button
+                  key={c}
+                  ref={c === 'red' ? first : undefined}
+                  type="button"
+                  className={`oc-slice ${c}`}
+                  aria-label={COLOR_NAME[c]}
+                  disabled={busy}
+                  onClick={() => onPick(c)}
+                ></button>
+              ))}
+            </span>
+            <span className="oc-namer-hub" aria-hidden="true">
+              <WheelSign kind={card.kind} />
+            </span>
           </span>
-        </div>
-        <button type="button" className="oc-namer-back" onClick={onBack}>
-          <Icon name="chevronLeft" />
-          Back
-        </button>
+        </span>
       </div>
     </div>
   );

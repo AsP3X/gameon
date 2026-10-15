@@ -34,6 +34,14 @@ const button = (label: string): HTMLButtonElement => {
   if (!el) throw new Error(`No button says "${label}"`);
   return el;
 };
+/** A click on the dimmed table, outside the colour card. */
+async function clickOutside(): Promise<void> {
+  await act(async () => {
+    $('.oc-namer-dim')?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    await vi.advanceTimersByTimeAsync(0);
+  });
+}
+
 async function press(label: string): Promise<void> {
   const el = button(label);
   if (el.disabled) throw new Error(`"${label}" is disabled`);
@@ -245,8 +253,14 @@ describe('the table', () => {
     expect($('[role="dialog"]')).toBeNull();
     const wheel = $('.oc-namer [role="group"]');
     expect(wheel?.getAttribute('aria-label')).toBe('Name a color');
-    expect(texts('.oc-namer .oc-quadrant')).toEqual(['Red', 'Blue', 'Green', 'Yellow']);
-    expect(document.activeElement?.textContent).toBe('Red');
+    // The real wild, grown: its corner, its wheel and its eight; the quarters carry no words.
+    expect($('.oc-namer-card .oc-corner')?.textContent).toBe('WILD');
+    expect($('.oc-namer-card .oc-wheel .oc-namer-hub b')?.textContent).toBe('8');
+    const slices = $$('.oc-namer .oc-slice');
+    expect(slices.map((b) => b.getAttribute('aria-label'))).toEqual(['Red', 'Blue', 'Green', 'Yellow']);
+    expect(texts('.oc-namer .oc-slice')).toEqual(['', '', '', '']);
+    expect(texts('.oc-namer button').join('')).toBe('');
+    expect(document.activeElement?.getAttribute('aria-label')).toBe('Red');
     expect($('.oc-status')?.textContent).toBe('You played Ocho Wild · name the next color');
     expect($('[data-card="13"]')?.classList.contains('oc-away')).toBe(true);
     expect(sent()).toEqual([]);
@@ -255,11 +269,18 @@ describe('the table', () => {
     expect($('.oc-namer')).toBeNull();
   });
 
-  it('puts a wild back in the hand with Back or Escape, and sends nothing', async () => {
+  it('puts a wild back in the hand with a click outside it or Escape, and sends nothing', async () => {
     await atTable(aView());
     await press('Ocho Wild');
     await press('Play Ocho Wild');
-    await press('Back');
+    expect(Array.from(document.querySelectorAll('button')).some((b) => b.textContent === 'Back')).toBe(false);
+    // The black middle is not a colour.
+    await act(async () => {
+      $('.oc-namer-hub')?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect($('.oc-namer')).not.toBeNull();
+    await clickOutside();
     expect($('.oc-namer')).toBeNull();
     expect($('[data-card="13"]')?.classList.contains('oc-away')).toBe(false);
     // Still picked: the card came back, and Play names its colour again.
@@ -304,8 +325,9 @@ describe('the table', () => {
     await atTable(aView({ phase: 'chooseColor', must: 'chooseColor', top: card(30, null, 'wild'), symbol: 'color' }));
     expect($('.oc-namer [role="group"]')?.getAttribute('aria-label')).toBe('Name a color');
     expect($('.oc-status')?.textContent).toBe('Opening card: Ocho Wild · name the color');
-    await press('Back');
+    await clickOutside();
     expect($('.oc-namer')).toBeNull();
+    expect(sent()).toEqual([]);
     await press('Name the color');
     await press('Blue');
     expect(sent()).toEqual([{ t: 'ocho.color', color: 'blue' }]);

@@ -1001,7 +1001,8 @@
   align-items: flex-end;
 }
 
-/* The colour card: the wild grown large in the middle of the felt, its wheel four buttons. */
+/* The colour card: the wild itself grown large in the middle of the felt, the same face as in the
+   hand. The quarters of its wheel are the buttons; a click on the dim puts the card back. */
 .oc-felt {
   position: relative;
 }
@@ -1017,136 +1018,78 @@
   inset: 0;
   border-radius: inherit;
   background: color-mix(in srgb, var(--c-sk) 50%, transparent);
+  cursor: pointer;
 }
 .oc-felt .oc-namer-dim {
   border-radius: 24px;
 }
+/* Large enough that each quarter, with the black ground round the ring, is a 44 px target. */
 .oc-card.oc-namer-card {
-  --w: clamp(184px, 52vw, 230px);
-  height: auto;
-  min-height: calc(var(--w) * 1.433);
-  align-items: center;
-  gap: calc(var(--w) * 0.04);
-  padding: calc(var(--w) * 0.07);
+  --w: clamp(192px, 56vw, 240px);
   border-width: 3px;
   box-shadow: 0 14px 32px color-mix(in srgb, var(--c-sk) 35%, transparent);
 }
-.oc-card.oc-namer-card .oc-corner {
-  align-self: flex-start;
-  font-size: calc(var(--w) * 0.08);
-}
 .oc-namer-wheel {
   position: relative;
+}
+/* The four quarters lie over the wheel and reach past it to the edge of the card. */
+.oc-namer-slices {
+  position: absolute;
+  top: 50%;
+  left: 50%;
   display: grid;
   grid-template: 1fr 1fr / 1fr 1fr;
   grid-template-areas:
     'yellow red'
     'green  blue';
-  gap: 3px;
-  width: calc(var(--w) * 0.82);
+  width: calc(var(--w) * 0.84);
   aspect-ratio: 1;
-  border-radius: 50%;
-  overflow: hidden;
+  translate: -50% -50%;
+  clip-path: circle(50%);
 }
-.oc-quadrant {
-  display: grid;
-  place-items: center;
-  min-width: 44px;
-  min-height: 44px;
+.oc-slice {
   padding: 0;
   border: 0;
-  color: var(--c-black);
-  font: inherit;
-  font-size: calc(var(--w) * 0.056);
-  font-weight: 900;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  background: transparent;
   cursor: pointer;
-  transition:
-    filter 0.12s,
-    transform 0.12s var(--ease-out);
+  transition: background-color 0.12s;
 }
-/* Each name sits in the open part of its quarter, nudged away from the black middle. */
-.oc-quadrant.red {
+.oc-slice.red {
   grid-area: red;
-  background: var(--red);
-  padding: 0 12% 6% 0;
 }
-.oc-quadrant.blue {
+.oc-slice.blue {
   grid-area: blue;
-  background: var(--blue);
-  padding: 6% 12% 0 0;
 }
-.oc-quadrant.green {
+.oc-slice.green {
   grid-area: green;
-  background: var(--c-green);
-  padding: 6% 0 0 12%;
 }
-.oc-quadrant.yellow {
+.oc-slice.yellow {
   grid-area: yellow;
-  background: var(--c-yellow);
-  padding: 0 0 6% 12%;
 }
-.oc-quadrant:not([disabled]):hover {
-  filter: brightness(1.08);
+.oc-slice:not([disabled]):hover {
+  background: color-mix(in srgb, var(--white) 16%, transparent);
 }
-.oc-quadrant:not([disabled]):active {
-  transform: scale(0.96);
+.oc-slice:not([disabled]):active {
+  background: color-mix(in srgb, var(--white) 28%, transparent);
 }
-.oc-quadrant[disabled] {
+.oc-slice[disabled] {
   cursor: default;
 }
-.oc-quadrant:focus-visible {
+.oc-slice:focus-visible {
   outline: 4px solid var(--white);
   outline-offset: -6px;
 }
-.oc-namer-sign {
+/* The black middle is not a colour: it lies over the quarters and takes their clicks. */
+.oc-namer-hub {
   position: absolute;
-  inset: 31%;
+  inset: 0;
   display: grid;
   place-items: center;
+  margin: auto;
+  width: calc(var(--w) * 0.4);
+  height: calc(var(--w) * 0.4);
   border-radius: 50%;
   background: var(--c-black);
-  pointer-events: none;
-}
-.oc-namer-sign b {
-  font-size: calc(var(--w) * 0.15);
-}
-.oc-namer-sign svg {
-  width: 44%;
-  height: 44%;
-  fill: none;
-  stroke: var(--white);
-  stroke-width: 2.4;
-  stroke-linejoin: round;
-}
-.oc-namer-back {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  min-height: 44px;
-  margin-top: auto;
-  padding: 0 18px;
-  border: 2px solid var(--white);
-  border-radius: 99px;
-  background: transparent;
-  color: var(--white);
-  font: inherit;
-  font-size: 14px;
-  font-weight: 900;
-  cursor: pointer;
-  transition: transform 0.06s;
-}
-.oc-namer-back:active {
-  transform: translateY(2px);
-}
-.oc-namer-back:focus-visible {
-  outline: 3px solid var(--gold);
-  outline-offset: 2px;
-}
-.oc-namer-back .go-icon {
-  width: 16px;
-  height: 16px;
 }
 
 /* Whose turn it is: that seat stands on a card plate with the gold ring, and the ring breathes. */
@@ -1296,7 +1239,7 @@
 @media (prefers-reduced-motion: reduce) {
   .oc-hand-card,
   .oc-seat,
-  .oc-quadrant,
+  .oc-slice,
   .oc-choice,
   .oc-step,
   #gameon .oc-way,
