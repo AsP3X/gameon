@@ -6,6 +6,7 @@ import { AWARDS_TIGHT } from './awards';
 import { endDeal, paintDeal, startDeal } from './deal';
 import { $, $$ } from './dom';
 import { animateBar, countUp, flip, snapshot } from './motion';
+import type { Snapshot } from './motion';
 import { clearTimer, patchUi, placeNow, scoreView, stage, tableView, ui } from './state';
 import type { Screen, Sheet } from './state';
 import { trackScreen, trkResultsSheet, trkSetupView, trkView } from './tracker';
@@ -150,6 +151,39 @@ export function fitAwards(): void {
   if (turned) $$('.award', box).forEach((tile) => tile.classList.add('in'));
 }
 
+/**
+ * A player's action draws twice. The update draws what the table did, then the action draws again
+ * so the one-shot marks are not left on the picture. The second draw must fly from where the first
+ * one looked, or it finds the card already on the trick and throws the flight away with the first picture.
+ */
+type FlightHold = { phase: 'off' } | { phase: 'armed' } | { phase: 'held'; snap: Snapshot | null };
+let flight: FlightHold = { phase: 'off' };
+
+/** The next draw is the update's. Remember where things were, for the draw that follows it. */
+export function armPlayerDraw(): void {
+  flight = { phase: 'armed' };
+}
+
+/**
+ * Draw the picture a player's action ends on. If the update already drew, cards that were already
+ * on screen fly from where that draw found them. Cards that appeared in that draw keep the fresh
+ * snapshot, which is what the second draw of the legacy page animates.
+ */
+export function renderPlayerDraw(): void {
+  if (flight.phase === 'armed') flight = { phase: 'off' };
+  render();
+}
+
+function carriedFlight(fresh: Snapshot | null): Snapshot | null {
+  if (flight.phase !== 'held') return fresh;
+  const held = flight.snap;
+  if (!held) return fresh;
+  if (!fresh) return held;
+  const keys = new Map(fresh.keys);
+  for (const [key, rect] of held.keys) if (keys.has(key)) keys.set(key, rect);
+  return { keys, anchors: fresh.anchors };
+}
+
 export function render(): void {
   const app = stage.app;
   if (!app) return; // unmounted: a late timer or a finished animation has nothing to draw on
@@ -161,7 +195,10 @@ export function render(): void {
   // felt gets covered or left while a deal is shown, everything is simply where it ends up.
   if (ui.screen !== 'game' || ui.curtain || ui.sheet) endDeal();
   else if (ui.deal) startDeal(tableView());
-  const snap = ui.screen === 'game' && !ui.curtain ? snapshot() : null;
+  const taken = ui.screen === 'game' && !ui.curtain ? snapshot() : null;
+  const snap = carriedFlight(taken);
+  if (flight.phase === 'armed') flight = { phase: 'held', snap: taken };
+  else flight = { phase: 'off' };
   // A page that draws the home itself leaves the renderer nothing to draw there but a sheet.
   const blank = ui.screen === 'home' && stage.pageHome;
   let html = blank ? '' : VIEWS[ui.screen]();

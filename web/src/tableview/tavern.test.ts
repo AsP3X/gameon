@@ -153,6 +153,52 @@ describe('mountTavern', () => {
     expect(localStorage.getItem('skullking-tavern.game.v2')).not.toBeNull();
   });
 
+  it('flies a played card from the hand onto the trick, and that flight stays on the card', async () => {
+    mount();
+    startSoloGame();
+    await vi.advanceTimersByTimeAsync(3000);
+    key('#bid', '1');
+    click('[data-act="bid"]');
+    await vi.advanceTimersByTimeAsync(600);
+    await untilMyTurn();
+
+    // Motion is on, and the hand and the trick sit in different places, as they do on a laid-out page.
+    vi.stubGlobal('matchMedia', (query: string) => ({ matches: false, media: query }));
+    vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function (this: Element) {
+      if (this.classList.contains('hslot')) return new DOMRect(80, 640, 72, 100);
+      if (this.classList.contains('slot')) return new DOMRect(180, 280, 58, 110);
+      if (this.hasAttribute('data-anchor')) return new DOMRect(40, 80, 48, 48);
+      return new DOMRect(0, 0, 20, 20);
+    });
+    const flown: HTMLElement[] = [];
+    Object.defineProperty(Element.prototype, 'animate', {
+      configurable: true,
+      value(this: HTMLElement, keyframes: Keyframe[]) {
+        const first = keyframes[0];
+        const transform = first && 'transform' in first ? String(first.transform) : '';
+        if (this.classList.contains('slot') && transform.includes('translate(-100px,360px)')) flown.push(this);
+        return { finished: Promise.resolve() };
+      },
+    });
+
+    try {
+      const v = tableView();
+      const card = v.legal.find((id) => v.deck[id].kind !== 'tigress') ?? v.legal[0];
+      const slot = `.hand .hslot[data-id="${card}"]`;
+      click(slot);
+      if (v.deck[card].kind === 'tigress') click('[data-act="play"][data-as="pirate"]');
+      else click(slot);
+
+      // The update draws first and the action draws again. The flight has to be on the card that stays.
+      const live = flown.filter((el) => el.isConnected);
+      expect(live).toHaveLength(1);
+      expect(live[0].dataset.key).toBe(`c${card}`);
+      expect(app.querySelector(`.trick .slot[data-key="c${card}"]`)).toBe(live[0]);
+    } finally {
+      Reflect.deleteProperty(Element.prototype, 'animate');
+    }
+  });
+
   describe('the bid sheet', () => {
     const send = (): HTMLButtonElement => {
       const el = app.querySelector<HTMLButtonElement>('.bidsheet [data-act="bid"]');

@@ -15,7 +15,7 @@ import { $, reduced } from './dom';
 import type { ActionFn } from './dom';
 import { layout } from './layout';
 import { banner, collectTrick, finale, finishFinale, playFinale } from './motion';
-import { armMenuMusic, fitAwards, follow, go, render } from './render';
+import { armMenuMusic, armPlayerDraw, fitAwards, follow, go, render, renderPlayerDraw } from './render';
 import {
   BOT_NAMES,
   clearTimer,
@@ -364,8 +364,11 @@ function act(action: Action, undo?: () => void): void {
   const mine = ++sent,
     from = session.view;
   ui.waiting = true;
+  // The update draws before this returns when the table is on this device. That draw keeps where
+  // the cards were, and the draw below flies from there instead of from the trick.
+  armPlayerDraw();
   const answer = dispatchWithin(table, action);
-  render();
+  renderPlayerDraw();
   // On a table that still shows what the action was sent from, the player gets their pick back.
   const giveBack = (): void => {
     if (session.view === from) undo?.();
