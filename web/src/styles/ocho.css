@@ -1,0 +1,1332 @@
+/* Ocho's pages (src/ocho), as design/ocho.pen draws them: the cards, sit down, the table waiting,
+   the table, the match score and how to play. Every class is `oc-`: tavern.css styles `.card` and
+   much else for Skull King's table, and none of it is meant here. Tokens only. */
+
+.oc-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* ---------- cards ---------- */
+.oc-card {
+  --w: 60px;
+  position: relative;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  width: var(--w);
+  height: calc(var(--w) * 1.433);
+  padding: calc(var(--w) * 0.083) calc(var(--w) * 0.1);
+  border: 2px solid var(--white);
+  border-radius: calc(var(--w) * 0.167);
+  background: var(--c-black);
+  color: var(--white);
+  box-shadow: 0 2px 0 color-mix(in srgb, var(--c-sk) 18%, transparent);
+  font-weight: 900;
+  line-height: 1;
+  user-select: none;
+}
+.oc-card.sm {
+  --w: 22px;
+  border-width: 1px;
+  padding: 0;
+}
+.oc-card.lg {
+  --w: 72px;
+}
+.oc-card.red {
+  background: var(--red);
+}
+.oc-card.blue {
+  background: var(--blue);
+}
+.oc-card.green {
+  background: var(--c-green);
+}
+.oc-card.yellow {
+  background: var(--c-yellow);
+}
+.oc-corner {
+  font-size: calc(var(--w) * 0.2);
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+.oc-card:not(.oc-num) .oc-corner {
+  font-size: calc(var(--w) * 0.135);
+}
+.oc-mid {
+  flex: 1;
+  display: grid;
+  place-items: center;
+  min-height: 0;
+}
+.oc-face-big {
+  font-size: calc(var(--w) * 0.57);
+}
+.oc-face-mid {
+  font-size: calc(var(--w) * 0.4);
+}
+.oc-face-word {
+  font-size: calc(var(--w) * 0.19);
+  text-align: center;
+  line-height: 1.05;
+}
+.oc-face-sign {
+  width: calc(var(--w) * 0.55);
+  height: calc(var(--w) * 0.55);
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+/* The four colours round the wild's middle. */
+.oc-wheel {
+  display: grid;
+  place-items: center;
+  width: calc(var(--w) * 0.66);
+  height: calc(var(--w) * 0.66);
+  border-radius: 50%;
+  background:
+    radial-gradient(circle, var(--c-black) 0 calc(var(--w) * 0.2), transparent calc(var(--w) * 0.205)),
+    conic-gradient(var(--red) 0 25%, var(--blue) 0 50%, var(--c-green) 0 75%, var(--c-yellow) 0);
+}
+.oc-wheel b {
+  font-size: calc(var(--w) * 0.2);
+}
+.oc-wheel svg {
+  width: calc(var(--w) * 0.22);
+  height: calc(var(--w) * 0.22);
+  fill: none;
+  stroke: var(--white);
+  stroke-width: 2.6;
+  stroke-linejoin: round;
+}
+.oc-card.back {
+  align-items: center;
+  justify-content: center;
+  gap: calc(var(--w) * 0.03);
+  background: var(--c-black);
+}
+.oc-back-eight {
+  font-size: calc(var(--w) * 0.5);
+  color: var(--gold);
+}
+.oc-back-word {
+  font-size: calc(var(--w) * 0.14);
+  letter-spacing: 0.1em;
+  color: var(--gold);
+}
+.oc-card.sm .oc-corner,
+.oc-card.sm .oc-back-word {
+  display: none;
+}
+.oc-card.sm .oc-back-eight {
+  font-size: 13px;
+}
+/* A card as small as a line of text: X-Ray's cards, a partner's hand, the guide's specials. */
+.oc-mini {
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  width: 36px;
+  height: 48px;
+  border: 2px solid var(--white);
+  border-radius: 7px;
+  background: var(--c-black);
+  color: var(--white);
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0;
+  box-shadow: 0 1px 0 var(--line);
+}
+.oc-mini.red {
+  background: var(--red);
+}
+.oc-mini.blue {
+  background: var(--blue);
+}
+.oc-mini.green {
+  background: var(--c-green);
+}
+.oc-mini.yellow {
+  background: var(--c-yellow);
+}
+
+/* ---------- the shelf ---------- */
+.oc-fan {
+  display: flex;
+  justify-content: center;
+  padding-block: 18px;
+}
+.oc-fan > .oc-card {
+  --w: 74px;
+}
+.oc-fan > .oc-card + .oc-card {
+  margin-left: -22px;
+}
+.oc-fan > .oc-card:nth-child(1) {
+  transform: translateY(6%) rotate(-16deg);
+}
+.oc-fan > .oc-card:nth-child(2) {
+  transform: translateY(1.5%) rotate(-8deg);
+}
+.oc-fan > .oc-card:nth-child(4) {
+  transform: translateY(1.5%) rotate(8deg);
+}
+.oc-fan > .oc-card:nth-child(5) {
+  transform: translateY(6%) rotate(16deg);
+}
+/* Ocho featured in the landing's hero: the hand fills its card as Skull King's does. */
+.go-featured .oc-fan {
+  --oc-fan-w: clamp(84px, 8.6vw, 124px);
+  padding-block: calc(var(--oc-fan-w) * 0.16);
+}
+.go-featured .oc-fan > .oc-card {
+  --w: var(--oc-fan-w);
+}
+.go-featured .oc-fan > .oc-card + .oc-card {
+  margin-left: calc(var(--oc-fan-w) * -0.3);
+}
+.go-key.oc-key {
+  background: var(--c-black);
+  color: var(--gold);
+  font-size: calc(var(--k) * 0.6);
+  font-weight: 900;
+  line-height: 1;
+}
+.go-choices.oc-shelf-ways {
+  gap: 10px 12px;
+}
+
+/* ---------- pages ---------- */
+.oc-page {
+  min-height: 100dvh;
+  background: var(--bg);
+  color: var(--fg);
+}
+.oc-back-bar {
+  display: flex;
+  align-items: center;
+  min-height: 60px;
+  padding: 0 16px;
+  max-width: 1440px;
+  margin: 0 auto;
+}
+#gameon .oc-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 44px;
+  color: var(--blue-ink);
+  font-weight: 800;
+}
+.oc-back .go-icon {
+  width: 20px;
+  height: 20px;
+}
+.oc-banner {
+  width: 100%;
+}
+.oc-muted {
+  color: var(--muted);
+  font-size: 14px;
+}
+.oc-label {
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* Sit down, and the table waiting: one column on a phone, two side by side on a desk. */
+.oc-sit {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+  gap: 16px;
+  width: 100%;
+  max-width: 552px;
+  margin: 0 auto;
+  padding: 8px 16px 40px;
+}
+.oc-sit > .oc-banner {
+  grid-column: 1 / -1;
+}
+.oc-wait-head {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.oc-levels {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.oc-levels .oc-choice {
+  padding: 10px;
+}
+.oc-skill-text {
+  font-size: 15px;
+  color: var(--muted);
+}
+.oc-skill-text b {
+  color: var(--fg);
+  font-weight: 900;
+}
+.oc-row .oc-remove {
+  margin: -6px -8px -6px 0;
+}
+.oc-row .oc-remove .go-icon {
+  width: 20px;
+  height: 20px;
+}
+.oc-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 22px 20px;
+  border: 2px solid var(--line);
+  border-radius: 22px;
+  background: var(--card);
+}
+.oc-panel h1 {
+  font-size: 28px;
+  font-weight: 900;
+  line-height: 1.1;
+}
+.oc-panel h2:not(.oc-label) {
+  font-size: 18px;
+  font-weight: 900;
+}
+.oc-field {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.oc-stepper {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.oc-step {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border: 2px solid var(--line);
+  border-radius: 14px;
+  background: var(--card);
+  color: var(--fg);
+}
+.oc-step[disabled] {
+  background: var(--soft);
+  color: var(--faint);
+}
+.oc-step .go-icon {
+  width: 20px;
+  height: 20px;
+}
+.oc-step-value {
+  min-width: 32px;
+  text-align: center;
+  font-size: 26px;
+  font-weight: 900;
+}
+.oc-step-caption {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  color: var(--muted);
+}
+.oc-step-caption .go-icon {
+  width: 16px;
+  height: 16px;
+}
+.oc-choices {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.oc-choice {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  min-height: 64px;
+  padding: 10px 14px;
+  border: 2px solid var(--line);
+  border-radius: 14px;
+  background: var(--card);
+  color: var(--fg);
+  text-align: left;
+  box-shadow: 0 2px 0 var(--line);
+}
+.oc-choice b {
+  font-size: 15px;
+  font-weight: 900;
+}
+.oc-choice small {
+  font-size: 13px;
+  color: var(--muted);
+}
+.oc-choice.oc-on {
+  border-color: var(--blue);
+  background: var(--blue-bg);
+  box-shadow: 0 2px 0 var(--blue-d);
+}
+.oc-choice.oc-on b,
+.oc-choice.oc-on small {
+  color: var(--blue-ink);
+}
+.oc-note {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--muted);
+}
+.oc-note .go-icon {
+  width: 16px;
+  height: 16px;
+  flex: none;
+}
+.oc-join-row {
+  display: flex;
+  gap: 12px;
+}
+.oc-join-row .btn {
+  width: auto;
+  flex: none;
+}
+.oc-code-input {
+  flex: 1;
+  min-width: 0;
+  min-height: 52px;
+  padding: 0 14px;
+  border: 2px solid var(--line);
+  border-radius: var(--r);
+  background: var(--card);
+  color: var(--fg);
+  font: inherit;
+  font-size: 20px;
+  font-weight: 900;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+.oc-code {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 16px;
+  border-radius: 16px;
+  background: var(--soft);
+}
+.oc-code-value {
+  font-size: 34px;
+  font-weight: 900;
+  letter-spacing: 0.18em;
+}
+#gameon .oc-leave {
+  align-self: center;
+  min-height: 44px;
+  color: var(--blue-ink);
+  font-weight: 800;
+}
+
+/* Rows of players: the table waiting, the match score, X-Ray on a phone. */
+.oc-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 0;
+  list-style: none;
+}
+.oc-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  padding: 6px 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--card);
+}
+.oc-row > .avatar {
+  width: 32px;
+  height: 32px;
+  font-size: 14px;
+  box-shadow: inset 0 -3px 0 color-mix(in srgb, var(--c-sk) 18%, transparent);
+}
+.oc-row.oc-empty {
+  border-style: dashed;
+  color: var(--muted);
+}
+.oc-row.oc-lead {
+  border-color: var(--gold);
+  background: var(--gold-bg);
+}
+.oc-row.oc-lead .pill {
+  background: var(--card);
+}
+.oc-row-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.oc-row-text b {
+  font-size: 14px;
+  font-weight: 800;
+  font-weight: 900;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.oc-row-text small {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+}
+.oc-row .pill {
+  flex: none;
+  font-weight: 900;
+}
+.oc-total {
+  min-width: 44px;
+  text-align: right;
+  font-size: 20px;
+  font-weight: 900;
+}
+
+/* Avatars: one colour per seat, from the tokens. */
+.oc-tone-purple {
+  background: var(--purple);
+}
+.oc-tone-orange {
+  background: var(--orange);
+}
+.oc-tone-blue {
+  background: var(--blue);
+}
+.oc-tone-green {
+  background: var(--green);
+}
+.oc-tone-red {
+  background: var(--red);
+}
+.oc-tone-gold {
+  background: var(--gold);
+  color: var(--gold-ink);
+}
+.oc-tone-cpurple {
+  background: var(--c-purple);
+}
+.oc-tone-cgreen {
+  background: var(--c-green);
+}
+
+/* ---------- the table ---------- */
+.oc-top {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 68px;
+  padding: 0 16px;
+  border-bottom: 2px solid var(--line);
+}
+.oc-brand {
+  font-size: 22px;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+}
+.oc-hand-no {
+  flex: 1;
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--muted);
+}
+.oc-menu-btn svg {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+.oc-menu {
+  position: absolute;
+  z-index: 5;
+  top: 60px;
+  right: 12px;
+  display: flex;
+  flex-direction: column;
+  min-width: 200px;
+  padding: 6px;
+  border: 2px solid var(--line);
+  border-radius: 14px;
+  background: var(--card);
+  box-shadow: 0 4px 0 var(--line);
+}
+#gameon .oc-menu-item {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 12px;
+  border-radius: 10px;
+  color: var(--fg);
+  font-weight: 800;
+}
+#gameon .oc-menu-item:hover {
+  background: var(--soft);
+}
+.oc-table {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 12px 12px 24px;
+}
+/* The felt: the other seats round its edge, the piles in the middle. */
+.oc-felt {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-areas:
+    '.  t1 t2 t3 . '
+    'l1 c  c  c  r1'
+    'l2 c  c  c  r2';
+  gap: 12px 4px;
+  padding: 16px 8px;
+  border-radius: 24px;
+  background: var(--felt);
+}
+.oc-seats {
+  display: contents;
+}
+.oc-seat {
+  position: relative;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  text-align: center;
+}
+.oc-seat[data-slot='t1'] {
+  grid-area: t1;
+}
+.oc-seat[data-slot='t2'] {
+  grid-area: t2;
+}
+.oc-seat[data-slot='t3'] {
+  grid-area: t3;
+}
+.oc-seat[data-slot='l1'] {
+  grid-area: l1;
+}
+.oc-seat[data-slot='l2'] {
+  grid-area: l2;
+}
+.oc-seat[data-slot='r1'] {
+  grid-area: r1;
+}
+.oc-seat[data-slot='r2'] {
+  grid-area: r2;
+}
+.oc-seat .avatar {
+  outline: 3px solid transparent;
+  outline-offset: 2px;
+}
+.oc-seat.oc-turn .avatar {
+  outline-color: var(--gold);
+}
+.oc-seat-name {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  font-weight: 800;
+}
+.oc-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  font-weight: 900;
+}
+.oc-tag {
+  font-size: 11px;
+  font-weight: 900;
+  padding: 2px 8px;
+}
+.oc-partner-hand {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 2px;
+  max-width: 180px;
+}
+.oc-centre {
+  grid-area: c;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-width: 0;
+}
+.oc-centre-pills {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+.oc-match,
+.oc-direction,
+.oc-stack {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 99px;
+  background: var(--card);
+  border: 2px solid var(--line);
+  font-size: 13px;
+  font-weight: 900;
+}
+.oc-direction {
+  color: var(--blue-ink);
+}
+.oc-direction svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.oc-direction svg.ccw {
+  transform: scaleX(-1);
+}
+.oc-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}
+.oc-dot.red {
+  background: var(--red);
+}
+.oc-dot.blue {
+  background: var(--blue);
+}
+.oc-dot.green {
+  background: var(--c-green);
+}
+.oc-dot.yellow {
+  background: var(--c-yellow);
+}
+.oc-stack {
+  border-color: var(--red);
+  background: var(--red-bg);
+  color: var(--red-ink);
+}
+.oc-stack b {
+  font-size: 16px;
+}
+.oc-piles {
+  display: flex;
+  gap: 18px;
+}
+.oc-pile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+}
+.oc-pile figcaption {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--muted);
+}
+/* When drawing is the move, the pile is the button: its top card is ringed in gold. */
+.oc-pile-btn {
+  display: block;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: none;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: transform 0.16s var(--ease-out);
+}
+.oc-pile-btn:not([disabled]):hover {
+  transform: translateY(-3px);
+}
+.oc-pile-btn .oc-pile-top .oc-card,
+.oc-pile-btn .oc-pile-empty {
+  outline: 3px solid var(--gold);
+  outline-offset: 1px;
+}
+.oc-pile-btn:focus-visible {
+  outline: 3px solid var(--blue);
+  outline-offset: 4px;
+}
+.oc-pile-tap figcaption {
+  color: var(--fg);
+}
+.oc-xray-card {
+  display: inline-flex;
+}
+.oc-xray-note {
+  text-align: center;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--muted);
+}
+.oc-you {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 0 4px;
+}
+.oc-you b {
+  font-weight: 900;
+}
+.oc-you .pill {
+  font-weight: 900;
+}
+.oc-hand {
+  display: flex;
+  justify-content: center;
+  padding: 22px 8px 10px;
+  list-style: none;
+}
+/* A long hand overlaps instead of wrapping: each card's slot gives way, and the card keeps its size. */
+.oc-hand li {
+  flex: 0 1 64px;
+  min-width: 12px;
+  /* The fan: each card leans from the bottom of the hand; the page sets the angle and the drop. */
+  transform-origin: 50% 160%;
+}
+.oc-hand li:last-child {
+  flex-shrink: 0;
+}
+/* The card being named, or just sent, has left the hand: its place stays until the view moves on. */
+.oc-hand li.oc-away {
+  visibility: hidden;
+}
+.oc-hand-card {
+  display: block;
+  padding: 0;
+  border: 0;
+  background: none;
+  border-radius: 12px;
+  transition: transform 0.16s var(--ease-out);
+}
+.oc-hand-card:not([disabled]) {
+  cursor: pointer;
+}
+/* A card that may be played stands a little out of the fan; the lifted one stands out further, and a
+   second tap plays it. The card just drawn that plays starts lifted. */
+.oc-hand-card.oc-can {
+  transform: translateY(-6px);
+}
+.oc-hand-card:not([disabled]):hover,
+.oc-hand-card.oc-on {
+  transform: translateY(-16px);
+}
+.oc-hand-card.oc-on .oc-card {
+  outline: 3px solid var(--gold);
+  outline-offset: 1px;
+}
+/* A card that cannot be played now is washed over, not see-through: the hand overlaps. */
+.oc-hand-card.oc-dim .oc-card::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  background: color-mix(in srgb, var(--bg) 55%, transparent);
+}
+.oc-hand-card:focus-visible {
+  outline: 3px solid var(--blue);
+  outline-offset: 2px;
+}
+.oc-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding-top: 6px;
+}
+.oc-status {
+  text-align: center;
+  font-size: 15px;
+  font-weight: 800;
+}
+.oc-buttons {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+  max-width: 560px;
+}
+.oc-buttons .btn {
+  flex: 1;
+  min-width: 0;
+}
+/* ---------- the match score ---------- */
+.oc-score {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 20px 16px 32px;
+}
+.oc-score-head {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.oc-score-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.oc-score-head h1 {
+  font-size: 28px;
+  font-weight: 900;
+  line-height: 1.15;
+}
+.oc-score-head .pill {
+  font-weight: 900;
+}
+.oc-score-actions {
+  display: flex;
+  justify-content: center;
+}
+
+/* ---------- how to play ---------- */
+.oc-rules {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 1040px;
+  margin: 0 auto;
+  padding: 8px 16px 40px;
+}
+.oc-rules-head h1 {
+  font-size: 32px;
+  font-weight: 900;
+  line-height: 1.1;
+}
+.oc-rules-head p {
+  margin-top: 6px;
+  font-size: 16px;
+  color: var(--muted);
+}
+.oc-rules-cols,
+.oc-rules-col {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.oc-rule p {
+  font-size: 15px;
+  line-height: 1.55;
+}
+.oc-specials {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 0;
+  list-style: none;
+}
+.oc-specials li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.oc-specials li > span:last-child {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.oc-specials b {
+  font-size: 15px;
+  font-weight: 900;
+}
+.oc-specials small {
+  font-size: 14px;
+  color: var(--muted);
+}
+.oc-ways {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.oc-ways ul {
+  display: grid;
+  gap: 10px;
+  padding: 0;
+  list-style: none;
+}
+#gameon .oc-way {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 64px;
+  padding: 10px 12px;
+  border: 2px solid var(--line);
+  border-radius: 14px;
+  background: var(--card);
+  color: var(--fg);
+  box-shadow: 0 2px 0 var(--line);
+}
+.oc-way > .go-icon {
+  width: 20px;
+  height: 20px;
+  color: var(--faint);
+}
+
+/* ---------- the table in motion ---------- */
+.oc-table-page {
+  position: relative;
+}
+/* Flights: copies of cards over the table. motion.ts puts them here and takes them away. */
+.oc-fx {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  overflow: hidden;
+  pointer-events: none;
+}
+.oc-ghost {
+  position: absolute;
+  margin: 0;
+}
+.oc-ghost > .oc-card + .oc-card {
+  position: absolute;
+  inset: 0;
+}
+/* The draw pile: as many layers as the pile has tens of cards, up to ten. */
+.oc-stack-pile {
+  position: relative;
+  display: grid;
+  padding: 18px 0 0 9px;
+}
+.oc-stack-pile > * {
+  grid-area: 1 / 1;
+}
+.oc-layer,
+.oc-pile-empty {
+  width: var(--pile-w);
+  height: calc(var(--pile-w) * 1.433);
+  border-radius: calc(var(--pile-w) * 0.167);
+}
+.oc-layer {
+  border: 2px solid var(--white);
+  background: var(--c-black);
+  box-shadow: 0 1px 0 color-mix(in srgb, var(--c-sk) 25%, transparent);
+}
+.oc-pile-empty {
+  border: 2px dashed var(--line);
+}
+.oc-pile-top {
+  display: block;
+}
+.oc-piles {
+  --pile-w: 72px;
+  align-items: flex-end;
+}
+
+/* The colour card: the wild itself grown large in the middle of the felt, the same face as in the
+   hand. The quarters of its wheel are the buttons; a click on the dim puts the card back. */
+.oc-felt {
+  position: relative;
+}
+.oc-namer {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: grid;
+  place-items: center;
+}
+.oc-namer-dim {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: color-mix(in srgb, var(--c-sk) 50%, transparent);
+  cursor: pointer;
+}
+.oc-felt .oc-namer-dim {
+  border-radius: 24px;
+}
+/* Large enough that each quarter, with the black ground round the ring, is a 44 px target. */
+.oc-card.oc-namer-card {
+  --w: clamp(192px, 56vw, 240px);
+  border-width: 3px;
+  box-shadow: 0 14px 32px color-mix(in srgb, var(--c-sk) 35%, transparent);
+}
+.oc-namer-wheel {
+  position: relative;
+}
+/* The four quarters lie over the wheel and reach past it to the edge of the card. */
+.oc-namer-slices {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  display: grid;
+  grid-template: 1fr 1fr / 1fr 1fr;
+  grid-template-areas:
+    'yellow red'
+    'green  blue';
+  width: calc(var(--w) * 0.84);
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  clip-path: circle(50%);
+}
+.oc-slice {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  transition: background-color 0.12s;
+}
+.oc-slice.red {
+  grid-area: red;
+}
+.oc-slice.blue {
+  grid-area: blue;
+}
+.oc-slice.green {
+  grid-area: green;
+}
+.oc-slice.yellow {
+  grid-area: yellow;
+}
+.oc-slice:not([disabled]):hover {
+  background: color-mix(in srgb, var(--white) 16%, transparent);
+}
+.oc-slice:not([disabled]):active {
+  background: color-mix(in srgb, var(--white) 28%, transparent);
+}
+.oc-slice[disabled] {
+  cursor: default;
+}
+.oc-slice:focus-visible {
+  outline: 4px solid var(--white);
+  outline-offset: -6px;
+}
+/* The black middle is not a colour: it lies over the quarters and takes their clicks. */
+.oc-namer-hub {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  margin: auto;
+  width: calc(var(--w) * 0.4);
+  height: calc(var(--w) * 0.4);
+  border-radius: 50%;
+  background: var(--c-black);
+}
+
+/* Whose turn it is: that seat stands on a card plate with the gold ring, and the ring breathes. */
+.oc-seat {
+  padding: 6px 4px;
+  border: 2px solid transparent;
+  border-radius: 16px;
+  transition:
+    transform 0.24s var(--ease-out),
+    background-color 0.24s,
+    border-color 0.24s;
+}
+.oc-seat.oc-turn {
+  transform: translateY(-3px);
+  border-color: var(--gold);
+  background: var(--card);
+  box-shadow: 0 3px 0 var(--gold-d);
+}
+.oc-seat.oc-turn .avatar {
+  animation: oc-breathe 1.6s ease-in-out infinite;
+}
+@keyframes oc-breathe {
+  50% {
+    outline-offset: 4px;
+  }
+}
+/* What X-Ray showed and a partner's hand settle onto the seat. */
+.oc-xray-card,
+.oc-partner-hand {
+  animation: oc-settle 0.36s var(--ease-out) both;
+}
+@keyframes oc-settle {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) rotate(-6deg);
+  }
+}
+
+/* The hand and what it can do are one block: the buttons rise in when what you must do changes. */
+.oc-play {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.oc-buttons {
+  animation: oc-rise 0.24s var(--ease-out) both;
+}
+.oc-top,
+.oc-score-head,
+.oc-score-actions {
+  animation: oc-rise 0.32s var(--ease-out) both;
+}
+.oc-score-rows .oc-row {
+  animation: oc-rise 0.36s var(--ease-out) both;
+}
+.oc-score-rows .oc-row:nth-child(2) {
+  animation-delay: 60ms;
+}
+.oc-score-rows .oc-row:nth-child(3) {
+  animation-delay: 120ms;
+}
+.oc-score-rows .oc-row:nth-child(4) {
+  animation-delay: 180ms;
+}
+.oc-score-rows .oc-row:nth-child(n + 5) {
+  animation-delay: 240ms;
+}
+@keyframes oc-rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+/* Sit down and the table waiting: the choices they have press in. */
+.oc-choice,
+.oc-step,
+#gameon .oc-way {
+  transition:
+    transform 0.06s,
+    box-shadow 0.06s;
+}
+.oc-choice:active,
+.oc-step:not([disabled]):active,
+#gameon .oc-way:active {
+  transform: translateY(2px);
+  box-shadow: 0 0 0 transparent;
+}
+/* How to play: a sample card tilts under the pointer. */
+.oc-specials .oc-mini {
+  transition: transform 0.2s var(--ease-out);
+}
+.oc-specials li:hover .oc-mini {
+  transform: rotate(-8deg) translateY(-2px);
+}
+
+/* A phone: sit-down is the page itself, and the piles are smaller. */
+@media (max-width: 719px) {
+  .oc-sit .oc-panel {
+    padding: 0 4px;
+    border: 0;
+  }
+  .oc-sit .oc-join,
+  .oc-sit .oc-wait-side {
+    padding-top: 18px;
+    border-top: 2px solid var(--line);
+    border-radius: 0;
+  }
+  .oc-card.lg {
+    --w: 60px;
+  }
+  .oc-piles {
+    --pile-w: 60px;
+  }
+}
+@media (min-width: 720px) {
+  .oc-back-bar {
+    padding: 0 32px;
+  }
+  .oc-felt {
+    gap: 24px 12px;
+    padding: 28px 24px;
+  }
+  .oc-seat-name {
+    font-size: 13px;
+  }
+  .oc-card.lg {
+    --w: 80px;
+  }
+  .oc-piles {
+    --pile-w: 80px;
+  }
+  .oc-hand li {
+    flex-basis: 68px;
+  }
+  .oc-sit {
+    grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+    gap: 24px;
+    max-width: 1040px;
+    padding: 40px 32px 48px;
+  }
+  .oc-sit > .oc-wait-side {
+    position: sticky;
+    top: 16px;
+  }
+  .oc-table {
+    max-width: 1200px;
+    padding: 16px 24px 32px;
+  }
+  .oc-rules-cols {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+  }
+  .oc-ways ul {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+/* Reduced motion: nothing travels and nothing breathes; every state is there at once. */
+@media (prefers-reduced-motion: reduce) {
+  .oc-hand-card,
+  .oc-seat,
+  .oc-slice,
+  .oc-choice,
+  .oc-step,
+  #gameon .oc-way,
+  .oc-specials .oc-mini {
+    transition: none;
+  }
+  .oc-seat.oc-turn .avatar,
+  .oc-xray-card,
+  .oc-partner-hand,
+  .oc-buttons,
+  .oc-top,
+  .oc-score-head,
+  .oc-score-actions,
+  .oc-score-rows .oc-row {
+    animation: none;
+  }
+  .oc-hand-card:not([disabled]):hover,
+  .oc-pile-btn:not([disabled]):hover,
+  .oc-specials li:hover .oc-mini {
+    transform: none;
+  }
+  .oc-hand-card.oc-can {
+    transform: translateY(-6px);
+  }
+  .oc-hand-card.oc-on {
+    transform: translateY(-16px);
+  }
+}

@@ -25,9 +25,11 @@ exact command or decision that unblocks it.
    ([design sync](design-sync.md)).
 10. **No deprecated APIs, no data loss** — ([deprecated](no-deprecated-apis.md),
     [data safety](data-safety.md)).
-11. **Handover** — the prompt is written and printed. When Grok is handing to Claude, it is
-    delivered by running the Claude Code CLI
-    ([ownership and handover](ownership-and-handover.md)).
+11. **Handover** — when the other agent had a task, the initiator wrote the prompt and ran that
+    agent's local CLI ([ownership and handover](ownership-and-handover.md),
+    [agent routing](agent-routing.md)). No task means no handover file and no CLI call.
+12. **Routing** — UI and client work was done by Claude, and non-UI code by Grok, each through
+    that agent's local CLI. A fallback names the exception and quotes the CLI's output.
 
 ## Verification by change type
 

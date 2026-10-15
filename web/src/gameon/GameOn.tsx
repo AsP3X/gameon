@@ -9,8 +9,11 @@
    ladder and on another player's page, and gets a guest at Games, where they are on their way to
    a table. Nothing here decides anything about a
    game, a rating or a seat. */
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import type { Online, OnlineState } from '../net/online';
+import { OchoClient } from '../ocho/client';
+import { ochoTransport } from '../ocho/transport';
+import { OchoPage, OchoRules } from '../ocho/Ocho';
 import type { LobbyId } from '../protocol/generated';
 import { AT } from '../router/addresses';
 import type { FrameRoute } from '../router/addresses';
@@ -36,11 +39,17 @@ export interface GameOnProps {
   back: (fallback: string) => void;
   /** Sit down at a public table. The online screens take it from there. */
   onJoin: (id: LobbyId) => void;
+  /** Ocho's connection, kept by the page so a table outlasts a visit to another page. A frame
+      without one makes its own when it first needs it. */
+  ocho?: OchoClient;
 }
 
-export function GameOn({ online, state, route, go, up, back, onJoin }: GameOnProps) {
-  // At Games the player is on their way in: a browser without a session gets its guest there.
-  const who = useWho(online, state.me, route.page === 'games');
+export function GameOn({ online, state, route, go, up, back, onJoin, ocho: given }: GameOnProps) {
+  const [own] = useState(() => given ?? new OchoClient(ochoTransport));
+  const ocho = given ?? own;
+  // At Games and at Ocho's table the player is on their way in: a browser without a session gets
+  // its guest there. Ocho's server reads that session and makes none of its own.
+  const who = useWho(online, state.me, route.page === 'games' || route.page === 'ocho' || route.page === 'ochoTeams');
   const season = state.config ? state.config.season : undefined;
   const account = accountOf(who) != null;
 
@@ -57,7 +66,11 @@ export function GameOn({ online, state, route, go, up, back, onJoin }: GameOnPro
   return (
     <GoContext value={go}>
       <div id="gameon">
-        {route.page === 'games' ? (
+        {route.page === 'ocho' || route.page === 'ochoTeams' ? (
+          <OchoPage key={route.page} ocho={ocho} who={who} teams={route.page === 'ochoTeams'} go={go} />
+        ) : route.page === 'ochoRules' ? (
+          <OchoRules />
+        ) : route.page === 'games' ? (
           <Games online={online} who={who} seated={state.lobby != null} season={season} onJoin={onJoin} />
         ) : route.page === 'signUp' ? (
           <SignUp

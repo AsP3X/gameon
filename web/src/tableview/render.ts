@@ -4,7 +4,7 @@
 import { Sound } from '../sound/sound';
 import { AWARDS_TIGHT } from './awards';
 import { endDeal, paintDeal, startDeal } from './deal';
-import { $, $$ } from './dom';
+import { $, $$, sgn } from './dom';
 import { animateBar, countUp, flip, snapshot } from './motion';
 import type { Snapshot } from './motion';
 import { clearTimer, patchUi, placeNow, scoreView, stage, tableView, ui } from './state';
@@ -218,6 +218,12 @@ export function render(): void {
   if (ui.anim || ui.enter) {
     ui.anim = false;
     countUp();
+  } else {
+    // A redraw that is not the first showing (somebody else readied, say) shows the figures where
+    // the count would have ended, not the 0 it starts from.
+    $$('[data-count]', app).forEach((el) => {
+      el.textContent = (el.hasAttribute('data-plain') ? String : sgn)(Number(el.dataset.count));
+    });
   }
   patchUi({ enter: false, deal: false, reveal: false, bump: null, justSel: false, just: null });
 }

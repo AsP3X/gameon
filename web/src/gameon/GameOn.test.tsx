@@ -21,6 +21,7 @@ import { memoryPlaces } from '../router/places';
 import type { MemoryPlaces } from '../router/places';
 import { createRouter } from '../router/router';
 import { GameOn } from './GameOn';
+import { SLIDE_MS } from './Landing';
 
 function seeded(seed: number): () => number {
   let a = seed >>> 0;
@@ -266,6 +267,90 @@ describe('the landing', () => {
     expect($('#app')?.hidden).toBe(true);
     // Still nobody: playing offline takes no session either.
     expect((await session()).status).toBe(401);
+  });
+
+  it('turns the hero from Skull King to Ocho and back, each slide with its own Play', async () => {
+    await openAt('/');
+    const slides = (): { name: string | null; shown: boolean }[] =>
+      Array.from(document.querySelectorAll<HTMLElement>('.go-hero [aria-roledescription="slide"]'), (el) => ({
+        name: el.getAttribute('aria-label'),
+        shown: !el.hidden,
+      }));
+    const shown = (): HTMLElement | null => $('.go-hero [aria-roledescription="slide"]:not([hidden])');
+    const control = (label: string): HTMLElement => $(`.go-hero button[aria-label="${label}"]`) ?? host;
+    expect($('.go-hero')?.getAttribute('aria-roledescription')).toBe('carousel');
+    expect(slides()).toEqual([
+      { name: 'Skull King, 1 of 2', shown: true },
+      { name: 'Ocho, 2 of 2', shown: false },
+    ]);
+    expect(shown()?.querySelector('.pill.green')?.textContent).toBe('Skull King is live');
+    expect(shown()?.querySelector('.go-actions a')?.getAttribute('href')).toBe('/skull-king');
+    expect(control('Show Skull King').getAttribute('aria-current')).toBe('true');
+
+    await clickOn(control('Next game'));
+    expect(slides().map((s) => s.shown)).toEqual([false, true]);
+    const ocho = shown();
+    expect(ocho?.querySelector('.pill.green')?.textContent).toBe('Ocho is live');
+    expect(ocho?.querySelector('.go-actions a')?.textContent).toBe('Play Ocho');
+    expect(ocho?.querySelector('.go-actions a')?.getAttribute('href')).toBe('/games/ocho');
+    expect(ocho?.querySelector('a[aria-label="Play Ocho now"]')?.getAttribute('href')).toBe('/games/ocho');
+    expect(Array.from(ocho?.querySelectorAll('.go-pills .pill') ?? [], (el) => el.textContent)).toEqual([
+      '2–8 players',
+      'A table',
+      'Teams',
+    ]);
+    expect(ocho?.textContent).not.toMatch(/Solo|One screen|Ranked/);
+    expect(control('Show Ocho').getAttribute('aria-current')).toBe('true');
+
+    await clickOn(control('Next game'));
+    expect(slides().map((s) => s.shown)).toEqual([true, false]);
+    await clickOn(control('Previous game'));
+    expect(slides().map((s) => s.shown)).toEqual([false, true]);
+    await clickOn(control('Show Skull King'));
+    expect(slides().map((s) => s.shown)).toEqual([true, false]);
+
+    await follow('Play Skull King');
+    expect(places.path()).toBe('/skull-king');
+  });
+
+  it('moves the hero on by itself, but not under the pointer, with focus inside, or with less motion asked for', async () => {
+    let less = false;
+    vi.stubGlobal('matchMedia', (query: string) => ({
+      matches: query.includes('reduced-motion') ? less : true,
+      media: query,
+    }));
+    await openAt('/');
+    const at = (): string | null | undefined =>
+      $('.go-hero [aria-roledescription="slide"]:not([hidden])')?.getAttribute('aria-label');
+    const hero = $('.go-hero') ?? host;
+    expect(at()).toBe('Skull King, 1 of 2');
+    await settle(SLIDE_MS);
+    expect(at()).toBe('Ocho, 2 of 2');
+    await settle(SLIDE_MS);
+    expect(at()).toBe('Skull King, 1 of 2');
+
+    act(() => {
+      hero.dispatchEvent(new PointerEvent('pointerover', { bubbles: true }));
+    });
+    await settle(SLIDE_MS * 2);
+    expect(at()).toBe('Skull King, 1 of 2');
+    act(() => {
+      hero.dispatchEvent(new PointerEvent('pointerout', { bubbles: true }));
+    });
+    await settle(SLIDE_MS);
+    expect(at()).toBe('Ocho, 2 of 2');
+
+    act(() => $('.go-hero button[aria-label="Next game"]')?.focus());
+    await settle(SLIDE_MS * 2);
+    expect(at()).toBe('Ocho, 2 of 2');
+    act(() => $('.go-hero button[aria-label="Next game"]')?.blur());
+
+    less = true;
+    await settle(SLIDE_MS * 2);
+    expect(at()).toBe('Ocho, 2 of 2');
+    // Less motion still leaves the buttons to the visitor.
+    await clickOn($('.go-hero button[aria-label="Next game"]') ?? host);
+    expect(at()).toBe('Skull King, 1 of 2');
   });
 
   it('leaves a modified click to the browser: a link can be opened in a new tab', async () => {
@@ -625,6 +710,33 @@ describe('Games', () => {
       ['Swift', 'Pirate 1’s table'],
       ['Classic', 'Open table'],
     ]);
+  });
+
+  it('offers Ocho under Skull King, live, with its two ways, and not among what is coming', async () => {
+    await openAt('/games');
+    expect($('#go-ocho-title')?.textContent).toBe('Ocho');
+    const card = $('#go-ocho-title')?.closest('.go-game');
+    expect(card?.querySelector('.go-game-name small')?.textContent).toBe('2–8 players · Cards');
+    expect(card?.querySelector('.pill')?.textContent).toBe('Live');
+    expect(
+      Array.from(card?.querySelectorAll<HTMLAnchorElement>('.oc-shelf-ways a') ?? [], (a) => [
+        a.querySelector('b')?.textContent,
+        a.getAttribute('href'),
+      ]),
+    ).toEqual([
+      ['A table', '/games/ocho'],
+      ['Teams', '/games/ocho/teams'],
+    ]);
+    expect(card?.querySelector('a[aria-label="Play Ocho"]')?.getAttribute('href')).toBe('/games/ocho');
+    expect(card?.querySelector('a[aria-label="How to play Ocho"]')?.getAttribute('href')).toBe(
+      '/games/ocho/how-to-play',
+    );
+    expect(texts('.go-soon > b')).not.toContain('Ocho');
+    // Ocho is a card game: the board shelf has no room for it.
+    await press('Board');
+    expect($('#go-ocho-title')).toBeNull();
+    await press('Cards');
+    expect($('#go-ocho-title')).not.toBeNull();
   });
 
   it('filters the shelf, and counts what is coming', async () => {

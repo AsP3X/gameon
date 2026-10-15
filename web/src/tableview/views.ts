@@ -218,7 +218,7 @@ function soloEndNote(v: ScoreView): string {
     ? '<p class="end-note"><span class="pill soft">Offline game · not counted in your stats</span></p>'
     : '';
 }
-function deadlineRing(v: TableView, seat: Seat): string {
+export function deadlineRing(v: TableView, seat: Seat): string {
   const d = v.online?.deadline;
   if (!d || !session.online || !d.seats.includes(seat)) return '';
   // A solo game has no clock on the player: nothing counts down on their seat, whatever is timed.
@@ -238,7 +238,7 @@ function presenceTag(v: TableView, seat: Seat): string {
   if (status === 'out') return '<span class="presence out">Out</span>';
   return '';
 }
-function seatBid(v: TableView, i: Seat): string {
+export function seatBid(v: TableView, i: Seat): string {
   if (v.phase === 'roundEnd' && v.online?.ready[i]) return '<span class="ready">Ready</span>';
   if (v.phase !== 'bidding') return pips(v.bids[i], v.won[i]);
   const b = v.bids[i];

@@ -11,8 +11,8 @@ import { initialOf } from '../online/parts';
 import { describeRow } from '../online/settings';
 import { AT } from '../router/addresses';
 import { cssColor, whole } from '../tableview/dom';
-import { CardFan, SkullKingKey } from './art';
-import { showsSkullKing, soonOn } from './catalog';
+import { CardFan, OchoFan, OchoKey, SkullKingKey } from './art';
+import { showsOcho, showsSkullKing, soonOn } from './catalog';
 import type { Shelf } from './catalog';
 import { Footer, Link, Nav, useTitle } from './Frame';
 import type { Who } from './Frame';
@@ -142,6 +142,55 @@ function SkullKing({ season }: { season: Season | null | undefined }) {
             How to play
           </Link>
           <Link to={AT.howToPlay} className="go-text-link narrow-only">
+            How to play
+          </Link>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/** Ocho on the shelf: its two ways open sit-down, Teams with Teams chosen. */
+function Ocho() {
+  return (
+    <section className="go-game" aria-labelledby="go-ocho-title">
+      <div className="go-game-art">
+        <OchoFan />
+      </div>
+      <div className="go-game-info">
+        <div className="go-game-title">
+          <OchoKey />
+          <span className="go-game-name">
+            <b id="go-ocho-title">Ocho</b>
+            <small>2–8 players · Cards</small>
+          </span>
+          <span className="pill green caps">Live</span>
+        </div>
+        <p className="wide-only">Match a colour or a number, then be the first to play your last card.</p>
+        <ul className="go-choices oc-shelf-ways" aria-label="Ways to play Ocho">
+          <Option
+            name="A table"
+            icon="globe"
+            tone="green"
+            line="2 to 8 players. Friends join with a code."
+            to={AT.ocho}
+          />
+          <Option
+            name="Teams"
+            icon="users"
+            tone="blue"
+            line="2v2. Partners sit opposite and see each other’s cards."
+            to={AT.ochoTeams}
+          />
+        </ul>
+        <div className="go-actions">
+          <Link to={AT.ocho} className="btn go-btn" label="Play Ocho">
+            Play
+          </Link>
+          <Link to={AT.ochoRules} className="btn ghost go-btn wide-only" label="How to play Ocho">
+            How to play
+          </Link>
+          <Link to={AT.ochoRules} className="go-text-link narrow-only" label="How to play Ocho">
             How to play
           </Link>
         </div>
@@ -341,7 +390,7 @@ export function Games({ online, who, seated, season, onJoin }: GamesProps) {
               <h1 tabIndex={-1} ref={title}>
                 Games
               </h1>
-              <p className="go-sub wide-only">One game is live. More are on the way.</p>
+              <p className="go-sub wide-only">Two games are live. More are on the way.</p>
             </div>
             <Shelves shelf={shelf} onPick={setShelf} />
           </div>
@@ -355,6 +404,7 @@ export function Games({ online, who, seated, season, onJoin }: GamesProps) {
             <div className="go-main">
               <JumpBack me={me} seated={seated} />
               {showsSkullKing(shelf) && <SkullKing season={season} />}
+              {showsOcho(shelf) && <Ocho />}
               <section className="go-soon-block" aria-labelledby="go-soon-title">
                 <h2 id="go-soon-title">
                   Coming soon <span className="pill soft">{soon.length}</span>

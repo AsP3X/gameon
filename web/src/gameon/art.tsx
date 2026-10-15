@@ -2,6 +2,8 @@
    the mascot sits on), and the cards of Skull King. The cards and the mascot are the renderer's own
    artwork (src/tableview/art.ts), which is HTML in strings. Every string put on the page here is
    built from constants of this file: nothing a player typed and nothing the server sent. */
+import { CardBack, CardFace } from '../ocho/cards';
+import type { Card } from '../ocho/wire';
 import { cardHTML, mascot } from '../tableview/art';
 import type { FaceCard } from '../tableview/art';
 import { Icon } from './icons';
@@ -82,5 +84,33 @@ export function CardFan({ trio = false }: { trio?: boolean }) {
       aria-hidden="true"
       dangerouslySetInnerHTML={{ __html: trio ? TRIO_HTML : FAN_HTML }}
     />
+  );
+}
+
+/** A few of Ocho's cards, fanned, with its back in front. Decoration: the text beside says what the game is. */
+const OCHO_FAN: Card[] = [
+  { id: 0, color: 'red', kind: { number: 3 } },
+  { id: 1, color: 'blue', kind: { number: 7 } },
+  { id: 2, color: 'green', kind: { number: 5 } },
+  { id: 3, color: 'yellow', kind: { number: 8 } },
+];
+
+export function OchoFan() {
+  return (
+    <div className="oc-fan" aria-hidden="true">
+      <CardBack />
+      {OCHO_FAN.map((card) => (
+        <CardFace key={card.id} card={card} />
+      ))}
+    </div>
+  );
+}
+
+/** Ocho's key: its eight on the black tile. */
+export function OchoKey() {
+  return (
+    <span className="go-key oc-key" aria-hidden="true">
+      8
+    </span>
   );
 }

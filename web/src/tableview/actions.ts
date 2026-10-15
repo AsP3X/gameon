@@ -42,7 +42,7 @@ import { recordGame } from './stats';
 import { Store } from './store';
 import { Tracker, trkCreate, trkNow } from './tracker';
 import { TRK_ACTIONS } from './trackerActions';
-import { abilityToast, movesStandings, ratingLine, roundResults, scored } from './views';
+import { abilityToast, deadlineRing, movesStandings, ratingLine, roundResults, scored, seatBid } from './views';
 
 type EventOf<T extends GameEvent['type']> = Extract<GameEvent, { type: T }>;
 
@@ -188,11 +188,51 @@ async function present(
     void playFinale();
     return;
   }
+  // Somebody else readied while this seat reads the results: only the ready marks and the clocks
+  // change. The sheet is not built again, so its count-up is left where it is.
+  const sameEnd =
+    !events.length &&
+    ui.sheet === 'results' &&
+    !ui.curtain &&
+    v.phase === 'roundEnd' &&
+    before != null &&
+    isTableView(before) &&
+    before.phase === 'roundEnd' &&
+    before.round === v.round;
+  if (sameEnd && markReady(v)) return;
   render();
   // The Smuggler's swap, as the rest of the table sees it: backs from the pile to that seat.
   const swap = events.find((e) => e.type === 'abilityUsed' && e.kind === 'smuggler');
   if (swap?.type === 'abilityUsed' && swap.kind === 'smuggler' && swap.seat !== v.me && !ui.curtain && !ui.sheet)
     tossFromPile(swap.seat, swap.count);
+}
+
+/**
+ * Draws a ready update over the open results: each seat's bid line (where "Ready" shows) and its
+ * countdown ring, and nothing else. False when a seat is not where the table drew it: then the
+ * caller redraws the page.
+ */
+function markReady(v: TableView): boolean {
+  const app = stage.app;
+  if (!app) return false;
+  const parts = v.seats.map((_, i) => {
+    const avatar = $(`[data-anchor="seat-${i}"]`, app),
+      seat = avatar?.closest('.seat, .mebar'),
+      line =
+        seat && $(seat.classList.contains('mebar') ? ':scope > .grow' : ':scope > .sname', seat)?.nextElementSibling;
+    return avatar && seat && line ? { i, avatar, seat, line } : null;
+  });
+  if (parts.some((p) => p == null)) return false;
+  for (const p of parts) {
+    if (!p) continue;
+    const bid = seatBid(v, p.i);
+    if (p.line.outerHTML !== bid) p.line.outerHTML = bid;
+    const ring = deadlineRing(v, p.i),
+      old = $(':scope > .ring', p.seat);
+    if (old) old.remove();
+    if (ring) p.avatar.insertAdjacentHTML('afterend', ring);
+  }
+  return true;
 }
 
 /* ---------- Actions ---------- */

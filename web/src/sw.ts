@@ -1,8 +1,8 @@
 /// <reference lib="webworker" />
 /* The service worker: what makes the page installable and lets it open with no network.
 
-   It keeps the build's own files, and nothing else. `/api` is never touched: every answer of the
-   server is fetched from the server, so nothing here can show a player something old about a game,
+   It keeps the build's own files, and nothing else. `/api` and `/ocho` are never touched: every
+   answer of the server is fetched from the server, so nothing here can show a player something old about a game,
    a table or an account. With no network the page still opens, the offline modes play, and the
    online screens say that the server cannot be reached.
 
@@ -59,6 +59,12 @@ async function file(request: Request): Promise<Response> {
 sw.addEventListener('fetch', (event) => {
   const { request } = event,
     url = new URL(request.url);
-  if (request.method !== 'GET' || url.origin !== sw.location.origin || url.pathname.startsWith('/api/')) return;
+  if (
+    request.method !== 'GET' ||
+    url.origin !== sw.location.origin ||
+    url.pathname.startsWith('/api/') ||
+    url.pathname.startsWith('/ocho/')
+  )
+    return;
   event.respondWith(request.mode === 'navigate' ? page(request) : file(request));
 });

@@ -1,6 +1,6 @@
 # Rendered by the nginx image envsubst entrypoint.
 # Substitutes ${API_UPSTREAM} and ${NGINX_LOG_LEVEL}. Other $names are nginx variables.
-# API_UPSTREAM is http://skt-api:8080. Do not use the service name api: on a
+# API_UPSTREAM is http://gameon-api:8080. Do not use the service name api: on a
 # shared proxy-network Docker DNS returns every service of that name.
 
 server {
@@ -28,10 +28,36 @@ server {
 
     resolver 127.0.0.11 valid=10s ipv6=off;
 
+    # Skull King lobby and socket. Accounts stay on the API.
+    location /api/v1/ws {
+        include /etc/nginx/api-proxy.conf;
+        set $skt_game ${SKT_GAME_UPSTREAM};
+        proxy_pass $skt_game;
+    }
+
+    location /api/v1/lobbies {
+        include /etc/nginx/api-proxy.conf;
+        set $skt_game ${SKT_GAME_UPSTREAM};
+        proxy_pass $skt_game;
+    }
+
+    location /api/v1/metrics {
+        include /etc/nginx/api-proxy.conf;
+        set $skt_game ${SKT_GAME_UPSTREAM};
+        proxy_pass $skt_game;
+    }
+
     location /api/ {
         include /etc/nginx/api-proxy.conf;
         set $skt_api ${API_UPSTREAM};
         proxy_pass $skt_api;
+    }
+
+    # Ocho lobby and table. The API still owns the session cookie.
+    location /ocho/ {
+        include /etc/nginx/api-proxy.conf;
+        set $ocho ${OCHO_UPSTREAM};
+        proxy_pass $ocho;
     }
 
     # Hashed build output, including tavern-<hash>.mp3. One long cache lifetime.

@@ -33,51 +33,79 @@ use http_api::{
     profile, register, socket,
 };
 
-/// Routes mounted at `/api/v1`, with a request id and a trace span on each call.
-pub fn router(state: AppState) -> Router {
+/// Accounts, profiles, the ladder, and finished games. No lobby and no table.
+pub fn api_router(state: AppState) -> Router {
     logging::trace(
-        Router::new()
+        account_routes(Router::new())
             .route("/api/v1/health", get(health).fallback(method_not_allowed))
-            .route("/api/v1/metrics", get(metrics).fallback(method_not_allowed))
-            .route("/api/v1/config", get(config).fallback(method_not_allowed))
-            .route(
-                "/api/v1/auth/guest",
-                post(guest).fallback(method_not_allowed),
-            )
-            .route(
-                "/api/v1/auth/register",
-                post(register).fallback(method_not_allowed),
-            )
-            .route(
-                "/api/v1/auth/login",
-                post(login).fallback(method_not_allowed),
-            )
-            .route(
-                "/api/v1/auth/logout",
-                post(logout).fallback(method_not_allowed),
-            )
-            .route(
-                "/api/v1/me",
-                get(me).patch(patch_me).fallback(method_not_allowed),
-            )
-            .route(
-                "/api/v1/users/{id}",
-                get(profile).fallback(method_not_allowed),
-            )
-            .route("/api/v1/lobbies", get(lobbies).fallback(method_not_allowed))
-            .route(
-                "/api/v1/me/games",
-                get(my_games).fallback(method_not_allowed),
-            )
-            .route("/api/v1/ladder", get(ladder).fallback(method_not_allowed))
-            .route(
-                "/api/v1/games/{id}/log",
-                get(game_log).fallback(method_not_allowed),
-            )
-            .route("/api/v1/ws", get(socket).fallback(method_not_allowed))
             .fallback(not_found),
     )
     .with_state(state)
+}
+
+/// Skull King lobbies, the public list, and the table socket.
+pub fn game_router(state: AppState) -> Router {
+    logging::trace(
+        game_routes(Router::new())
+            .route("/api/v1/health", get(health).fallback(method_not_allowed))
+            .fallback(not_found),
+    )
+    .with_state(state)
+}
+
+/// Both surfaces on one port. Tests use this. The containers do not.
+pub fn router(state: AppState) -> Router {
+    logging::trace(
+        game_routes(account_routes(Router::new()))
+            .route("/api/v1/health", get(health).fallback(method_not_allowed))
+            .fallback(not_found),
+    )
+    .with_state(state)
+}
+
+fn account_routes(router: Router<AppState>) -> Router<AppState> {
+    router
+        .route("/api/v1/config", get(config).fallback(method_not_allowed))
+        .route(
+            "/api/v1/auth/guest",
+            post(guest).fallback(method_not_allowed),
+        )
+        .route(
+            "/api/v1/auth/register",
+            post(register).fallback(method_not_allowed),
+        )
+        .route(
+            "/api/v1/auth/login",
+            post(login).fallback(method_not_allowed),
+        )
+        .route(
+            "/api/v1/auth/logout",
+            post(logout).fallback(method_not_allowed),
+        )
+        .route(
+            "/api/v1/me",
+            get(me).patch(patch_me).fallback(method_not_allowed),
+        )
+        .route(
+            "/api/v1/users/{id}",
+            get(profile).fallback(method_not_allowed),
+        )
+        .route(
+            "/api/v1/me/games",
+            get(my_games).fallback(method_not_allowed),
+        )
+        .route("/api/v1/ladder", get(ladder).fallback(method_not_allowed))
+        .route(
+            "/api/v1/games/{id}/log",
+            get(game_log).fallback(method_not_allowed),
+        )
+}
+
+fn game_routes(router: Router<AppState>) -> Router<AppState> {
+    router
+        .route("/api/v1/metrics", get(metrics).fallback(method_not_allowed))
+        .route("/api/v1/lobbies", get(lobbies).fallback(method_not_allowed))
+        .route("/api/v1/ws", get(socket).fallback(method_not_allowed))
 }
 
 async fn health() -> Json<Health> {

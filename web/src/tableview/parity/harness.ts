@@ -288,6 +288,16 @@ function withoutKeyboardMarks(app: HTMLElement): HTMLElement {
   return copy;
 }
 
+/* A count-up figure (a round's points on the results) is drawn as 0 and counted to its value
+   (motion.ts, countUp). The legacy page left the 0 on any later redraw of the same sheet: after an
+   ability that ends the round offline, or when another seat readies online. The port shows the
+   value there (render.ts). So the figures are compared by the value they count to, `data-count`,
+   and their text is taken off both pages. */
+function withoutCounts(app: HTMLElement): HTMLElement {
+  for (const el of Array.from(app.querySelectorAll('[data-count]'))) el.textContent = '';
+  return app;
+}
+
 /* The port draws the deck where the legacy page had none (views.ts, pileView and seatPile, and
    deal.ts): what is left of it lies on the felt, every other seat has its hand as one back and a
    count, and a round that starts is dealt from the stack. The legacy page named the trick as the
@@ -306,7 +316,7 @@ function withoutDeal(app: HTMLElement): HTMLElement {
    says, not on how it is drawn: how many bids it offers, and what its button reads and whether it
    can be pressed. Everything around it is still compared as markup. */
 function pageHtml(page: HTMLElement): string {
-  const app = withoutDeal(withoutKeyboardMarks(page));
+  const app = withoutCounts(withoutDeal(withoutKeyboardMarks(page)));
   // The port's home screen offers "Play online" next to "Play", in a row the legacy page does not
   // have. What is compared is the button both builds share.
   const row = app.querySelector('.play-row'),

@@ -40,6 +40,8 @@ Two agents work in this repo, often at the same time, and now in the same checko
    ([ownership](ownership-and-handover.md)). Never stage, commit, stash, restore, reset or delete
    them.
 3. Commit only your own paths, and run the gate on the tree as it is at that commit.
+4. When the other agent's paths need a change, route it through
+   [agent routing](agent-routing.md). While that CLI is running, do not edit, stage or commit.
 
 ## What an agent may do
 

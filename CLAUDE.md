@@ -4,6 +4,7 @@ loads them for Claude Code.
 @AGENTS.md
 @docs/agent-rules/server-authority.md
 @docs/agent-rules/ownership-and-handover.md
+@docs/agent-rules/agent-routing.md
 @docs/agent-rules/protocol-contract.md
 @docs/agent-rules/design-sync.md
 @docs/agent-rules/no-deprecated-apis.md

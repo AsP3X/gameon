@@ -210,10 +210,17 @@ describe('how to play', () => {
 
   it('is where Games and the landing send somebody who asks how', async () => {
     await openAt('/games');
-    const how = Array.from(document.querySelectorAll<HTMLAnchorElement>('.go-game a')).filter(
-      (a) => a.textContent === 'How to play',
-    );
+    const hows = (card: string): HTMLAnchorElement[] =>
+      Array.from(
+        document.querySelector(`[aria-labelledby="${card}"]`)?.querySelectorAll<HTMLAnchorElement>('a') ?? [],
+      ).filter((a) => a.textContent === 'How to play');
+    const how = hows('go-sk-title');
     expect(how.map((a) => a.getAttribute('href'))).toEqual(['/how-to-play', '/how-to-play']);
+    // Ocho has a guide of its own.
+    expect(hows('go-ocho-title').map((a) => a.getAttribute('href'))).toEqual([
+      '/games/ocho/how-to-play',
+      '/games/ocho/how-to-play',
+    ]);
     await clickOn(how[0]);
     expect(places.path()).toBe('/how-to-play');
     closePage();

@@ -6,7 +6,7 @@
    Skull King's own pages (its home and
    the solo setup), the online screens, and the screens the legacy renderer draws.
 
-   Never a page: `/api`, `/assets`, `/sw.js`, `/index.html`, `/manifest.json`. The server and the
+   Never a page: `/api`, `/ocho`, `/assets`, `/sw.js`, `/index.html`, `/manifest.json`. The server and the
    build answer those. */
 import type { UserId } from '../protocol/generated';
 
@@ -24,6 +24,12 @@ export const AT = {
   privacy: '/privacy',
   imprint: '/imprint',
   suggest: '/suggest',
+  /** Ocho: sit down, the table waiting, or the table, as Ocho's server says (src/ocho). Not under
+      `/ocho/`: that is Ocho's server, behind the same origin. */
+  ocho: '/games/ocho',
+  /** Ocho's sit-down with Teams chosen: the shelf's "Teams" way. */
+  ochoTeams: '/games/ocho/teams',
+  ochoRules: '/games/ocho/how-to-play',
   home: '/skull-king',
   solo: '/skull-king/solo',
   oneScreen: '/skull-king/one-screen',
@@ -74,6 +80,10 @@ export type Route =
   | { page: 'privacy' }
   | { page: 'imprint' }
   | { page: 'suggest' }
+  /* Ocho: a game of its own, on its own server. */
+  | { page: 'ocho' }
+  | { page: 'ochoTeams' }
+  | { page: 'ochoRules' }
   /* The legacy renderer's screens. Skull King's home is the page's own, with the renderer under it. */
   | { page: 'home' }
   /** The new-game screen, for a game on one screen. */
@@ -105,7 +115,10 @@ export type FramePage =
   | 'howToPlay'
   | 'privacy'
   | 'imprint'
-  | 'suggest';
+  | 'suggest'
+  | 'ocho'
+  | 'ochoTeams'
+  | 'ochoRules';
 export type FrameRoute = Extract<Route, { page: FramePage }>;
 /** The solo setup. It needs a connection only when a game is asked for. */
 export type SoloRoute = Extract<Route, { page: 'solo' }>;
@@ -125,6 +138,9 @@ const FRAME: ReadonlySet<string> = new Set<FramePage>([
   'privacy',
   'imprint',
   'suggest',
+  'ocho',
+  'ochoTeams',
+  'ochoRules',
 ]);
 export const isFrame = (route: Route): route is FrameRoute => FRAME.has(route.page);
 export const isOnline = (route: Route): route is OnlineRoute =>
@@ -154,6 +170,9 @@ const PAGES: Record<string, Route> = {
   [AT.privacy]: { page: 'privacy' },
   [AT.imprint]: { page: 'imprint' },
   [AT.suggest]: { page: 'suggest' },
+  [AT.ocho]: { page: 'ocho' },
+  [AT.ochoTeams]: { page: 'ochoTeams' },
+  [AT.ochoRules]: { page: 'ochoRules' },
 };
 
 /**

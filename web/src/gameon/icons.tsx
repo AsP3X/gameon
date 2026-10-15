@@ -68,12 +68,20 @@ const SHAPES = {
       <path d="M7 11V7a5 5 0 0 1 10 0v4" />
     </>
   ),
+  users: (
+    <>
+      <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+      <circle cx="9" cy="7" r="4" />
+      <path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
+    </>
+  ),
   minus: <path d="M5 12h14" />,
   plus: <path d="M5 12h14M12 5v14" />,
   chevronRight: <path d="m9 18 6-6-6-6" />,
   chevronLeft: <path d="m15 18-6-6 6-6" />,
   chevronDown: <path d="m6 9 6 6 6-6" />,
   check: <path d="M20 6 9 17l-5-5" />,
+  x: <path d="M18 6 6 18M6 6l12 12" />,
   wifiOff: (
     <path d="M12 20h.01M8.5 16.429a5 5 0 0 1 7 0M5 12.859a10 10 0 0 1 5.17-2.69M19 12.859a10 10 0 0 0-2.007-1.523M2 8.82a15 15 0 0 1 4.177-2.643M22 8.82a15 15 0 0 0-11.288-3.764M2 2l20 20" />
   ),

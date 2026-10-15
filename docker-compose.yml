@@ -14,21 +14,23 @@
 # it until they are copied or reset.
 #
 # NPM targets (npm overlay, container DNS on proxy-network):
-#   http://skt-web:80      the page, which also proxies /api/v1 and the socket
-#   http://skt-api:8080    the API, for a client that does not go through the page
-# The page's upstream is the container name skt-api. The service name api is not
+#   http://gameon-web:80         the page, which also proxies /api and /ocho
+#   http://gameon-api:8080       accounts, for a client that does not go through the page
+#   http://gameon-skullking:8092 Skull King lobby and tables
+#   http://gameon-ocho:8091      Ocho lobby and tables
+# The page's upstreams are the container names. The service name api is not
 # unique on a shared proxy-network: another stack's service of that name is
-# returned too, and nginx then sends the game socket to the wrong server.
+# returned too, and nginx then sends the request to the wrong server.
 #
 # The setup screen can attach more Docker networks. ./deploy.sh writes
 # .deploy/networks.yml and passes it last, so those lists replace the ones here.
 
-name: skt
+name: gameon
 
 services:
   postgres:
     image: postgres:16-alpine
-    container_name: skt-postgres
+    container_name: gameon-postgres
     # warning is Postgres's own default. The setup screen can set another level.
     command:
       - postgres
@@ -61,7 +63,8 @@ services:
     build:
       context: ./server
       dockerfile: Dockerfile
-    container_name: skt-api
+    image: gameon-api:local
+    container_name: gameon-api
     environment:
       HOST: 0.0.0.0
       PORT: "8080"
@@ -106,17 +109,104 @@ services:
         max-file: "${SKT_LOG_FILES_API:-3}"
     restart: unless-stopped
 
+  # Skull King lobby and tables. Its own image, not the API image.
+  skt:
+    build:
+      context: ./server
+      dockerfile: Dockerfile.skt
+    image: gameon-skullking:local
+    container_name: gameon-skullking
+    environment:
+      SKT_GAME_HOST: 0.0.0.0
+      SKT_GAME_PORT: "8092"
+      RUST_LOG: ${RUST_LOG:-info}
+      RUST_LOG_FORMAT: ${RUST_LOG_FORMAT:-text}
+      SKT_PUBLIC_ORIGIN: ${SKT_PUBLIC_ORIGIN:-}
+      SKT_SECURE_COOKIE: ${SKT_SECURE_COOKIE:-}
+      DATABASE_URL: postgres://${POSTGRES_USER:-skt}:${POSTGRES_PASSWORD:-skt}@postgres:5432/${POSTGRES_DB:-skt}
+      SKT_TRUSTED_PROXIES: ${SKT_TRUSTED_PROXIES:-172.16.0.0/12}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - skt-internal
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "curl",
+          "-fsS",
+          "http://127.0.0.1:8092/api/v1/health",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 20s
+    restart: unless-stopped
+
+  # Ocho lobby and tables. Accounts stay on api. The page proxies /ocho/ here.
+  ocho:
+    build:
+      context: ./server
+      dockerfile: Dockerfile.ocho
+    image: gameon-ocho:local
+    container_name: gameon-ocho
+    environment:
+      OCHO_HOST: 0.0.0.0
+      OCHO_PORT: "8091"
+      RUST_LOG: ${RUST_LOG:-info}
+      DATABASE_URL: postgres://${POSTGRES_USER:-skt}:${POSTGRES_PASSWORD:-skt}@postgres:5432/${POSTGRES_DB:-skt}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - skt-internal
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "curl",
+          "-fsS",
+          "http://127.0.0.1:8091/ocho/v1/health",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 20s
+    restart: unless-stopped
+
   web:
     build:
       context: .
       dockerfile: deploy/web/Dockerfile
-    container_name: skt-web
+    image: gameon-web:local
+    container_name: gameon-web
     depends_on:
       api:
         condition: service_healthy
+      skt:
+        condition: service_healthy
+      ocho:
+        condition: service_healthy
     environment:
       # Container name. The service name api collides on a shared proxy-network.
-      API_UPSTREAM: http://skt-api:8080
+      API_UPSTREAM: http://gameon-api:8080
+      OCHO_UPSTREAM: http://gameon-ocho:8091
+      SKT_GAME_UPSTREAM: http://gameon-skullking:8092
       # notice matches the nginx image. The setup screen can set another level.
       NGINX_LOG_LEVEL: ${SKT_LOG_WEB:-notice}
     networks:
