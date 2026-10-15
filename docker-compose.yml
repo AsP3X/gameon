@@ -107,14 +107,13 @@ services:
         max-file: "${SKT_LOG_FILES_API:-3}"
     restart: unless-stopped
 
-  # Skull King lobby and tables. Same image as api, different command.
+  # Skull King lobby and tables. Its own image, not the API image.
   skt:
     build:
       context: ./server
-      dockerfile: Dockerfile
-    image: skt-server:local
+      dockerfile: Dockerfile.skt
+    image: skt-game:local
     container_name: skt-game
-    command: ["skt-game"]
     environment:
       SKT_GAME_HOST: 0.0.0.0
       SKT_GAME_PORT: "8092"

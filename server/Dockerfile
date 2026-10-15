@@ -25,7 +25,7 @@ RUN mkdir -p crates/skt-engine/src crates/skt-protocol/src crates/skt-server/src
     && echo '' > crates/skt-protocol/src/lib.rs \
     && echo '' > crates/skt-server/src/lib.rs \
     && echo '' > crates/ocho-engine/src/lib.rs \
-    && cargo build --locked --release -p skt-server --bins \
+    && cargo build --locked --release -p skt-server --bin skt-server \
     && rm -rf crates/skt-engine/src crates/skt-protocol/src crates/skt-server/src crates/skt-bot-pass/src \
         crates/ocho-engine/src crates/ocho-server/src
 
@@ -36,7 +36,7 @@ COPY migrations migrations
 
 # The dependency layer is newer than these sources, so cargo would keep the empty crates.
 RUN find crates -name '*.rs' -exec touch {} + \
-    && cargo build --locked --release -p skt-server
+    && cargo build --locked --release -p skt-server --bin skt-server
 
 FROM debian:bookworm-slim AS runtime
 
@@ -46,7 +46,6 @@ RUN apt-get update \
     && useradd --system --uid 10001 --no-create-home skt
 
 COPY --from=builder /app/target/release/skt-server /usr/local/bin/skt-server
-COPY --from=builder /app/target/release/skt-game /usr/local/bin/skt-game
 
 USER skt
 
