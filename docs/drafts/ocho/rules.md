@@ -6,15 +6,15 @@ The first drawing is the Plato-style game only: the table and the card layouts. 
 
 Card layouts are frames: back, rank, color, and the name of a special. No illustrations, no generated images, and no use of the Skull King card-art scripts.
 
-## Open, and blocking the frames they name
+## Locked for the drawing
 
-These are not decided. The frames that depend on them wait.
+Taken from the rules text and from the owner. Not house additions.
 
-1. **Boo Blue, tie for fewest cards.** All tied players draw 2, or only one of them. If only one, which.
-2. **Dead Red, whose hand is checked.** After the card has left the player's hand, or before. The text says the player who played it can be hit if they qualify.
-3. **Opening card.** Any card may start the discard and its effect does not fire, or a special is turned back and another card is flipped until a number card shows.
-4. **Who sits at the first table.** Four players, each for themselves. Whether this pass also draws two players, and whether it draws 2v2 with partners seeing each other's cards.
-5. **End of a hand, on the table.** The player who went out only, or that player plus the point total of the cards left in the other hands.
+1. **Eight seats.** The official maximum is 8. The table is drawn for 8 players. Two players are a second frame, because Reverse is a Skip there. Team mode is a third frame: four seats, partners opposite, each partner's cards visible. Eight players is free-for-all, not four teams.
+2. **Boo Blue.** A tie hits every player who shares the fewest cards. Each of them draws 2.
+3. **Dead Red.** The card is on the discard before hands are checked. The player who played it draws 2 when it was their last red card. That is what makes "the player who played it can be affected" true.
+4. **Opening card.** Any card may be turned up. It sets color and number or symbol only. Its effect does not fire.
+5. **Hand end.** The frame shows who went out, the cards left in the other hands, and the point sum: a number is its face value, an action is 20, a wild or a special is 50.
 
 Everything else below is the text to draw from.
 
@@ -24,9 +24,7 @@ A shedding game. Be the first to play your last card. The hand ends at once when
 
 ### Players
 
-2–4 at the table this pass is aimed at. Some games seat up to 6–8. That larger table is not drawn now.
-
-Team mode, 2v2, is in the rules and not in the first frames unless the open question says so. Partners sit opposite, see each other's cards, and the team wins when one partner goes out.
+The table seats 2 to 8. Eight is the official maximum, and it is the table drawn for every play state. With two players, Reverse is a Skip. Team mode is 2v2 only: four seats, partners opposite, each sees the partner's cards, and the team wins when one partner goes out. An eight-player game is not played in teams.
 
 ### Deck
 
@@ -73,7 +71,7 @@ After a play, the turn passes to the next player in the current direction. One c
 - **Shield.** A wild. It blocks a Draw 2, a Wild Draw 4, or the whole stack aimed at the player, and sends that total back to the last player who played a draw card. A Shield can send a stack back at another Shield. It does not block Dead Red or Boo Blue.
 - **X-Ray.** A wild. The player who played it is shown one random card from each opponent's hand. Only that player sees those cards. Hands stay hidden otherwise, except partners in team mode.
 - **Dead Red.** Counts as red. Every player who has no red card in hand draws 2. Shield does not stop it. It happens before the next ordinary turn. The player who played it is included if they qualify.
-- **Boo Blue.** Counts as blue. The player with the fewest cards draws 2. Shield does not stop it. It happens before the next ordinary turn. The player who played it is included if they have the fewest. A tie is an open question.
+- **Boo Blue.** Counts as blue. Every player who has the fewest cards draws 2, including a tie and including the player who played it. Shield does not stop it. It happens before the next ordinary turn.
 
 ### Stacking draws
 
@@ -89,7 +87,7 @@ The table shows the running total while a stack is open.
 
 ### Scoring
 
-Optional, and not required for the hand to end. The winner scores the face values of the cards left in the other hands: a number is its face value, an action is 20, a wild or a special is 50. First to a target such as 500 wins the match, or the match is a fixed number of hands. Whether the hand-end frame shows those points is an open question.
+The hand ends when a player has no cards. The hand-end frame shows that player, the cards left in the other hands, and the point sum of those cards: a number is its face value, an action is 20, a wild or a special is 50. First to a target such as 500 wins the match, or the match is a fixed number of hands. The match score itself is not a screen in this pass.
 
 ## Standard deck
 
