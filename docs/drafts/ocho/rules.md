@@ -69,7 +69,7 @@ After a play, the turn passes to the next player in the current direction. One c
 - **Draw 2.** The next player draws 2 and loses the turn, unless they play a Draw 2 or a Wild Draw 4 onto the stack.
 - **Wild Draw 4.** The player names the next color. The next player draws 4 and loses the turn, unless they play a Draw 2 or a Wild Draw 4 onto the stack.
 - **Shield.** A wild. It blocks a Draw 2, a Wild Draw 4, or the whole stack aimed at the player, and sends that total back to the last player who played a draw card. A Shield can send a stack back at another Shield. It does not block Dead Red or Boo Blue.
-- **X-Ray.** A wild. The player who played it is shown one random card from each opponent's hand. Only that player sees those cards. Hands stay hidden otherwise, except partners in team mode.
+- **X-Ray.** A wild. The player who played it is shown one random card from each opponent's hand. Only that player sees those cards. Hands stay hidden otherwise, except partners in team mode. On the desk, each revealed card sits on that opponent's seat. There is no sheet over the table. On the phone, the same cards are not a dialog: the seats are rows, and the revealed card sits on its row.
 - **Dead Red.** Counts as red. Every player who has no red card in hand draws 2. Shield does not stop it. It happens before the next ordinary turn. The player who played it is included if they qualify.
 - **Boo Blue.** Counts as blue. Every player who has the fewest cards draws 2, including a tie and including the player who played it. Shield does not stop it. It happens before the next ordinary turn.
 
@@ -97,4 +97,4 @@ A 52-card deck plus jokers. Deal 7. Match suit or rank. Ace is Reverse. 2 is Dra
 
 ## What the table has to show
 
-Direction of play. The color and the number or symbol to match. Whose turn it is. The draw pile and the discard. An open draw total. A private X-Ray look. Who Dead Red or Boo Blue sent cards to. The hand ending when someone plays their last card.
+Direction of play. The color and the number or symbol to match. Whose turn it is. The draw pile and the discard. An open draw total. A private X-Ray look, on the seat at a desk and on that seat's row on a phone. Who Dead Red or Boo Blue sent cards to. The hand ending when someone plays their last card.
