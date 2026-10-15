@@ -608,13 +608,40 @@ describe('a table that moved on without saying so', () => {
     expect(first).toHaveLength(3);
     // A round in which nobody scored would hide a sheet drawn with 0s.
     expect(first.every((t) => t === '0')).toBe(false);
-    // Remy pressed Next round: the update carries the ready flags and nothing that happened.
-    tell({ ...present(), ready: [false, true, false] }, OTHERS);
+    const sheet = app.querySelector('.sheet'),
+      rows = Array.from(app.querySelectorAll('.sheet .res'));
+    const remy = (): Element => app.querySelectorAll('.seat')[0];
+    expect(remy().querySelector('.ready')).toBeNull();
+    // Remy pressed Next round: the update carries the ready flags, the restarted clock without
+    // Remy on it, and nothing that happened.
+    const at = Date.now() + 20_000;
+    tell(
+      { ...present(), ready: [false, true, false], deadline: { kind: 'nextRound', seats: [0], at, total: 20_000 } },
+      OTHERS,
+    );
     await settle();
     expect(state.phase).toBe('roundEnd');
     expect(ui.sheet).toBe('results');
     expect(app.querySelector('.sheet[aria-label="Round results"]')).not.toBeNull();
+    // The sheet was not built again: the same nodes, with the same points.
+    expect(app.querySelector('.sheet')).toBe(sheet);
+    expect(app.querySelectorAll('.sheet .res')).toHaveLength(rows.length);
+    app.querySelectorAll('.sheet .res').forEach((row, i) => expect(row).toBe(rows[i]));
     expect(pts()).toEqual(first);
+    // What the update says is on the seats: Remy is ready, and only this seat is on the clock.
+    expect(remy().querySelector('.ready')?.textContent).toBe('Ready');
+    expect(remy().querySelector('.ring')).toBeNull();
+    expect(app.querySelector('.mebar .ready')).toBeNull();
+    expect(app.querySelector('.mebar > .ring')).not.toBeNull();
+    // Then Remy's clock is restarted with this seat's, and it goes again: the ring follows the deadline.
+    tell(
+      { ...present(), ready: [false, true, false], deadline: { kind: 'nextRound', seats: [0, 1], at, total: 20_000 } },
+      OTHERS,
+    );
+    await settle();
+    expect(app.querySelector('.sheet')).toBe(sheet);
+    expect(remy().querySelector(':scope > .ring')).not.toBeNull();
+    expect(app.querySelectorAll('.ring')).toHaveLength(2);
   });
 
   it('gives input back when the phase changes under an unanswered action', async () => {
