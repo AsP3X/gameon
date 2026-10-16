@@ -75,7 +75,8 @@ struct Table {
 /// How long a bot waits on the score before dealing the next hand.
 const BOT_DEAL_PAUSE: Duration = Duration::from_secs(4);
 /// How long a played card stays on the discard before a bot plays over it.
-const BOT_PLAY_PAUSE: Duration = Duration::from_millis(700);
+/// The flight onto the discard is 420ms (`FLIGHT` in `web/src/ocho/motion.ts`). The rest is time to read the card.
+const BOT_PLAY_PAUSE: Duration = Duration::from_millis(1500);
 
 /// What one delayed bot step should do after it looks at the table.
 enum BotStep {
@@ -973,7 +974,7 @@ impl Room {
         });
     }
 
-    /// One bot plays after the discard has been on the table long enough to see.
+    /// One bot plays after the card has flown to the discard and sat there long enough to read.
     fn schedule_bot_play(self: &Arc<Self>, user_id: &str, seq: u64) {
         let room = Arc::clone(self);
         let user_id = user_id.to_owned();
