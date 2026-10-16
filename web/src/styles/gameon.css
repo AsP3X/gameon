@@ -1011,9 +1011,6 @@
 .go-rail {
   display: contents;
 }
-.go-jump {
-  order: 1;
-}
 .go-games .go-game {
   order: 2;
 }
@@ -1651,7 +1648,7 @@
     padding-block: 44px 80px;
   }
   .go-games .go-in {
-    gap: 36px;
+    gap: 28px;
   }
   .go-page-head {
     flex-direction: row;
@@ -1670,18 +1667,59 @@
     font-size: 44px;
     letter-spacing: -0.014em;
   }
-  .go-columns {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) 340px;
-    align-items: start;
-    gap: 32px;
+  /* Games uses the window: the page's inset, and no column. */
+  .go-wide .go-in {
+    max-width: none;
   }
-  .go-main,
+  /* The two live games side by side, as tall as most of the window, and the rail beside them. The
+     rail is as tall as the games and adds nothing to their height: a list it cannot fit scrolls in
+     its own card. The announced games are the band under all three. */
+  .go-columns {
+    --go-band: clamp(560px, calc(100svh - 320px), 760px);
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 400px;
+    grid-template-rows: minmax(var(--go-band), auto) auto;
+    gap: 28px 24px;
+  }
+  .go-main {
+    display: contents;
+  }
   .go-rail {
+    grid-area: 1 / 3;
+    contain: size;
     display: flex;
     flex-direction: column;
     gap: 24px;
     min-width: 0;
+  }
+  .go-games .go-game {
+    grid-row: 1;
+  }
+  .go-soon-block {
+    grid-area: 2 / 1 / auto / -1;
+  }
+  /* A shelf with no live game: the announced games take their place, beside the rail. */
+  .no-live .go-soon-block {
+    grid-area: 1 / 1 / auto / 3;
+  }
+  .go-seat {
+    flex: none;
+  }
+  .go-rail .go-tables {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  .go-tables-head,
+  .go-tables-foot {
+    flex: none;
+  }
+  .go-rail .go-tables ul {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
   }
   .go-jump {
     display: flex;
@@ -1706,15 +1744,31 @@
   .go-games .go-game {
     border-radius: 24px;
   }
+  /* The hand is sized to the felt it lies on. */
   .go-games .go-game-art {
+    flex: none;
     min-height: 216px;
+    container-type: inline-size;
   }
   .go-games .go-fan {
-    --fan-w: 99px;
+    --fan-w: clamp(44px, 22cqi, 110px);
+  }
+  /* Ocho's hand is its own (ocho.css): it is reached here by its place on the felt. */
+  .go-games .go-game-art > div:not(.go-fan) {
+    --hand-w: clamp(44px, 22cqi, 110px);
+    padding-block: calc(var(--hand-w) * 0.16);
+  }
+  .go-games .go-game-art > div:not(.go-fan) > * {
+    --w: var(--hand-w);
+  }
+  .go-games .go-game-art > div:not(.go-fan) > * + * {
+    margin-left: calc(var(--hand-w) * -0.3);
   }
   .go-games .go-game-info {
+    flex: 1;
     gap: 20px;
-    padding: 28px;
+    padding: 24px;
+    container: go-info / inline-size;
   }
   .go-games .go-game-title {
     gap: 16px;
@@ -1751,6 +1805,15 @@
   }
   .go-games .go-soon-list {
     gap: 16px;
+  }
+  .no-live .go-soon-list {
+    flex: 1;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-auto-rows: 1fr;
+  }
+  .no-live .go-soon,
+  #gameon .no-live .go-suggest-link {
+    justify-content: center;
   }
   .go-games .go-soon {
     gap: 12px;
@@ -2712,5 +2775,86 @@
   .go-doc-block li,
   .go-doc-note {
     font-size: 17px;
+  }
+}
+
+/* ---------- Games on a wide window: the cards and the band ---------- */
+/* A live game's card is as narrow as a third of the window allows. What it holds goes one under the
+   other when the card has no room for two side by side. */
+@container go-info (max-width: 459px) {
+  .go-choices {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .go-choices > .sk-choice {
+    display: flex;
+  }
+  .go-choices .sk-opts {
+    margin-top: 0;
+  }
+  .go-games .go-actions {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+  .go-games .go-actions .go-btn {
+    min-width: 0;
+  }
+}
+/* The title over the name: the key and the pill on one line, the name under them. */
+@container go-info (max-width: 339px) {
+  .go-games .go-game-title {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .go-game-title > .pill {
+    margin-left: auto;
+  }
+  .go-games .go-game-name {
+    order: 1;
+    flex-basis: 100%;
+  }
+}
+/* From here a card is wide enough to lie on its side: the felt on the left, the game on the right.
+   Narrower, the felt is on top, as on a phone. */
+@media (min-width: 1680px) {
+  .go-games .go-game {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+  }
+  .go-games .go-game-art {
+    min-height: 0;
+    border-bottom: 0;
+    border-right: 2px solid var(--line);
+  }
+  .go-games .go-game-info {
+    justify-content: center;
+  }
+  /* A felt this narrow and tall holds the hand closed up a little more. */
+  .go-games .go-fan {
+    --fan-w: clamp(44px, 28cqi, 120px);
+  }
+  .go-games .go-fan > div + div {
+    margin-left: calc(var(--fan-w) * -0.5);
+  }
+  .go-games .go-game-art > div:not(.go-fan) {
+    --hand-w: clamp(44px, 28cqi, 120px);
+  }
+  .go-games .go-game-art > div:not(.go-fan) > * + * {
+    margin-left: calc(var(--hand-w) * -0.5);
+  }
+}
+@media (min-width: 1440px) {
+  .go-wide .go-in {
+    padding-inline: 48px;
+  }
+}
+/* The six announced games in one row, when each is still a card wide. */
+@media (min-width: 1600px) {
+  .go-columns:not(.no-live) .go-soon-list {
+    grid-template-columns: none;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr);
   }
 }

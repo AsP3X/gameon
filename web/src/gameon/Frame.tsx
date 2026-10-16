@@ -110,7 +110,7 @@ export function Nav({ page, who, onWays }: NavProps) {
     // Only the landing and Games themselves are under Games.
     aside = page !== 'landing' && page !== 'games';
   return (
-    <header className="go-nav">
+    <header className={page === 'games' ? 'go-nav go-wide' : 'go-nav'}>
       <div className="go-in">
         <div className="go-nav-left">
           <Link to={AT.landing} className="go-home" label="GameOn, the front page" current={page === 'landing'}>
@@ -189,7 +189,7 @@ const MORE: { page: FramePage; to: string; name: string }[] = [
 /** The footer of the landing, of Games, of the profile, of the ladder, and of the four pages it leads to. */
 export function Footer({ page, who }: { page: FramePage; who: Who }) {
   return (
-    <footer className="go-foot">
+    <footer className={page === 'games' ? 'go-foot go-wide' : 'go-foot'}>
       <div className="go-in">
         <Link to={AT.landing} className="go-home" label="GameOn, the front page">
           <Logo />

@@ -361,7 +361,8 @@ export function Games({ online, who, seated, season, onJoin }: GamesProps) {
   const [round, setRound] = useState(0);
   const me = who.is === 'player' ? who.me : null,
     session = me != null,
-    soon = soonOn(shelf);
+    soon = soonOn(shelf),
+    live = showsSkullKing(shelf) || showsOcho(shelf);
 
   // The list needs a session, and is read once: nothing pushes changes to it.
   useEffect(() => {
@@ -383,7 +384,7 @@ export function Games({ online, who, seated, season, onJoin }: GamesProps) {
   return (
     <>
       <Nav page="games" who={who} />
-      <main className="go-games">
+      <main className="go-games go-wide">
         <div className="go-in">
           <div className="go-page-head">
             <div>
@@ -400,22 +401,13 @@ export function Games({ online, who, seated, season, onJoin }: GamesProps) {
               Not connected. Trying again…
             </p>
           )}
-          <div className="go-columns">
+          <JumpBack me={me} seated={seated} />
+          {/* On a wide window the live games, the rail and the announced games share one grid. On a
+              shelf with no live game, the announced games take the live games' place. */}
+          <div className={live ? 'go-columns' : 'go-columns no-live'}>
             <div className="go-main">
-              <JumpBack me={me} seated={seated} />
               {showsSkullKing(shelf) && <SkullKing season={season} />}
               {showsOcho(shelf) && <Ocho />}
-              <section className="go-soon-block" aria-labelledby="go-soon-title">
-                <h2 id="go-soon-title">
-                  Coming soon <span className="pill soft">{soon.length}</span>
-                </h2>
-                <ul className="go-soon-list">
-                  {soon.map((game) => (
-                    <SoonTile key={game.name} game={game} />
-                  ))}
-                  <SuggestTile />
-                </ul>
-              </section>
             </div>
             <div className="go-rail">
               {me && <YourSeat me={me} season={season} />}
@@ -430,6 +422,17 @@ export function Games({ online, who, seated, season, onJoin }: GamesProps) {
                 />
               )}
             </div>
+            <section className="go-soon-block" aria-labelledby="go-soon-title">
+              <h2 id="go-soon-title">
+                Coming soon <span className="pill soft">{soon.length}</span>
+              </h2>
+              <ul className="go-soon-list">
+                {soon.map((game) => (
+                  <SoonTile key={game.name} game={game} />
+                ))}
+                <SuggestTile />
+              </ul>
+            </section>
           </div>
         </div>
       </main>
