@@ -319,94 +319,73 @@
 }
 
 /* ---------- the landing: the top ---------- */
+/* Two doors: one line, then the two live games as equal felts, then what sitting down costs. */
 .go-hero {
   padding-block: 28px;
 }
-.go-hero .go-in,
-.go-slide,
-.go-hero-copy {
+.go-hero .go-in {
   display: flex;
   flex-direction: column;
-  gap: 18px;
-}
-/* The hero is a carousel of the live games. A slide that comes in fades in, unless the visitor
-   asked for less motion. */
-@media (prefers-reduced-motion: no-preference) {
-  .go-slide {
-    animation: go-slide-in 0.4s ease-out;
-  }
-}
-@keyframes go-slide-in {
-  from {
-    opacity: 0;
-  }
-}
-.go-carousel {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-}
-.go-turn {
-  display: grid;
-  place-items: center;
-  width: 44px;
-  height: 44px;
-  padding: 0;
-  border: 2px solid var(--line);
-  border-radius: 50%;
-  background: var(--card);
-  color: var(--fg);
-}
-.go-turn .go-icon {
-  width: 20px;
-  height: 20px;
-}
-.go-dots {
-  display: flex;
-}
-/* A dot is small to the eye and 44 px to the finger. The one that shows is long and green. */
-.go-dot {
-  display: grid;
-  place-items: center;
-  width: 44px;
-  height: 44px;
-  padding: 0;
-  border: 0;
-  background: none;
-}
-.go-dot i {
-  width: 10px;
-  height: 10px;
-  border-radius: 5px;
-  background: var(--line);
-  transition: width 0.2s;
-}
-.go-dot[aria-current='true'] i {
-  width: 26px;
-  background: var(--green);
-}
-@media (prefers-reduced-motion: reduce) {
-  .go-dot i {
-    transition: none;
-  }
-}
-.go-hero-copy {
-  align-items: flex-start;
+  gap: 20px;
 }
 .go-hero h1 {
-  font-size: 40px;
-  line-height: 1.08;
+  font-size: 32px;
+  line-height: 1.1;
   letter-spacing: -0.015em;
+  text-align: center;
 }
 .go-accent {
-  display: block;
   color: var(--green-ink);
 }
-.go-lead {
+.go-doors {
+  display: grid;
+  gap: 16px;
+}
+.go-door {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  min-width: 0;
+  padding: 24px 20px;
+  border: 2px solid var(--line);
+  border-radius: 16px;
+  background: var(--felt);
+  text-align: center;
+}
+.go-door-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+.go-door-name .go-mascot {
+  --m: 48px;
+}
+.go-door-name .go-key {
+  --k: 44px;
+}
+.go-door-name h2 {
+  font-size: 32px;
+  line-height: 1;
+}
+/* The felt between the name and the line. The hand is sized to it, not to the window, so it grows
+   with the door and never leaves it. */
+.go-door-art {
+  align-self: stretch;
+  display: grid;
+  place-items: center;
+  container-type: inline-size;
+}
+.go-door .go-fan {
+  --fan-w: clamp(52px, 23cqi, 180px);
+}
+.go-door > p {
   font-size: 17px;
-  line-height: 1.5;
-  color: var(--muted);
+  font-weight: 800;
+}
+.go-door .go-btn {
+  min-width: min(100%, 240px);
 }
 .go-actions {
   display: flex;
@@ -420,6 +399,7 @@
 .go-facts {
   display: flex;
   flex-wrap: wrap;
+  justify-content: center;
   gap: 8px 24px;
   font-size: 15px;
   font-weight: 800;
@@ -435,64 +415,11 @@
   height: 18px;
   color: var(--green-ink);
 }
-.go-featured {
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  gap: 20px;
-  min-height: 540px;
-  padding: 28px;
-  border: 2px solid var(--line);
-  border-radius: 28px;
-  background: var(--felt);
-}
-.go-featured-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-.go-sk-name {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-}
-.go-sk-name .logo {
-  font-size: 38px;
-  line-height: 1;
-}
-/* The felt between the card's head and foot. The hand is sized to it, not to the window, so it grows
-   with the card and never leaves it. */
-.go-featured-art {
-  flex: 1;
-  display: grid;
-  place-items: center;
-  container-type: inline-size;
-}
-.go-featured .go-fan {
-  --fan-w: clamp(84px, 20cqi, 200px);
-}
-/* Ocho's hand is its own (ocho.css), sized by the width it is given there: it is reached here by
-   its place on the felt. */
-.go-featured-art > div:not(.go-fan) {
-  --oc-fan-w: clamp(84px, 20cqi, 200px);
-}
-.go-featured-foot {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
-}
-.go-featured-foot b {
-  font-size: 16px;
-  font-weight: 800;
-}
-.go-featured .pill.soft,
 .go-podium .pill.soft {
   background: var(--card);
 }
 
-/* ---------- a game on its card: the landing on a phone, and Games ---------- */
+/* ---------- a game on its card: Games ---------- */
 .go-game {
   display: flex;
   flex-direction: column;
@@ -1478,31 +1405,47 @@
     font-size: 17px;
   }
 
+  /* The first view is the window under the bar: the line, the two doors filling it, and what
+     sitting down costs on its bottom edge. */
   .go-hero {
-    padding-block: 72px 64px;
+    padding-block: 0;
   }
   .go-hero .go-in {
-    gap: 28px;
-  }
-  /* One row across the page: the copy stops at a block's width, and the featured card takes the
-     rest. The card grows with a tall window, so the hero is the top of the page. */
-  .go-slide {
-    display: grid;
-    grid-template-columns: min(640px, 46%) minmax(0, 1fr);
-    align-items: center;
-    gap: 56px;
-  }
-  .go-featured {
-    min-height: clamp(540px, calc(100svh - 300px), 760px);
-  }
-  .go-hero-copy {
+    min-height: clamp(600px, calc(100svh - 82px), 980px);
+    padding-block: 32px 0;
     gap: 28px;
   }
   .go-hero h1 {
-    font-size: clamp(52px, 5vw, 68px);
+    font-size: clamp(44px, 4.2vw, 60px);
   }
-  .go-lead {
-    font-size: 20px;
+  .go-doors {
+    flex: 1;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 24px;
+  }
+  .go-door {
+    gap: 24px;
+    padding: 36px 32px;
+  }
+  .go-door-name .go-mascot {
+    --m: 60px;
+  }
+  .go-door-name .go-key {
+    --k: 56px;
+  }
+  .go-door-name h2 {
+    font-size: 40px;
+  }
+  .go-door > p {
+    font-size: 19px;
+  }
+  .go-door .go-btn {
+    min-width: 260px;
+  }
+  .go-facts {
+    justify-content: flex-start;
+    padding-block: 18px;
+    border-top: 2px solid var(--line);
   }
   .go-actions .go-btn {
     flex: none;
@@ -1905,7 +1848,6 @@
 
 /* ---------- room to spare ---------- */
 @media (min-width: 1200px) {
-  .go-hero .go-actions .go-btn,
   .go-ranked-actions .go-btn {
     padding-inline: 28px;
   }

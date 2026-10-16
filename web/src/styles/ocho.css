@@ -181,15 +181,15 @@
 .oc-fan > .oc-card:nth-child(5) {
   transform: translateY(6%) rotate(16deg);
 }
-/* Ocho featured in the landing's hero: the hand fills its card as Skull King's does. */
-.go-featured .oc-fan {
-  --oc-fan-w: clamp(84px, 8.6vw, 124px);
+/* Ocho's door on the landing: the hand fills its felt as Skull King's does. */
+.go-door .oc-fan {
+  --oc-fan-w: clamp(44px, 19cqi, 160px);
   padding-block: calc(var(--oc-fan-w) * 0.16);
 }
-.go-featured .oc-fan > .oc-card {
+.go-door .oc-fan > .oc-card {
   --w: var(--oc-fan-w);
 }
-.go-featured .oc-fan > .oc-card + .oc-card {
+.go-door .oc-fan > .oc-card + .oc-card {
   margin-left: calc(var(--oc-fan-w) * -0.3);
 }
 .go-key.oc-key {
