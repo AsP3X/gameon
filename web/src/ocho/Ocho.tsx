@@ -1,5 +1,5 @@
 /* Ocho's pages: sit down, the table waiting for its players, the table, the match score between
-   hands and at the end, and how to play. They are drawn in design/ocho.pen (frames 01–22).
+   hands, the match won, and how to play. They are drawn in design/ocho.pen (frames 01–22).
 
    Ocho runs on its own server (docs/ocho-protocol.md). These pages send intents and draw the lobby
    and the per-seat view it pushes: which cards may be played, whose turn it is, who went out and
@@ -31,6 +31,7 @@ import {
 import type { OchoClient, OchoResult } from './client';
 import { pileLayers, TableMotion } from './motion';
 import type { Box } from './motion';
+import { OchoSounds, winnersOf } from './sounds';
 import { COLORS } from './wire';
 import type { BotLevel, Card, Color, Intent, Lobby, View } from './wire';
 
@@ -662,7 +663,17 @@ function fanOf(i: number, n: number): CSSProperties {
   return { rotate: `${k * step}deg`, translate: `0 ${Math.round(k * k * step * 0.35)}px` };
 }
 
-function Table({ ocho, view, nameOf }: { ocho: OchoClient; view: View; nameOf: (seat: number) => string }) {
+function Table({
+  ocho,
+  view,
+  nameOf,
+  sounds,
+}: {
+  ocho: OchoClient;
+  view: View;
+  nameOf: (seat: number) => string;
+  sounds: OchoSounds;
+}) {
   const title = useTitle('GameOn · Ocho · Table');
   const [menu, setMenu] = useState(false);
   const [picked, setPicked] = useState<number | null>(null);
@@ -762,7 +773,10 @@ function Table({ ocho, view, nameOf }: { ocho: OchoClient; view: View; nameOf: (
       const card = wild;
       if (box) launched.current = { id: card, box };
       const chosen = view.hand.find((c) => c.id === card);
-      if (chosen) setPending(chosen);
+      if (chosen) {
+        setPending(chosen);
+        sounds.played(chosen, view.you);
+      }
       setSent(card);
       setWild(null);
       void send({ t: 'ocho.play', card, color }).then((r) => {
@@ -770,6 +784,7 @@ function Table({ ocho, view, nameOf }: { ocho: OchoClient; view: View; nameOf: (
           launched.current = null;
           setSent(null);
           setPending(null);
+          sounds.refused();
         }
       });
     } else {
@@ -785,8 +800,12 @@ function Table({ ocho, view, nameOf }: { ocho: OchoClient; view: View; nameOf: (
     if (isWild(card)) setWild(card.id);
     else {
       setPending(card);
+      sounds.played(card, view.you);
       void send({ t: 'ocho.play', card: card.id }).then((r) => {
-        if (!r.ok) setPending(null);
+        if (!r.ok) {
+          setPending(null);
+          sounds.refused();
+        }
       });
     }
   };
@@ -795,7 +814,10 @@ function Table({ ocho, view, nameOf }: { ocho: OchoClient; view: View; nameOf: (
     if (card.id === selected?.id) play(card);
     else setPicked(card.id);
   };
-  const draw = (): void => void send({ t: 'ocho.draw' });
+  const draw = (): void => {
+    sounds.tap();
+    void send({ t: 'ocho.draw' });
+  };
   const take = view.stack ?? 0;
 
   let status: string;
@@ -938,35 +960,41 @@ const ordinal = (n: number): string => {
   return `${n}${suffix}`;
 };
 
+/** The seats by the server's totals, highest first. */
+const ranked = (view: View): { seat: number; score: number }[] =>
+  view.scores.map((score, seat) => ({ seat, score })).sort((a, b) => b.score - a.score || a.seat - b.seat);
+
+/** Who went out and what that hand was worth, and the match's target: the line under the heading. */
+function HandLine({ view, nameOf }: { view: View; nameOf: (seat: number) => string }) {
+  const out = view.handWinner;
+  return (
+    <div className="oc-score-meta">
+      {out != null && (
+        <p className="oc-muted">
+          {nameOf(out)} went out · {view.handPoints?.[out] ?? 0} this hand
+        </p>
+      )}
+      {view.target != null && <span className="pill gold">First to {view.target}</span>}
+    </div>
+  );
+}
+
+/** Between hands: the totals so far, and the next deal. */
 function Score({
   ocho,
   view,
   nameOf,
-  teams,
-  onHome,
+  sounds,
 }: {
   ocho: OchoClient;
   view: View;
   nameOf: (seat: number) => string;
-  /** 2v2: the match is won by both partners. */
-  teams: boolean;
-  onHome: () => void;
+  sounds: OchoSounds;
 }) {
-  const over = view.phase === 'over';
-  const winner = view.matchWinner;
-  const winners = winner == null ? [] : teams ? [winner, (winner + 2) % 4] : [winner];
-  const heading = over
-    ? winners.length === 0
-      ? 'The match is over'
-      : `${winners.map(nameOf).join(' and ')} ${winners.length === 1 && winners[0] !== view.you ? 'wins' : 'win'} the match`
-    : 'Match score';
-  const title = useTitle(`GameOn · Ocho · ${over ? 'Match won' : 'Match score'}`);
+  const title = useTitle('GameOn · Ocho · Match score');
   const { busy, error, send } = useSender(ocho);
   const out = view.handWinner;
   const gained = out != null ? (view.handPoints?.[out] ?? 0) : 0;
-  const order = view.scores
-    .map((score, seat) => ({ seat, score }))
-    .sort((a, b) => b.score - a.score || a.seat - b.seat);
   const [menu, setMenu] = useState(false);
   return (
     <div className="oc-page">
@@ -974,34 +1002,24 @@ function Score({
       <main className="oc-score">
         <div className="oc-score-head">
           <h1 tabIndex={-1} ref={title}>
-            {heading}
+            Match score
           </h1>
-          <div className="oc-score-meta">
-            {out != null && (
-              <p className="oc-muted">
-                {nameOf(out)} went out · {gained} this hand
-              </p>
-            )}
-            {view.target != null && <span className="pill gold">First to {view.target}</span>}
-          </div>
+          <HandLine view={view} nameOf={nameOf} />
         </div>
         <ol className="oc-rows oc-score-rows" aria-label="Match score">
-          {order.map(({ seat, score }, i) => {
-            const lead = over ? winners.includes(seat) : i === 0;
-            return (
-              <li key={seat} className={lead ? 'oc-row oc-lead' : 'oc-row'}>
-                <span className={`avatar oc-tone-${toneOf(seat)}`} aria-hidden="true">
-                  {initialOf(nameOf(seat))}
-                </span>
-                <span className="oc-row-text">
-                  <b>{nameOf(seat)}</b>
-                  <small>{seat === out ? `Went out · +${gained} this hand` : `${ordinal(i + 1)} place`}</small>
-                </span>
-                {lead && <span className="pill gold">{over ? 'Winner' : 'Leader'}</span>}
-                <b className="oc-total">{score}</b>
-              </li>
-            );
-          })}
+          {ranked(view).map(({ seat, score }, i) => (
+            <li key={seat} className={i === 0 ? 'oc-row oc-lead' : 'oc-row'}>
+              <span className={`avatar oc-tone-${toneOf(seat)}`} aria-hidden="true">
+                {initialOf(nameOf(seat))}
+              </span>
+              <span className="oc-row-text">
+                <b>{nameOf(seat)}</b>
+                <small>{seat === out ? `Went out · +${gained} this hand` : `${ordinal(i + 1)} place`}</small>
+              </span>
+              {i === 0 && <span className="pill gold">Leader</span>}
+              <b className="oc-total">{score}</b>
+            </li>
+          ))}
         </ol>
         {error && (
           <p className="alert" role="alert">
@@ -1009,12 +1027,16 @@ function Score({
           </p>
         )}
         <div className="oc-score-actions">
-          {over ? (
-            <button type="button" className="btn blue" onClick={onHome}>
-              Back to games
-            </button>
-          ) : view.must === 'nextHand' ? (
-            <button type="button" className="btn" disabled={busy} onClick={() => void send({ t: 'ocho.next' })}>
+          {view.must === 'nextHand' ? (
+            <button
+              type="button"
+              className="btn"
+              disabled={busy}
+              onClick={() => {
+                sounds.tap();
+                void send({ t: 'ocho.next' });
+              }}
+            >
               Next hand
             </button>
           ) : (
@@ -1023,6 +1045,62 @@ function Score({
             </p>
           )}
         </div>
+      </main>
+    </div>
+  );
+}
+
+/** The match is over: who won it is the page, with every total under it. */
+function Won({
+  view,
+  nameOf,
+  teams,
+  onHome,
+}: {
+  view: View;
+  nameOf: (seat: number) => string;
+  /** 2v2: the match is won by both partners. */
+  teams: boolean;
+  onHome: () => void;
+}) {
+  const winners = winnersOf(view, teams);
+  const heading =
+    winners.length === 0
+      ? 'The match is over'
+      : `${winners.map(nameOf).join(' and ')} ${winners.length === 1 && winners[0] !== view.you ? 'wins' : 'win'} the match`;
+  const title = useTitle('GameOn · Ocho · Match won');
+  const [menu, setMenu] = useState(false);
+  return (
+    <div className="oc-page oc-won-page">
+      <TopBar hand={view.handNo} menu={menu} onMenu={() => setMenu((m) => !m)} />
+      <main className="oc-won">
+        <div className="oc-won-head">
+          <h1 tabIndex={-1} ref={title}>
+            {heading}
+          </h1>
+          <HandLine view={view} nameOf={nameOf} />
+        </div>
+        <ol className="oc-rows oc-won-rows" aria-label="Match score">
+          {ranked(view).map(({ seat, score }, i) => {
+            const won = winners.includes(seat);
+            return (
+              <li key={seat} className={won ? 'oc-row oc-lead oc-won-row' : 'oc-row'}>
+                <span className={`avatar oc-tone-${toneOf(seat)}`} aria-hidden="true">
+                  {initialOf(nameOf(seat))}
+                </span>
+                <span className="oc-row-text">
+                  <b>{nameOf(seat)}</b>
+                  <small>{ordinal(i + 1)} place</small>
+                </span>
+                {won && <span className="pill gold">Winner</span>}
+                <b className="oc-total">{score}</b>
+              </li>
+            );
+          })}
+        </ol>
+        <button type="button" className="btn blue oc-won-home" onClick={onHome}>
+          Back to games
+        </button>
       </main>
     </div>
   );
@@ -1043,6 +1121,7 @@ export function OchoPage({ ocho, who, teams, go }: OchoPageProps) {
   const state = useSyncExternalStore(ocho.subscribe, ocho.getState);
   const player = who.is === 'player';
   const meId = who.is === 'player' ? who.me.user.id : null;
+  const [sounds] = useState(() => new OchoSounds());
 
   // The socket needs the session the frame has made sure of.
   useEffect(() => {
@@ -1050,18 +1129,25 @@ export function OchoPage({ ocho, who, teams, go }: OchoPageProps) {
   }, [ocho, player]);
 
   const { lobby, view } = state;
+  const twos = lobby?.teams ?? view?.partnerHand != null;
+  // Every view the server pushes sounds once, whichever page draws it.
+  useEffect(() => {
+    if (view) sounds.view(view, twos);
+    else sounds.reset();
+  }, [sounds, view, twos]);
+
   const nameOf = (seat: number): string =>
     view && seat === view.you ? 'You' : (lobby?.members[seat]?.name ?? `Seat ${seat + 1}`);
 
   if (view) {
-    if (view.phase === 'between' || view.phase === 'over')
+    if (view.phase === 'over')
       return (
-        <Score
-          ocho={ocho}
+        <Won
           view={view}
           nameOf={nameOf}
-          teams={lobby?.teams ?? view.partnerHand != null}
+          teams={twos}
           onHome={() => {
+            sounds.tap();
             // The match is over: the seat is given up, and the page forgets the table.
             void ocho.send({ t: 'ocho.leave' });
             ocho.forget();
@@ -1069,7 +1155,8 @@ export function OchoPage({ ocho, who, teams, go }: OchoPageProps) {
           }}
         />
       );
-    return <Table ocho={ocho} view={view} nameOf={nameOf} />;
+    if (view.phase === 'between') return <Score ocho={ocho} view={view} nameOf={nameOf} sounds={sounds} />;
+    return <Table ocho={ocho} view={view} nameOf={nameOf} sounds={sounds} />;
   }
   if (lobby) return <Waiting ocho={ocho} lobby={lobby} meId={meId} />;
   return <SitDown ocho={ocho} who={who} teams={teams} />;

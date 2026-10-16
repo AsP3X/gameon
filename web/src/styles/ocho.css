@@ -917,6 +917,46 @@
   justify-content: center;
 }
 
+/* ---------- the match won ---------- */
+/* A phone: one column, the winner large on top. From 720px it fills the window like the table. */
+.oc-won {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 24px 16px 32px;
+}
+.oc-won-head {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.oc-won-head h1 {
+  font-size: 36px;
+  font-weight: 900;
+  line-height: 1.05;
+  overflow-wrap: anywhere;
+  transform-origin: left bottom;
+}
+.oc-won-head .pill {
+  font-weight: 900;
+}
+.oc-won-row {
+  min-height: 64px;
+  padding: 10px 14px;
+  border-width: 2px;
+}
+.oc-won-row > .avatar {
+  width: 40px;
+  height: 40px;
+  font-size: 17px;
+}
+.oc-won-row .oc-row-text b {
+  font-size: 17px;
+}
+.oc-won-row .oc-total {
+  font-size: 26px;
+}
+
 /* ---------- how to play ---------- */
 .oc-rules {
   display: flex;
@@ -1189,23 +1229,40 @@
 }
 .oc-top,
 .oc-score-head,
-.oc-score-actions {
+.oc-score-actions,
+.oc-won-head,
+.oc-won-home {
   animation: oc-rise 0.32s var(--ease-out) both;
 }
-.oc-score-rows .oc-row {
+.oc-score-rows .oc-row,
+.oc-won-rows .oc-row {
   animation: oc-rise 0.36s var(--ease-out) both;
 }
-.oc-score-rows .oc-row:nth-child(2) {
+.oc-score-rows .oc-row:nth-child(2),
+.oc-won-rows .oc-row:nth-child(2) {
   animation-delay: 60ms;
 }
-.oc-score-rows .oc-row:nth-child(3) {
+.oc-score-rows .oc-row:nth-child(3),
+.oc-won-rows .oc-row:nth-child(3) {
   animation-delay: 120ms;
 }
-.oc-score-rows .oc-row:nth-child(4) {
+.oc-score-rows .oc-row:nth-child(4),
+.oc-won-rows .oc-row:nth-child(4) {
   animation-delay: 180ms;
 }
-.oc-score-rows .oc-row:nth-child(n + 5) {
+.oc-score-rows .oc-row:nth-child(n + 5),
+.oc-won-rows .oc-row:nth-child(n + 5) {
   animation-delay: 240ms;
+}
+/* The match won: the winner's heading lands a beat larger. */
+.oc-won-head h1 {
+  animation: oc-land 0.48s var(--ease-out) both;
+}
+@keyframes oc-land {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
 }
 @keyframes oc-rise {
   from {
@@ -1281,6 +1338,57 @@
   .oc-table-page .oc-top {
     flex: none;
     padding: 0 24px;
+  }
+  /* The match won fills the window too: the winner on the left, every total on the right. */
+  .oc-won-page {
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+  }
+  .oc-won-page .oc-top {
+    flex: none;
+    padding: 0 24px;
+  }
+  .oc-won-page .oc-menu {
+    right: 24px;
+  }
+  .oc-won {
+    flex: 1;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: minmax(0, 5fr) minmax(0, 4fr);
+    grid-template-rows: 1fr auto 1fr;
+    grid-template-areas:
+      'head rows'
+      'home rows'
+      '. rows';
+    gap: 28px 48px;
+    padding: 32px 24px;
+    overflow-y: auto;
+  }
+  .oc-won-head {
+    grid-area: head;
+    align-self: end;
+    gap: 20px;
+  }
+  .oc-won-rows {
+    grid-area: rows;
+    align-self: center;
+  }
+  .oc-won-home {
+    grid-area: home;
+  }
+  .oc-won-head h1 {
+    font-size: clamp(44px, 5.4vw, 80px);
+  }
+  .oc-won-head .oc-score-meta {
+    justify-content: flex-start;
+    gap: 8px 16px;
+  }
+  #gameon .oc-won-home {
+    justify-self: start;
+    width: auto;
+    min-width: 240px;
   }
   .oc-table-page .oc-menu {
     right: 24px;
@@ -1378,7 +1486,11 @@
   .oc-top,
   .oc-score-head,
   .oc-score-actions,
-  .oc-score-rows .oc-row {
+  .oc-score-rows .oc-row,
+  .oc-won-head,
+  .oc-won-head h1,
+  .oc-won-home,
+  .oc-won-rows .oc-row {
     animation: none;
   }
   .oc-hand-card:not([disabled]):hover,

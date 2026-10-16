@@ -5,10 +5,12 @@ import { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import type { Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test';
+import type { MockInstance } from 'vite-plus/test';
 import { GoContext } from '../gameon/Frame';
 import type { Who } from '../gameon/Frame';
 import { MockServer } from '../net/mock/server';
 import type { Me } from '../protocol/generated';
+import { Sound } from '../sound/sound';
 import { OchoClient } from './client';
 import { aLobby, aView, card, fakeOcho } from './fake';
 import type { FakeOcho } from './fake';
@@ -21,6 +23,9 @@ let fake: FakeOcho;
 let ocho: OchoClient;
 let who: Who;
 let went: string[];
+let play: MockInstance<typeof Sound.play>;
+/** The sounds the page played, by name, in order. */
+const sounds = (): unknown[] => play.mock.calls.map(([name, arg]) => (arg === undefined ? name : [name, arg]));
 
 const $ = (selector: string): HTMLElement | null => document.querySelector<HTMLElement>(selector);
 const $$ = (selector: string): HTMLElement[] => Array.from(document.querySelectorAll<HTMLElement>(selector));
@@ -93,6 +98,7 @@ beforeEach(async () => {
   fake = fakeOcho();
   ocho = new OchoClient(fake.transport);
   went = [];
+  play = vi.spyOn(Sound, 'play').mockImplementation(() => {});
 });
 
 afterEach(() => {
@@ -100,6 +106,7 @@ afterEach(() => {
   root = null;
   vi.useRealTimers();
   vi.unstubAllGlobals();
+  vi.restoreAllMocks();
 });
 
 describe('sitting down at Ocho', () => {
@@ -443,6 +450,74 @@ describe('the table', () => {
     expect(texts('.oc-partner-hand .oc-mini')).toEqual(['2', 'SHLD']);
     expect(texts('.oc-you .pill')).toContain('Team with Ben');
   });
+
+  it('deals with one sound, then plays your card once: the view of that card is silent', async () => {
+    await atTable(aView());
+    expect(sounds()).toEqual([['deal', 4], 'yourTurn']);
+    play.mockClear();
+    await press('Yellow 7');
+    expect(sounds()).toEqual([]);
+    await press('Yellow 7');
+    expect(sounds()).toEqual([['cardPlay', 0]]);
+    const top = card(11, 'yellow', { number: 7 });
+    const after = aView({
+      must: 'none',
+      turn: 1,
+      legal: [],
+      top,
+      hand: aView().hand.filter((c) => c.id !== 11),
+      counts: [3, 8, 8, 8, 8, 8, 8, 8],
+    });
+    await push({ t: 'ocho.view', view: after });
+    await answer();
+    expect(sounds()).toEqual([['cardPlay', 0]]);
+  });
+
+  it('says no once when the server refuses the play', async () => {
+    await atTable(aView());
+    play.mockClear();
+    await press('Yellow 7');
+    await press('Yellow 7');
+    await act(async () => {
+      fake.err('ILLEGAL', 'That card does not play.');
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(sounds()).toEqual([['cardPlay', 0], 'nope']);
+  });
+
+  it('plays a wild once with its colour, and naming the opening colour plays no card', async () => {
+    await atTable(aView());
+    play.mockClear();
+    await press('Ocho Wild');
+    await press('Ocho Wild');
+    expect(sounds()).toEqual([]);
+    await press('Green');
+    expect(sounds()).toEqual([['cardPlay', 0]]);
+    if (root) act(() => root?.unmount());
+    play.mockClear();
+    await atTable(aView({ phase: 'chooseColor', must: 'chooseColor', top: card(30, null, 'wild'), symbol: 'color' }));
+    play.mockClear();
+    await press('Blue');
+    expect(sounds()).toEqual([]);
+  });
+
+  it('taps when the pile is tapped to draw, and the card drawn sounds once', async () => {
+    await atTable(aView({ legal: [] }));
+    play.mockClear();
+    await press('Draw one');
+    expect(sounds()).toEqual(['tap']);
+    await answer();
+    await push({
+      t: 'ocho.view',
+      view: aView({
+        phase: 'drawn',
+        must: 'playDrawnOrKeep',
+        legal: [14],
+        hand: [...aView().hand, card(14, 'yellow', { number: 2 })],
+      }),
+    });
+    expect(sounds()).toEqual(['tap', ['cardPlay', 0]]);
+  });
 });
 
 describe('the match score', () => {
@@ -477,14 +552,72 @@ describe('the match score', () => {
     expect($('.oc-score-actions')?.textContent).toBe('Waiting for Ana to deal the next hand');
   });
 
+  it('sounds the sheet once for the hand: good when you went out', async () => {
+    await atTable(between, 3);
+    await push({ t: 'ocho.view', view: { ...between } });
+    expect(sounds()).toEqual(['roundGood']);
+    await press('Next hand');
+    expect(sounds()).toEqual(['roundGood', 'tap']);
+  });
+});
+
+describe('the match won', () => {
+  const over = aView({
+    phase: 'over',
+    must: 'none',
+    hand: [],
+    legal: [],
+    counts: [0, 2, 3],
+    scores: [77, 0, 512],
+    handPoints: [77, 0, 0],
+    handWinner: 0,
+    handNo: 6,
+    target: 500,
+    matchWinner: 2,
+  });
+
   it('names the winner of the match, and goes back to the games giving up the seat', async () => {
-    await atTable({ ...between, phase: 'over', must: 'none', matchWinner: 2, scores: [77, 0, 512] }, 3);
+    await atTable(over, 3);
     expect($('h1')?.textContent).toBe('Ben wins the match');
-    expect($('.oc-row.oc-lead .pill')?.textContent).toBe('Winner');
+    expect(document.title).toBe('GameOn · Ocho · Match won');
+    expect($('.oc-score-rows')).toBeNull();
+    expect($('.oc-won-head .oc-score-meta p')?.textContent).toBe('You went out · 77 this hand');
+    expect($('.oc-won-head .pill')?.textContent).toBe('First to 500');
+    expect(texts('.oc-won-rows .oc-row-text b')).toEqual(['Ben', 'You', 'Ana']);
+    expect(texts('.oc-won-rows .oc-row-text small')).toEqual(['1st place', '2nd place', '3rd place']);
+    expect(texts('.oc-won-rows .oc-total')).toEqual(['512', '77', '0']);
+    expect(texts('.oc-row.oc-lead .pill')).toEqual(['Winner']);
+    expect(texts('.oc-won-rows .oc-lead .oc-row-text b')).toEqual(['Ben']);
+    expect(texts('.oc-won button')).toEqual(['Back to games']);
     await press('Back to games');
     expect(sent()).toEqual([{ t: 'ocho.leave' }]);
     expect(went).toEqual(['/games']);
     expect(ocho.getState().view).toBeNull();
+  });
+
+  it('marks both partners when a team wins, and plays the fanfare once for you', async () => {
+    const teams = { ...over, counts: [0, 2, 3, 4], scores: [300, 120, 230, 90], handPoints: [77, 0, 0, 0] };
+    await render(page());
+    await push({ t: 'ocho.lobby', lobby: aLobby({ started: true, teams: true }, 4, 4) });
+    await push({ t: 'ocho.view', view: teams });
+    expect($('h1')?.textContent).toBe('Ben and You win the match');
+    expect(texts('.oc-won-rows .oc-lead .oc-row-text b')).toEqual(['You', 'Ben']);
+    await push({ t: 'ocho.view', view: { ...teams } });
+    expect(sounds()).toEqual(['fanfare']);
+  });
+
+  it('plays the loss once when another seat wins, and says the match is over with no winner', async () => {
+    await atTable(over, 3);
+    await push({ t: 'ocho.view', view: { ...over } });
+    expect(sounds()).toEqual(['roundBad']);
+    await press('Back to games');
+    expect(sounds()).toEqual(['roundBad', 'tap']);
+    if (root) act(() => root?.unmount());
+    play.mockClear();
+    await atTable({ ...over, matchWinner: null }, 3);
+    expect($('h1')?.textContent).toBe('The match is over');
+    expect($$('.oc-row.oc-lead')).toEqual([]);
+    expect(sounds()).toEqual([]);
   });
 });
 
