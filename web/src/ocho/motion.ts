@@ -315,6 +315,11 @@ export class TableMotion {
     return halves.length > 0 ? 680 : 0;
   }
 
+  /** The discard already shows `top`, so the next view must not fly that card again. */
+  acceptPlayed(top: Card): void {
+    if (this.last) this.last = { ...this.last, top };
+  }
+
   /** Moves the page from `prev` to `view`, which is already drawn. */
   view(view: View, launched: { id: number; box: Box } | null): void {
     const prev = this.last;

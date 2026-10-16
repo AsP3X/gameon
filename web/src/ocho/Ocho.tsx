@@ -543,7 +543,7 @@ function DrawPile({ count }: { count: number }) {
 /** The pile is the control when taking from it is the move: a tap draws one, or takes the stack. */
 type PileTap = { label: string; busy: boolean; onTap: () => void } | null;
 
-function Centre({ view, tap }: { view: View; tap: PileTap }) {
+function Centre({ view, top, tap }: { view: View; top: Card; tap: PileTap }) {
   return (
     <div className="oc-centre">
       <div className="oc-centre-pills">
@@ -577,10 +577,10 @@ function Centre({ view, tap }: { view: View; tap: PileTap }) {
         </figure>
         <figure className="oc-pile">
           <span data-oc="discard">
-            <CardFace card={view.top} size="lg" />
+            <CardFace card={top} size="lg" />
           </span>
           <figcaption>
-            Discard<span className="oc-sr">: {cardName(view.top)}</span>
+            Discard<span className="oc-sr">: {cardName(top)}</span>
           </figcaption>
         </figure>
       </div>
@@ -669,6 +669,8 @@ function Table({ ocho, view, nameOf }: { ocho: OchoClient; view: View; nameOf: (
   const [wild, setWild] = useState<number | null>(null);
   /** A wild sent with its colour: it has left the hand, and flies when the view comes back. */
   const [sent, setSent] = useState<number | null>(null);
+  /** The card just chosen. It is the discard until the server's view says the same. */
+  const [pending, setPending] = useState<Card | null>(null);
   /** The opening card was put back small; the action line can make it large again. */
   const [shut, setShut] = useState(false);
   const { busy, error, send } = useSender(ocho);
@@ -690,6 +692,8 @@ function Table({ ocho, view, nameOf }: { ocho: OchoClient; view: View; nameOf: (
   const motion = useRef<TableMotion | null>(null);
   const launched = useRef<{ id: number; box: Box } | null>(null);
   const settle = useRef<{ selector: string; box: Box } | null>(null);
+  const pendingRef = useRef(pending);
+  pendingRef.current = pending;
 
   // A new view is a new moment: what was picked for the last one is not picked for this one.
   useEffect(() => {
@@ -697,6 +701,7 @@ function Table({ ocho, view, nameOf }: { ocho: OchoClient; view: View; nameOf: (
     setWild(null);
     setSent(null);
     setShut(false);
+    setPending(null);
   }, [view]);
 
   useLayoutEffect(() => {
@@ -709,6 +714,8 @@ function Table({ ocho, view, nameOf }: { ocho: OchoClient; view: View; nameOf: (
     };
   }, []);
   useLayoutEffect(() => {
+    const held = pendingRef.current;
+    if (held && view.top.id === held.id) motion.current?.acceptPlayed(view.top);
     motion.current?.view(view, launched.current);
     launched.current = null;
   }, [view]);
@@ -754,12 +761,15 @@ function Table({ ocho, view, nameOf }: { ocho: OchoClient; view: View; nameOf: (
     if (wild != null) {
       const card = wild;
       if (box) launched.current = { id: card, box };
+      const chosen = view.hand.find((c) => c.id === card);
+      if (chosen) setPending(chosen);
       setSent(card);
       setWild(null);
       void send({ t: 'ocho.play', card, color }).then((r) => {
         if (!r.ok) {
           launched.current = null;
           setSent(null);
+          setPending(null);
         }
       });
     } else {
@@ -773,7 +783,12 @@ function Table({ ocho, view, nameOf }: { ocho: OchoClient; view: View; nameOf: (
 
   const play = (card: Card): void => {
     if (isWild(card)) setWild(card.id);
-    else void send({ t: 'ocho.play', card: card.id });
+    else {
+      setPending(card);
+      void send({ t: 'ocho.play', card: card.id }).then((r) => {
+        if (!r.ok) setPending(null);
+      });
+    }
   };
   /** A tap on a card in the hand: the first lifts it, a tap on the lifted one plays it. */
   const tapCard = (card: Card): void => {
@@ -840,7 +855,7 @@ function Table({ ocho, view, nameOf }: { ocho: OchoClient; view: View; nameOf: (
               <Seat key={seat} view={view} seat={seat} name={nameOf(seat)} slot={slots[i] ?? 't2'} />
             ))}
           </ul>
-          <Centre view={view} tap={naming ? null : pile} />
+          <Centre view={view} top={pending ?? view.top} tap={naming ? null : pile} />
           {namerCardOf && (
             <Namer
               key={namerKey}
@@ -870,7 +885,7 @@ function Table({ ocho, view, nameOf }: { ocho: OchoClient; view: View; nameOf: (
             {view.hand.map((card, i) => {
               const can = mine && legal.has(card.id);
               const on = selected?.id === card.id;
-              const away = card.id === wild || card.id === sent;
+              const away = card.id === wild || card.id === sent || card.id === pending?.id;
               return (
                 <li
                   key={card.id}

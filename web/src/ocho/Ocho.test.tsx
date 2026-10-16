@@ -271,6 +271,8 @@ describe('the table', () => {
     expect(sent()).toEqual([]);
     await press('Yellow 7');
     expect(sent()).toEqual([{ t: 'ocho.play', card: 11 }]);
+    expect($('[data-oc="discard"] .oc-corner')?.textContent).toBe('7');
+    expect($('[data-card="11"]')?.classList.contains('oc-away')).toBe(true);
   });
 
   it('grows a wild into the colour card and sends the quadrant pressed with the card', async () => {
@@ -294,6 +296,8 @@ describe('the table', () => {
     await press('Green');
     expect(sent()).toEqual([{ t: 'ocho.play', card: 13, color: 'green' }]);
     expect($('.oc-namer')).toBeNull();
+    expect($('[data-oc="discard"] .oc-corner')?.textContent).toBe('WILD');
+    expect($('[data-card="13"]')?.classList.contains('oc-away')).toBe(true);
   });
 
   it('puts a wild back in the hand with a click outside it or Escape, and sends nothing', async () => {

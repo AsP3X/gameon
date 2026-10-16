@@ -52,6 +52,8 @@ struct Lobby {
     bots: Option<BotLevel>,
     /// Hand number a bot is waiting to deal, so a second pause does not deal twice.
     bot_deal: Option<u32>,
+    /// Bumps when a person acts, so a bot pause from an earlier play does not move.
+    bot_seq: u64,
     members: Vec<Member>,
     table: Option<Table>,
 }
@@ -72,6 +74,18 @@ struct Table {
 
 /// How long a bot waits on the score before dealing the next hand.
 const BOT_DEAL_PAUSE: Duration = Duration::from_secs(4);
+/// How long a played card stays on the discard before a bot plays over it.
+const BOT_PLAY_PAUSE: Duration = Duration::from_millis(700);
+
+/// What one delayed bot step should do after it looks at the table.
+enum BotStep {
+    /// Nobody for this pause to play.
+    Stop,
+    /// A bot has to deal. The between view is already published.
+    Deal(u32),
+    /// A bot played. Publish that card, then deal or wait for the next bot.
+    Played { deal: Option<u32>, again: bool },
+}
 
 struct OsRng;
 
@@ -407,6 +421,8 @@ struct StepOk {
     publish: bool,
     /// A bot went out on this hand and should deal after [`BOT_DEAL_PAUSE`].
     bot_deal: Option<u32>,
+    /// A bot's turn should be played after [`BOT_PLAY_PAUSE`], if this is still `Lobby::bot_seq`.
+    bot_play: Option<u64>,
 }
 
 fn done(re: u64, lobby: Option<LobbyView>, publish: bool) -> StepOk {
@@ -415,6 +431,7 @@ fn done(re: u64, lobby: Option<LobbyView>, publish: bool) -> StepOk {
         lobby,
         publish,
         bot_deal: None,
+        bot_play: None,
     }
 }
 
@@ -492,6 +509,7 @@ fn create(
         first_to_500,
         bots,
         bot_deal: None,
+        bot_seq: 0,
         members,
         table: None,
     };
@@ -721,12 +739,51 @@ fn act(inner: &mut Inner, user: &User, id: u64, intent: Intent) -> Result<StepOk
                 }
                 ocho_engine::StepError::Broken => (id, "INTERNAL", "The hand could not continue."),
             })?;
-        bots_until_a_player(&mut table.game, &table.bots, &mut OsRng)
+        // Human: The card just played is the discard the table shows. Bots move only after that view has gone out.
+        // Agent: WRITES game via act; READS the next seat; does not play a bot in this call.
+        let deal = bot_must_deal(table);
+        let play = deal.is_none() && bot_must_play(table);
+        (deal, play)
     };
-    lobby.bot_deal = pause;
+    let (deal, play) = pause;
+    lobby.bot_deal = deal;
+    lobby.bot_seq = lobby.bot_seq.wrapping_add(1);
     let mut step = done(id, None, true);
-    step.bot_deal = pause;
+    step.bot_deal = deal;
+    if play {
+        step.bot_play = Some(lobby.bot_seq);
+    }
     Ok(step)
+}
+
+/// A bot is the seat that must deal the next hand.
+fn bot_must_deal(table: &Table) -> Option<u32> {
+    let probe = table.game.view(0).ok()?;
+    let view = table.game.view(probe.turn).ok()?;
+    if view.must != Must::NextHand {
+        return None;
+    }
+    table.bots.get(usize::from(probe.turn)).copied().flatten()?;
+    Some(view.hand_no)
+}
+
+/// A bot has a turn to play. Dealing the next hand is not one of those turns.
+fn bot_must_play(table: &Table) -> bool {
+    let Ok(probe) = table.game.view(0) else {
+        return false;
+    };
+    let Ok(view) = table.game.view(probe.turn) else {
+        return false;
+    };
+    if view.must == Must::None || view.must == Must::NextHand {
+        return false;
+    }
+    table
+        .bots
+        .get(usize::from(probe.turn))
+        .copied()
+        .flatten()
+        .is_some()
 }
 
 fn lobby_of<'a>(inner: &'a mut Inner, user: &str) -> Option<&'a mut Lobby> {
@@ -872,6 +929,7 @@ impl Room {
                         sockets,
                         step.publish,
                         step.bot_deal,
+                        step.bot_play,
                         None,
                     )
                 }
@@ -881,11 +939,12 @@ impl Room {
                     Vec::new(),
                     false,
                     None,
+                    None,
                     Some(ServerMsg::err(re, code, message)),
                 ),
             }
         };
-        let (re, lobby, sockets, publish, bot_deal, err) = views;
+        let (re, lobby, sockets, publish, bot_deal, bot_play, err) = views;
         if let Some(err) = err {
             self.send(&user.id, &err).await;
             return;
@@ -900,6 +959,9 @@ impl Room {
         if let Some(hand_no) = bot_deal {
             self.schedule_bot_deal(&user.id, hand_no);
         }
+        if let Some(seq) = bot_play {
+            self.schedule_bot_play(&user.id, seq);
+        }
     }
 
     fn schedule_bot_deal(self: &Arc<Self>, user_id: &str, hand_no: u32) {
@@ -909,6 +971,91 @@ impl Room {
             tokio::time::sleep(BOT_DEAL_PAUSE).await;
             room.deal_for_bot(&user_id, hand_no).await;
         });
+    }
+
+    /// One bot plays after the discard has been on the table long enough to see.
+    fn schedule_bot_play(self: &Arc<Self>, user_id: &str, seq: u64) {
+        let room = Arc::clone(self);
+        let user_id = user_id.to_owned();
+        tokio::spawn(async move {
+            tokio::time::sleep(BOT_PLAY_PAUSE).await;
+            room.play_one_bot(&user_id, seq).await;
+        });
+    }
+
+    /// Play a single bot seat, publish that card, then wait again if another bot is next.
+    async fn play_one_bot(self: &Arc<Self>, user_id: &str, seq: u64) {
+        // Human: Bots take turns one card at a time, so a person's card stays on the discard before the next one.
+        // Agent: READS bot_seq and one seat's PlayerView; WRITES one Intent; does not hold the lock across the pause.
+        let step = {
+            let mut inner = self.inner.lock().await;
+            let Some(lobby_id) = inner.seated.get(user_id).cloned() else {
+                return;
+            };
+            let Some(lobby) = inner.lobbies.get_mut(&lobby_id) else {
+                return;
+            };
+            if lobby.bot_seq != seq {
+                return;
+            }
+            let acted = {
+                let Some(table) = lobby.table.as_mut() else {
+                    return;
+                };
+                let Ok(probe) = table.game.view(0) else {
+                    tracing::error!("ocho bot could not see the table");
+                    return;
+                };
+                let Some(level) = table.bots.get(usize::from(probe.turn)).copied().flatten() else {
+                    return;
+                };
+                let Ok(view) = table.game.view(probe.turn) else {
+                    tracing::error!("ocho bot could not see its seat");
+                    return;
+                };
+                if view.must == Must::NextHand {
+                    BotStep::Deal(view.hand_no)
+                } else if view.must == Must::None {
+                    BotStep::Stop
+                } else {
+                    let Ok(intent) = choose(&view, level, &mut OsRng) else {
+                        tracing::error!("ocho bot could not choose");
+                        return;
+                    };
+                    if table.game.act(probe.turn, intent, &mut OsRng).is_err() {
+                        tracing::error!("ocho bot could not move");
+                        return;
+                    }
+                    let deal = bot_must_deal(table);
+                    let again = deal.is_none() && bot_must_play(table);
+                    BotStep::Played { deal, again }
+                }
+            };
+            let hand_no = match &acted {
+                BotStep::Deal(hand_no)
+                | BotStep::Played {
+                    deal: Some(hand_no),
+                    ..
+                } => Some(*hand_no),
+                BotStep::Stop | BotStep::Played { deal: None, .. } => None,
+            };
+            if let Some(hand_no) = hand_no {
+                lobby.bot_deal = Some(hand_no);
+            }
+            acted
+        };
+        match step {
+            BotStep::Stop => {}
+            BotStep::Deal(hand_no) => self.schedule_bot_deal(user_id, hand_no),
+            BotStep::Played { deal, again } => {
+                self.publish_views(user_id).await;
+                if let Some(hand_no) = deal {
+                    self.schedule_bot_deal(user_id, hand_no);
+                } else if again {
+                    self.schedule_bot_play(user_id, seq);
+                }
+            }
+        }
     }
 
     /// Deal the next hand for a bot who went out, then play bots up to a person.
@@ -1048,10 +1195,10 @@ fn bot_name(used: &[String]) -> String {
 #[cfg(test)]
 mod tests {
     use super::{
-        Inner, Socket, Table, User, add_bot, bots_until_a_player, create, detach_socket, hello,
-        join, leave, remove_bot, set_bots, set_ready, start,
+        Inner, Socket, Table, User, act, add_bot, bots_until_a_player, create, detach_socket,
+        hello, join, leave, remove_bot, set_bots, set_ready, start,
     };
-    use ocho_engine::{BotLevel, Game, Phase};
+    use ocho_engine::{BotLevel, Color, Game, Intent, Kind, Must, Phase};
     use std::collections::HashMap;
     use tokio::sync::mpsc;
 
@@ -1209,6 +1356,54 @@ mod tests {
         add_bot(&mut inner, &host, 9).expect("full");
         let err = add_bot(&mut inner, &host, 10);
         assert!(err.is_err());
+    }
+
+    #[test]
+    fn a_play_stays_on_the_discard_until_the_bot_is_due() {
+        let mut inner = empty();
+        let host = user("host");
+        create(&mut inner, &host, 1, 2, false, false, Some(BotLevel::Easy)).expect("create");
+        let lobby_id = inner.seated[&host.id].clone();
+        let bots = vec![None, Some(BotLevel::Easy)];
+        let mut dealt = None;
+        for seed in 0..40 {
+            let mut game = Game::create(2, false, false, &mut Seq(seed)).expect("game");
+            let _ = bots_until_a_player(&mut game, &bots, &mut Seq(seed.wrapping_add(9)));
+            let mut view = game.view(0).expect("view");
+            if view.must == Must::ChooseColor {
+                game.act(0, Intent::Choose { color: Color::Red }, &mut Seq(3))
+                    .expect("color");
+                view = game.view(0).expect("view");
+            }
+            let Some(card) = view
+                .hand
+                .iter()
+                .find(|card| view.legal.contains(&card.id) && matches!(card.kind, Kind::Number(_)))
+            else {
+                continue;
+            };
+            dealt = Some((game, card.id, view.counts[1]));
+            break;
+        }
+        let (game, card, bot_cards) = dealt.expect("a seeded deal with a number to play");
+        inner.lobbies.get_mut(&lobby_id).expect("lobby").table = Some(Table {
+            game,
+            seats: vec![host.id.clone(), "bot".to_owned()],
+            bots,
+        });
+        let step = act(&mut inner, &host, 2, Intent::Play { card, color: None }).expect("play");
+        assert!(step.publish);
+        assert!(step.bot_play.is_some());
+        assert!(step.bot_deal.is_none());
+        let after = inner.lobbies[&lobby_id]
+            .table
+            .as_ref()
+            .expect("table")
+            .game
+            .view(0)
+            .expect("view");
+        assert_eq!(after.top.id, card);
+        assert_eq!(after.counts[1], bot_cards);
     }
 
     #[test]
