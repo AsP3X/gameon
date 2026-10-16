@@ -215,17 +215,15 @@ describe('how to play', () => {
         document.querySelector(`[aria-labelledby="${card}"]`)?.querySelectorAll<HTMLAnchorElement>('a') ?? [],
       ).filter((a) => a.textContent === 'How to play');
     const how = hows('go-sk-title');
-    expect(how.map((a) => a.getAttribute('href'))).toEqual(['/how-to-play', '/how-to-play']);
+    expect(how.map((a) => a.getAttribute('href'))).toEqual(['/how-to-play']);
     // Ocho has a guide of its own.
-    expect(hows('go-ocho-title').map((a) => a.getAttribute('href'))).toEqual([
-      '/games/ocho/how-to-play',
-      '/games/ocho/how-to-play',
-    ]);
+    expect(hows('go-ocho-title').map((a) => a.getAttribute('href'))).toEqual(['/games/ocho/how-to-play']);
     await clickOn(how[0]);
     expect(places.path()).toBe('/how-to-play');
     closePage();
+    // The landing's way is its footer.
     await openAt('/');
-    expect($('.go-pick .go-actions a.ghost')?.getAttribute('href')).toBe('/how-to-play');
+    expect($('.go-foot a[href="/how-to-play"]')?.textContent).toBe('How to play');
   });
 });
 
@@ -343,10 +341,10 @@ describe('suggesting a game', () => {
     expect($('.go-send .alert')?.textContent).toBe('This browser would not keep the note.');
   });
 
-  it('is where the tile under the announced games leads, on Games and on the landing', async () => {
+  it('is where the line under the felt on Games and the tile under the announced games on the landing lead', async () => {
     await openAt('/games');
-    expect($('.go-suggest a')?.getAttribute('href')).toBe('/suggest');
-    await clickOn($('.go-suggest a'));
+    expect($('.go-coming a')?.getAttribute('href')).toBe('/suggest');
+    await clickOn($('.go-coming a'));
     expect(places.path()).toBe('/suggest');
     closePage();
     await openAt('/');

@@ -65,28 +65,17 @@ async function clickOn(el: HTMLElement): Promise<void> {
     await vi.advanceTimersByTimeAsync(0);
   });
 }
-/** Skull King's two choices on Games, as the page has them: the name of each, and whether it is open. */
-const choices = (): { name: string; open: boolean }[] =>
-  Array.from(document.querySelectorAll<HTMLElement>('.go-choices .sk-way'), (card) => ({
-    name: card.querySelector('b')?.textContent ?? '',
-    open: card.getAttribute('aria-expanded') === 'true',
-  }));
-/** The ways of the choice that is open: what each is called and where it leads. */
-const shown = (): [string, string | null][] =>
-  Array.from(document.querySelectorAll<HTMLElement>('.go-choices .sk-opts:not([hidden]) .sk-opt'), (opt) => [
-    opt.querySelector('b')?.textContent ?? '',
-    opt.getAttribute('href'),
-  ]);
-const way = (name: string): HTMLElement => {
-  const el = Array.from(document.querySelectorAll<HTMLElement>('.go-choices .sk-opts:not([hidden]) .sk-opt')).find(
-    (opt) => opt.querySelector('b')?.textContent === name,
-  );
-  if (!el) throw new Error(`No way called "${name}" is open`);
-  return el;
-};
-/** Open the choice of that name, or close it. */
-const choose = (name: string): Promise<void> =>
-  clickOn($(`.go-choices .sk-way[aria-controls="go-${name.toLowerCase()}-ways"]`) ?? host);
+/** A phone: the window is narrower than the wide layout, and Games' sheets are used. */
+function phone(): void {
+  vi.stubGlobal('matchMedia', (query: string) => ({ matches: !query.includes('min-width'), media: query }));
+}
+/** Open one of the sheets of a phone's Games by its button in the bar, and give back the dialog. */
+async function sheet(label: 'Tables' | 'You' | 'Play'): Promise<HTMLDialogElement> {
+  await press(label);
+  const dialog = document.querySelector<HTMLDialogElement>('dialog.go-sheet');
+  if (!dialog?.open) throw new Error(`The ${label} sheet did not open`);
+  return dialog;
+}
 const follow = (label: string): Promise<void> => clickOn(link(label));
 const press = (label: string): Promise<void> => clickOn(button(label));
 async function type(selector: string, value: string): Promise<void> {
@@ -199,6 +188,15 @@ beforeEach(() => {
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
   vi.stubGlobal('matchMedia', (query: string) => ({ matches: true, media: query }));
   vi.stubGlobal('scrollTo', () => {});
+  // jsdom has the dialog element without its modal methods: these do what a browser does that the page relies on.
+  HTMLDialogElement.prototype.showModal = function (this: HTMLDialogElement) {
+    this.open = true;
+  };
+  HTMLDialogElement.prototype.close = function (this: HTMLDialogElement) {
+    if (!this.open) return;
+    this.open = false;
+    this.dispatchEvent(new Event('close'));
+  };
   localStorage.clear();
   document.title = 'Skull King Tavern';
   document.body.innerHTML = '<div id="root"></div>';
@@ -299,17 +297,41 @@ describe('the landing', () => {
     expect(places.path()).toBe('/');
   });
 
-  it('filters the shelf by the kind of game', async () => {
+  it('reads the ways to sit down, the season, what is coming and the last word, in that order on a wide window', async () => {
     await openAt('/');
+    expect(Array.from(document.querySelectorAll('#gameon main > section'), (s) => s.className)).toEqual([
+      'go-hero',
+      'go-ways',
+      'go-ranked',
+      'go-shelf',
+      'go-cta wide-only',
+    ]);
+    // No kickers over the headings.
+    expect($('.go-ways .go-eyebrow, .go-ranked .go-eyebrow, .go-shelf .go-eyebrow')).toBeNull();
+    expect($('#go-shelf-title .wide-only')?.textContent).toBe('Coming soon');
+    // Every announced game and the way to ask for one: no filters and no featured game.
     expect(texts('.go-soon > b')).toEqual(['Hearts', 'Chess', 'Ludo', 'Four in a Row', 'Five Dice']);
-    expect($('.go-pick')).not.toBeNull();
-    await press('Dice');
-    expect(button('Dice').getAttribute('aria-pressed')).toBe('true');
-    expect(texts('.go-soon > b')).toEqual(['Five Dice']);
+    expect($('.go-suggest')).not.toBeNull();
+    expect($('.go-shelves')).toBeNull();
     expect($('.go-pick')).toBeNull();
-    await press('Cards');
-    expect(texts('.go-soon > b')).toEqual(['Hearts']);
-    expect($('.go-pick')).not.toBeNull();
+    // The season's words on the left, the tiers on the right.
+    expect($('.go-ranked-copy .go-ranked-text')).not.toBeNull();
+    expect($('.go-standings .go-tiers')?.getAttribute('aria-label')).toBe('Seven tiers');
+    expect($('#go-cta-title')?.textContent).toBe('Pull up a chair.');
+  });
+
+  it('reads the season before the ways to play on a phone, as it did', async () => {
+    phone();
+    await openAt('/');
+    expect(Array.from(document.querySelectorAll('#gameon main > section'), (s) => s.className)).toEqual([
+      'go-hero',
+      'go-ranked',
+      'go-ways',
+      'go-shelf',
+      'go-cta wide-only',
+    ]);
+    expect($('.go-ranked .go-eyebrow')?.textContent).toBe('Ranked');
+    expect(link('See the ladder').getAttribute('href')).toBe('/ladder');
   });
 
   it('shows the three at the top of the ladder to a browser that has a session, as the server sent them', async () => {
@@ -343,7 +365,7 @@ describe('the landing', () => {
     expect(texts('.go-step small')).toEqual(['Rating 52', 'Rating 49', 'Rating 48']);
     // An account has what ranked takes: the way in is the ranked page.
     expect(link('Find a ranked game').getAttribute('href')).toBe('/skull-king/ranked');
-    expect($('.go-ranked-foot')?.textContent).not.toContain('free account');
+    expect($('.go-ranked-foot')).toBeNull();
     expect($('.go-chip')?.getAttribute('href')).toBe('/profile');
   });
 
@@ -396,85 +418,79 @@ describe('the landing', () => {
 
 describe('Games', () => {
   it('makes a guest of a browser nobody knew, and says who they are', async () => {
+    phone();
     await openAt('/games');
     expect($('#gameon h1')?.textContent).toBe('Games');
     expect(document.title).toBe('GameOn · Games');
     const guest = await me();
     expect(guest.guest).toBe(true);
+    // A guest has no name on the felt's bar: the way to sign in is in its place.
+    expect($('.go-bar-name')).toBeNull();
+    expect($('.go-bar-sign')?.getAttribute('href')).toBe('/sign-in');
+    expect(link('Sign in').getAttribute('href')).toBe('/sign-in');
+    // Their seat is in the sheet the bar's "You" opens.
+    await sheet('You');
     expect($('.go-seat-who b')?.textContent).toBe(guest.user.name);
     expect($('.go-seat-who small')?.textContent).toBe('Playing as a guest');
     expect($('.go-seat > p')?.textContent).toBe('Ranked needs an account. Your name, colour and stats stay with you.');
     expect(link('Create an account').getAttribute('href')).toBe('/sign-up');
-    expect(link('Sign in').getAttribute('href')).toBe('/sign-in');
     // No connection was made for any of it.
     expect($('#online')).toBeNull();
     expect($('.go-banner')).toBeNull();
   });
 
-  it("offers Skull King's two choices, closed, as its home does, and no four ways beside them", async () => {
+  it('lays the page out as one felt: the table, the open tables, the bar, and what is coming under it', async () => {
     await openAt('/games');
-    expect(choices()).toEqual([
-      { name: 'Solo', open: false },
-      { name: 'Online', open: false },
+    const floor = $('.go-floor');
+    expect(floor?.querySelector('.go-felt-table')).not.toBeNull();
+    expect(floor?.querySelector('.go-floor-side .go-shelves')).not.toBeNull();
+    expect(floor?.querySelector('.go-floor-side .go-tables')).not.toBeNull();
+    expect(floor?.querySelector('.go-floor-bar')).not.toBeNull();
+    // Four seats round the table. A guest's is not called "You".
+    expect(document.querySelectorAll('.go-felt-table .go-seat-mark')).toHaveLength(4);
+    expect($('.go-seat-mark.you small')).toBeNull();
+    // The footer is a wide window's: a phone's Games is one screen.
+    expect($('.go-foot')?.classList.contains('wide-only')).toBe(true);
+    expect($('.go-coming')?.closest('.wide-only')).not.toBeNull();
+  });
+
+  it('starts either live game from the table and from the bar, and Back is Games again', async () => {
+    await openAt('/games');
+    const games = Array.from(document.querySelectorAll<HTMLElement>('.go-start-game'));
+    expect(games.map((game) => game.querySelector('.go-start-name b')?.textContent)).toEqual(['Skull King', 'Ocho']);
+    expect(games.map((game) => game.querySelector(':scope > p')?.textContent)).toEqual([
+      'The pirate trick-taking game',
+      'Match the colour or the number',
     ]);
-    expect(shown()).toEqual([]);
-    expect($('.go-mode')).toBeNull();
-    // What each choice holds is there for a screen reader to be told of, and not to be seen.
-    expect($('#go-solo-ways')?.hidden).toBe(true);
-    expect($('#go-online-ways')?.hidden).toBe(true);
-    expect(link('Play').getAttribute('href')).toBe('/skull-king');
-    await follow('Play');
+    expect(
+      games.map((game) => [
+        game.querySelector('a')?.getAttribute('aria-label'),
+        game.querySelector('a')?.getAttribute('href'),
+      ]),
+    ).toEqual([
+      ['Play Skull King', '/skull-king'],
+      ['Play Ocho', '/games/ocho'],
+    ]);
+    expect(
+      Array.from(document.querySelectorAll('.go-bar-play a'), (a) => [a.textContent, a.getAttribute('href')]),
+    ).toEqual([
+      ['Play Skull King', '/skull-king'],
+      ['Play Ocho', '/games/ocho'],
+    ]);
+    // Nothing to go back to: no game is made up for the table.
+    expect($('.go-felt-table .go-jump-text')).toBeNull();
+
+    await follow('Play Skull King');
     expect(places.entries()).toEqual({ paths: ['/games', '/skull-king'], at: 1 });
     expect($('.sk-home')).not.toBeNull();
     expect($('#app')?.hidden).toBe(false);
-  });
-
-  it('opens one choice at a time, each on its two ways and their addresses', async () => {
-    await openAt('/games');
-    await choose('Solo');
-    expect(choices()).toEqual([
-      { name: 'Solo', open: true },
-      { name: 'Online', open: false },
-    ]);
-    expect(shown()).toEqual([
-      ['Against bots', '/skull-king/solo'],
-      ['One screen', '/skull-king/one-screen'],
-    ]);
-    // Opening the other closes this one.
-    await choose('Online');
-    expect(choices()).toEqual([
-      { name: 'Solo', open: false },
-      { name: 'Online', open: true },
-    ]);
-    expect(shown()).toEqual([
-      ['Tables', '/skull-king/online'],
-      ['Ranked', '/skull-king/ranked'],
-    ]);
-    // Pressing an open choice closes it. The address never moved.
-    await choose('Online');
-    expect(shown()).toEqual([]);
-    expect(places.entries()).toEqual({ paths: ['/games'], at: 0 });
-  });
-
-  for (const [choice, name, at] of [
-    ['Solo', 'Against bots', '/skull-king/solo'],
-    ['Solo', 'One screen', '/skull-king/one-screen'],
-    ['Online', 'Tables', '/skull-king/online'],
-    ['Online', 'Ranked', '/skull-king/ranked'],
-  ])
-    it(`opens ${at} from ${name} under ${choice}, and Back is Games again`, async () => {
-      await openAt('/games');
-      await choose(choice);
-      await clickOn(way(name));
-      expect(places.entries()).toEqual({ paths: ['/games', at], at: 1 });
-      expect($('.go-games')).toBeNull();
-      await act(async () => {
-        places.back();
-        await vi.advanceTimersByTimeAsync(0);
-      });
-      expect(places.path()).toBe('/games');
-      expect($('#gameon h1')?.textContent).toBe('Games');
+    await act(async () => {
+      places.back();
+      await vi.advanceTimersByTimeAsync(0);
     });
+    expect(places.path()).toBe('/games');
+    expect($('#gameon h1')?.textContent).toBe('Games');
+  });
 
   it('says so when no table is open, and offers to open one', async () => {
     await openAt('/games');
@@ -484,6 +500,7 @@ describe('Games', () => {
   });
 
   it('lists the public tables that have room, and sits down at one through the public list', async () => {
+    phone();
     const open = await someone(),
       full = await someone(),
       hidden = await someone();
@@ -501,14 +518,26 @@ describe('Games', () => {
     // What the table plays leads the row, by its short name, then its rounds and its seats.
     expect(texts('.go-table-text .pill')).toEqual(['Swift']);
     expect(texts('.go-table-more small')).toEqual(['5 rounds · 5 cards each', '1 of 3 seats']);
-    // The avatar is the host's own colour, as the server sent it.
-    expect($('.go-tables li .avatar')?.className).toBe('avatar');
-    expect($('.go-tables li .avatar')?.style.background).toBe('rgb(206, 130, 255)');
+    // On the felt it is a small table: a mark for each seat, the taken one filled.
+    expect(
+      Array.from(document.querySelectorAll('.go-tiles .go-tile-seats > span'), (s) => s.classList.contains('on')),
+    ).toEqual([true, false, false]);
     expect(link('All public tables').getAttribute('href')).toBe('/skull-king/online/public');
     expect(link('Join with a code').getAttribute('href')).toBe('/skull-king/online/join');
 
+    // The phone's sheet lists it with its host: the avatar is the host's own colour, as the server sent it.
+    const dialog = await sheet('Tables');
+    expect(dialog.querySelector('.go-sheet-head h2')?.textContent).toBe('Open tables');
+    expect(dialog.querySelector('.go-shelves')).not.toBeNull();
+    expect(dialog.querySelector<HTMLElement>('.go-tables li .avatar')?.className).toBe('avatar');
+    expect(dialog.querySelector<HTMLElement>('.go-tables li .avatar')?.style.background).toBe('rgb(206, 130, 255)');
+    expect(Array.from(dialog.querySelectorAll('a'), (a) => a.getAttribute('href'))).toEqual([
+      '/skull-king/online/public',
+      '/skull-king/online/join',
+    ]);
+
     // Games has no connection. The public list makes one and asks for the seat.
-    await press('Join');
+    await clickOn(dialog.querySelector<HTMLButtonElement>('.go-tables li button') ?? host);
     expect(places.entries()).toEqual({ paths: ['/games', '/skull-king/online/public'], at: 1 });
     await settle();
     // The frame's page is gone: what is up is the table, in the online screens.
@@ -534,6 +563,7 @@ describe('Games', () => {
   });
 
   it('says the tables could not be loaded, and reads them again when asked', async () => {
+    phone();
     const guest = await aGuest();
     let broken = true;
     await openFrame(
@@ -550,12 +580,13 @@ describe('Games', () => {
     broken = false;
     await press('Try again');
     await settle();
-    // This row came without a host's colour, as a table nobody hosts does: the name the server gave
-    // it is the whole title, the avatar is plain, and no colour is made up for it.
     expect(texts('.go-table-text b')).toEqual(['Teo']);
     expect(texts('.go-table-more small')).toEqual(['5 rounds · 5 cards each', '2 of 3 seats']);
-    expect($('.go-tables li .avatar')?.className).toBe('avatar plain');
-    expect($('.go-tables li .avatar')?.getAttribute('style')).toBeNull();
+    // This row came without a host's colour, as a table nobody hosts does: the name the server gave
+    // it is the whole title, the avatar is plain, and no colour is made up for it.
+    const dialog = await sheet('Tables');
+    expect(dialog.querySelector('.go-tables li .avatar')?.className).toBe('avatar plain');
+    expect(dialog.querySelector('.go-tables li .avatar')?.getAttribute('style')).toBeNull();
   });
 
   /** A table the server keeps open, which nobody hosts yet: no colour, nobody seated. */
@@ -572,6 +603,7 @@ describe('Games', () => {
   };
 
   it("lists the server's own open tables, one for each length of game, and a player's as one more", async () => {
+    phone();
     await listing([house('classic'), house('brawl'), house('swift'), house('even'), house('whirl'), mira]);
     expect($('.go-tables-head .pill')?.textContent).toBe('6');
     expect(
@@ -586,8 +618,23 @@ describe('Games', () => {
       ['Whirl', 'Open table', '10 rounds · 9, 7, 5, 3, 1 twice', '0 of 4 seats'],
       ['Swift', 'Mira’s table', '5 rounds · 5 cards each', '1 of 3 seats'],
     ]);
-    // A table nobody hosts has the plain avatar: no colour is made up for it.
-    expect(Array.from(document.querySelectorAll('.go-tables li .avatar'), (a) => a.className)).toEqual([
+    // Each can be sat down at, and Join is told apart by what the table plays: five rows have the same title.
+    const joins = (within: ParentNode): (string | null | undefined)[][] =>
+      Array.from(within.querySelectorAll('.go-tables li button'), (join) =>
+        (join.getAttribute('aria-describedby') ?? '').split(' ').map((id) => document.getElementById(id)?.textContent),
+      );
+    const told = [
+      ['Classic', 'Open table'],
+      ['Brawl', 'Open table'],
+      ['Swift', 'Open table'],
+      ['Even', 'Open table'],
+      ['Whirl', 'Open table'],
+      ['Swift', 'Mira’s table'],
+    ];
+    expect(joins(document)).toEqual(told);
+    // In the phone's sheet, a table nobody hosts has the plain avatar: no colour is made up for it.
+    const dialog = await sheet('Tables');
+    expect(Array.from(dialog.querySelectorAll('.go-tables li .avatar'), (a) => a.className)).toEqual([
       'avatar plain',
       'avatar plain',
       'avatar plain',
@@ -595,19 +642,7 @@ describe('Games', () => {
       'avatar plain',
       'avatar',
     ]);
-    // Each can be sat down at, and Join is told apart by what the table plays: five rows have the same title.
-    expect(
-      Array.from(document.querySelectorAll('.go-tables li button'), (join) =>
-        (join.getAttribute('aria-describedby') ?? '').split(' ').map((id) => document.getElementById(id)?.textContent),
-      ),
-    ).toEqual([
-      ['Classic', 'Open table'],
-      ['Brawl', 'Open table'],
-      ['Swift', 'Open table'],
-      ['Even', 'Open table'],
-      ['Whirl', 'Open table'],
-      ['Swift', 'Mira’s table'],
-    ]);
+    expect(joins(dialog)).toEqual(told);
   });
 
   it('leaves out none of the lengths of game, wherever its table is in the list and whoever hosts it', async () => {
@@ -633,7 +668,7 @@ describe('Games', () => {
       house('classic'),
     ]);
     expect($('.go-tables-head .pill')?.textContent).toBe('11');
-    // The five lengths, and one row more: the rest are behind "All public tables".
+    // The five lengths, and one table more: the rest are behind "All public tables".
     expect(
       Array.from(document.querySelectorAll('.go-table-text'), (row) =>
         Array.from(row.querySelectorAll('.pill, b'), (c) => c.textContent),
@@ -648,26 +683,13 @@ describe('Games', () => {
     ]);
   });
 
-  it('offers Ocho under Skull King, live, with its two ways, and not among what is coming', async () => {
+  it('offers Ocho on the table beside Skull King, live, and not among what is coming', async () => {
     await openAt('/games');
     expect($('#go-ocho-title')?.textContent).toBe('Ocho');
-    const card = $('#go-ocho-title')?.closest('.go-game');
-    expect(card?.querySelector('.go-game-name small')?.textContent).toBe('2–8 players · Cards');
-    expect(card?.querySelector('.pill')?.textContent).toBe('Live');
-    expect(
-      Array.from(card?.querySelectorAll<HTMLAnchorElement>('.oc-shelf-ways a') ?? [], (a) => [
-        a.querySelector('b')?.textContent,
-        a.getAttribute('href'),
-      ]),
-    ).toEqual([
-      ['A table', '/games/ocho'],
-      ['Teams', '/games/ocho/teams'],
-    ]);
-    expect(card?.querySelector('a[aria-label="Play Ocho"]')?.getAttribute('href')).toBe('/games/ocho');
-    expect(card?.querySelector('a[aria-label="How to play Ocho"]')?.getAttribute('href')).toBe(
-      '/games/ocho/how-to-play',
-    );
-    expect(texts('.go-soon > b')).not.toContain('Ocho');
+    const game = $('#go-ocho-title')?.closest('.go-start-game');
+    expect(game?.querySelector(':scope > p')?.textContent).toBe('Match the colour or the number');
+    expect(game?.querySelector('a[aria-label="Play Ocho"]')?.getAttribute('href')).toBe('/games/ocho');
+    expect($('.go-coming-names')?.textContent).not.toContain('Ocho');
     // Ocho is a card game: the board shelf has no room for it.
     await press('Board');
     expect($('#go-ocho-title')).toBeNull();
@@ -675,16 +697,20 @@ describe('Games', () => {
     expect($('#go-ocho-title')).not.toBeNull();
   });
 
-  it('filters the shelf, and counts what is coming', async () => {
+  it('filters the live games and what is coming by the shelf', async () => {
     await openAt('/games');
     expect($('#go-sk-title')).not.toBeNull();
-    expect($('#go-soon-title .pill')?.textContent).toBe('5');
+    expect($('.go-coming-names')?.textContent).toBe('Hearts, Chess, Ludo, Four in a Row, Five Dice');
+    expect(link('Suggest a game').getAttribute('href')).toBe('/suggest');
     await press('Board');
+    expect(button('Board').getAttribute('aria-pressed')).toBe('true');
     expect($('#go-sk-title')).toBeNull();
-    expect(texts('.go-soon > b')).toEqual(['Chess', 'Ludo', 'Four in a Row']);
-    expect($('#go-soon-title .pill')?.textContent).toBe('3');
+    expect($('.go-start-none')?.textContent).toBe('No live game on this shelf yet. These are on the way.');
+    expect($('.go-bar-play a')).toBeNull();
+    expect($('.go-coming-names')?.textContent).toBe('Chess, Ludo, Four in a Row');
     await press('All');
     expect($('#go-sk-title')).not.toBeNull();
+    expect(texts('.go-bar-play a')).toEqual(['Play Skull King', 'Play Ocho']);
   });
 
   it('offers the game saved on this device, and continues it at the table', async () => {
@@ -697,8 +723,11 @@ describe('Games', () => {
     closePage();
 
     await openAt('/games');
-    expect($('.go-jump-text b')?.textContent).toMatch(/^Skull King · solo against \d bots?$/);
-    expect($('.go-jump-text span')?.textContent).toMatch(/^Round 1 of \d+ · saved on this device$/);
+    expect($('#go-felt-title')?.textContent).toBe('Jump back in: Skull King');
+    expect($('.go-jump-text b')?.textContent).toMatch(/^solo against \d bots?$/);
+    expect($('.go-jump-text > span')?.textContent).toMatch(/^Round 1 of \d+ · saved on this device$/);
+    // A few of its cards lie on the table, and are not read out.
+    expect($('.go-felt-cards')?.getAttribute('aria-hidden')).toBe('true');
     expect(link('Continue').getAttribute('href')).toBe('/skull-king/table');
     await follow('Continue');
     expect(places.path()).toBe('/skull-king/table');
@@ -710,6 +739,7 @@ describe('Games', () => {
   it('has no way back to offer when nothing is open', async () => {
     await openAt('/games');
     expect($('.go-jump')).toBeNull();
+    expect($('.go-felt-cards')).toBeNull();
   });
 
   it('offers the seat the server keeps before the game on this device', async () => {
@@ -722,9 +752,9 @@ describe('Games', () => {
       },
       '/games',
     );
-    expect($('.go-jump-text b')?.textContent).toBe('Skull King · your table');
-    expect($('.go-jump-text span')?.textContent).toBe('Game running · your seat is kept');
-    expect(link('Rejoin').getAttribute('href')).toBe('/skull-king/online');
+    expect($('.go-jump-text b')?.textContent).toBe('your table');
+    expect($('.go-jump-text > span')?.textContent).toBe('Game running · your seat is kept');
+    expect(link('Continue').getAttribute('href')).toBe('/skull-king/online');
     closePage();
     await openFrame(
       {
@@ -733,11 +763,12 @@ describe('Games', () => {
       },
       '/games',
     );
-    expect($('.go-jump-text span')?.textContent).toBe('Waiting to start · your seat is kept');
-    expect(link('Rejoin').getAttribute('href')).toBe('/skull-king/online');
+    expect($('.go-jump-text > span')?.textContent).toBe('Waiting to start · your seat is kept');
+    expect(link('Continue').getAttribute('href')).toBe('/skull-king/online');
   });
 
   it('shows an account its rating as the server sent it, and says when there is none yet', async () => {
+    phone();
     const guest = await aGuest(),
       season = (await config()).season,
       anne: Me = { ...guest, guest: false, username: 'anne_bonny', user: { ...guest.user, name: 'Anne' } };
@@ -750,23 +781,92 @@ describe('Games', () => {
       },
       '/games',
     );
+    // The felt's bar: name, tier and rating. The near seat is theirs.
+    expect($('.go-bar-name b')?.textContent).toBe('Anne');
+    expect($('.go-bar-name small')?.textContent).toBe('Captain');
+    expect($('.go-bar-rating b')?.textContent).toBe('34');
+    expect($('.go-bar-sign')).toBeNull();
+    expect($('.go-seat-mark.you small')?.textContent).toBe('You');
+    // The bar has the player where a guest has "Sign in".
+    expect($('.go-chip')?.getAttribute('aria-label')).toBe('Anne, your profile');
+    expect($('.go-chip-text small')?.textContent).toBe('Captain');
+    expect(Array.from(document.querySelectorAll('#gameon a'), (a) => a.textContent)).not.toContain('Sign in');
+    // Their seat, in the phone's sheet.
+    await sheet('You');
     expect($('.go-seat-who b')?.textContent).toBe('Anne');
     expect($('.go-seat-who small')?.textContent).toBe('anne_bonny');
     expect($('.go-seat-label .pill')?.textContent).toBe(season?.name);
     expect(texts('.go-seat-stats dt')).toEqual(['Rating', 'Tier', 'Games']);
     expect(texts('.go-seat-stats dd')).toEqual(['34', 'Captain', '23']);
     expect(link('Find a ranked game').getAttribute('href')).toBe('/skull-king/ranked');
-    // The bar has the player where a guest has "Sign in".
-    expect($('.go-chip')?.getAttribute('aria-label')).toBe('Anne, your profile');
-    expect($('.go-chip-text small')?.textContent).toBe('Captain');
-    expect(Array.from(document.querySelectorAll('#gameon a'), (a) => a.textContent)).not.toContain('Sign in');
+    // Then what is coming, and the footer's links: a phone's Games has no footer of its own to show.
+    expect($('dialog .go-coming-names')?.textContent).toBe('Hearts, Chess, Ludo, Four in a Row, Five Dice');
+    expect(texts('dialog .go-sheet-links a')).toEqual([
+      'Games',
+      'Ladder',
+      'How to play',
+      'Privacy',
+      'Imprint',
+      'Suggest a game',
+    ]);
     closePage();
 
     await openFrame({ 'POST /auth/guest': () => ok(anne), 'GET /lobbies': () => ok({ lobbies: [] }) }, '/games');
+    expect($('.go-bar-name small')?.textContent).toBe('anne_bonny');
+    expect($('.go-bar-rating')).toBeNull();
+    expect($('.go-chip-text small')?.textContent).toBe('anne_bonny');
+    await sheet('You');
     expect($('.go-seat > p')?.textContent).toBe('No rating yet. Five placement games set your tier.');
     expect($('.go-seat-stats')).toBeNull();
-    expect($('.go-chip-text small')?.textContent).toBe('anne_bonny');
     expect(link('Find a ranked game').getAttribute('href')).toBe('/skull-king/ranked');
+  });
+
+  it('opens the tables from the phone bar as a dialog, and Escape, the close button and the scrim close it', async () => {
+    phone();
+    await openAt('/games');
+    expect($('dialog')).toBeNull();
+    const opener = button('Tables');
+    act(() => opener.focus());
+    let dialog = await sheet('Tables');
+    expect(dialog.getAttribute('aria-labelledby')).toBe(dialog.querySelector('h2')?.id);
+    expect($('.go-felt-table')).not.toBeNull();
+
+    // Escape closes it, and the button that opened it has the keyboard again.
+    await act(async () => {
+      dialog.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect($('dialog')).toBeNull();
+    expect(document.activeElement).toBe(opener);
+    // The table is still on the screen.
+    expect($('.go-felt-table')).not.toBeNull();
+
+    dialog = await sheet('Tables');
+    await clickOn(dialog.querySelector<HTMLButtonElement>('.go-sheet-close') ?? host);
+    expect($('dialog')).toBeNull();
+
+    // A tap on the scrim is a click on the dialog itself. One on the sheet leaves it open.
+    dialog = await sheet('Play');
+    await clickOn(dialog.querySelector<HTMLElement>('.go-sheet-panel') ?? host);
+    expect($('dialog')).not.toBeNull();
+    expect(
+      Array.from(dialog.querySelectorAll('.go-sheet-play li'), (li) => [
+        li.querySelector('a')?.textContent,
+        li.querySelector('p')?.textContent,
+      ]),
+    ).toEqual([
+      ['Play Skull King', 'The pirate trick-taking game'],
+      ['Play Ocho', 'Match the colour or the number'],
+    ]);
+    await clickOn(dialog);
+    expect($('dialog')).toBeNull();
+    expect(document.activeElement).toBe(button('Play'));
+  });
+
+  it('uses no dialog on a wide window', async () => {
+    await openAt('/games');
+    await press('Tables');
+    expect($('dialog')).toBeNull();
   });
 
   it('says it is not connected when the server cannot be asked, and asks again by itself', async () => {
@@ -781,7 +881,6 @@ describe('Games', () => {
     );
     expect($('.go-banner')?.textContent).toBe('Not connected. Trying again…');
     expect($('.go-banner')?.getAttribute('role')).toBe('status');
-    expect($('.go-seat')).toBeNull();
     expect($('.go-tables')).toBeNull();
     // What needs no server is there all the same.
     expect($('#go-sk-title')).not.toBeNull();
@@ -789,7 +888,7 @@ describe('Games', () => {
     down = false;
     await settle(RETRY_MS);
     expect($('.go-banner')).toBeNull();
-    expect($('.go-seat-who b')?.textContent).toBe(guest.user.name);
+    expect($('.go-bar-sign')).not.toBeNull();
     expect($('.go-tables')).not.toBeNull();
   });
 });
@@ -921,8 +1020,8 @@ describe('signing in', () => {
     await settle();
     expect((await me()).user.id).toBe(anne.user.id);
     expect(places.entries()).toEqual({ paths: ['/games'], at: 0 });
-    expect($('.go-seat-who b')?.textContent).toBe('Anne');
-    expect($('.go-seat-who small')?.textContent).toBe('anne_bonny');
+    expect($('.go-bar-name b')?.textContent).toBe('Anne');
+    expect($('.go-bar-name small')?.textContent).toBe('anne_bonny');
     // Signing in made no connection: the frame has none to make again.
     expect($('#online')).toBeNull();
   });

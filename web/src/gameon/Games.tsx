@@ -1,33 +1,37 @@
-/* Games: the shelf, the way back into a game that is still open, the player's own seat, and the
-   public tables that have room. Skull King offers the two choices its own home does, Solo and
-   Online, each opening in place on its two ways. A player who comes here is on their way in, so a browser without a
-   session gets a guest here, as it does when it connects. Everything about the player and the
-   tables is what the server said (`Me`, `GET /lobbies`). The game saved on this device is read from
-   where the renderer keeps it. Sitting down at a table is not done here: the online screens do it. */
-import { useEffect, useState } from 'react';
+/* Games: one felt floor. The table in the middle of it is the way back into a game that is still
+   open, or the two live games to start. Beside it are the public tables that have room, and along
+   its bottom edge the player and the two ways to play. On a phone it is one screen: the table, and
+   a bar whose three buttons open the tables, the player's seat and Play as sheets.
+
+   A player who comes here is on their way in, so a browser without a session gets a guest here, as
+   it does when it connects. Everything about the player and the tables is what the server said
+   (`Me`, `GET /lobbies`). The game saved on this device is read from where the renderer keeps it.
+   Sitting down at a table is not done here: the online screens do it. */
+import { useEffect, useId, useRef, useState } from 'react';
+import type { ReactNode, RefObject } from 'react';
 import type { Online } from '../net/online';
 import type { Format, LobbyId, LobbySummary, Me, Season } from '../protocol/generated';
 import { initialOf } from '../online/parts';
 import { describeRow } from '../online/settings';
 import { AT } from '../router/addresses';
 import { cssColor, whole } from '../tableview/dom';
-import { CardFan, OchoFan, OchoKey, SkullKingKey } from './art';
+import { CardFan, OchoFan, OchoKey, SkullKingKey, TableCards } from './art';
 import { showsOcho, showsSkullKing, soonOn } from './catalog';
 import type { Shelf } from './catalog';
-import { Footer, Link, Nav, useTitle } from './Frame';
+import { accountOf, FootLinks, Footer, Link, Nav, useTitle, useWide } from './Frame';
 import type { Who } from './Frame';
 import { Icon } from './icons';
-import { Shelves, SoonTile, SuggestTile } from './Landing';
+import { DOORS, Shelves } from './Landing';
 import { savedGame, savedTitle } from './saved';
-import { Choice, Option } from '../skullking/parts';
+import type { SavedGame } from './saved';
 
-/** How many open tables the card lists. The rest are behind "All public tables". */
+/** How many open tables the floor shows. The rest are behind "All public tables". */
 const TABLES_SHOWN = 6;
 
 /**
- * The open tables the card lists, in the server's order: the first of each length of game, so that
+ * The open tables the floor shows, in the server's order: the first of each length of game, so that
  * none of the five is missing while it has a table with room, and then the others for as long as
- * there are rows left. The length is the row's own (`settings.format`), not its place in the list.
+ * there are places left. The length is the row's own (`settings.format`), not its place in the list.
  */
 function shown(open: LobbySummary[]): LobbySummary[] {
   const first = new Map<Format, LobbySummary>();
@@ -38,163 +42,211 @@ function shown(open: LobbySummary[]): LobbySummary[] {
 
 type Tables = { state: 'loading' } | { state: 'failed' } | { state: 'ready'; open: LobbySummary[] };
 
+/** A game that is not over: what it is, how far it got, and where it goes on. */
+interface Resume {
+  mode: string;
+  line: string;
+  to: string;
+}
+
 /** The way back into a game that is not over: a seat the server keeps, or the game saved on this device. */
-function JumpBack({ me, seated }: { me: Me | null; seated: boolean }) {
-  const [saved] = useState(savedGame);
+function resumeOf(me: Me | null, seated: boolean, saved: SavedGame | null): Resume | null {
   const active = me?.active ?? null,
     running = active?.kind === 'game',
     waiting = !running && (seated || active?.kind === 'lobby');
-  if (!running && !waiting && !saved) return null;
-  const online = running || waiting;
+  if (running || waiting)
+    return {
+      mode: 'your table',
+      line: running ? 'Game running · your seat is kept' : 'Waiting to start · your seat is kept',
+      to: AT.online,
+    };
+  if (saved)
+    return {
+      mode: savedTitle(saved),
+      line: `Round ${saved.round} of ${saved.rounds} · saved on this device`,
+      to: AT.table,
+    };
+  return null;
+}
+
+/**
+ * The table in the middle of the floor. With a game to go back to, it is that game, with a few of
+ * its cards on the cloth. Without one, it offers the live games the shelf shows. Four seats are
+ * marked round it. The near one is the player's, and says so when they have an account.
+ */
+function FeltTable({ resume, you, shelf }: { resume: Resume | null; you: boolean; shelf: Shelf }) {
+  const live = DOORS.filter((door) => (door.to === AT.ocho ? showsOcho(shelf) : showsSkullKing(shelf)));
   return (
-    <section className="go-jump" aria-labelledby="go-jump-title">
-      <SkullKingKey />
-      <div className="go-jump-text">
-        <small id="go-jump-title">Jump back in</small>
-        <b>Skull King · {online || !saved ? 'your table' : savedTitle(saved)}</b>
-        <span>
-          {running
-            ? 'Game running · your seat is kept'
-            : waiting
-              ? 'Waiting to start · your seat is kept'
-              : saved && `Round ${saved.round} of ${saved.rounds} · saved on this device`}
-        </span>
-      </div>
-      <Link to={online ? AT.online : AT.table} className="btn go-btn">
-        {online ? 'Rejoin' : 'Continue'}
-      </Link>
+    <section className={resume ? 'go-felt-table go-jump' : 'go-felt-table'} aria-labelledby="go-felt-title">
+      {resume && <TableCards />}
+      <span className="go-seat-mark top" aria-hidden="true"></span>
+      <span className="go-seat-mark left" aria-hidden="true"></span>
+      <span className="go-seat-mark right" aria-hidden="true"></span>
+      <span className="go-seat-mark you" aria-hidden="true">
+        <span></span>
+        {you && <small>You</small>}
+      </span>
+      {resume ? (
+        <div className="go-jump-text">
+          <h2 id="go-felt-title">
+            <span className="go-sr">Jump back in: </span>Skull King
+          </h2>
+          <b>{resume.mode}</b>
+          <span>{resume.line}</span>
+          <Link to={resume.to} className="btn go-btn">
+            Continue
+          </Link>
+        </div>
+      ) : (
+        <div className="go-start">
+          <h2 id="go-felt-title" className="go-sr">
+            Start a game
+          </h2>
+          {live.length === 0 ? (
+            <p className="go-start-none">No live game on this shelf yet. These are on the way.</p>
+          ) : (
+            <ul>
+              {live.map((door) => {
+                const ocho = door.to === AT.ocho,
+                  name = ocho ? 'go-ocho-title' : 'go-sk-title';
+                return (
+                  <li key={door.id} className="go-start-game" aria-labelledby={name}>
+                    <span className="go-start-art">{ocho ? <OchoFan /> : <CardFan trio />}</span>
+                    <span className="go-start-name">
+                      {ocho ? <OchoKey /> : <SkullKingKey />}
+                      <b id={name}>{door.name}</b>
+                    </span>
+                    <p>{door.line}</p>
+                    <Link to={door.to} className="btn go-btn" label={`Play ${door.name}`}>
+                      Play
+                    </Link>
+                    <Link
+                      to={ocho ? AT.ochoRules : AT.howToPlay}
+                      className="go-text-link"
+                      label={ocho ? 'How to play Ocho' : undefined}
+                    >
+                      How to play
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
+      )}
     </section>
   );
 }
 
-function SkullKing({ season }: { season: Season | null | undefined }) {
-  /** The choice that is open. One at a time: opening the other closes this one. */
-  const [open, setOpen] = useState<'solo' | 'online' | null>(null);
-  const toggle = (card: 'solo' | 'online') => (): void => setOpen((was) => (was === card ? null : card));
+/** The seat marks of a table: one for each place, filled for the ones taken. */
+function Seats({ lobby }: { lobby: LobbySummary }) {
   return (
-    <section className="go-game" aria-labelledby="go-sk-title">
-      <div className="go-game-art">
-        <CardFan />
-      </div>
-      <div className="go-game-info">
-        <div className="go-game-title">
-          <SkullKingKey />
-          <span className="go-game-name">
-            <b id="go-sk-title">Skull King</b>
-            <small className="wide-only">2–8 players · About 30 min · Cards</small>
-            <small className="narrow-only">2–8 players · 30 min</small>
-          </span>
-          <span className="pill green caps">Live</span>
-        </div>
-        <p className="wide-only">
-          The pirate trick-taking game. Bid how many tricks you will win, then hit that number exactly.
-        </p>
-        {/* The two choices of Skull King's home, with the addresses each way has there. */}
-        <ul className="go-choices" aria-label="Ways to play Skull King">
-          <Choice
-            id="go-solo-ways"
-            name="Solo"
-            icon="bot"
-            tone="blue"
-            line="Against bots, or one screen for the crew."
-            open={open === 'solo'}
-            onToggle={toggle('solo')}
-          >
-            <Option name="Against bots" icon="bot" tone="blue" line="Any time. Saved to your account." to={AT.solo} />
-            <Option
-              name="One screen"
-              icon="smartphone"
-              tone="gold"
-              line="Pass one device around. 2 to 8 pirates."
-              to={AT.oneScreen}
-            />
-          </Choice>
-          <Choice
-            id="go-online-ways"
-            name="Online"
-            icon="globe"
-            tone="green"
-            line="Tables with friends or strangers, and ranked."
-            open={open === 'online'}
-            onToggle={toggle('online')}
-          >
-            <Option
-              name="Tables"
-              icon="globe"
-              tone="green"
-              line="Quick play, public tables, a table of your own, or a code."
-              to={AT.online}
-            />
-            <Option
-              name="Ranked"
-              icon="crown"
-              tone="purple"
-              line={season ? `Season ${season.name}` : 'Climb the ladder'}
-              to={AT.ranked}
-            />
-          </Choice>
-        </ul>
-        <div className="go-actions">
-          <Link to={AT.home} className="btn go-btn" label="Play Skull King">
-            Play
-          </Link>
-          <Link to={AT.howToPlay} className="btn ghost go-btn wide-only">
-            How to play
-          </Link>
-          <Link to={AT.howToPlay} className="go-text-link narrow-only">
-            How to play
-          </Link>
-        </div>
-      </div>
-    </section>
+    <span className="go-tile-seats" aria-hidden="true">
+      {Array.from({ length: lobby.settings.maxPlayers }, (_, seat) => (
+        <span key={seat} className={seat < lobby.players ? 'on' : undefined}></span>
+      ))}
+    </span>
   );
 }
 
-/** Ocho on the shelf: its two ways open sit-down, Teams with Teams chosen. */
-function Ocho() {
+/**
+ * The public tables with room. On the floor they are small tables of their own. In the phone's sheet
+ * they are a list, each row with its host.
+ */
+function OpenTables({
+  tables,
+  onJoin,
+  onAgain,
+  tiles,
+}: {
+  tables: Tables;
+  onJoin: (id: LobbyId) => void;
+  onAgain: () => void;
+  tiles: boolean;
+}) {
+  const ids = useId();
   return (
-    <section className="go-game" aria-labelledby="go-ocho-title">
-      <div className="go-game-art">
-        <OchoFan />
+    <section className={tiles ? 'go-tables go-tiles' : 'go-tables'} aria-labelledby={`${ids}-title`}>
+      <div className={tiles ? 'go-tables-head' : 'go-tables-head go-sr'}>
+        <h2 id={`${ids}-title`}>Open tables · Skull King</h2>
+        {tables.state === 'ready' && <span className="pill green">{tables.open.length}</span>}
       </div>
-      <div className="go-game-info">
-        <div className="go-game-title">
-          <OchoKey />
-          <span className="go-game-name">
-            <b id="go-ocho-title">Ocho</b>
-            <small>2–8 players · Cards</small>
-          </span>
-          <span className="pill green caps">Live</span>
+      {tables.state === 'loading' ? (
+        <div className="go-tables-wait" role="status" aria-label="Looking for open tables">
+          <span></span>
+          <span></span>
         </div>
-        <p className="wide-only">Match a colour or a number, then be the first to play your last card.</p>
-        <ul className="go-choices oc-shelf-ways" aria-label="Ways to play Ocho">
-          <Option
-            name="A table"
-            icon="globe"
-            tone="green"
-            line="2 to 8 players. Friends join with a code."
-            to={AT.ocho}
-          />
-          <Option
-            name="Teams"
-            icon="users"
-            tone="blue"
-            line="2v2. Partners sit opposite and see each other’s cards."
-            to={AT.ochoTeams}
-          />
-        </ul>
-        <div className="go-actions">
-          <Link to={AT.ocho} className="btn go-btn" label="Play Ocho">
-            Play
-          </Link>
-          <Link to={AT.ochoRules} className="btn ghost go-btn wide-only" label="How to play Ocho">
-            How to play
-          </Link>
-          <Link to={AT.ochoRules} className="go-text-link narrow-only" label="How to play Ocho">
-            How to play
+      ) : tables.state === 'failed' ? (
+        <div className="go-tables-note">
+          <p className="alert" role="alert">
+            The tables could not be loaded.
+          </p>
+          <button type="button" className="btn ghost go-btn full" onClick={onAgain}>
+            Try again
+          </button>
+        </div>
+      ) : tables.open.length === 0 ? (
+        <div className="go-tables-note">
+          <p>No open tables right now. Open one and others can sit down.</p>
+          <Link to={AT.newPublicTable} className="btn ghost go-btn full">
+            Create a table
           </Link>
         </div>
-      </div>
+      ) : (
+        <>
+          <ul>
+            {shown(tables.open).map((lobby, i) => {
+              const row = describeRow(lobby),
+                format = `${ids}-format-${i}`,
+                title = `${ids}-table-${i}`;
+              return (
+                <li key={lobby.id}>
+                  {tiles ? (
+                    <Seats lobby={lobby} />
+                  ) : (
+                    // The host's colour when the server sent one. No other is put in its place.
+                    <span
+                      className={lobby.hostColor ? 'avatar' : 'avatar plain'}
+                      style={lobby.hostColor ? { background: cssColor(lobby.hostColor) } : undefined}
+                      aria-hidden="true"
+                    >
+                      {initialOf(lobby.hostName)}
+                    </span>
+                  )}
+                  <span className="go-table-text">
+                    <span className="pill format" id={format}>
+                      {row.format}
+                    </span>
+                    {/* A row without its host's colour has no host: the server's name for it is the whole title. */}
+                    <b id={title}>{row.title}</b>
+                  </span>
+                  <button
+                    type="button"
+                    className="btn ghost go-btn small"
+                    aria-describedby={`${format} ${title}`}
+                    onClick={() => onJoin(lobby.id)}
+                  >
+                    Join
+                  </button>
+                  <span className="go-table-more">
+                    <small>{row.rounds}</small>
+                    <small>{row.seats}</small>
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+          <p className="go-tables-foot">
+            <Link to={AT.publicTables} className="go-text-link">
+              All public tables
+              <Icon name="chevronRight" />
+            </Link>
+            <Link to={AT.join} className="go-text-link">
+              Join with a code
+            </Link>
+          </p>
+        </>
+      )}
     </section>
   );
 }
@@ -203,7 +255,7 @@ function Ocho() {
 function YourSeat({ me, season }: { me: Me; season: Season | null | undefined }) {
   const rating = me.rating;
   return (
-    <section className="go-seat wide-only" aria-label="Your seat">
+    <section className="go-seat" aria-label="Your seat">
       <div className="go-seat-who">
         <span className="avatar" style={{ background: cssColor(me.user.color) }} aria-hidden="true">
           {initialOf(me.user.name)}
@@ -255,92 +307,94 @@ function YourSeat({ me, season }: { me: Me; season: Season | null | undefined })
   );
 }
 
-function OpenTables({
-  tables,
-  onJoin,
-  onAgain,
-}: {
-  tables: Tables;
-  onJoin: (id: LobbyId) => void;
-  onAgain: () => void;
-}) {
+/** The announced games the shelf shows, on one line, and the way to say which one is missing. */
+function Coming({ shelf }: { shelf: Shelf }) {
   return (
-    <section className="go-tables" aria-labelledby="go-tables-title">
-      <div className="go-tables-head">
-        <h2 id="go-tables-title">Open tables · Skull King</h2>
-        {tables.state === 'ready' && <span className="pill green">{tables.open.length}</span>}
-      </div>
-      {tables.state === 'loading' ? (
-        <div className="go-tables-wait" role="status" aria-label="Looking for open tables">
-          <span></span>
-          <span></span>
-        </div>
-      ) : tables.state === 'failed' ? (
-        <div className="go-tables-note">
-          <p className="alert" role="alert">
-            The tables could not be loaded.
-          </p>
-          <button type="button" className="btn ghost go-btn full" onClick={onAgain}>
-            Try again
+    <p className="go-coming">
+      <span>
+        <b id="go-soon-title">Coming soon</b>
+        {' · '}
+        <span className="go-coming-names">
+          {soonOn(shelf)
+            .map((game) => game.name)
+            .join(', ')}
+        </span>
+      </span>
+      <Link to={AT.suggest} className="go-text-link">
+        Suggest a game
+      </Link>
+    </p>
+  );
+}
+
+type SheetName = 'tables' | 'you' | 'play';
+
+/**
+ * A sheet on a phone: a native modal dialog over the floor. Escape, the close button and a tap on
+ * the scrim close it, and the button that opened it has the keyboard again.
+ */
+function Sheet({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
+  const dialog = useRef<HTMLDialogElement>(null);
+  const titleId = useId();
+  useEffect(() => {
+    // Opened once. React's second mount in development finds it open already.
+    if (dialog.current && !dialog.current.open) dialog.current.showModal();
+  }, []);
+  const close = (): void => dialog.current?.close();
+  return (
+    <dialog
+      ref={dialog}
+      className="go-sheet"
+      aria-labelledby={titleId}
+      onClose={onClose}
+      onKeyDown={(e) => {
+        if (e.key !== 'Escape') return;
+        e.preventDefault();
+        close();
+      }}
+      onClick={(e) => {
+        // The dialog itself is the scrim: the sheet is a child of it.
+        if (e.target === e.currentTarget) close();
+      }}
+    >
+      <div className="go-sheet-panel">
+        <div className="go-sheet-head">
+          <h2 id={titleId}>{title}</h2>
+          <button type="button" className="go-sheet-close" aria-label="Close" onClick={close}>
+            <Icon name="x" />
           </button>
         </div>
-      ) : tables.open.length === 0 ? (
-        <div className="go-tables-note">
-          <p>No open tables right now. Open one and others can sit down.</p>
-          <Link to={AT.newPublicTable} className="btn ghost go-btn full">
-            Create a table
-          </Link>
-        </div>
-      ) : (
-        <>
-          <ul>
-            {shown(tables.open).map((lobby, i) => {
-              const row = describeRow(lobby);
-              return (
-                <li key={lobby.id}>
-                  {/* The host's colour when the server sent one. No other is put in its place. */}
-                  <span
-                    className={lobby.hostColor ? 'avatar' : 'avatar plain'}
-                    style={lobby.hostColor ? { background: cssColor(lobby.hostColor) } : undefined}
-                    aria-hidden="true"
-                  >
-                    {initialOf(lobby.hostName)}
-                  </span>
-                  <span className="go-table-text">
-                    <span className="pill format" id={`go-table-format-${i}`}>
-                      {row.format}
-                    </span>
-                    {/* A row without its host's colour has no host: the server's name for it is the whole title. */}
-                    <b id={`go-table-${i}`}>{row.title}</b>
-                  </span>
-                  <button
-                    type="button"
-                    className="btn ghost go-btn small"
-                    aria-describedby={`go-table-format-${i} go-table-${i}`}
-                    onClick={() => onJoin(lobby.id)}
-                  >
-                    Join
-                  </button>
-                  <span className="go-table-more">
-                    <small>{row.rounds}</small>
-                    <small>{row.seats}</small>
-                  </span>
-                </li>
-              );
-            })}
-          </ul>
-          <p className="go-tables-foot">
-            <Link to={AT.publicTables} className="go-text-link">
-              All public tables
-              <Icon name="chevronRight" />
-            </Link>
-            <Link to={AT.join} className="go-text-link">
-              Join with a code
-            </Link>
-          </p>
-        </>
+        {children}
+      </div>
+    </dialog>
+  );
+}
+
+/** The player along the bottom edge of the floor: name, tier and rating. A guest has the way to sign in. */
+function BarPlayer({ account }: { account: Me | null }) {
+  if (!account)
+    return (
+      <Link to={AT.signIn} className="btn ghost go-btn go-bar-sign">
+        Sign in
+      </Link>
+    );
+  const rating = account.rating;
+  return (
+    <div className="go-bar-player">
+      <span className="avatar" style={{ background: cssColor(account.user.color) }} aria-hidden="true">
+        {initialOf(account.user.name)}
+      </span>
+      <span className="go-bar-name">
+        <b>{account.user.name}</b>
+        <small>{rating?.tier ?? account.username}</small>
+      </span>
+      {rating && (
+        <span className="go-bar-rating">
+          <b>{whole(rating.value)}</b>
+          <small>rating</small>
+        </span>
       )}
-    </section>
+    </div>
   );
 }
 
@@ -356,13 +410,24 @@ export interface GamesProps {
 
 export function Games({ online, who, seated, season, onJoin }: GamesProps) {
   const title = useTitle('GameOn · Games');
+  const wide = useWide();
   const [shelf, setShelf] = useState<Shelf>('all');
   const [tables, setTables] = useState<Tables>({ state: 'loading' });
   const [round, setRound] = useState(0);
+  const [saved] = useState(savedGame);
+  const [sheet, setSheet] = useState<SheetName | null>(null);
+  const openers: Record<SheetName, RefObject<HTMLButtonElement | null>> = {
+    tables: useRef<HTMLButtonElement>(null),
+    you: useRef<HTMLButtonElement>(null),
+    play: useRef<HTMLButtonElement>(null),
+  };
   const me = who.is === 'player' ? who.me : null,
+    account = accountOf(who),
     session = me != null,
-    soon = soonOn(shelf),
-    live = showsSkullKing(shelf) || showsOcho(shelf);
+    resume = resumeOf(me, seated, saved),
+    live = DOORS.filter((door) => (door.to === AT.ocho ? showsOcho(shelf) : showsSkullKing(shelf))),
+    // The sheets are a phone's: a window that grows wide closes the one that is open.
+    open = wide ? null : sheet;
 
   // The list needs a session, and is read once: nothing pushes changes to it.
   useEffect(() => {
@@ -381,62 +446,118 @@ export function Games({ online, who, seated, season, onJoin }: GamesProps) {
     };
   }, [online, session, round]);
 
+  const again = (): void => {
+    setTables({ state: 'loading' });
+    setRound((n) => n + 1);
+  };
+  const closeSheet = (): void => {
+    const was = sheet;
+    setSheet(null);
+    if (was) openers[was].current?.focus();
+  };
+  const tablesHere = who.is !== 'unknown';
+
   return (
     <>
       <Nav page="games" who={who} />
       <main className="go-games go-wide">
-        <div className="go-in">
-          <div className="go-page-head">
-            <div>
-              <h1 tabIndex={-1} ref={title}>
-                Games
-              </h1>
-              <p className="go-sub wide-only">Two games are live. More are on the way.</p>
-            </div>
-            <Shelves shelf={shelf} onPick={setShelf} />
-          </div>
+        <h1 className="go-sr" tabIndex={-1} ref={title}>
+          Games
+        </h1>
+        <div className="go-floor">
           {who.is === 'unknown' && (
             <p className="go-banner" role="status">
               <Icon name="wifiOff" />
               Not connected. Trying again…
             </p>
           )}
-          <JumpBack me={me} seated={seated} />
-          {/* On a wide window the live games, the rail and the announced games share one grid. On a
-              shelf with no live game, the announced games take the live games' place. */}
-          <div className={live ? 'go-columns' : 'go-columns no-live'}>
-            <div className="go-main">
-              {showsSkullKing(shelf) && <SkullKing season={season} />}
-              {showsOcho(shelf) && <Ocho />}
-            </div>
-            <div className="go-rail">
-              {me && <YourSeat me={me} season={season} />}
-              {who.is !== 'unknown' && (
-                <OpenTables
-                  tables={tables}
-                  onJoin={onJoin}
-                  onAgain={() => {
-                    setTables({ state: 'loading' });
-                    setRound((n) => n + 1);
-                  }}
-                />
-              )}
-            </div>
-            <section className="go-soon-block" aria-labelledby="go-soon-title">
-              <h2 id="go-soon-title">
-                Coming soon <span className="pill soft">{soon.length}</span>
-              </h2>
-              <ul className="go-soon-list">
-                {soon.map((game) => (
-                  <SoonTile key={game.name} game={game} />
-                ))}
-                <SuggestTile />
-              </ul>
-            </section>
+          <div className="go-floor-play">
+            <FeltTable resume={resume} you={account != null} shelf={shelf} />
           </div>
+          <div className="go-floor-side wide-only">
+            <Shelves shelf={shelf} onPick={setShelf} />
+            {tablesHere && <OpenTables tables={tables} onJoin={onJoin} onAgain={again} tiles />}
+          </div>
+          <div className="go-floor-bar">
+            <div className="wide-only go-bar-wide">
+              <BarPlayer account={account} />
+              <span className="go-bar-play">
+                {live.map((door) => (
+                  <Link key={door.id} to={door.to} className="btn go-btn">
+                    Play {door.name}
+                  </Link>
+                ))}
+              </span>
+            </div>
+            <div className="narrow-only go-bar-narrow">
+              <button type="button" className="go-bar-btn" ref={openers.tables} onClick={() => setSheet('tables')}>
+                <Icon name="grid" />
+                Tables
+              </button>
+              <button type="button" className="go-bar-btn" ref={openers.you} onClick={() => setSheet('you')}>
+                <Icon name="users" />
+                You
+              </button>
+              <button
+                type="button"
+                className="btn go-btn go-bar-btn"
+                ref={openers.play}
+                onClick={() => setSheet('play')}
+              >
+                Play
+              </button>
+            </div>
+          </div>
+        </div>
+        <div className="go-in wide-only">
+          <Coming shelf={shelf} />
         </div>
       </main>
       <Footer page="games" who={who} />
+
+      {open === 'tables' && (
+        <Sheet title="Open tables" onClose={closeSheet}>
+          <Shelves shelf={shelf} onPick={setShelf} />
+          {tablesHere ? (
+            <OpenTables tables={tables} onJoin={onJoin} onAgain={again} tiles={false} />
+          ) : (
+            <p className="go-banner">
+              <Icon name="wifiOff" />
+              Not connected. Trying again…
+            </p>
+          )}
+        </Sheet>
+      )}
+      {open === 'you' && (
+        <Sheet title="You" onClose={closeSheet}>
+          {me ? (
+            <YourSeat me={me} season={season} />
+          ) : (
+            <Link to={AT.signIn} className="btn ghost go-btn full">
+              Sign in
+            </Link>
+          )}
+          <Coming shelf={shelf} />
+          <nav className="go-sheet-links" aria-label="More of GameOn">
+            <FootLinks page="games" />
+          </nav>
+        </Sheet>
+      )}
+      {open === 'play' && (
+        <Sheet title="Play" onClose={closeSheet}>
+          {live.length === 0 && <p className="go-sub">No live game on this shelf yet.</p>}
+          <ul className="go-sheet-play">
+            {live.map((door) => (
+              <li key={door.id}>
+                <Link to={door.to} className="btn go-btn full">
+                  Play {door.name}
+                </Link>
+                <p>{door.line}</p>
+              </li>
+            ))}
+          </ul>
+        </Sheet>
+      )}
     </>
   );
 }

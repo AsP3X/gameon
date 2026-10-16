@@ -59,8 +59,8 @@ describe('the class names of the profile and the ladder', () => {
   });
 });
 
-/** The classes gameon.css introduces for Games' two choices and the four pages the footer leads to. */
-const FOOTER_PAGES = ['go-choices', 'go-suggest', 'go-plus', 'go-doc', 'go-doc-block', 'go-doc-way', 'go-saved'];
+/** The classes gameon.css introduces for the four pages the footer leads to. */
+const FOOTER_PAGES = ['go-suggest', 'go-plus', 'go-doc', 'go-doc-block', 'go-doc-way', 'go-saved'];
 /** The classes skullking.css introduces for dropping the game saved on the device. */
 const FORGET = ['sk-jump-device', 'sk-jump-forget', 'sk-forget-actions'];
 

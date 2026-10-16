@@ -1,7 +1,7 @@
 /* What every page of the frame has around it: the bar at the top with the logo and the way in, the
    footer, and the links between pages. A link is a real one: it has the page's address, so it can
    be opened in a new tab, and a plain click goes there without loading the page again. */
-import { createContext, useContext, useEffect, useRef } from 'react';
+import { createContext, useContext, useEffect, useRef, useSyncExternalStore } from 'react';
 import type { MouseEvent, ReactNode, RefObject } from 'react';
 import type { Me } from '../protocol/generated';
 import { initialOf } from '../online/parts';
@@ -71,6 +71,23 @@ export function useTitle(tab: string): RefObject<HTMLHeadingElement | null> {
     };
   }, [tab]);
   return title;
+}
+
+/** The width from which a page has its wide layout (gameon.css). */
+const WIDE = '(min-width: 1000px)';
+const wideQuery = (): MediaQueryList | null => (typeof matchMedia === 'function' ? matchMedia(WIDE) : null);
+const onWidth = (changed: () => void): (() => void) => {
+  const query = wideQuery();
+  query?.addEventListener?.('change', changed);
+  return () => query?.removeEventListener?.('change', changed);
+};
+
+/**
+ * Whether the window is wide, for the few places where the two layouts read in a different order.
+ * The rest is CSS. A browser that cannot say is taken to be wide.
+ */
+export function useWide(): boolean {
+  return useSyncExternalStore(onWidth, () => wideQuery()?.matches ?? true);
 }
 
 function Avatar({ me }: { me: Me }) {
@@ -189,10 +206,32 @@ const MORE: { page: FramePage; to: string; name: string }[] = [
   { page: 'suggest', to: AT.suggest, name: 'Suggest a game' },
 ];
 
-/** The footer of the landing, of Games, of the profile, of the ladder, and of the four pages it leads to. */
+/** The links of the footer. Games on a phone has no footer, and carries them in its "You" sheet. */
+export function FootLinks({ page }: { page: FramePage }) {
+  return (
+    <>
+      <Link to={AT.games} className="go-foot-link">
+        Games
+      </Link>
+      <Link to={AT.ladder} className="go-foot-link">
+        Ladder
+      </Link>
+      {MORE.map((more) => (
+        <Link key={more.page} to={more.to} className="go-foot-link" current={page === more.page}>
+          {more.name}
+        </Link>
+      ))}
+    </>
+  );
+}
+
+/**
+ * The footer of the landing, of Games, of the profile, of the ladder, and of the four pages it leads
+ * to. Games on a phone is one screen, and has it only from a wide window.
+ */
 export function Footer({ page, who }: { page: FramePage; who: Who }) {
   return (
-    <footer className={wide(page) ? 'go-foot go-wide' : 'go-foot'}>
+    <footer className={`go-foot${wide(page) ? ' go-wide' : ''}${page === 'games' ? ' wide-only' : ''}`}>
       <div className="go-in">
         <Link to={AT.landing} className="go-home" label="GameOn, the front page">
           <Logo />
@@ -203,17 +242,7 @@ export function Footer({ page, who }: { page: FramePage; who: Who }) {
               Sign in
             </Link>
           )}
-          <Link to={AT.games} className="go-foot-link">
-            Games
-          </Link>
-          <Link to={AT.ladder} className="go-foot-link">
-            Ladder
-          </Link>
-          {MORE.map((more) => (
-            <Link key={more.page} to={more.to} className="go-foot-link" current={page === more.page}>
-              {more.name}
-            </Link>
-          ))}
+          <FootLinks page={page} />
         </nav>
         <span className="go-copy">© {new Date().getFullYear()} GameOn</span>
       </div>

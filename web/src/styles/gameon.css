@@ -387,15 +387,6 @@
 .go-door .go-btn {
   min-width: min(100%, 240px);
 }
-.go-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 14px;
-  padding-block: 4px;
-}
-.go-actions .go-btn {
-  flex: 1;
-}
 .go-facts {
   display: flex;
   flex-wrap: wrap;
@@ -419,68 +410,6 @@
   background: var(--card);
 }
 
-/* ---------- a game on its card: Games ---------- */
-.go-game {
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  border: 2px solid var(--line);
-  border-radius: 22px;
-  background: var(--card);
-  box-shadow: 0 4px 0 var(--line);
-}
-.go-game-art {
-  display: grid;
-  place-items: center;
-  min-height: 176px;
-  border-bottom: 2px solid var(--line);
-  background: var(--felt);
-}
-.go-game-info {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  padding: 18px;
-}
-.go-game-title {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-.go-game-title .go-key {
-  --k: 52px;
-}
-.go-game-name {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-.go-game-name b {
-  font-size: 22px;
-  font-weight: 900;
-  line-height: 1.15;
-}
-.go-game-name small,
-.go-soon small {
-  font-size: 12px;
-  font-weight: 900;
-  letter-spacing: 0.065em;
-  text-transform: uppercase;
-  color: var(--muted);
-}
-.go-game-info > p {
-  font-size: 16px;
-  line-height: 1.5;
-  color: var(--muted);
-}
-.go-game-facts {
-  text-align: center;
-  font-size: 13px;
-  font-weight: 800;
-  color: var(--muted);
-}
 /* ---------- the landing: the ranked season ---------- */
 .go-ranked {
   padding-bottom: 32px;
@@ -628,28 +557,9 @@
 }
 .go-tiers {
   display: flex;
-  align-items: center;
-  gap: 16px;
-  padding-top: 24px;
-  border-top: 2px solid var(--line);
-}
-.go-tiers ol {
-  flex: 1;
-  display: flex;
   flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-.go-tiers li {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  color: var(--blue-ink);
-}
-.go-tiers li > .go-icon {
-  width: 16px;
-  height: 16px;
+  justify-content: center;
+  gap: 6px;
 }
 .go-tier {
   display: inline-flex;
@@ -784,57 +694,6 @@
   line-height: 1.5;
   color: var(--muted);
 }
-.go-pick {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 440px);
-  overflow: hidden;
-  border: 2px solid var(--line);
-  border-radius: 24px;
-  background: var(--card);
-  box-shadow: 0 4px 0 var(--line);
-}
-.go-pick-info {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: flex-start;
-  gap: 20px;
-  padding: 40px;
-}
-.go-pick .go-game-title {
-  gap: 16px;
-}
-.go-pick .go-key {
-  --k: 72px;
-}
-.go-pick .go-game-name {
-  align-items: flex-start;
-  gap: 6px;
-}
-.go-pick .go-game-name b {
-  font-size: 30px;
-  line-height: 1.1;
-}
-.go-pick-info > p {
-  font-size: 17px;
-  line-height: 1.5;
-  color: var(--muted);
-}
-.go-pick .go-actions .go-btn {
-  flex: none;
-  min-width: 200px;
-}
-.go-pick-art {
-  --fan-w: 150px;
-  display: grid;
-  place-items: center;
-  min-height: 356px;
-  border-left: 2px solid var(--line);
-  background: var(--felt);
-}
-.go-pick-art .go-fan {
-  --fan-w: 150px;
-}
 .go-cta {
   padding-block: 80px 96px;
 }
@@ -909,27 +768,6 @@
 }
 
 /* ---------- Games ---------- */
-.go-games {
-  padding-block: 24px 32px;
-}
-.go-games .go-in,
-.go-columns,
-.go-page-head {
-  display: flex;
-  flex-direction: column;
-}
-.go-games .go-in,
-.go-columns {
-  gap: 20px;
-}
-.go-page-head {
-  gap: 14px;
-}
-.go-games h1 {
-  font-size: 32px;
-  line-height: 1.1;
-  letter-spacing: -0.012em;
-}
 .go-banner {
   display: flex;
   align-items: center;
@@ -944,61 +782,6 @@
 .go-banner .go-icon {
   width: 18px;
   height: 18px;
-}
-/* On a phone the two columns are one, in the order the page is read. */
-.go-main,
-.go-rail {
-  display: contents;
-}
-.go-games .go-game {
-  order: 2;
-}
-.go-seat {
-  order: 3;
-}
-.go-tables {
-  order: 4;
-}
-.go-soon-block {
-  order: 5;
-}
-.go-jump {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  align-items: center;
-  gap: 14px 12px;
-  padding: 16px;
-  border-radius: 20px;
-  background: var(--green-bg);
-}
-.go-jump .go-key {
-  --k: 48px;
-}
-.go-jump .go-btn {
-  grid-column: 1 / -1;
-}
-.go-jump-text {
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-}
-.go-jump-text small {
-  font-size: 12px;
-  font-weight: 900;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--green-ink);
-}
-.go-jump-text b {
-  font-size: 17px;
-  font-weight: 900;
-  line-height: 1.25;
-}
-.go-jump-text span {
-  font-size: 14px;
-  line-height: 1.35;
-  color: var(--green-ink);
 }
 .go-seat,
 .go-tables {
@@ -1187,20 +970,6 @@
   background:
     linear-gradient(var(--soft), var(--soft)) top left / 100% 12px no-repeat,
     linear-gradient(var(--soft), var(--soft)) bottom left / 68% 12px no-repeat;
-}
-.go-soon-block {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  padding-top: 8px;
-}
-.go-soon-block h2 {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 22px;
-  line-height: 1.2;
-  letter-spacing: -0.01em;
 }
 
 /* ---------- signing up and in ---------- */
@@ -1447,9 +1216,6 @@
     padding-block: 18px;
     border-top: 2px solid var(--line);
   }
-  .go-actions .go-btn {
-    flex: none;
-  }
 
   .go-ranked {
     padding-bottom: 96px;
@@ -1459,28 +1225,26 @@
     padding: 44px 56px 36px;
     border-radius: 28px;
   }
-  /* The copy takes the flexible side and the podium about two fifths. Without a podium, the copy
-     has the row. */
-  .go-ranked-top {
+  /* What the season is and the way in on the left; the season, the top of the ladder and the seven
+     tiers on the right. */
+  .go-ranked-split {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 38%;
-    align-items: end;
-    gap: 18px 56px;
-  }
-  .go-ranked-top:not(:has(.go-podium)) {
-    grid-template-columns: minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
+    align-items: center;
+    gap: 56px;
+    padding-block: 44px;
   }
   .go-ranked-copy {
     gap: 18px;
   }
-  .go-ranked-copy,
-  .go-ranked-actions,
-  .go-ranked-foot {
-    grid-column: 1;
+  .go-standings {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 24px;
   }
-  .go-podium {
-    grid-column: 2;
-    grid-row: 1 / span 3;
+  .go-standings .go-podium {
+    align-self: stretch;
     gap: 12px;
   }
   .go-ranked h2,
@@ -1603,21 +1367,6 @@
   .go-soon b {
     font-size: 21px;
   }
-  /* Skull King's card across the page: the copy keeps a reading width, and the felt takes the rest
-     and the hand grows with it. */
-  .go-pick {
-    grid-template-columns: min(720px, 50%) minmax(0, 1fr);
-  }
-  .go-pick-info > p {
-    max-width: 62ch;
-  }
-  .go-pick-art {
-    container-type: inline-size;
-  }
-  .go-pick-art .go-fan {
-    --fan-w: clamp(110px, 24cqi, 220px);
-  }
-
   .go-cta h2 {
     font-size: clamp(38px, 2.8vw, 52px);
   }
@@ -1634,187 +1383,9 @@
     font-size: 14px;
   }
 
-  .go-games {
-    padding-block: 44px 80px;
-  }
-  .go-games .go-in {
-    gap: 28px;
-  }
-  .go-page-head {
-    flex-direction: row;
-    align-items: flex-end;
-    justify-content: space-between;
-  }
-  .go-page-head > div:first-child {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-  }
-  .go-page-head .go-shelves {
-    flex: none;
-  }
-  .go-games h1 {
-    font-size: 44px;
-    letter-spacing: -0.014em;
-  }
-  /* Games uses the window: the page's inset, and no column. */
+  /* The landing uses the window: the page's inset, and no column. */
   .go-wide .go-in {
     max-width: none;
-  }
-  /* The two live games side by side, as tall as most of the window, and the rail beside them. The
-     rail is as tall as the games and adds nothing to their height: a list it cannot fit scrolls in
-     its own card. The announced games are the band under all three. */
-  .go-columns {
-    --go-band: clamp(560px, calc(100svh - 320px), 760px);
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 400px;
-    grid-template-rows: minmax(var(--go-band), auto) auto;
-    gap: 28px 24px;
-  }
-  .go-main {
-    display: contents;
-  }
-  .go-rail {
-    grid-area: 1 / 3;
-    contain: size;
-    display: flex;
-    flex-direction: column;
-    gap: 24px;
-    min-width: 0;
-  }
-  .go-games .go-game {
-    grid-row: 1;
-  }
-  .go-soon-block {
-    grid-area: 2 / 1 / auto / -1;
-  }
-  /* A shelf with no live game: the announced games take their place, beside the rail. */
-  .no-live .go-soon-block {
-    grid-area: 1 / 1 / auto / 3;
-  }
-  .go-seat {
-    flex: none;
-  }
-  .go-rail .go-tables {
-    flex: 1;
-    min-height: 0;
-    display: flex;
-    flex-direction: column;
-  }
-  .go-tables-head,
-  .go-tables-foot {
-    flex: none;
-  }
-  .go-rail .go-tables ul {
-    flex: 1;
-    min-height: 0;
-    overflow-y: auto;
-    overscroll-behavior: contain;
-  }
-  .go-jump {
-    display: flex;
-    gap: 16px;
-    padding: 20px;
-  }
-  .go-jump .go-key {
-    --k: 56px;
-  }
-  .go-jump-text {
-    flex: 1;
-  }
-  .go-jump-text b {
-    font-size: 19px;
-  }
-  .go-jump-text span {
-    font-size: 15px;
-  }
-  .go-jump .go-btn {
-    min-width: 170px;
-  }
-  .go-games .go-game {
-    border-radius: 24px;
-  }
-  /* The hand is sized to the felt it lies on. */
-  .go-games .go-game-art {
-    flex: none;
-    min-height: 216px;
-    container-type: inline-size;
-  }
-  .go-games .go-fan {
-    --fan-w: clamp(44px, 22cqi, 110px);
-  }
-  /* Ocho's hand is its own (ocho.css): it is reached here by its place on the felt. */
-  .go-games .go-game-art > div:not(.go-fan) {
-    --hand-w: clamp(44px, 22cqi, 110px);
-    padding-block: calc(var(--hand-w) * 0.16);
-  }
-  .go-games .go-game-art > div:not(.go-fan) > * {
-    --w: var(--hand-w);
-  }
-  .go-games .go-game-art > div:not(.go-fan) > * + * {
-    margin-left: calc(var(--hand-w) * -0.3);
-  }
-  .go-games .go-game-info {
-    flex: 1;
-    gap: 20px;
-    padding: 24px;
-    container: go-info / inline-size;
-  }
-  .go-games .go-game-title {
-    gap: 16px;
-  }
-  .go-games .go-game-title .go-key {
-    --k: 64px;
-  }
-  .go-games .go-game-name {
-    gap: 3px;
-  }
-  .go-games .go-game-name b {
-    font-size: 28px;
-    line-height: 1.1;
-  }
-  .go-games .go-game-info > p {
-    font-size: 17px;
-  }
-  .go-games .go-actions .go-btn {
-    min-width: 200px;
-  }
-  .go-tables-head,
-  .go-tables-foot,
-  .go-tables-note {
-    padding-inline: 20px;
-  }
-  .go-tables li {
-    padding-left: 20px;
-  }
-  .go-soon-block {
-    padding-top: 12px;
-  }
-  .go-soon-block h2 {
-    font-size: 24px;
-  }
-  .go-games .go-soon-list {
-    gap: 16px;
-  }
-  .no-live .go-soon-list {
-    flex: 1;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    grid-auto-rows: 1fr;
-  }
-  .no-live .go-soon,
-  #gameon .no-live .go-suggest-link {
-    justify-content: center;
-  }
-  .go-games .go-soon {
-    gap: 12px;
-    padding: 18px;
-    border-radius: 18px;
-  }
-  .go-games .go-soon .go-key {
-    --k: 48px;
-  }
-  .go-games .go-soon b {
-    font-size: 18px;
   }
 
   .go-account {
@@ -2469,24 +2040,6 @@
   }
 }
 
-/* ---------- Games: Skull King's two choices ---------- */
-/* The cards are the ones of Skull King's home (skullking.css): a card opens in place, and its two
-   ways are under it. Here they stand in the game's own card. */
-.go-choices {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-/* On a phone the way to the guide is a line under the button. */
-.go-games .go-actions {
-  flex-direction: column;
-  align-items: stretch;
-  gap: 4px;
-}
-#gameon .go-games .go-actions .go-text-link {
-  justify-content: center;
-}
-
 /* ---------- the tile that asks which game is missing ---------- */
 #gameon .go-suggest {
   padding: 0;
@@ -2658,40 +2211,6 @@
 }
 
 @media (min-width: 1000px) {
-  /* Side by side and as tall as each other: a card and what it opens share the list's two rows. */
-  .go-choices {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    grid-template-rows: auto auto;
-    gap: 0 12px;
-  }
-  .go-choices > .sk-choice {
-    display: grid;
-    grid-row: span 2;
-    grid-template-rows: subgrid;
-    align-items: start;
-  }
-  .go-choices > .sk-choice > .sk-way {
-    align-self: stretch;
-  }
-  .go-choices .sk-opts {
-    margin-top: 10px;
-  }
-  /* Two cards share the game's card here: they are smaller than on the home's felt. */
-  #gameon .go-choices .sk-way {
-    min-height: 76px;
-    padding: 12px 10px 14px 12px;
-  }
-  .go-choices .sk-way .go-key {
-    --k: 44px;
-  }
-  #gameon .go-choices .sk-opts {
-    padding-left: 0;
-  }
-  .go-games .go-actions {
-    flex-direction: row;
-    gap: 14px;
-  }
   .go-foot-links {
     justify-content: center;
   }
@@ -2767,73 +2286,6 @@
   }
 }
 
-/* ---------- Games on a wide window: the cards and the band ---------- */
-/* A live game's card is as narrow as a third of the window allows. What it holds goes one under the
-   other when the card has no room for two side by side. */
-@container go-info (max-width: 459px) {
-  .go-choices {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-  }
-  .go-choices > .sk-choice {
-    display: flex;
-  }
-  .go-choices .sk-opts {
-    margin-top: 0;
-  }
-  .go-games .go-actions {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 10px;
-  }
-  .go-games .go-actions .go-btn {
-    min-width: 0;
-  }
-}
-/* The title over the name: the key and the pill on one line, the name under them. */
-@container go-info (max-width: 339px) {
-  .go-games .go-game-title {
-    flex-wrap: wrap;
-    gap: 12px;
-  }
-  .go-game-title > .pill {
-    margin-left: auto;
-  }
-  .go-games .go-game-name {
-    order: 1;
-    flex-basis: 100%;
-  }
-}
-/* From here a card is wide enough to lie on its side: the felt on the left, the game on the right.
-   Narrower, the felt is on top, as on a phone. */
-@media (min-width: 1680px) {
-  .go-games .go-game {
-    display: grid;
-    grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
-  }
-  .go-games .go-game-art {
-    min-height: 0;
-    border-bottom: 0;
-    border-right: 2px solid var(--line);
-  }
-  .go-games .go-game-info {
-    justify-content: center;
-  }
-  /* A felt this narrow and tall holds the hand closed up a little more. */
-  .go-games .go-fan {
-    --fan-w: clamp(44px, 28cqi, 120px);
-  }
-  .go-games .go-fan > div + div {
-    margin-left: calc(var(--fan-w) * -0.5);
-  }
-  .go-games .go-game-art > div:not(.go-fan) {
-    --hand-w: clamp(44px, 28cqi, 120px);
-  }
-  .go-games .go-game-art > div:not(.go-fan) > * + * {
-    margin-left: calc(var(--hand-w) * -0.5);
-  }
-}
 @media (min-width: 1440px) {
   .go-wide .go-in {
     padding-inline: 48px;
@@ -2841,10 +2293,654 @@
 }
 /* The six announced games in one row, when each is still a card wide. */
 @media (min-width: 1600px) {
-  .go-columns:not(.no-live) .go-soon-list,
   .go-shelf .go-soon-list {
     grid-template-columns: none;
     grid-auto-flow: column;
     grid-auto-columns: minmax(0, 1fr);
+  }
+}
+
+/* ---------- Games: the felt floor ---------- */
+/* One felt from edge to edge: the table on it, the open tables beside it on a wide window, and a
+   dark bar along its bottom edge. On a phone the page is one screen and nothing scrolls but a
+   sheet's list. The cloth of a table is the felt with a little of the text colour in it: darker in
+   the light theme, lighter in the dark one. */
+.go-floor {
+  --go-cloth: color-mix(in srgb, var(--fg) 7%, var(--felt));
+  --go-cloth-line: color-mix(in srgb, var(--fg) 11%, var(--felt));
+  --go-on-dark: color-mix(in srgb, var(--white) 72%, transparent);
+  display: flex;
+  flex-direction: column;
+  background: var(--felt);
+}
+.go-floor .go-banner {
+  margin: 12px 16px 0;
+}
+.go-floor-play {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  padding: 16px;
+}
+.go-felt-table {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border: 2px solid var(--go-cloth-line);
+  border-radius: 150px;
+  background: var(--go-cloth);
+  container-type: size;
+}
+/* Four seats round the table. The near one is the player's. */
+.go-seat-mark {
+  position: absolute;
+  width: 36px;
+  height: 36px;
+  border: 2px solid var(--muted);
+  border-radius: 50%;
+  background: var(--felt);
+}
+.go-seat-mark.top {
+  top: 20px;
+  left: calc(50% - 18px);
+}
+.go-seat-mark.left,
+.go-seat-mark.right {
+  top: calc(38% - 18px);
+}
+.go-seat-mark.left {
+  left: 20px;
+}
+.go-seat-mark.right {
+  right: 20px;
+}
+.go-seat-mark.you {
+  bottom: 12px;
+  left: calc(50% - 40px);
+  width: 80px;
+  height: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  border: 0;
+  background: none;
+}
+.go-seat-mark.you > span {
+  width: 36px;
+  height: 36px;
+  border: 2px solid var(--green-d);
+  border-radius: 50%;
+  background: var(--green);
+}
+.go-seat-mark.you small {
+  font-size: 13px;
+  font-weight: 900;
+  color: var(--green-ink);
+}
+/* The cards of the game to go back to, one by each corner, under what is written on the table. */
+.go-felt-cards {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.go-felt-cards > div {
+  position: absolute;
+}
+.go-felt-cards .card {
+  --w: clamp(64px, 19cqmin, 150px);
+}
+.go-felt-cards > div:nth-child(1) {
+  top: 6%;
+  left: 10%;
+  transform: rotate(-12deg);
+}
+.go-felt-cards > div:nth-child(2) {
+  top: 10%;
+  right: 12%;
+  transform: rotate(12deg);
+}
+.go-felt-cards > div:nth-child(3) {
+  bottom: 9%;
+  left: 7%;
+  transform: rotate(9deg);
+}
+.go-felt-cards > div:nth-child(4) {
+  right: 10%;
+  bottom: 14%;
+  transform: rotate(-8deg);
+}
+.go-felt-table .go-jump-text {
+  position: relative;
+  max-width: min(100%, 420px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 24px;
+  text-align: center;
+}
+.go-felt-table .go-jump-text h2 {
+  font-size: clamp(34px, 8cqi, 56px);
+  line-height: 1.1;
+  letter-spacing: -0.015em;
+}
+.go-felt-table .go-jump-text b {
+  font-size: 18px;
+  font-weight: 800;
+}
+.go-felt-table .go-jump-text > span {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--green-ink);
+}
+.go-felt-table .go-jump-text .go-btn {
+  min-width: 220px;
+  margin-top: 16px;
+}
+/* No game to go back to: the live games the shelf shows, each with its hand and its Play. */
+.go-start {
+  position: relative;
+  padding: 72px 24px;
+}
+.go-start ul {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+.go-start-game {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  text-align: center;
+}
+.go-start-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+.go-start-name .go-key {
+  --k: 40px;
+}
+.go-start-name b {
+  font-size: 26px;
+  font-weight: 900;
+  line-height: 1.1;
+}
+.go-start-game > p,
+.go-start-none {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--muted);
+}
+.go-start-none {
+  max-width: 28ch;
+  text-align: center;
+}
+.go-start-game .go-btn {
+  min-width: 200px;
+}
+#gameon .go-start-game .go-text-link {
+  margin-top: -6px;
+  color: var(--green-ink);
+}
+.go-start-art .go-fan {
+  --fan-w: clamp(40px, 10cqi, 96px);
+}
+/* A phone's table too short for both hands keeps the names and the buttons. */
+@container (max-height: 640px) {
+  .go-start-art {
+    display: none;
+  }
+}
+/* The dark bar along the bottom edge of the felt. */
+.go-floor-bar {
+  padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+  background: var(--c-black);
+  color: var(--white);
+}
+.go-bar-narrow {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+.go-bar-btn {
+  min-height: 48px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+#gameon .go-bar-btn:not(.btn) {
+  border: 2px solid var(--go-on-dark);
+  border-radius: 16px;
+  background: none;
+  color: var(--white);
+}
+.go-bar-btn:not(.btn):focus-visible {
+  outline: 3px solid var(--blue);
+  outline-offset: 2px;
+}
+.go-bar-btn .go-icon {
+  width: 18px;
+  height: 18px;
+}
+/* The announced games, on one line under the felt. */
+.go-coming {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 16px;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--muted);
+}
+#gameon .go-coming .go-text-link {
+  color: var(--green-ink);
+}
+
+/* ---------- Games: a phone's sheets ---------- */
+/* A native modal dialog. The dialog is the scrim and fills the screen; the sheet rises from its
+   bottom edge. */
+html:has(.go-sheet[open]) {
+  overflow: hidden;
+}
+.go-sheet {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--fg);
+  font-family: var(--f-ui);
+}
+.go-sheet[open] {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+.go-sheet::backdrop {
+  background: color-mix(in srgb, var(--c-black) 60%, transparent);
+}
+.go-sheet-panel {
+  max-height: 80dvh;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 12px 20px calc(28px + env(safe-area-inset-bottom));
+  border-radius: 16px 16px 0 0;
+  background: var(--bg);
+}
+.go-sheet-panel > * {
+  flex: none;
+}
+.go-sheet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.go-sheet-head h2 {
+  font-size: 22px;
+  line-height: 1.2;
+}
+.go-sheet-close {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 2px solid var(--line);
+  border-radius: 14px;
+  background: var(--bg);
+  color: var(--fg);
+  font-size: 20px;
+}
+.go-sheet-close:focus-visible {
+  outline: 3px solid var(--blue);
+  outline-offset: 2px;
+}
+/* The tables' list is what scrolls, inside the sheet. */
+.go-sheet-panel > .go-tables {
+  flex: 0 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.go-sheet-panel > .go-tables ul {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.go-sheet-panel > .go-tables .go-tables-foot {
+  flex: none;
+}
+.go-sheet-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 20px;
+  padding-top: 8px;
+  border-top: 2px solid var(--line);
+}
+.go-sheet-play {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding-top: 8px;
+}
+.go-sheet-play li {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  text-align: center;
+}
+.go-sheet-play p {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--muted);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .go-sheet[open] .go-sheet-panel {
+    animation: go-sheet-up 220ms var(--ease-out);
+  }
+}
+@keyframes go-sheet-up {
+  from {
+    transform: translateY(100%);
+  }
+}
+
+/* On a phone Games is the window: the bar at the top and the felt under it, no more. */
+@media (max-width: 999.98px) {
+  #gameon:has(.go-games) {
+    height: 100dvh;
+    min-height: 0;
+    overflow: hidden;
+  }
+  #gameon main.go-games {
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  .go-games .go-floor {
+    flex: 1;
+    min-height: 0;
+  }
+}
+
+/* ---------- Games on a wide window ---------- */
+@media (min-width: 1000px) {
+  .go-floor {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(360px, 1fr);
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    grid-template-areas:
+      'note note'
+      'play side'
+      'bar bar';
+    min-height: clamp(620px, calc(100svh - 142px), 900px);
+  }
+  .go-floor .go-banner {
+    grid-area: note;
+    margin: 20px 32px 0;
+  }
+  .go-floor-play {
+    grid-area: play;
+    padding: 32px 16px 32px 32px;
+  }
+  .go-felt-table {
+    min-height: 480px;
+    border-radius: 200px;
+  }
+  .go-seat-mark.left,
+  .go-seat-mark.right {
+    top: calc(50% - 18px);
+  }
+  .go-start {
+    padding: 48px 96px;
+  }
+  .go-start ul {
+    flex-direction: row;
+    gap: 56px;
+  }
+  .go-start-game {
+    flex: 1;
+    min-width: 0;
+  }
+  .go-start-name b {
+    font-size: 32px;
+  }
+  .go-floor-side {
+    grid-area: side;
+    min-width: 0;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 20px 32px 32px 16px;
+  }
+  /* The filters sit in the top right corner of the felt. */
+  .go-floor-side .go-shelves {
+    align-self: flex-end;
+    gap: 4px;
+  }
+  .go-floor-side .go-shelves button {
+    padding: 0 14px;
+    border-color: transparent;
+    background: none;
+    font-size: 13px;
+    text-transform: uppercase;
+  }
+  .go-floor-side .go-shelves button[aria-pressed='true'] {
+    border-color: var(--green-bg);
+    background: var(--green-bg);
+  }
+  /* The open tables as small tables on the felt, two by two. */
+  .go-tiles {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    overflow: visible;
+    border: 0;
+    border-radius: 0;
+    background: none;
+  }
+  .go-tiles .go-tables-head {
+    min-height: 0;
+    padding: 0;
+    background: none;
+  }
+  .go-tiles ul {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+    align-content: start;
+  }
+  #gameon .go-tiles li {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      'seats count'
+      'text text'
+      'rounds join';
+    align-items: center;
+    gap: 10px 8px;
+    padding: 14px;
+    border: 2px solid var(--go-cloth-line);
+    border-radius: 16px;
+    background: var(--go-cloth);
+  }
+  .go-tile-seats {
+    grid-area: seats;
+    justify-self: start;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    height: 32px;
+    padding: 0 12px;
+    border-radius: 16px;
+    background: var(--go-cloth-line);
+  }
+  .go-tile-seats > span {
+    width: 12px;
+    height: 12px;
+    border: 2px solid var(--muted);
+    border-radius: 50%;
+  }
+  .go-tile-seats > span.on {
+    border-color: var(--green-d);
+    background: var(--green);
+  }
+  .go-tiles .go-table-text {
+    grid-area: text;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .go-tiles .go-table-text .pill {
+    flex: none;
+    margin: 0;
+  }
+  .go-tiles .go-table-text b {
+    font-size: 14px;
+  }
+  .go-tiles .go-table-more {
+    display: contents;
+  }
+  .go-tiles .go-table-more small {
+    font-size: 13px;
+    font-weight: 800;
+    color: var(--fg);
+  }
+  .go-tiles .go-table-more small:last-child {
+    grid-area: count;
+    font-size: 15px;
+    font-weight: 900;
+  }
+  .go-tiles .go-table-more small:first-child {
+    grid-area: rounds;
+  }
+  .go-tiles li .go-btn {
+    grid-area: join;
+  }
+  .go-tiles .go-tables-foot,
+  .go-tiles .go-tables-note {
+    padding: 0;
+    border-top: 0;
+  }
+  .go-tiles .go-tables-note {
+    padding: 18px;
+    border: 2px solid var(--go-cloth-line);
+    border-radius: 16px;
+    background: var(--go-cloth);
+  }
+  #gameon .go-tiles .go-tables-foot .go-text-link {
+    color: var(--green-ink);
+  }
+  .go-tiles .go-tables-wait {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+  }
+  .go-tiles .go-tables-wait span {
+    height: 132px;
+    border: 0;
+    border-radius: 16px;
+    background: var(--go-cloth);
+  }
+  .go-tiles .go-tables-wait span::before,
+  .go-tiles .go-tables-wait span::after {
+    display: none;
+  }
+  .go-floor-bar {
+    grid-area: bar;
+    padding: 18px 32px;
+  }
+  .go-bar-wide {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    min-height: 52px;
+  }
+  .go-bar-player {
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .go-bar-player .avatar {
+    width: 42px;
+    height: 42px;
+    font-size: 18px;
+  }
+  .go-bar-name,
+  .go-bar-rating {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .go-bar-name {
+    min-width: 0;
+  }
+  .go-bar-name b {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 17px;
+    font-weight: 900;
+  }
+  .go-bar-name small,
+  .go-bar-rating small {
+    font-size: 12px;
+    font-weight: 800;
+    color: var(--go-on-dark);
+  }
+  .go-bar-rating {
+    align-items: center;
+    padding-left: 14px;
+    border-left: 2px solid var(--go-on-dark);
+  }
+  .go-bar-rating b {
+    font-size: 26px;
+    font-weight: 900;
+    line-height: 1.1;
+    color: var(--gold);
+  }
+  .go-bar-play {
+    display: flex;
+    gap: 12px;
+  }
+  .go-bar-play .go-btn {
+    min-width: 200px;
+  }
+  .go-games > .go-in {
+    padding-block: 26px;
+  }
+}
+@media (min-width: 1440px) {
+  .go-floor-play {
+    padding-left: 48px;
+  }
+  .go-floor-side {
+    padding-right: 48px;
+  }
+  .go-floor-bar {
+    padding-inline: 48px;
   }
 }
