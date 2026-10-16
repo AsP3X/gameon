@@ -66058,41 +66058,43 @@
         },
         {
           "type": "frame",
-          "id": "z6fUPv",
+          "id": "u6FvTU",
           "name": "Main",
           "width": "fill_container",
           "height": "fill_container",
           "layout": "vertical",
-          "alignItems": "center",
+          "gap": 20,
+          "padding": [
+            24,
+            16,
+            32,
+            16
+          ],
           "children": [
             {
               "type": "frame",
-              "id": "F5F7V",
-              "name": "Body",
+              "id": "lkYZ4",
+              "name": "Head",
               "width": "fill_container",
-              "height": "fill_container",
               "layout": "vertical",
               "gap": 12,
-              "padding": [
-                4,
-                16,
-                24,
-                16
-              ],
               "children": [
                 {
                   "type": "text",
-                  "id": "dkY6K",
+                  "id": "EibCq",
                   "name": "Title",
                   "fill": "$fg",
-                  "content": "Ana wins the match",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "You win the match",
+                  "lineHeight": 1.05,
                   "fontFamily": "$f-ui",
-                  "fontSize": 28,
+                  "fontSize": 36,
                   "fontWeight": "900"
                 },
                 {
                   "type": "frame",
-                  "id": "rAJqH",
+                  "id": "rxLcM",
                   "name": "Meta",
                   "width": "fill_container",
                   "gap": 8,
@@ -66101,23 +66103,20 @@
                   "children": [
                     {
                       "type": "text",
-                      "id": "bpCdi",
+                      "id": "BcLhz",
                       "name": "Went out",
-                      "fill": "$green-ink",
-                      "content": "Ana went out · 94 this hand",
+                      "fill": "$muted",
+                      "content": "You went out · 94 this hand",
                       "fontFamily": "$f-ui",
                       "fontSize": 14,
-                      "fontWeight": "800"
+                      "fontWeight": "700"
                     },
                     {
                       "type": "frame",
-                      "id": "T0TJLD",
+                      "id": "G8olA",
                       "name": "Target",
-                      "fill": "$soft",
-                      "cornerRadius": 999,
-                      "stroke": "$line",
-                      "strokeWidth": 1,
-                      "gap": 5,
+                      "fill": "$gold-bg",
+                      "cornerRadius": 99,
                       "padding": [
                         4,
                         10
@@ -66125,146 +66124,156 @@
                       "alignItems": "center",
                       "children": [
                         {
-                          "type": "icon",
-                          "id": "AUPyY",
-                          "name": "Icon",
-                          "width": 13,
-                          "height": 13,
-                          "icon": "flag",
-                          "library": "lucide",
-                          "fill": "$muted"
-                        },
-                        {
                           "type": "text",
-                          "id": "rfP5f",
+                          "id": "O07YPh",
                           "name": "Text",
                           "fill": "$fg",
                           "content": "First to 500",
                           "fontFamily": "$f-ui",
-                          "fontSize": 12,
+                          "fontSize": 13,
                           "fontWeight": "900"
                         }
                       ]
                     }
                   ]
-                },
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "wCLun",
+              "name": "Totals",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 6,
+              "children": [
                 {
-                  "type": "frame",
-                  "id": "EHTTY",
-                  "name": "Totals",
+                  "id": "YZnVk",
+                  "type": "ref",
+                  "ref": "q34fC1",
+                  "name": "Row You",
                   "width": "fill_container",
-                  "layout": "vertical",
-                  "gap": 6,
-                  "children": [
-                    {
-                      "id": "OqusD",
-                      "type": "ref",
-                      "ref": "q34fC1",
-                      "name": "Row Ana",
-                      "width": "fill_container",
-                      "fill": "$gold-bg",
-                      "stroke": "$gold",
-                      "descendants": {
-                        "bgt4g": {
-                          "fill": "$purple"
-                        },
-                        "e8UAN5": {
-                          "content": "A",
-                          "fill": "$white"
-                        },
-                        "gT6ck": {
-                          "content": "Ana"
-                        },
-                        "mIXNs": {
-                          "content": "Went out · +94 this hand",
-                          "fill": "$green-ink"
-                        },
-                        "iz9G3": {
+                  "fill": "$gold-bg",
+                  "stroke": "$gold",
+                  "strokeWidth": 2,
+                  "padding": [
+                    10,
+                    14
+                  ],
+                  "height": 64,
+                  "descendants": {
+                    "bgt4g": {
+                      "fill": "$blue-ink",
+                      "width": 40,
+                      "height": 40,
+                      "cornerRadius": 20
+                    },
+                    "e8UAN5": {
+                      "content": "Y",
+                      "fill": "$white",
+                      "fontSize": 17
+                    },
+                    "gT6ck": {
+                      "content": "You",
+                      "fontWeight": "900",
+                      "fontSize": 17
+                    },
+                    "mIXNs": {
+                      "content": "1st place"
+                    },
+                    "iz9G3": {
+                      "type": "frame",
+                      "id": "FYIXD",
+                      "name": "Score",
+                      "gap": 8,
+                      "alignItems": "center",
+                      "children": [
+                        {
                           "type": "frame",
-                          "id": "m8C9AG",
-                          "name": "Score",
-                          "gap": 8,
+                          "id": "fCNH8",
+                          "name": "Winner",
+                          "fill": "$card",
+                          "cornerRadius": 99,
+                          "padding": [
+                            4,
+                            10
+                          ],
                           "alignItems": "center",
                           "children": [
                             {
-                              "type": "frame",
-                              "id": "inEGF",
-                              "name": "Winner",
-                              "fill": "$gold",
-                              "cornerRadius": 999,
-                              "gap": 4,
-                              "padding": [
-                                2,
-                                8
-                              ],
-                              "alignItems": "center",
-                              "children": [
-                                {
-                                  "type": "icon",
-                                  "id": "N0JQz",
-                                  "name": "Icon",
-                                  "width": 12,
-                                  "height": 12,
-                                  "icon": "trophy",
-                                  "library": "lucide",
-                                  "fill": "$gold-ink"
-                                },
-                                {
-                                  "type": "text",
-                                  "id": "egX6L",
-                                  "name": "Text",
-                                  "fill": "$gold-ink",
-                                  "content": "Winner",
-                                  "fontFamily": "$f-ui",
-                                  "fontSize": 11,
-                                  "fontWeight": "900"
-                                }
-                              ]
-                            },
+                              "type": "text",
+                              "id": "WIJ3U",
+                              "name": "Text",
+                              "fill": "$fg",
+                              "content": "Winner",
+                              "fontFamily": "$f-ui",
+                              "fontSize": 13,
+                              "fontWeight": "900"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "FB703",
+                          "name": "Total slot",
+                          "width": 44,
+                          "justifyContent": "end",
+                          "children": [
                             {
                               "type": "text",
-                              "id": "Dhf7D",
+                              "id": "u7Rtv0",
                               "name": "Total",
                               "fill": "$fg",
                               "content": "512",
                               "fontFamily": "$f-ui",
-                              "fontSize": 20,
+                              "fontSize": 26,
                               "fontWeight": "900"
                             }
                           ]
                         }
-                      }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "id": "JZtPu",
+                  "type": "ref",
+                  "ref": "q34fC1",
+                  "name": "Row Ana",
+                  "width": "fill_container",
+                  "height": 48,
+                  "descendants": {
+                    "bgt4g": {
+                      "fill": "$purple"
                     },
-                    {
-                      "id": "G0DOkR",
-                      "type": "ref",
-                      "ref": "q34fC1",
-                      "name": "Row Fay",
-                      "width": "fill_container",
-                      "descendants": {
-                        "bgt4g": {
-                          "fill": "$c-purple"
-                        },
-                        "e8UAN5": {
-                          "content": "F",
-                          "fill": "$white"
-                        },
-                        "gT6ck": {
-                          "content": "Fay"
-                        },
-                        "mIXNs": {
-                          "content": "2nd place"
-                        },
-                        "iz9G3": {
+                    "e8UAN5": {
+                      "content": "A",
+                      "fill": "$white"
+                    },
+                    "gT6ck": {
+                      "content": "Ana",
+                      "fontWeight": "900"
+                    },
+                    "mIXNs": {
+                      "content": "2nd place"
+                    },
+                    "iz9G3": {
+                      "type": "frame",
+                      "id": "oHK0H",
+                      "name": "Score",
+                      "gap": 8,
+                      "alignItems": "center",
+                      "children": [
+                        {
                           "type": "frame",
-                          "id": "ngyGr",
-                          "name": "Score",
-                          "gap": 8,
-                          "alignItems": "center",
+                          "id": "gym3H",
+                          "name": "Total slot",
+                          "width": 44,
+                          "justifyContent": "end",
                           "children": [
                             {
                               "type": "text",
-                              "id": "O5pZZN",
+                              "id": "vfESx",
                               "name": "Total",
                               "fill": "$fg",
                               "content": "356",
@@ -66274,38 +66283,49 @@
                             }
                           ]
                         }
-                      }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "id": "rfpTj",
+                  "type": "ref",
+                  "ref": "q34fC1",
+                  "name": "Row Fay",
+                  "width": "fill_container",
+                  "height": 48,
+                  "descendants": {
+                    "bgt4g": {
+                      "fill": "$c-purple"
                     },
-                    {
-                      "id": "a0YpEF",
-                      "type": "ref",
-                      "ref": "q34fC1",
-                      "name": "Row You",
-                      "width": "fill_container",
-                      "descendants": {
-                        "bgt4g": {
-                          "fill": "$blue-ink"
-                        },
-                        "e8UAN5": {
-                          "content": "Y",
-                          "fill": "$white"
-                        },
-                        "gT6ck": {
-                          "content": "You"
-                        },
-                        "mIXNs": {
-                          "content": "3rd place"
-                        },
-                        "iz9G3": {
+                    "e8UAN5": {
+                      "content": "F",
+                      "fill": "$white"
+                    },
+                    "gT6ck": {
+                      "content": "Fay",
+                      "fontWeight": "900"
+                    },
+                    "mIXNs": {
+                      "content": "3rd place"
+                    },
+                    "iz9G3": {
+                      "type": "frame",
+                      "id": "cw04t",
+                      "name": "Score",
+                      "gap": 8,
+                      "alignItems": "center",
+                      "children": [
+                        {
                           "type": "frame",
-                          "id": "YNgeB",
-                          "name": "Score",
-                          "gap": 8,
-                          "alignItems": "center",
+                          "id": "SfC2u",
+                          "name": "Total slot",
+                          "width": 44,
+                          "justifyContent": "end",
                           "children": [
                             {
                               "type": "text",
-                              "id": "idvLL",
+                              "id": "Jare8",
                               "name": "Total",
                               "fill": "$fg",
                               "content": "302",
@@ -66315,38 +66335,49 @@
                             }
                           ]
                         }
-                      }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "id": "zsOV7",
+                  "type": "ref",
+                  "ref": "q34fC1",
+                  "name": "Row Gus",
+                  "width": "fill_container",
+                  "height": 48,
+                  "descendants": {
+                    "bgt4g": {
+                      "fill": "$gold-d"
                     },
-                    {
-                      "id": "rNM0T",
-                      "type": "ref",
-                      "ref": "q34fC1",
-                      "name": "Row Gus",
-                      "width": "fill_container",
-                      "descendants": {
-                        "bgt4g": {
-                          "fill": "$gold-d"
-                        },
-                        "e8UAN5": {
-                          "content": "G",
-                          "fill": "$gold-ink"
-                        },
-                        "gT6ck": {
-                          "content": "Gus"
-                        },
-                        "mIXNs": {
-                          "content": "4th place"
-                        },
-                        "iz9G3": {
+                    "e8UAN5": {
+                      "content": "G",
+                      "fill": "$gold-ink"
+                    },
+                    "gT6ck": {
+                      "content": "Gus",
+                      "fontWeight": "900"
+                    },
+                    "mIXNs": {
+                      "content": "4th place"
+                    },
+                    "iz9G3": {
+                      "type": "frame",
+                      "id": "eVVFX",
+                      "name": "Score",
+                      "gap": 8,
+                      "alignItems": "center",
+                      "children": [
+                        {
                           "type": "frame",
-                          "id": "J5b7sZ",
-                          "name": "Score",
-                          "gap": 8,
-                          "alignItems": "center",
+                          "id": "iZZHb",
+                          "name": "Total slot",
+                          "width": 44,
+                          "justifyContent": "end",
                           "children": [
                             {
                               "type": "text",
-                              "id": "s76gN",
+                              "id": "wGzrM",
                               "name": "Total",
                               "fill": "$fg",
                               "content": "288",
@@ -66356,38 +66387,49 @@
                             }
                           ]
                         }
-                      }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "id": "x5eci0",
+                  "type": "ref",
+                  "ref": "q34fC1",
+                  "name": "Row Ben",
+                  "width": "fill_container",
+                  "height": 48,
+                  "descendants": {
+                    "bgt4g": {
+                      "fill": "$orange"
                     },
-                    {
-                      "id": "k2pqQ2",
-                      "type": "ref",
-                      "ref": "q34fC1",
-                      "name": "Row Ben",
-                      "width": "fill_container",
-                      "descendants": {
-                        "bgt4g": {
-                          "fill": "$orange"
-                        },
-                        "e8UAN5": {
-                          "content": "B",
-                          "fill": "$white"
-                        },
-                        "gT6ck": {
-                          "content": "Ben"
-                        },
-                        "mIXNs": {
-                          "content": "5th place"
-                        },
-                        "iz9G3": {
+                    "e8UAN5": {
+                      "content": "B",
+                      "fill": "$white"
+                    },
+                    "gT6ck": {
+                      "content": "Ben",
+                      "fontWeight": "900"
+                    },
+                    "mIXNs": {
+                      "content": "5th place"
+                    },
+                    "iz9G3": {
+                      "type": "frame",
+                      "id": "Ryvk5",
+                      "name": "Score",
+                      "gap": 8,
+                      "alignItems": "center",
+                      "children": [
+                        {
                           "type": "frame",
-                          "id": "i4vYs",
-                          "name": "Score",
-                          "gap": 8,
-                          "alignItems": "center",
+                          "id": "LcMFn",
+                          "name": "Total slot",
+                          "width": 44,
+                          "justifyContent": "end",
                           "children": [
                             {
                               "type": "text",
-                              "id": "Y6Ma9Q",
+                              "id": "CWJrX",
                               "name": "Total",
                               "fill": "$fg",
                               "content": "240",
@@ -66397,38 +66439,49 @@
                             }
                           ]
                         }
-                      }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "id": "EwDdy",
+                  "type": "ref",
+                  "ref": "q34fC1",
+                  "name": "Row Cleo",
+                  "width": "fill_container",
+                  "height": 48,
+                  "descendants": {
+                    "bgt4g": {
+                      "fill": "$blue"
                     },
-                    {
-                      "id": "s9Vi8",
-                      "type": "ref",
-                      "ref": "q34fC1",
-                      "name": "Row Cleo",
-                      "width": "fill_container",
-                      "descendants": {
-                        "bgt4g": {
-                          "fill": "$blue"
-                        },
-                        "e8UAN5": {
-                          "content": "C",
-                          "fill": "$white"
-                        },
-                        "gT6ck": {
-                          "content": "Cleo"
-                        },
-                        "mIXNs": {
-                          "content": "6th place"
-                        },
-                        "iz9G3": {
+                    "e8UAN5": {
+                      "content": "C",
+                      "fill": "$white"
+                    },
+                    "gT6ck": {
+                      "content": "Cleo",
+                      "fontWeight": "900"
+                    },
+                    "mIXNs": {
+                      "content": "6th place"
+                    },
+                    "iz9G3": {
+                      "type": "frame",
+                      "id": "SUgs6",
+                      "name": "Score",
+                      "gap": 8,
+                      "alignItems": "center",
+                      "children": [
+                        {
                           "type": "frame",
-                          "id": "RyZJC",
-                          "name": "Score",
-                          "gap": 8,
-                          "alignItems": "center",
+                          "id": "sD865",
+                          "name": "Total slot",
+                          "width": 44,
+                          "justifyContent": "end",
                           "children": [
                             {
                               "type": "text",
-                              "id": "Yryjq",
+                              "id": "sNS5M",
                               "name": "Total",
                               "fill": "$fg",
                               "content": "197",
@@ -66438,38 +66491,49 @@
                             }
                           ]
                         }
-                      }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "id": "D8kKR",
+                  "type": "ref",
+                  "ref": "q34fC1",
+                  "name": "Row Dev",
+                  "width": "fill_container",
+                  "height": 48,
+                  "descendants": {
+                    "bgt4g": {
+                      "fill": "$c-green"
                     },
-                    {
-                      "id": "h6V4lh",
-                      "type": "ref",
-                      "ref": "q34fC1",
-                      "name": "Row Dev",
-                      "width": "fill_container",
-                      "descendants": {
-                        "bgt4g": {
-                          "fill": "$c-green"
-                        },
-                        "e8UAN5": {
-                          "content": "D",
-                          "fill": "$white"
-                        },
-                        "gT6ck": {
-                          "content": "Dev"
-                        },
-                        "mIXNs": {
-                          "content": "7th place"
-                        },
-                        "iz9G3": {
+                    "e8UAN5": {
+                      "content": "D",
+                      "fill": "$white"
+                    },
+                    "gT6ck": {
+                      "content": "Dev",
+                      "fontWeight": "900"
+                    },
+                    "mIXNs": {
+                      "content": "7th place"
+                    },
+                    "iz9G3": {
+                      "type": "frame",
+                      "id": "BnDc3",
+                      "name": "Score",
+                      "gap": 8,
+                      "alignItems": "center",
+                      "children": [
+                        {
                           "type": "frame",
-                          "id": "BZwVl",
-                          "name": "Score",
-                          "gap": 8,
-                          "alignItems": "center",
+                          "id": "mPFV1",
+                          "name": "Total slot",
+                          "width": 44,
+                          "justifyContent": "end",
                           "children": [
                             {
                               "type": "text",
-                              "id": "Ad2Qg",
+                              "id": "E3RjdO",
                               "name": "Total",
                               "fill": "$fg",
                               "content": "151",
@@ -66479,38 +66543,49 @@
                             }
                           ]
                         }
-                      }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "id": "ypizT",
+                  "type": "ref",
+                  "ref": "q34fC1",
+                  "name": "Row Eli",
+                  "width": "fill_container",
+                  "height": 48,
+                  "descendants": {
+                    "bgt4g": {
+                      "fill": "$red"
                     },
-                    {
-                      "id": "TDYfv",
-                      "type": "ref",
-                      "ref": "q34fC1",
-                      "name": "Row Eli",
-                      "width": "fill_container",
-                      "descendants": {
-                        "bgt4g": {
-                          "fill": "$red"
-                        },
-                        "e8UAN5": {
-                          "content": "E",
-                          "fill": "$white"
-                        },
-                        "gT6ck": {
-                          "content": "Eli"
-                        },
-                        "mIXNs": {
-                          "content": "8th place"
-                        },
-                        "iz9G3": {
+                    "e8UAN5": {
+                      "content": "E",
+                      "fill": "$white"
+                    },
+                    "gT6ck": {
+                      "content": "Eli",
+                      "fontWeight": "900"
+                    },
+                    "mIXNs": {
+                      "content": "8th place"
+                    },
+                    "iz9G3": {
+                      "type": "frame",
+                      "id": "eehHw",
+                      "name": "Score",
+                      "gap": 8,
+                      "alignItems": "center",
+                      "children": [
+                        {
                           "type": "frame",
-                          "id": "mvOoL",
-                          "name": "Score",
-                          "gap": 8,
-                          "alignItems": "center",
+                          "id": "ouhaE",
+                          "name": "Total slot",
+                          "width": 44,
+                          "justifyContent": "end",
                           "children": [
                             {
                               "type": "text",
-                              "id": "Ci3Xc",
+                              "id": "W4MksM",
                               "name": "Total",
                               "fill": "$fg",
                               "content": "96",
@@ -66520,41 +66595,34 @@
                             }
                           ]
                         }
-                      }
-                    }
-                  ]
-                },
-                {
-                  "type": "frame",
-                  "id": "XszPA",
-                  "name": "Spacer",
-                  "width": "fill_container",
-                  "height": "fill_container"
-                },
-                {
-                  "id": "J7wK4",
-                  "type": "ref",
-                  "ref": "m4uNX",
-                  "name": "Button Back to games",
-                  "fill": "$blue",
-                  "effect": {
-                    "type": "shadow",
-                    "shadowType": "outer",
-                    "color": "$blue-d",
-                    "offset": {
-                      "x": 0,
-                      "y": 4
-                    }
-                  },
-                  "width": "fill_container",
-                  "descendants": {
-                    "U2QTp": {
-                      "content": "BACK TO GAMES",
-                      "fill": "$white"
+                      ]
                     }
                   }
                 }
               ]
+            },
+            {
+              "id": "HLInE",
+              "type": "ref",
+              "ref": "m4uNX",
+              "name": "Button Back to games",
+              "fill": "$blue",
+              "effect": {
+                "type": "shadow",
+                "shadowType": "outer",
+                "color": "$blue-d",
+                "offset": {
+                  "x": 0,
+                  "y": 4
+                }
+              },
+              "width": "fill_container",
+              "descendants": {
+                "U2QTp": {
+                  "content": "BACK TO GAMES",
+                  "fill": "$white"
+                }
+              }
             }
           ]
         }
@@ -66590,473 +66658,94 @@
         },
         {
           "type": "frame",
-          "id": "RS0Pn",
+          "id": "p20xf7",
           "name": "Main",
           "width": "fill_container",
           "height": "fill_container",
-          "layout": "vertical",
-          "justifyContent": "center",
+          "gap": 48,
+          "padding": [
+            32,
+            24
+          ],
           "alignItems": "center",
           "children": [
             {
               "type": "frame",
-              "id": "d7ejBQ",
-              "name": "Body",
-              "width": 560,
-              "fill": "$card",
-              "cornerRadius": 24,
-              "stroke": "$line",
-              "strokeWidth": 2,
+              "id": "u68vdE",
+              "name": "Winner side",
+              "width": "fill_container",
               "layout": "vertical",
-              "gap": 12,
-              "padding": 32,
+              "gap": 28,
               "children": [
                 {
-                  "type": "text",
-                  "id": "HYNda",
-                  "name": "Title",
-                  "fill": "$fg",
-                  "content": "Ana wins the match",
-                  "fontFamily": "$f-ui",
-                  "fontSize": 32,
-                  "fontWeight": "900"
-                },
-                {
                   "type": "frame",
-                  "id": "P68yyN",
-                  "name": "Meta",
+                  "id": "cvwKj",
+                  "name": "Head",
                   "width": "fill_container",
-                  "gap": 8,
-                  "justifyContent": "space_between",
-                  "alignItems": "center",
+                  "layout": "vertical",
+                  "gap": 20,
                   "children": [
                     {
                       "type": "text",
-                      "id": "eqpZ9",
-                      "name": "Went out",
-                      "fill": "$green-ink",
-                      "content": "Ana went out · 94 this hand",
+                      "id": "T09qeh",
+                      "name": "Title",
+                      "fill": "$fg",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "You win the match",
+                      "lineHeight": 1.05,
                       "fontFamily": "$f-ui",
-                      "fontSize": 14,
-                      "fontWeight": "800"
+                      "fontSize": 78,
+                      "fontWeight": "900"
                     },
                     {
                       "type": "frame",
-                      "id": "Jb2cJ",
-                      "name": "Target",
-                      "fill": "$soft",
-                      "cornerRadius": 999,
-                      "stroke": "$line",
-                      "strokeWidth": 1,
-                      "gap": 5,
-                      "padding": [
-                        4,
-                        10
-                      ],
+                      "id": "RC3Vv",
+                      "name": "Meta",
+                      "width": "fill_container",
+                      "gap": 16,
                       "alignItems": "center",
                       "children": [
                         {
-                          "type": "icon",
-                          "id": "Qtbpf",
-                          "name": "Icon",
-                          "width": 13,
-                          "height": 13,
-                          "icon": "flag",
-                          "library": "lucide",
-                          "fill": "$muted"
+                          "type": "text",
+                          "id": "CX1DD",
+                          "name": "Went out",
+                          "fill": "$muted",
+                          "content": "You went out · 94 this hand",
+                          "fontFamily": "$f-ui",
+                          "fontSize": 14,
+                          "fontWeight": "700"
                         },
                         {
-                          "type": "text",
-                          "id": "t8KuU",
-                          "name": "Text",
-                          "fill": "$fg",
-                          "content": "First to 500",
-                          "fontFamily": "$f-ui",
-                          "fontSize": 12,
-                          "fontWeight": "900"
+                          "type": "frame",
+                          "id": "nYFpv",
+                          "name": "Target",
+                          "fill": "$gold-bg",
+                          "cornerRadius": 99,
+                          "padding": [
+                            4,
+                            10
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "H0nCB",
+                              "name": "Text",
+                              "fill": "$fg",
+                              "content": "First to 500",
+                              "fontFamily": "$f-ui",
+                              "fontSize": 13,
+                              "fontWeight": "900"
+                            }
+                          ]
                         }
                       ]
                     }
                   ]
                 },
                 {
-                  "type": "frame",
-                  "id": "HLoc0",
-                  "name": "Totals",
-                  "width": "fill_container",
-                  "layout": "vertical",
-                  "gap": 6,
-                  "children": [
-                    {
-                      "id": "jgBw5",
-                      "type": "ref",
-                      "ref": "q34fC1",
-                      "name": "Row Ana",
-                      "width": "fill_container",
-                      "fill": "$gold-bg",
-                      "stroke": "$gold",
-                      "descendants": {
-                        "bgt4g": {
-                          "fill": "$purple"
-                        },
-                        "e8UAN5": {
-                          "content": "A",
-                          "fill": "$white"
-                        },
-                        "gT6ck": {
-                          "content": "Ana"
-                        },
-                        "mIXNs": {
-                          "content": "Went out · +94 this hand",
-                          "fill": "$green-ink"
-                        },
-                        "iz9G3": {
-                          "type": "frame",
-                          "id": "v4rST",
-                          "name": "Score",
-                          "gap": 8,
-                          "alignItems": "center",
-                          "children": [
-                            {
-                              "type": "frame",
-                              "id": "sUHAC",
-                              "name": "Winner",
-                              "fill": "$gold",
-                              "cornerRadius": 999,
-                              "gap": 4,
-                              "padding": [
-                                2,
-                                8
-                              ],
-                              "alignItems": "center",
-                              "children": [
-                                {
-                                  "type": "icon",
-                                  "id": "zQJd2",
-                                  "name": "Icon",
-                                  "width": 12,
-                                  "height": 12,
-                                  "icon": "trophy",
-                                  "library": "lucide",
-                                  "fill": "$gold-ink"
-                                },
-                                {
-                                  "type": "text",
-                                  "id": "V6DSb",
-                                  "name": "Text",
-                                  "fill": "$gold-ink",
-                                  "content": "Winner",
-                                  "fontFamily": "$f-ui",
-                                  "fontSize": 11,
-                                  "fontWeight": "900"
-                                }
-                              ]
-                            },
-                            {
-                              "type": "text",
-                              "id": "ixBUw",
-                              "name": "Total",
-                              "fill": "$fg",
-                              "content": "512",
-                              "fontFamily": "$f-ui",
-                              "fontSize": 20,
-                              "fontWeight": "900"
-                            }
-                          ]
-                        }
-                      }
-                    },
-                    {
-                      "id": "Ao6wD",
-                      "type": "ref",
-                      "ref": "q34fC1",
-                      "name": "Row Fay",
-                      "width": "fill_container",
-                      "descendants": {
-                        "bgt4g": {
-                          "fill": "$c-purple"
-                        },
-                        "e8UAN5": {
-                          "content": "F",
-                          "fill": "$white"
-                        },
-                        "gT6ck": {
-                          "content": "Fay"
-                        },
-                        "mIXNs": {
-                          "content": "2nd place"
-                        },
-                        "iz9G3": {
-                          "type": "frame",
-                          "id": "VQrUm",
-                          "name": "Score",
-                          "gap": 8,
-                          "alignItems": "center",
-                          "children": [
-                            {
-                              "type": "text",
-                              "id": "t9RwP",
-                              "name": "Total",
-                              "fill": "$fg",
-                              "content": "356",
-                              "fontFamily": "$f-ui",
-                              "fontSize": 20,
-                              "fontWeight": "900"
-                            }
-                          ]
-                        }
-                      }
-                    },
-                    {
-                      "id": "nl7Tu",
-                      "type": "ref",
-                      "ref": "q34fC1",
-                      "name": "Row You",
-                      "width": "fill_container",
-                      "descendants": {
-                        "bgt4g": {
-                          "fill": "$blue-ink"
-                        },
-                        "e8UAN5": {
-                          "content": "Y",
-                          "fill": "$white"
-                        },
-                        "gT6ck": {
-                          "content": "You"
-                        },
-                        "mIXNs": {
-                          "content": "3rd place"
-                        },
-                        "iz9G3": {
-                          "type": "frame",
-                          "id": "HnoPf",
-                          "name": "Score",
-                          "gap": 8,
-                          "alignItems": "center",
-                          "children": [
-                            {
-                              "type": "text",
-                              "id": "gebPk",
-                              "name": "Total",
-                              "fill": "$fg",
-                              "content": "302",
-                              "fontFamily": "$f-ui",
-                              "fontSize": 20,
-                              "fontWeight": "900"
-                            }
-                          ]
-                        }
-                      }
-                    },
-                    {
-                      "id": "bUnMH",
-                      "type": "ref",
-                      "ref": "q34fC1",
-                      "name": "Row Gus",
-                      "width": "fill_container",
-                      "descendants": {
-                        "bgt4g": {
-                          "fill": "$gold-d"
-                        },
-                        "e8UAN5": {
-                          "content": "G",
-                          "fill": "$gold-ink"
-                        },
-                        "gT6ck": {
-                          "content": "Gus"
-                        },
-                        "mIXNs": {
-                          "content": "4th place"
-                        },
-                        "iz9G3": {
-                          "type": "frame",
-                          "id": "fWXqa",
-                          "name": "Score",
-                          "gap": 8,
-                          "alignItems": "center",
-                          "children": [
-                            {
-                              "type": "text",
-                              "id": "DbCfP",
-                              "name": "Total",
-                              "fill": "$fg",
-                              "content": "288",
-                              "fontFamily": "$f-ui",
-                              "fontSize": 20,
-                              "fontWeight": "900"
-                            }
-                          ]
-                        }
-                      }
-                    },
-                    {
-                      "id": "u6Ig1",
-                      "type": "ref",
-                      "ref": "q34fC1",
-                      "name": "Row Ben",
-                      "width": "fill_container",
-                      "descendants": {
-                        "bgt4g": {
-                          "fill": "$orange"
-                        },
-                        "e8UAN5": {
-                          "content": "B",
-                          "fill": "$white"
-                        },
-                        "gT6ck": {
-                          "content": "Ben"
-                        },
-                        "mIXNs": {
-                          "content": "5th place"
-                        },
-                        "iz9G3": {
-                          "type": "frame",
-                          "id": "pbq9m",
-                          "name": "Score",
-                          "gap": 8,
-                          "alignItems": "center",
-                          "children": [
-                            {
-                              "type": "text",
-                              "id": "QofdO",
-                              "name": "Total",
-                              "fill": "$fg",
-                              "content": "240",
-                              "fontFamily": "$f-ui",
-                              "fontSize": 20,
-                              "fontWeight": "900"
-                            }
-                          ]
-                        }
-                      }
-                    },
-                    {
-                      "id": "cZFDo",
-                      "type": "ref",
-                      "ref": "q34fC1",
-                      "name": "Row Cleo",
-                      "width": "fill_container",
-                      "descendants": {
-                        "bgt4g": {
-                          "fill": "$blue"
-                        },
-                        "e8UAN5": {
-                          "content": "C",
-                          "fill": "$white"
-                        },
-                        "gT6ck": {
-                          "content": "Cleo"
-                        },
-                        "mIXNs": {
-                          "content": "6th place"
-                        },
-                        "iz9G3": {
-                          "type": "frame",
-                          "id": "DDfOm",
-                          "name": "Score",
-                          "gap": 8,
-                          "alignItems": "center",
-                          "children": [
-                            {
-                              "type": "text",
-                              "id": "agkS2",
-                              "name": "Total",
-                              "fill": "$fg",
-                              "content": "197",
-                              "fontFamily": "$f-ui",
-                              "fontSize": 20,
-                              "fontWeight": "900"
-                            }
-                          ]
-                        }
-                      }
-                    },
-                    {
-                      "id": "TF6Id",
-                      "type": "ref",
-                      "ref": "q34fC1",
-                      "name": "Row Dev",
-                      "width": "fill_container",
-                      "descendants": {
-                        "bgt4g": {
-                          "fill": "$c-green"
-                        },
-                        "e8UAN5": {
-                          "content": "D",
-                          "fill": "$white"
-                        },
-                        "gT6ck": {
-                          "content": "Dev"
-                        },
-                        "mIXNs": {
-                          "content": "7th place"
-                        },
-                        "iz9G3": {
-                          "type": "frame",
-                          "id": "n3NmI",
-                          "name": "Score",
-                          "gap": 8,
-                          "alignItems": "center",
-                          "children": [
-                            {
-                              "type": "text",
-                              "id": "g084Lw",
-                              "name": "Total",
-                              "fill": "$fg",
-                              "content": "151",
-                              "fontFamily": "$f-ui",
-                              "fontSize": 20,
-                              "fontWeight": "900"
-                            }
-                          ]
-                        }
-                      }
-                    },
-                    {
-                      "id": "yG3oj",
-                      "type": "ref",
-                      "ref": "q34fC1",
-                      "name": "Row Eli",
-                      "width": "fill_container",
-                      "descendants": {
-                        "bgt4g": {
-                          "fill": "$red"
-                        },
-                        "e8UAN5": {
-                          "content": "E",
-                          "fill": "$white"
-                        },
-                        "gT6ck": {
-                          "content": "Eli"
-                        },
-                        "mIXNs": {
-                          "content": "8th place"
-                        },
-                        "iz9G3": {
-                          "type": "frame",
-                          "id": "w3HI6",
-                          "name": "Score",
-                          "gap": 8,
-                          "alignItems": "center",
-                          "children": [
-                            {
-                              "type": "text",
-                              "id": "S7F2s",
-                              "name": "Total",
-                              "fill": "$fg",
-                              "content": "96",
-                              "fontFamily": "$f-ui",
-                              "fontSize": 20,
-                              "fontWeight": "900"
-                            }
-                          ]
-                        }
-                      }
-                    }
-                  ]
-                },
-                {
-                  "id": "X1J61",
+                  "id": "teKVq",
                   "type": "ref",
                   "ref": "m4uNX",
                   "name": "Button Back to games",
@@ -67070,13 +66759,484 @@
                       "y": 4
                     }
                   },
-                  "width": "fill_container",
+                  "width": 240,
                   "descendants": {
                     "U2QTp": {
                       "content": "BACK TO GAMES",
                       "fill": "$white"
                     }
                   }
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "xBakX",
+              "name": "Totals side",
+              "width": 597,
+              "layout": "vertical",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "Ap7QY",
+                  "name": "Totals",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 6,
+                  "children": [
+                    {
+                      "id": "aYFTt",
+                      "type": "ref",
+                      "ref": "q34fC1",
+                      "name": "Row You",
+                      "width": "fill_container",
+                      "fill": "$gold-bg",
+                      "stroke": "$gold",
+                      "strokeWidth": 2,
+                      "padding": [
+                        10,
+                        14
+                      ],
+                      "height": 64,
+                      "descendants": {
+                        "bgt4g": {
+                          "fill": "$blue-ink",
+                          "width": 40,
+                          "height": 40,
+                          "cornerRadius": 20
+                        },
+                        "e8UAN5": {
+                          "content": "Y",
+                          "fill": "$white",
+                          "fontSize": 17
+                        },
+                        "gT6ck": {
+                          "content": "You",
+                          "fontWeight": "900",
+                          "fontSize": 17
+                        },
+                        "mIXNs": {
+                          "content": "1st place"
+                        },
+                        "iz9G3": {
+                          "type": "frame",
+                          "id": "azvdC",
+                          "name": "Score",
+                          "gap": 8,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "r7FP8",
+                              "name": "Winner",
+                              "fill": "$card",
+                              "cornerRadius": 99,
+                              "padding": [
+                                4,
+                                10
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "TjJhY",
+                                  "name": "Text",
+                                  "fill": "$fg",
+                                  "content": "Winner",
+                                  "fontFamily": "$f-ui",
+                                  "fontSize": 13,
+                                  "fontWeight": "900"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "OK39o",
+                              "name": "Total slot",
+                              "width": 44,
+                              "justifyContent": "end",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "sA6TI",
+                                  "name": "Total",
+                                  "fill": "$fg",
+                                  "content": "512",
+                                  "fontFamily": "$f-ui",
+                                  "fontSize": 26,
+                                  "fontWeight": "900"
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    {
+                      "id": "MPvAB",
+                      "type": "ref",
+                      "ref": "q34fC1",
+                      "name": "Row Ana",
+                      "width": "fill_container",
+                      "height": 48,
+                      "descendants": {
+                        "bgt4g": {
+                          "fill": "$purple"
+                        },
+                        "e8UAN5": {
+                          "content": "A",
+                          "fill": "$white"
+                        },
+                        "gT6ck": {
+                          "content": "Ana",
+                          "fontWeight": "900"
+                        },
+                        "mIXNs": {
+                          "content": "2nd place"
+                        },
+                        "iz9G3": {
+                          "type": "frame",
+                          "id": "NL6e9",
+                          "name": "Score",
+                          "gap": 8,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "y2hyYQ",
+                              "name": "Total slot",
+                              "width": 44,
+                              "justifyContent": "end",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "up2Ki",
+                                  "name": "Total",
+                                  "fill": "$fg",
+                                  "content": "356",
+                                  "fontFamily": "$f-ui",
+                                  "fontSize": 20,
+                                  "fontWeight": "900"
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    {
+                      "id": "UY7fS",
+                      "type": "ref",
+                      "ref": "q34fC1",
+                      "name": "Row Fay",
+                      "width": "fill_container",
+                      "height": 48,
+                      "descendants": {
+                        "bgt4g": {
+                          "fill": "$c-purple"
+                        },
+                        "e8UAN5": {
+                          "content": "F",
+                          "fill": "$white"
+                        },
+                        "gT6ck": {
+                          "content": "Fay",
+                          "fontWeight": "900"
+                        },
+                        "mIXNs": {
+                          "content": "3rd place"
+                        },
+                        "iz9G3": {
+                          "type": "frame",
+                          "id": "ebocQ",
+                          "name": "Score",
+                          "gap": 8,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "x98u4",
+                              "name": "Total slot",
+                              "width": 44,
+                              "justifyContent": "end",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "FcbcP",
+                                  "name": "Total",
+                                  "fill": "$fg",
+                                  "content": "302",
+                                  "fontFamily": "$f-ui",
+                                  "fontSize": 20,
+                                  "fontWeight": "900"
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    {
+                      "id": "sLebj",
+                      "type": "ref",
+                      "ref": "q34fC1",
+                      "name": "Row Gus",
+                      "width": "fill_container",
+                      "height": 48,
+                      "descendants": {
+                        "bgt4g": {
+                          "fill": "$gold-d"
+                        },
+                        "e8UAN5": {
+                          "content": "G",
+                          "fill": "$gold-ink"
+                        },
+                        "gT6ck": {
+                          "content": "Gus",
+                          "fontWeight": "900"
+                        },
+                        "mIXNs": {
+                          "content": "4th place"
+                        },
+                        "iz9G3": {
+                          "type": "frame",
+                          "id": "jDJE8",
+                          "name": "Score",
+                          "gap": 8,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "CY1UJ",
+                              "name": "Total slot",
+                              "width": 44,
+                              "justifyContent": "end",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "Bq11m",
+                                  "name": "Total",
+                                  "fill": "$fg",
+                                  "content": "288",
+                                  "fontFamily": "$f-ui",
+                                  "fontSize": 20,
+                                  "fontWeight": "900"
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    {
+                      "id": "Uvyfy",
+                      "type": "ref",
+                      "ref": "q34fC1",
+                      "name": "Row Ben",
+                      "width": "fill_container",
+                      "height": 48,
+                      "descendants": {
+                        "bgt4g": {
+                          "fill": "$orange"
+                        },
+                        "e8UAN5": {
+                          "content": "B",
+                          "fill": "$white"
+                        },
+                        "gT6ck": {
+                          "content": "Ben",
+                          "fontWeight": "900"
+                        },
+                        "mIXNs": {
+                          "content": "5th place"
+                        },
+                        "iz9G3": {
+                          "type": "frame",
+                          "id": "KZDX9",
+                          "name": "Score",
+                          "gap": 8,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "Mi54q",
+                              "name": "Total slot",
+                              "width": 44,
+                              "justifyContent": "end",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "uijeQ",
+                                  "name": "Total",
+                                  "fill": "$fg",
+                                  "content": "240",
+                                  "fontFamily": "$f-ui",
+                                  "fontSize": 20,
+                                  "fontWeight": "900"
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    {
+                      "id": "jpbZi",
+                      "type": "ref",
+                      "ref": "q34fC1",
+                      "name": "Row Cleo",
+                      "width": "fill_container",
+                      "height": 48,
+                      "descendants": {
+                        "bgt4g": {
+                          "fill": "$blue"
+                        },
+                        "e8UAN5": {
+                          "content": "C",
+                          "fill": "$white"
+                        },
+                        "gT6ck": {
+                          "content": "Cleo",
+                          "fontWeight": "900"
+                        },
+                        "mIXNs": {
+                          "content": "6th place"
+                        },
+                        "iz9G3": {
+                          "type": "frame",
+                          "id": "d6anl5",
+                          "name": "Score",
+                          "gap": 8,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "S5wwYp",
+                              "name": "Total slot",
+                              "width": 44,
+                              "justifyContent": "end",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "jNUzB",
+                                  "name": "Total",
+                                  "fill": "$fg",
+                                  "content": "197",
+                                  "fontFamily": "$f-ui",
+                                  "fontSize": 20,
+                                  "fontWeight": "900"
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    {
+                      "id": "h994y",
+                      "type": "ref",
+                      "ref": "q34fC1",
+                      "name": "Row Dev",
+                      "width": "fill_container",
+                      "height": 48,
+                      "descendants": {
+                        "bgt4g": {
+                          "fill": "$c-green"
+                        },
+                        "e8UAN5": {
+                          "content": "D",
+                          "fill": "$white"
+                        },
+                        "gT6ck": {
+                          "content": "Dev",
+                          "fontWeight": "900"
+                        },
+                        "mIXNs": {
+                          "content": "7th place"
+                        },
+                        "iz9G3": {
+                          "type": "frame",
+                          "id": "T9idh",
+                          "name": "Score",
+                          "gap": 8,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "oYa7s",
+                              "name": "Total slot",
+                              "width": 44,
+                              "justifyContent": "end",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "GKeaF",
+                                  "name": "Total",
+                                  "fill": "$fg",
+                                  "content": "151",
+                                  "fontFamily": "$f-ui",
+                                  "fontSize": 20,
+                                  "fontWeight": "900"
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    {
+                      "id": "lyBjo",
+                      "type": "ref",
+                      "ref": "q34fC1",
+                      "name": "Row Eli",
+                      "width": "fill_container",
+                      "height": 48,
+                      "descendants": {
+                        "bgt4g": {
+                          "fill": "$red"
+                        },
+                        "e8UAN5": {
+                          "content": "E",
+                          "fill": "$white"
+                        },
+                        "gT6ck": {
+                          "content": "Eli",
+                          "fontWeight": "900"
+                        },
+                        "mIXNs": {
+                          "content": "8th place"
+                        },
+                        "iz9G3": {
+                          "type": "frame",
+                          "id": "xvqkg",
+                          "name": "Score",
+                          "gap": 8,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "p0iSe",
+                              "name": "Total slot",
+                              "width": 44,
+                              "justifyContent": "end",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "U3E42K",
+                                  "name": "Total",
+                                  "fill": "$fg",
+                                  "content": "96",
+                                  "fontFamily": "$f-ui",
+                                  "fontSize": 20,
+                                  "fontWeight": "900"
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  ]
                 }
               ]
             }
@@ -67114,41 +67274,43 @@
         },
         {
           "type": "frame",
-          "id": "askWY",
+          "id": "eJ9WZ",
           "name": "Main",
           "width": "fill_container",
           "height": "fill_container",
           "layout": "vertical",
-          "alignItems": "center",
+          "gap": 20,
+          "padding": [
+            24,
+            16,
+            32,
+            16
+          ],
           "children": [
             {
               "type": "frame",
-              "id": "RjE5F",
-              "name": "Body",
+              "id": "JIRKB",
+              "name": "Head",
               "width": "fill_container",
-              "height": "fill_container",
               "layout": "vertical",
               "gap": 12,
-              "padding": [
-                4,
-                16,
-                24,
-                16
-              ],
               "children": [
                 {
                   "type": "text",
-                  "id": "lMAdY",
+                  "id": "sUC9j",
                   "name": "Title",
                   "fill": "$fg",
-                  "content": "Ana wins the match",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "You win the match",
+                  "lineHeight": 1.05,
                   "fontFamily": "$f-ui",
-                  "fontSize": 28,
+                  "fontSize": 36,
                   "fontWeight": "900"
                 },
                 {
                   "type": "frame",
-                  "id": "ZxzVz",
+                  "id": "U0ExC",
                   "name": "Meta",
                   "width": "fill_container",
                   "gap": 8,
@@ -67157,23 +67319,20 @@
                   "children": [
                     {
                       "type": "text",
-                      "id": "EkS5C",
+                      "id": "Q5Ds4X",
                       "name": "Went out",
-                      "fill": "$green-ink",
-                      "content": "Ana went out · 94 this hand",
+                      "fill": "$muted",
+                      "content": "You went out · 94 this hand",
                       "fontFamily": "$f-ui",
                       "fontSize": 14,
-                      "fontWeight": "800"
+                      "fontWeight": "700"
                     },
                     {
                       "type": "frame",
-                      "id": "s0dtrD",
+                      "id": "WYfEm",
                       "name": "Target",
-                      "fill": "$soft",
-                      "cornerRadius": 999,
-                      "stroke": "$line",
-                      "strokeWidth": 1,
-                      "gap": 5,
+                      "fill": "$gold-bg",
+                      "cornerRadius": 99,
                       "padding": [
                         4,
                         10
@@ -67181,146 +67340,156 @@
                       "alignItems": "center",
                       "children": [
                         {
-                          "type": "icon",
-                          "id": "vOQYK",
-                          "name": "Icon",
-                          "width": 13,
-                          "height": 13,
-                          "icon": "flag",
-                          "library": "lucide",
-                          "fill": "$muted"
-                        },
-                        {
                           "type": "text",
-                          "id": "v7CIw4",
+                          "id": "gmZas",
                           "name": "Text",
                           "fill": "$fg",
                           "content": "First to 500",
                           "fontFamily": "$f-ui",
-                          "fontSize": 12,
+                          "fontSize": 13,
                           "fontWeight": "900"
                         }
                       ]
                     }
                   ]
-                },
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "tRc9O",
+              "name": "Totals",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 6,
+              "children": [
                 {
-                  "type": "frame",
-                  "id": "YWkr6",
-                  "name": "Totals",
+                  "id": "W7acW",
+                  "type": "ref",
+                  "ref": "q34fC1",
+                  "name": "Row You",
                   "width": "fill_container",
-                  "layout": "vertical",
-                  "gap": 6,
-                  "children": [
-                    {
-                      "id": "nwOfF",
-                      "type": "ref",
-                      "ref": "q34fC1",
-                      "name": "Row Ana",
-                      "width": "fill_container",
-                      "fill": "$gold-bg",
-                      "stroke": "$gold",
-                      "descendants": {
-                        "bgt4g": {
-                          "fill": "$purple"
-                        },
-                        "e8UAN5": {
-                          "content": "A",
-                          "fill": "$white"
-                        },
-                        "gT6ck": {
-                          "content": "Ana"
-                        },
-                        "mIXNs": {
-                          "content": "Went out · +94 this hand",
-                          "fill": "$green-ink"
-                        },
-                        "iz9G3": {
+                  "fill": "$gold-bg",
+                  "stroke": "$gold",
+                  "strokeWidth": 2,
+                  "padding": [
+                    10,
+                    14
+                  ],
+                  "height": 64,
+                  "descendants": {
+                    "bgt4g": {
+                      "fill": "$blue-ink",
+                      "width": 40,
+                      "height": 40,
+                      "cornerRadius": 20
+                    },
+                    "e8UAN5": {
+                      "content": "Y",
+                      "fill": "$white",
+                      "fontSize": 17
+                    },
+                    "gT6ck": {
+                      "content": "You",
+                      "fontWeight": "900",
+                      "fontSize": 17
+                    },
+                    "mIXNs": {
+                      "content": "1st place"
+                    },
+                    "iz9G3": {
+                      "type": "frame",
+                      "id": "x1MXZt",
+                      "name": "Score",
+                      "gap": 8,
+                      "alignItems": "center",
+                      "children": [
+                        {
                           "type": "frame",
-                          "id": "LeyQR",
-                          "name": "Score",
-                          "gap": 8,
+                          "id": "A9unwl",
+                          "name": "Winner",
+                          "fill": "$card",
+                          "cornerRadius": 99,
+                          "padding": [
+                            4,
+                            10
+                          ],
                           "alignItems": "center",
                           "children": [
                             {
-                              "type": "frame",
-                              "id": "c0KiJ",
-                              "name": "Winner",
-                              "fill": "$gold",
-                              "cornerRadius": 999,
-                              "gap": 4,
-                              "padding": [
-                                2,
-                                8
-                              ],
-                              "alignItems": "center",
-                              "children": [
-                                {
-                                  "type": "icon",
-                                  "id": "wJ2VM",
-                                  "name": "Icon",
-                                  "width": 12,
-                                  "height": 12,
-                                  "icon": "trophy",
-                                  "library": "lucide",
-                                  "fill": "$gold-ink"
-                                },
-                                {
-                                  "type": "text",
-                                  "id": "bN6xE",
-                                  "name": "Text",
-                                  "fill": "$gold-ink",
-                                  "content": "Winner",
-                                  "fontFamily": "$f-ui",
-                                  "fontSize": 11,
-                                  "fontWeight": "900"
-                                }
-                              ]
-                            },
+                              "type": "text",
+                              "id": "qbHy8",
+                              "name": "Text",
+                              "fill": "$fg",
+                              "content": "Winner",
+                              "fontFamily": "$f-ui",
+                              "fontSize": 13,
+                              "fontWeight": "900"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "GBU9a",
+                          "name": "Total slot",
+                          "width": 44,
+                          "justifyContent": "end",
+                          "children": [
                             {
                               "type": "text",
-                              "id": "gps5Q",
+                              "id": "jocd8",
                               "name": "Total",
                               "fill": "$fg",
                               "content": "512",
                               "fontFamily": "$f-ui",
-                              "fontSize": 20,
+                              "fontSize": 26,
                               "fontWeight": "900"
                             }
                           ]
                         }
-                      }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "id": "XMCkS",
+                  "type": "ref",
+                  "ref": "q34fC1",
+                  "name": "Row Ana",
+                  "width": "fill_container",
+                  "height": 48,
+                  "descendants": {
+                    "bgt4g": {
+                      "fill": "$purple"
                     },
-                    {
-                      "id": "DBjZY",
-                      "type": "ref",
-                      "ref": "q34fC1",
-                      "name": "Row Fay",
-                      "width": "fill_container",
-                      "descendants": {
-                        "bgt4g": {
-                          "fill": "$c-purple"
-                        },
-                        "e8UAN5": {
-                          "content": "F",
-                          "fill": "$white"
-                        },
-                        "gT6ck": {
-                          "content": "Fay"
-                        },
-                        "mIXNs": {
-                          "content": "2nd place"
-                        },
-                        "iz9G3": {
+                    "e8UAN5": {
+                      "content": "A",
+                      "fill": "$white"
+                    },
+                    "gT6ck": {
+                      "content": "Ana",
+                      "fontWeight": "900"
+                    },
+                    "mIXNs": {
+                      "content": "2nd place"
+                    },
+                    "iz9G3": {
+                      "type": "frame",
+                      "id": "cDQSK",
+                      "name": "Score",
+                      "gap": 8,
+                      "alignItems": "center",
+                      "children": [
+                        {
                           "type": "frame",
-                          "id": "uyjeC",
-                          "name": "Score",
-                          "gap": 8,
-                          "alignItems": "center",
+                          "id": "K4WmNO",
+                          "name": "Total slot",
+                          "width": 44,
+                          "justifyContent": "end",
                           "children": [
                             {
                               "type": "text",
-                              "id": "pZEzW",
+                              "id": "MvAhC",
                               "name": "Total",
                               "fill": "$fg",
                               "content": "356",
@@ -67330,38 +67499,49 @@
                             }
                           ]
                         }
-                      }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "id": "RscFS",
+                  "type": "ref",
+                  "ref": "q34fC1",
+                  "name": "Row Fay",
+                  "width": "fill_container",
+                  "height": 48,
+                  "descendants": {
+                    "bgt4g": {
+                      "fill": "$c-purple"
                     },
-                    {
-                      "id": "yhtsI",
-                      "type": "ref",
-                      "ref": "q34fC1",
-                      "name": "Row You",
-                      "width": "fill_container",
-                      "descendants": {
-                        "bgt4g": {
-                          "fill": "$blue-ink"
-                        },
-                        "e8UAN5": {
-                          "content": "Y",
-                          "fill": "$white"
-                        },
-                        "gT6ck": {
-                          "content": "You"
-                        },
-                        "mIXNs": {
-                          "content": "3rd place"
-                        },
-                        "iz9G3": {
+                    "e8UAN5": {
+                      "content": "F",
+                      "fill": "$white"
+                    },
+                    "gT6ck": {
+                      "content": "Fay",
+                      "fontWeight": "900"
+                    },
+                    "mIXNs": {
+                      "content": "3rd place"
+                    },
+                    "iz9G3": {
+                      "type": "frame",
+                      "id": "YP5oP",
+                      "name": "Score",
+                      "gap": 8,
+                      "alignItems": "center",
+                      "children": [
+                        {
                           "type": "frame",
-                          "id": "DdxUp",
-                          "name": "Score",
-                          "gap": 8,
-                          "alignItems": "center",
+                          "id": "EyIkC",
+                          "name": "Total slot",
+                          "width": 44,
+                          "justifyContent": "end",
                           "children": [
                             {
                               "type": "text",
-                              "id": "GjoXD",
+                              "id": "nJYxd",
                               "name": "Total",
                               "fill": "$fg",
                               "content": "302",
@@ -67371,38 +67551,49 @@
                             }
                           ]
                         }
-                      }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "id": "TCnLj",
+                  "type": "ref",
+                  "ref": "q34fC1",
+                  "name": "Row Gus",
+                  "width": "fill_container",
+                  "height": 48,
+                  "descendants": {
+                    "bgt4g": {
+                      "fill": "$gold-d"
                     },
-                    {
-                      "id": "f71XW",
-                      "type": "ref",
-                      "ref": "q34fC1",
-                      "name": "Row Gus",
-                      "width": "fill_container",
-                      "descendants": {
-                        "bgt4g": {
-                          "fill": "$gold-d"
-                        },
-                        "e8UAN5": {
-                          "content": "G",
-                          "fill": "$gold-ink"
-                        },
-                        "gT6ck": {
-                          "content": "Gus"
-                        },
-                        "mIXNs": {
-                          "content": "4th place"
-                        },
-                        "iz9G3": {
+                    "e8UAN5": {
+                      "content": "G",
+                      "fill": "$gold-ink"
+                    },
+                    "gT6ck": {
+                      "content": "Gus",
+                      "fontWeight": "900"
+                    },
+                    "mIXNs": {
+                      "content": "4th place"
+                    },
+                    "iz9G3": {
+                      "type": "frame",
+                      "id": "iVVDJ",
+                      "name": "Score",
+                      "gap": 8,
+                      "alignItems": "center",
+                      "children": [
+                        {
                           "type": "frame",
-                          "id": "lVaA7",
-                          "name": "Score",
-                          "gap": 8,
-                          "alignItems": "center",
+                          "id": "yTUoM",
+                          "name": "Total slot",
+                          "width": 44,
+                          "justifyContent": "end",
                           "children": [
                             {
                               "type": "text",
-                              "id": "YHmAZ",
+                              "id": "eEv9J",
                               "name": "Total",
                               "fill": "$fg",
                               "content": "288",
@@ -67412,38 +67603,49 @@
                             }
                           ]
                         }
-                      }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "id": "xEKVU",
+                  "type": "ref",
+                  "ref": "q34fC1",
+                  "name": "Row Ben",
+                  "width": "fill_container",
+                  "height": 48,
+                  "descendants": {
+                    "bgt4g": {
+                      "fill": "$orange"
                     },
-                    {
-                      "id": "UUT7j",
-                      "type": "ref",
-                      "ref": "q34fC1",
-                      "name": "Row Ben",
-                      "width": "fill_container",
-                      "descendants": {
-                        "bgt4g": {
-                          "fill": "$orange"
-                        },
-                        "e8UAN5": {
-                          "content": "B",
-                          "fill": "$white"
-                        },
-                        "gT6ck": {
-                          "content": "Ben"
-                        },
-                        "mIXNs": {
-                          "content": "5th place"
-                        },
-                        "iz9G3": {
+                    "e8UAN5": {
+                      "content": "B",
+                      "fill": "$white"
+                    },
+                    "gT6ck": {
+                      "content": "Ben",
+                      "fontWeight": "900"
+                    },
+                    "mIXNs": {
+                      "content": "5th place"
+                    },
+                    "iz9G3": {
+                      "type": "frame",
+                      "id": "Zsaqz",
+                      "name": "Score",
+                      "gap": 8,
+                      "alignItems": "center",
+                      "children": [
+                        {
                           "type": "frame",
-                          "id": "Jh8nn",
-                          "name": "Score",
-                          "gap": 8,
-                          "alignItems": "center",
+                          "id": "IBa66",
+                          "name": "Total slot",
+                          "width": 44,
+                          "justifyContent": "end",
                           "children": [
                             {
                               "type": "text",
-                              "id": "zmvTU",
+                              "id": "H0zRt",
                               "name": "Total",
                               "fill": "$fg",
                               "content": "240",
@@ -67453,38 +67655,49 @@
                             }
                           ]
                         }
-                      }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "id": "QgOmh",
+                  "type": "ref",
+                  "ref": "q34fC1",
+                  "name": "Row Cleo",
+                  "width": "fill_container",
+                  "height": 48,
+                  "descendants": {
+                    "bgt4g": {
+                      "fill": "$blue"
                     },
-                    {
-                      "id": "T9HQ3Y",
-                      "type": "ref",
-                      "ref": "q34fC1",
-                      "name": "Row Cleo",
-                      "width": "fill_container",
-                      "descendants": {
-                        "bgt4g": {
-                          "fill": "$blue"
-                        },
-                        "e8UAN5": {
-                          "content": "C",
-                          "fill": "$white"
-                        },
-                        "gT6ck": {
-                          "content": "Cleo"
-                        },
-                        "mIXNs": {
-                          "content": "6th place"
-                        },
-                        "iz9G3": {
+                    "e8UAN5": {
+                      "content": "C",
+                      "fill": "$white"
+                    },
+                    "gT6ck": {
+                      "content": "Cleo",
+                      "fontWeight": "900"
+                    },
+                    "mIXNs": {
+                      "content": "6th place"
+                    },
+                    "iz9G3": {
+                      "type": "frame",
+                      "id": "dKGXH",
+                      "name": "Score",
+                      "gap": 8,
+                      "alignItems": "center",
+                      "children": [
+                        {
                           "type": "frame",
-                          "id": "WupKw",
-                          "name": "Score",
-                          "gap": 8,
-                          "alignItems": "center",
+                          "id": "JsgiN",
+                          "name": "Total slot",
+                          "width": 44,
+                          "justifyContent": "end",
                           "children": [
                             {
                               "type": "text",
-                              "id": "jzXGg",
+                              "id": "HAtKf",
                               "name": "Total",
                               "fill": "$fg",
                               "content": "197",
@@ -67494,38 +67707,49 @@
                             }
                           ]
                         }
-                      }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "id": "eyR0v",
+                  "type": "ref",
+                  "ref": "q34fC1",
+                  "name": "Row Dev",
+                  "width": "fill_container",
+                  "height": 48,
+                  "descendants": {
+                    "bgt4g": {
+                      "fill": "$c-green"
                     },
-                    {
-                      "id": "D2Cyp6",
-                      "type": "ref",
-                      "ref": "q34fC1",
-                      "name": "Row Dev",
-                      "width": "fill_container",
-                      "descendants": {
-                        "bgt4g": {
-                          "fill": "$c-green"
-                        },
-                        "e8UAN5": {
-                          "content": "D",
-                          "fill": "$white"
-                        },
-                        "gT6ck": {
-                          "content": "Dev"
-                        },
-                        "mIXNs": {
-                          "content": "7th place"
-                        },
-                        "iz9G3": {
+                    "e8UAN5": {
+                      "content": "D",
+                      "fill": "$white"
+                    },
+                    "gT6ck": {
+                      "content": "Dev",
+                      "fontWeight": "900"
+                    },
+                    "mIXNs": {
+                      "content": "7th place"
+                    },
+                    "iz9G3": {
+                      "type": "frame",
+                      "id": "uGQhz",
+                      "name": "Score",
+                      "gap": 8,
+                      "alignItems": "center",
+                      "children": [
+                        {
                           "type": "frame",
-                          "id": "DsZub",
-                          "name": "Score",
-                          "gap": 8,
-                          "alignItems": "center",
+                          "id": "h9rgj",
+                          "name": "Total slot",
+                          "width": 44,
+                          "justifyContent": "end",
                           "children": [
                             {
                               "type": "text",
-                              "id": "N33aE",
+                              "id": "BbkGm",
                               "name": "Total",
                               "fill": "$fg",
                               "content": "151",
@@ -67535,38 +67759,49 @@
                             }
                           ]
                         }
-                      }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "id": "N19yg",
+                  "type": "ref",
+                  "ref": "q34fC1",
+                  "name": "Row Eli",
+                  "width": "fill_container",
+                  "height": 48,
+                  "descendants": {
+                    "bgt4g": {
+                      "fill": "$red"
                     },
-                    {
-                      "id": "dDG3T",
-                      "type": "ref",
-                      "ref": "q34fC1",
-                      "name": "Row Eli",
-                      "width": "fill_container",
-                      "descendants": {
-                        "bgt4g": {
-                          "fill": "$red"
-                        },
-                        "e8UAN5": {
-                          "content": "E",
-                          "fill": "$white"
-                        },
-                        "gT6ck": {
-                          "content": "Eli"
-                        },
-                        "mIXNs": {
-                          "content": "8th place"
-                        },
-                        "iz9G3": {
+                    "e8UAN5": {
+                      "content": "E",
+                      "fill": "$white"
+                    },
+                    "gT6ck": {
+                      "content": "Eli",
+                      "fontWeight": "900"
+                    },
+                    "mIXNs": {
+                      "content": "8th place"
+                    },
+                    "iz9G3": {
+                      "type": "frame",
+                      "id": "H6bDy",
+                      "name": "Score",
+                      "gap": 8,
+                      "alignItems": "center",
+                      "children": [
+                        {
                           "type": "frame",
-                          "id": "GR8NU",
-                          "name": "Score",
-                          "gap": 8,
-                          "alignItems": "center",
+                          "id": "x7mPcL",
+                          "name": "Total slot",
+                          "width": 44,
+                          "justifyContent": "end",
                           "children": [
                             {
                               "type": "text",
-                              "id": "QYnsq",
+                              "id": "e2lvH",
                               "name": "Total",
                               "fill": "$fg",
                               "content": "96",
@@ -67576,41 +67811,34 @@
                             }
                           ]
                         }
-                      }
-                    }
-                  ]
-                },
-                {
-                  "type": "frame",
-                  "id": "F0tLLf",
-                  "name": "Spacer",
-                  "width": "fill_container",
-                  "height": "fill_container"
-                },
-                {
-                  "id": "zdJcY",
-                  "type": "ref",
-                  "ref": "m4uNX",
-                  "name": "Button Back to games",
-                  "fill": "$blue",
-                  "effect": {
-                    "type": "shadow",
-                    "shadowType": "outer",
-                    "color": "$blue-d",
-                    "offset": {
-                      "x": 0,
-                      "y": 4
-                    }
-                  },
-                  "width": "fill_container",
-                  "descendants": {
-                    "U2QTp": {
-                      "content": "BACK TO GAMES",
-                      "fill": "$white"
+                      ]
                     }
                   }
                 }
               ]
+            },
+            {
+              "id": "o9L9P",
+              "type": "ref",
+              "ref": "m4uNX",
+              "name": "Button Back to games",
+              "fill": "$blue",
+              "effect": {
+                "type": "shadow",
+                "shadowType": "outer",
+                "color": "$blue-d",
+                "offset": {
+                  "x": 0,
+                  "y": 4
+                }
+              },
+              "width": "fill_container",
+              "descendants": {
+                "U2QTp": {
+                  "content": "BACK TO GAMES",
+                  "fill": "$white"
+                }
+              }
             }
           ]
         }
@@ -67646,473 +67874,94 @@
         },
         {
           "type": "frame",
-          "id": "g5IT4",
+          "id": "P1j4x",
           "name": "Main",
           "width": "fill_container",
           "height": "fill_container",
-          "layout": "vertical",
-          "justifyContent": "center",
+          "gap": 48,
+          "padding": [
+            32,
+            24
+          ],
           "alignItems": "center",
           "children": [
             {
               "type": "frame",
-              "id": "LsM2O",
-              "name": "Body",
-              "width": 560,
-              "fill": "$card",
-              "cornerRadius": 24,
-              "stroke": "$line",
-              "strokeWidth": 2,
+              "id": "UQagt",
+              "name": "Winner side",
+              "width": "fill_container",
               "layout": "vertical",
-              "gap": 12,
-              "padding": 32,
+              "gap": 28,
               "children": [
                 {
-                  "type": "text",
-                  "id": "e4rh1e",
-                  "name": "Title",
-                  "fill": "$fg",
-                  "content": "Ana wins the match",
-                  "fontFamily": "$f-ui",
-                  "fontSize": 32,
-                  "fontWeight": "900"
-                },
-                {
                   "type": "frame",
-                  "id": "VeqVF",
-                  "name": "Meta",
+                  "id": "FlUdQ",
+                  "name": "Head",
                   "width": "fill_container",
-                  "gap": 8,
-                  "justifyContent": "space_between",
-                  "alignItems": "center",
+                  "layout": "vertical",
+                  "gap": 20,
                   "children": [
                     {
                       "type": "text",
-                      "id": "YBpuY",
-                      "name": "Went out",
-                      "fill": "$green-ink",
-                      "content": "Ana went out · 94 this hand",
+                      "id": "uSJc6",
+                      "name": "Title",
+                      "fill": "$fg",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "You win the match",
+                      "lineHeight": 1.05,
                       "fontFamily": "$f-ui",
-                      "fontSize": 14,
-                      "fontWeight": "800"
+                      "fontSize": 78,
+                      "fontWeight": "900"
                     },
                     {
                       "type": "frame",
-                      "id": "aDOfA",
-                      "name": "Target",
-                      "fill": "$soft",
-                      "cornerRadius": 999,
-                      "stroke": "$line",
-                      "strokeWidth": 1,
-                      "gap": 5,
-                      "padding": [
-                        4,
-                        10
-                      ],
+                      "id": "f3icx",
+                      "name": "Meta",
+                      "width": "fill_container",
+                      "gap": 16,
                       "alignItems": "center",
                       "children": [
                         {
-                          "type": "icon",
-                          "id": "AVJE1",
-                          "name": "Icon",
-                          "width": 13,
-                          "height": 13,
-                          "icon": "flag",
-                          "library": "lucide",
-                          "fill": "$muted"
+                          "type": "text",
+                          "id": "ApRhy",
+                          "name": "Went out",
+                          "fill": "$muted",
+                          "content": "You went out · 94 this hand",
+                          "fontFamily": "$f-ui",
+                          "fontSize": 14,
+                          "fontWeight": "700"
                         },
                         {
-                          "type": "text",
-                          "id": "V8JN8",
-                          "name": "Text",
-                          "fill": "$fg",
-                          "content": "First to 500",
-                          "fontFamily": "$f-ui",
-                          "fontSize": 12,
-                          "fontWeight": "900"
+                          "type": "frame",
+                          "id": "au3rz",
+                          "name": "Target",
+                          "fill": "$gold-bg",
+                          "cornerRadius": 99,
+                          "padding": [
+                            4,
+                            10
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "sfADl",
+                              "name": "Text",
+                              "fill": "$fg",
+                              "content": "First to 500",
+                              "fontFamily": "$f-ui",
+                              "fontSize": 13,
+                              "fontWeight": "900"
+                            }
+                          ]
                         }
                       ]
                     }
                   ]
                 },
                 {
-                  "type": "frame",
-                  "id": "jLOPR",
-                  "name": "Totals",
-                  "width": "fill_container",
-                  "layout": "vertical",
-                  "gap": 6,
-                  "children": [
-                    {
-                      "id": "v08x4",
-                      "type": "ref",
-                      "ref": "q34fC1",
-                      "name": "Row Ana",
-                      "width": "fill_container",
-                      "fill": "$gold-bg",
-                      "stroke": "$gold",
-                      "descendants": {
-                        "bgt4g": {
-                          "fill": "$purple"
-                        },
-                        "e8UAN5": {
-                          "content": "A",
-                          "fill": "$white"
-                        },
-                        "gT6ck": {
-                          "content": "Ana"
-                        },
-                        "mIXNs": {
-                          "content": "Went out · +94 this hand",
-                          "fill": "$green-ink"
-                        },
-                        "iz9G3": {
-                          "type": "frame",
-                          "id": "SPJVc",
-                          "name": "Score",
-                          "gap": 8,
-                          "alignItems": "center",
-                          "children": [
-                            {
-                              "type": "frame",
-                              "id": "C0Md7",
-                              "name": "Winner",
-                              "fill": "$gold",
-                              "cornerRadius": 999,
-                              "gap": 4,
-                              "padding": [
-                                2,
-                                8
-                              ],
-                              "alignItems": "center",
-                              "children": [
-                                {
-                                  "type": "icon",
-                                  "id": "V9bYL",
-                                  "name": "Icon",
-                                  "width": 12,
-                                  "height": 12,
-                                  "icon": "trophy",
-                                  "library": "lucide",
-                                  "fill": "$gold-ink"
-                                },
-                                {
-                                  "type": "text",
-                                  "id": "X2Y6oI",
-                                  "name": "Text",
-                                  "fill": "$gold-ink",
-                                  "content": "Winner",
-                                  "fontFamily": "$f-ui",
-                                  "fontSize": 11,
-                                  "fontWeight": "900"
-                                }
-                              ]
-                            },
-                            {
-                              "type": "text",
-                              "id": "U23dG",
-                              "name": "Total",
-                              "fill": "$fg",
-                              "content": "512",
-                              "fontFamily": "$f-ui",
-                              "fontSize": 20,
-                              "fontWeight": "900"
-                            }
-                          ]
-                        }
-                      }
-                    },
-                    {
-                      "id": "b0tCO",
-                      "type": "ref",
-                      "ref": "q34fC1",
-                      "name": "Row Fay",
-                      "width": "fill_container",
-                      "descendants": {
-                        "bgt4g": {
-                          "fill": "$c-purple"
-                        },
-                        "e8UAN5": {
-                          "content": "F",
-                          "fill": "$white"
-                        },
-                        "gT6ck": {
-                          "content": "Fay"
-                        },
-                        "mIXNs": {
-                          "content": "2nd place"
-                        },
-                        "iz9G3": {
-                          "type": "frame",
-                          "id": "AMtTt",
-                          "name": "Score",
-                          "gap": 8,
-                          "alignItems": "center",
-                          "children": [
-                            {
-                              "type": "text",
-                              "id": "jHkDl",
-                              "name": "Total",
-                              "fill": "$fg",
-                              "content": "356",
-                              "fontFamily": "$f-ui",
-                              "fontSize": 20,
-                              "fontWeight": "900"
-                            }
-                          ]
-                        }
-                      }
-                    },
-                    {
-                      "id": "xPzNY",
-                      "type": "ref",
-                      "ref": "q34fC1",
-                      "name": "Row You",
-                      "width": "fill_container",
-                      "descendants": {
-                        "bgt4g": {
-                          "fill": "$blue-ink"
-                        },
-                        "e8UAN5": {
-                          "content": "Y",
-                          "fill": "$white"
-                        },
-                        "gT6ck": {
-                          "content": "You"
-                        },
-                        "mIXNs": {
-                          "content": "3rd place"
-                        },
-                        "iz9G3": {
-                          "type": "frame",
-                          "id": "pwAM3",
-                          "name": "Score",
-                          "gap": 8,
-                          "alignItems": "center",
-                          "children": [
-                            {
-                              "type": "text",
-                              "id": "sN74I",
-                              "name": "Total",
-                              "fill": "$fg",
-                              "content": "302",
-                              "fontFamily": "$f-ui",
-                              "fontSize": 20,
-                              "fontWeight": "900"
-                            }
-                          ]
-                        }
-                      }
-                    },
-                    {
-                      "id": "nxSk4",
-                      "type": "ref",
-                      "ref": "q34fC1",
-                      "name": "Row Gus",
-                      "width": "fill_container",
-                      "descendants": {
-                        "bgt4g": {
-                          "fill": "$gold-d"
-                        },
-                        "e8UAN5": {
-                          "content": "G",
-                          "fill": "$gold-ink"
-                        },
-                        "gT6ck": {
-                          "content": "Gus"
-                        },
-                        "mIXNs": {
-                          "content": "4th place"
-                        },
-                        "iz9G3": {
-                          "type": "frame",
-                          "id": "K6sfJi",
-                          "name": "Score",
-                          "gap": 8,
-                          "alignItems": "center",
-                          "children": [
-                            {
-                              "type": "text",
-                              "id": "PcxW3",
-                              "name": "Total",
-                              "fill": "$fg",
-                              "content": "288",
-                              "fontFamily": "$f-ui",
-                              "fontSize": 20,
-                              "fontWeight": "900"
-                            }
-                          ]
-                        }
-                      }
-                    },
-                    {
-                      "id": "xgQ7L",
-                      "type": "ref",
-                      "ref": "q34fC1",
-                      "name": "Row Ben",
-                      "width": "fill_container",
-                      "descendants": {
-                        "bgt4g": {
-                          "fill": "$orange"
-                        },
-                        "e8UAN5": {
-                          "content": "B",
-                          "fill": "$white"
-                        },
-                        "gT6ck": {
-                          "content": "Ben"
-                        },
-                        "mIXNs": {
-                          "content": "5th place"
-                        },
-                        "iz9G3": {
-                          "type": "frame",
-                          "id": "gjrbo",
-                          "name": "Score",
-                          "gap": 8,
-                          "alignItems": "center",
-                          "children": [
-                            {
-                              "type": "text",
-                              "id": "T5aYk",
-                              "name": "Total",
-                              "fill": "$fg",
-                              "content": "240",
-                              "fontFamily": "$f-ui",
-                              "fontSize": 20,
-                              "fontWeight": "900"
-                            }
-                          ]
-                        }
-                      }
-                    },
-                    {
-                      "id": "gMKcn",
-                      "type": "ref",
-                      "ref": "q34fC1",
-                      "name": "Row Cleo",
-                      "width": "fill_container",
-                      "descendants": {
-                        "bgt4g": {
-                          "fill": "$blue"
-                        },
-                        "e8UAN5": {
-                          "content": "C",
-                          "fill": "$white"
-                        },
-                        "gT6ck": {
-                          "content": "Cleo"
-                        },
-                        "mIXNs": {
-                          "content": "6th place"
-                        },
-                        "iz9G3": {
-                          "type": "frame",
-                          "id": "x0a4H",
-                          "name": "Score",
-                          "gap": 8,
-                          "alignItems": "center",
-                          "children": [
-                            {
-                              "type": "text",
-                              "id": "TB94Z",
-                              "name": "Total",
-                              "fill": "$fg",
-                              "content": "197",
-                              "fontFamily": "$f-ui",
-                              "fontSize": 20,
-                              "fontWeight": "900"
-                            }
-                          ]
-                        }
-                      }
-                    },
-                    {
-                      "id": "t8M4gp",
-                      "type": "ref",
-                      "ref": "q34fC1",
-                      "name": "Row Dev",
-                      "width": "fill_container",
-                      "descendants": {
-                        "bgt4g": {
-                          "fill": "$c-green"
-                        },
-                        "e8UAN5": {
-                          "content": "D",
-                          "fill": "$white"
-                        },
-                        "gT6ck": {
-                          "content": "Dev"
-                        },
-                        "mIXNs": {
-                          "content": "7th place"
-                        },
-                        "iz9G3": {
-                          "type": "frame",
-                          "id": "qJtD7",
-                          "name": "Score",
-                          "gap": 8,
-                          "alignItems": "center",
-                          "children": [
-                            {
-                              "type": "text",
-                              "id": "X2Btdb",
-                              "name": "Total",
-                              "fill": "$fg",
-                              "content": "151",
-                              "fontFamily": "$f-ui",
-                              "fontSize": 20,
-                              "fontWeight": "900"
-                            }
-                          ]
-                        }
-                      }
-                    },
-                    {
-                      "id": "T9bnwv",
-                      "type": "ref",
-                      "ref": "q34fC1",
-                      "name": "Row Eli",
-                      "width": "fill_container",
-                      "descendants": {
-                        "bgt4g": {
-                          "fill": "$red"
-                        },
-                        "e8UAN5": {
-                          "content": "E",
-                          "fill": "$white"
-                        },
-                        "gT6ck": {
-                          "content": "Eli"
-                        },
-                        "mIXNs": {
-                          "content": "8th place"
-                        },
-                        "iz9G3": {
-                          "type": "frame",
-                          "id": "N2q1aJ",
-                          "name": "Score",
-                          "gap": 8,
-                          "alignItems": "center",
-                          "children": [
-                            {
-                              "type": "text",
-                              "id": "C6XQDf",
-                              "name": "Total",
-                              "fill": "$fg",
-                              "content": "96",
-                              "fontFamily": "$f-ui",
-                              "fontSize": 20,
-                              "fontWeight": "900"
-                            }
-                          ]
-                        }
-                      }
-                    }
-                  ]
-                },
-                {
-                  "id": "V4txb",
+                  "id": "ADuWO",
                   "type": "ref",
                   "ref": "m4uNX",
                   "name": "Button Back to games",
@@ -68126,13 +67975,484 @@
                       "y": 4
                     }
                   },
-                  "width": "fill_container",
+                  "width": 240,
                   "descendants": {
                     "U2QTp": {
                       "content": "BACK TO GAMES",
                       "fill": "$white"
                     }
                   }
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "pxSDk",
+              "name": "Totals side",
+              "width": 597,
+              "layout": "vertical",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "up9tG",
+                  "name": "Totals",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 6,
+                  "children": [
+                    {
+                      "id": "g3OsE",
+                      "type": "ref",
+                      "ref": "q34fC1",
+                      "name": "Row You",
+                      "width": "fill_container",
+                      "fill": "$gold-bg",
+                      "stroke": "$gold",
+                      "strokeWidth": 2,
+                      "padding": [
+                        10,
+                        14
+                      ],
+                      "height": 64,
+                      "descendants": {
+                        "bgt4g": {
+                          "fill": "$blue-ink",
+                          "width": 40,
+                          "height": 40,
+                          "cornerRadius": 20
+                        },
+                        "e8UAN5": {
+                          "content": "Y",
+                          "fill": "$white",
+                          "fontSize": 17
+                        },
+                        "gT6ck": {
+                          "content": "You",
+                          "fontWeight": "900",
+                          "fontSize": 17
+                        },
+                        "mIXNs": {
+                          "content": "1st place"
+                        },
+                        "iz9G3": {
+                          "type": "frame",
+                          "id": "f3wzV",
+                          "name": "Score",
+                          "gap": 8,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "z2QsKe",
+                              "name": "Winner",
+                              "fill": "$card",
+                              "cornerRadius": 99,
+                              "padding": [
+                                4,
+                                10
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "J7CN5",
+                                  "name": "Text",
+                                  "fill": "$fg",
+                                  "content": "Winner",
+                                  "fontFamily": "$f-ui",
+                                  "fontSize": 13,
+                                  "fontWeight": "900"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "J1UPaL",
+                              "name": "Total slot",
+                              "width": 44,
+                              "justifyContent": "end",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "o3vh9I",
+                                  "name": "Total",
+                                  "fill": "$fg",
+                                  "content": "512",
+                                  "fontFamily": "$f-ui",
+                                  "fontSize": 26,
+                                  "fontWeight": "900"
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    {
+                      "id": "IUL05",
+                      "type": "ref",
+                      "ref": "q34fC1",
+                      "name": "Row Ana",
+                      "width": "fill_container",
+                      "height": 48,
+                      "descendants": {
+                        "bgt4g": {
+                          "fill": "$purple"
+                        },
+                        "e8UAN5": {
+                          "content": "A",
+                          "fill": "$white"
+                        },
+                        "gT6ck": {
+                          "content": "Ana",
+                          "fontWeight": "900"
+                        },
+                        "mIXNs": {
+                          "content": "2nd place"
+                        },
+                        "iz9G3": {
+                          "type": "frame",
+                          "id": "bc7CO",
+                          "name": "Score",
+                          "gap": 8,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "z9Qc8",
+                              "name": "Total slot",
+                              "width": 44,
+                              "justifyContent": "end",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "i4eoqC",
+                                  "name": "Total",
+                                  "fill": "$fg",
+                                  "content": "356",
+                                  "fontFamily": "$f-ui",
+                                  "fontSize": 20,
+                                  "fontWeight": "900"
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    {
+                      "id": "jOxaD",
+                      "type": "ref",
+                      "ref": "q34fC1",
+                      "name": "Row Fay",
+                      "width": "fill_container",
+                      "height": 48,
+                      "descendants": {
+                        "bgt4g": {
+                          "fill": "$c-purple"
+                        },
+                        "e8UAN5": {
+                          "content": "F",
+                          "fill": "$white"
+                        },
+                        "gT6ck": {
+                          "content": "Fay",
+                          "fontWeight": "900"
+                        },
+                        "mIXNs": {
+                          "content": "3rd place"
+                        },
+                        "iz9G3": {
+                          "type": "frame",
+                          "id": "AFVNE",
+                          "name": "Score",
+                          "gap": 8,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "nv37A",
+                              "name": "Total slot",
+                              "width": 44,
+                              "justifyContent": "end",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "r1IR12",
+                                  "name": "Total",
+                                  "fill": "$fg",
+                                  "content": "302",
+                                  "fontFamily": "$f-ui",
+                                  "fontSize": 20,
+                                  "fontWeight": "900"
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    {
+                      "id": "jPiDU",
+                      "type": "ref",
+                      "ref": "q34fC1",
+                      "name": "Row Gus",
+                      "width": "fill_container",
+                      "height": 48,
+                      "descendants": {
+                        "bgt4g": {
+                          "fill": "$gold-d"
+                        },
+                        "e8UAN5": {
+                          "content": "G",
+                          "fill": "$gold-ink"
+                        },
+                        "gT6ck": {
+                          "content": "Gus",
+                          "fontWeight": "900"
+                        },
+                        "mIXNs": {
+                          "content": "4th place"
+                        },
+                        "iz9G3": {
+                          "type": "frame",
+                          "id": "klqiy",
+                          "name": "Score",
+                          "gap": 8,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "PWGD7",
+                              "name": "Total slot",
+                              "width": 44,
+                              "justifyContent": "end",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "L7jJc",
+                                  "name": "Total",
+                                  "fill": "$fg",
+                                  "content": "288",
+                                  "fontFamily": "$f-ui",
+                                  "fontSize": 20,
+                                  "fontWeight": "900"
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    {
+                      "id": "LC37O",
+                      "type": "ref",
+                      "ref": "q34fC1",
+                      "name": "Row Ben",
+                      "width": "fill_container",
+                      "height": 48,
+                      "descendants": {
+                        "bgt4g": {
+                          "fill": "$orange"
+                        },
+                        "e8UAN5": {
+                          "content": "B",
+                          "fill": "$white"
+                        },
+                        "gT6ck": {
+                          "content": "Ben",
+                          "fontWeight": "900"
+                        },
+                        "mIXNs": {
+                          "content": "5th place"
+                        },
+                        "iz9G3": {
+                          "type": "frame",
+                          "id": "SU2KG",
+                          "name": "Score",
+                          "gap": 8,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "kJhY9",
+                              "name": "Total slot",
+                              "width": 44,
+                              "justifyContent": "end",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "MQsbo",
+                                  "name": "Total",
+                                  "fill": "$fg",
+                                  "content": "240",
+                                  "fontFamily": "$f-ui",
+                                  "fontSize": 20,
+                                  "fontWeight": "900"
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    {
+                      "id": "ekJIt",
+                      "type": "ref",
+                      "ref": "q34fC1",
+                      "name": "Row Cleo",
+                      "width": "fill_container",
+                      "height": 48,
+                      "descendants": {
+                        "bgt4g": {
+                          "fill": "$blue"
+                        },
+                        "e8UAN5": {
+                          "content": "C",
+                          "fill": "$white"
+                        },
+                        "gT6ck": {
+                          "content": "Cleo",
+                          "fontWeight": "900"
+                        },
+                        "mIXNs": {
+                          "content": "6th place"
+                        },
+                        "iz9G3": {
+                          "type": "frame",
+                          "id": "VNCRL",
+                          "name": "Score",
+                          "gap": 8,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "lz6Y7",
+                              "name": "Total slot",
+                              "width": 44,
+                              "justifyContent": "end",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "gMr8c",
+                                  "name": "Total",
+                                  "fill": "$fg",
+                                  "content": "197",
+                                  "fontFamily": "$f-ui",
+                                  "fontSize": 20,
+                                  "fontWeight": "900"
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    {
+                      "id": "m7XukF",
+                      "type": "ref",
+                      "ref": "q34fC1",
+                      "name": "Row Dev",
+                      "width": "fill_container",
+                      "height": 48,
+                      "descendants": {
+                        "bgt4g": {
+                          "fill": "$c-green"
+                        },
+                        "e8UAN5": {
+                          "content": "D",
+                          "fill": "$white"
+                        },
+                        "gT6ck": {
+                          "content": "Dev",
+                          "fontWeight": "900"
+                        },
+                        "mIXNs": {
+                          "content": "7th place"
+                        },
+                        "iz9G3": {
+                          "type": "frame",
+                          "id": "jgSOe",
+                          "name": "Score",
+                          "gap": 8,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "sn9v2",
+                              "name": "Total slot",
+                              "width": 44,
+                              "justifyContent": "end",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "lTlSy",
+                                  "name": "Total",
+                                  "fill": "$fg",
+                                  "content": "151",
+                                  "fontFamily": "$f-ui",
+                                  "fontSize": 20,
+                                  "fontWeight": "900"
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    {
+                      "id": "IvKoY",
+                      "type": "ref",
+                      "ref": "q34fC1",
+                      "name": "Row Eli",
+                      "width": "fill_container",
+                      "height": 48,
+                      "descendants": {
+                        "bgt4g": {
+                          "fill": "$red"
+                        },
+                        "e8UAN5": {
+                          "content": "E",
+                          "fill": "$white"
+                        },
+                        "gT6ck": {
+                          "content": "Eli",
+                          "fontWeight": "900"
+                        },
+                        "mIXNs": {
+                          "content": "8th place"
+                        },
+                        "iz9G3": {
+                          "type": "frame",
+                          "id": "doIyQ",
+                          "name": "Score",
+                          "gap": 8,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "oF7wm",
+                              "name": "Total slot",
+                              "width": 44,
+                              "justifyContent": "end",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "O5wiJm",
+                                  "name": "Total",
+                                  "fill": "$fg",
+                                  "content": "96",
+                                  "fontFamily": "$f-ui",
+                                  "fontSize": 20,
+                                  "fontWeight": "900"
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  ]
                 }
               ]
             }
