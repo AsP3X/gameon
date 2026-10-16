@@ -63,6 +63,7 @@ export class OchoSounds {
     if (next.phase === 'over') {
       if (this.ended) return;
       this.ended = true;
+      this.landed(prev, next);
       const winners = winnersOf(next, teams);
       if (winners.includes(next.you)) this.play('fanfare');
       else if (winners.length > 0) this.play('roundBad');
@@ -71,6 +72,7 @@ export class OchoSounds {
     if (next.phase === 'between') {
       if (this.scored === next.handNo) return;
       this.scored = next.handNo;
+      this.landed(prev, next);
       if (next.handWinner === next.you) this.play('roundGood');
       else if (next.handWinner != null) this.play('roundBad');
       return;
@@ -91,6 +93,18 @@ export class OchoSounds {
       if (c.turned) this.play('whoosh');
     }
     if (yours(next) && !(prev && yours(prev) && prev.handNo === next.handNo)) this.play('yourTurn');
+  }
+
+  /** The card that ended the hand, when the view before was still the turn it ended: the server
+      publishes the end with that card already the discard. Your own card sounded when you chose it. */
+  private landed(prev: View | null, next: View): void {
+    if (prev == null || prev.phase === 'between' || prev.phase === 'over') return;
+    const c = changes(prev, next);
+    if (c.played) {
+      if (c.played.card.id === this.held) this.held = null;
+      else this.play('cardPlay', c.played.from === 'you' ? next.you : c.played.from);
+    }
+    if (c.turned) this.play('whoosh');
   }
 
   /** Cards that joined a hand outside a deal: one is a card, several at once are dealt. */

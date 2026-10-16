@@ -98,6 +98,29 @@ describe("Ocho's sounds", () => {
     ]);
   });
 
+  it("sounds another seat's card that ends the hand, then the sheet, once", () => {
+    const { sounds, log } = heard();
+    sounds.view(waiting({ counts: [4, 1, 8, 8] }), false);
+    log.length = 0;
+    const sheet = aView(
+      {
+        phase: 'between',
+        must: 'none',
+        legal: [],
+        top: card(40, 'yellow', { number: 9 }),
+        counts: [4, 0, 8, 8],
+        handWinner: 1,
+      },
+      4,
+    );
+    sounds.view(sheet, false);
+    sounds.view({ ...sheet }, false);
+    expect(log).toEqual([
+      ['cardPlay', 1],
+      ['roundBad', undefined],
+    ]);
+  });
+
   it('sounds the end of the match once: a fanfare for the winners, a loss for the rest, nothing with no winner', () => {
     const over = (matchWinner: number | null): View =>
       aView({ phase: 'over', must: 'none', hand: [], legal: [], matchWinner }, 4);
