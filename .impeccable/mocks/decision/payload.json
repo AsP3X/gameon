@@ -1,0 +1,46 @@
+{
+  "title": "How the landing should work",
+  "question": "The current page is a headline beside a featured card, then a stack of sections. These three throw that out. The colours, Nunito, felt, and the green button stay. Lock one.",
+  "options": [
+    {
+      "id": "menu",
+      "kind": "assigned",
+      "kicker": "THE ROLL",
+      "label": "Tonight's board",
+      "lineage": "A tavern board of what is on tonight",
+      "thesis": "The landing is a board of the two live games. Each game is a row you sit at, not a card beside an essay.",
+      "palette": ["#ffffff", "#58cc02", "#ffc800", "#f1f7fa", "#3c3c3c"],
+      "materials": ["felt", "Nunito", "4px hard press"],
+      "viewport": "One title line, then Skull King and Ocho as two full-width rows on the felt, each with its cards and a green Play.",
+      "risk": "A row can read as a list if the cards and the play button are small.",
+      "comp": ".impeccable/mocks/decision/menu.png"
+    },
+    {
+      "id": "doors",
+      "kind": "dealt",
+      "label": "Two doors",
+      "lineage": "Two tables in one room",
+      "thesis": "The window is split in half. Skull King is the left felt. Ocho is the right felt. You walk into a game.",
+      "palette": ["#ffffff", "#58cc02", "#ffc800", "#f1f7fa", "#3c3c3c"],
+      "materials": ["felt", "Nunito", "4px hard press"],
+      "viewport": "The GameOn bar, then two equal felt panels, each with its name, its cards, and one Play.",
+      "risk": "A new visitor gets no sentence that says what either game is.",
+      "comp": ".impeccable/mocks/decision/doors.png"
+    },
+    {
+      "id": "board",
+      "kind": "dealt",
+      "label": "The season first",
+      "lineage": "The ladder as the front door",
+      "thesis": "The seasonal ladder is the first object, because it proves people are playing. The two games are how you join.",
+      "palette": ["#ffffff", "#58cc02", "#ffc800", "#f1f7fa", "#3c3c3c"],
+      "materials": ["felt", "Nunito", "4px hard press"],
+      "viewport": "A large season board with the seven tiers, and Skull King and Ocho as the two ways onto it.",
+      "risk": "A guest who only wants a hand tonight is shown a ladder they cannot join yet.",
+      "comp": ".impeccable/mocks/decision/board.png"
+    }
+  ],
+  "reroll": { "registers": ["safer", "bolder"] },
+  "steer": true,
+  "buildPath": { "value": "comp", "toggle": true }
+}

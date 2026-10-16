@@ -1,0 +1,17 @@
+{
+  "regions": [
+    { "id": "bar", "kind": "chrome", "grid": "A0:J0", "container": true, "note": "The existing GameOn bar: mark, wordmark, Games, Ways to play, Ladder, Play now." },
+    { "id": "headline", "kind": "text", "grid": "C1:H1", "note": "Game night, switched on." },
+    { "id": "sk-panel", "kind": "chrome", "grid": "A3:E8", "container": true, "note": "Left felt door. One pale felt panel." },
+    { "id": "sk-title", "kind": "text", "grid": "C3:D3", "note": "The door title Skull King." },
+    { "id": "sk-cards", "kind": "chrome", "grid": "B4:E6", "codeDrawn": true, "note": "The existing Skull King card fan, drawn by the card components already in the client." },
+    { "id": "sk-blurb", "kind": "text", "grid": "B7:E7", "note": "The pirate trick-taking game" },
+    { "id": "sk-play", "kind": "control", "grid": "B8:D8", "note": "Green button Play Skull King" },
+    { "id": "ocho-panel", "kind": "chrome", "grid": "F3:J8", "container": true, "note": "Right felt door. One pale felt panel." },
+    { "id": "ocho-title", "kind": "text", "grid": "G3:I3", "note": "The door title Ocho." },
+    { "id": "ocho-cards", "kind": "chrome", "grid": "F4:J6", "codeDrawn": true, "note": "The existing Ocho card fan, drawn by the card components already in the client." },
+    { "id": "ocho-blurb", "kind": "text", "grid": "F7:J7", "note": "Match the colour or the number" },
+    { "id": "ocho-play", "kind": "control", "grid": "G8:I8", "note": "Green button Play Ocho" },
+    { "id": "proof", "kind": "text", "grid": "A9:E9", "note": "Free to play. No download. No account needed." }
+  ]
+}
