@@ -461,9 +461,21 @@
   font-size: 38px;
   line-height: 1;
 }
-/* The hand fills its card at 1440 px and gets smaller with the window, so it never leaves it. */
+/* The felt between the card's head and foot. The hand is sized to it, not to the window, so it grows
+   with the card and never leaves it. */
+.go-featured-art {
+  flex: 1;
+  display: grid;
+  place-items: center;
+  container-type: inline-size;
+}
 .go-featured .go-fan {
-  --fan-w: clamp(84px, 8.6vw, 124px);
+  --fan-w: clamp(84px, 20cqi, 200px);
+}
+/* Ocho's hand is its own (ocho.css), sized by the width it is given there: it is reached here by
+   its place on the felt. */
+.go-featured-art > div:not(.go-fan) {
+  --oc-fan-w: clamp(84px, 20cqi, 200px);
 }
 .go-featured-foot {
   display: flex;
@@ -1472,12 +1484,16 @@
   .go-hero .go-in {
     gap: 28px;
   }
+  /* One row across the page: the copy stops at a block's width, and the featured card takes the
+     rest. The card grows with a tall window, so the hero is the top of the page. */
   .go-slide {
     display: grid;
-    grid-template-columns: minmax(0, 500px) minmax(0, 564px);
+    grid-template-columns: min(640px, 46%) minmax(0, 1fr);
     align-items: center;
-    justify-content: space-between;
     gap: 56px;
+  }
+  .go-featured {
+    min-height: clamp(540px, calc(100svh - 300px), 760px);
   }
   .go-hero-copy {
     gap: 28px;
@@ -1500,12 +1516,16 @@
     padding: 44px 56px 36px;
     border-radius: 28px;
   }
+  /* The copy takes the flexible side and the podium about two fifths. Without a podium, the copy
+     has the row. */
   .go-ranked-top {
     display: grid;
-    grid-template-columns: minmax(0, 512px) minmax(0, 440px);
+    grid-template-columns: minmax(0, 1fr) 38%;
     align-items: end;
-    justify-content: space-between;
     gap: 18px 56px;
+  }
+  .go-ranked-top:not(:has(.go-podium)) {
+    grid-template-columns: minmax(0, 1fr);
   }
   .go-ranked-copy {
     gap: 18px;
@@ -1528,6 +1548,7 @@
     letter-spacing: -0.012em;
   }
   .go-ranked-text {
+    max-width: 62ch;
     font-size: 17px;
     line-height: 1.5;
   }
@@ -1537,7 +1558,12 @@
   .go-ranked-foot {
     min-height: 0;
   }
+  /* Three steps side by side, each no wider than a step: a wide column does not stretch them. */
+  .go-podium {
+    justify-content: center;
+  }
   .go-podium li {
+    max-width: 200px;
     gap: 8px;
   }
   .go-crown {
@@ -1633,6 +1659,27 @@
   }
   .go-soon b {
     font-size: 21px;
+  }
+  /* Skull King's card across the page: the copy keeps a reading width, and the felt takes the rest
+     and the hand grows with it. */
+  .go-pick {
+    grid-template-columns: min(720px, 50%) minmax(0, 1fr);
+  }
+  .go-pick-info > p {
+    max-width: 62ch;
+  }
+  .go-pick-art {
+    container-type: inline-size;
+  }
+  .go-pick-art .go-fan {
+    --fan-w: clamp(110px, 24cqi, 220px);
+  }
+
+  .go-cta h2 {
+    font-size: clamp(38px, 2.8vw, 52px);
+  }
+  .go-cta p {
+    font-size: clamp(18px, 1.25vw, 22px);
   }
 
   .go-foot .go-in {
@@ -2852,7 +2899,8 @@
 }
 /* The six announced games in one row, when each is still a card wide. */
 @media (min-width: 1600px) {
-  .go-columns:not(.no-live) .go-soon-list {
+  .go-columns:not(.no-live) .go-soon-list,
+  .go-shelf .go-soon-list {
     grid-template-columns: none;
     grid-auto-flow: column;
     grid-auto-columns: minmax(0, 1fr);

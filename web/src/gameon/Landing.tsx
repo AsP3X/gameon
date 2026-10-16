@@ -131,7 +131,7 @@ function HeroSlide({
           {slide.head}
           <span className="pill gold caps">Featured game</span>
         </div>
-        {slide.fan}
+        <div className="go-featured-art">{slide.fan}</div>
         <div className="go-featured-foot">
           <b>{slide.line}</b>
           <span className="go-pills">
@@ -357,7 +357,7 @@ export function Landing({ online, who, season }: LandingProps) {
   return (
     <>
       <Nav page="landing" who={who} onWays={toWays} />
-      <main>
+      <main className="go-wide">
         <Hero title={title} />
 
         {season !== null && (

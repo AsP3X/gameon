@@ -97,6 +97,9 @@ function PlayerChip({ me, current }: { me: Me; current: boolean }) {
   );
 }
 
+/** The pages that use the whole of a wide window: the rest keep to the column. */
+const wide = (page: FramePage): boolean => page === 'landing' || page === 'games';
+
 export interface NavProps {
   page: FramePage;
   who: Who;
@@ -110,7 +113,7 @@ export function Nav({ page, who, onWays }: NavProps) {
     // Only the landing and Games themselves are under Games.
     aside = page !== 'landing' && page !== 'games';
   return (
-    <header className={page === 'games' ? 'go-nav go-wide' : 'go-nav'}>
+    <header className={wide(page) ? 'go-nav go-wide' : 'go-nav'}>
       <div className="go-in">
         <div className="go-nav-left">
           <Link to={AT.landing} className="go-home" label="GameOn, the front page" current={page === 'landing'}>
@@ -189,7 +192,7 @@ const MORE: { page: FramePage; to: string; name: string }[] = [
 /** The footer of the landing, of Games, of the profile, of the ladder, and of the four pages it leads to. */
 export function Footer({ page, who }: { page: FramePage; who: Who }) {
   return (
-    <footer className={page === 'games' ? 'go-foot go-wide' : 'go-foot'}>
+    <footer className={wide(page) ? 'go-foot go-wide' : 'go-foot'}>
       <div className="go-in">
         <Link to={AT.landing} className="go-home" label="GameOn, the front page">
           <Logo />
