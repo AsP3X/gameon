@@ -2197,7 +2197,20 @@
                   "name": "Menu button",
                   "width": 44,
                   "height": 44,
-                  "cornerRadius": 12,
+                  "fill": "$bg",
+                  "cornerRadius": 16,
+                  "stroke": "$line",
+                  "strokeWidth": 2,
+                  "strokeAlignment": "inner",
+                  "effect": {
+                    "type": "shadow",
+                    "shadowType": "outer",
+                    "color": "$line",
+                    "offset": {
+                      "x": 0,
+                      "y": 4
+                    }
+                  },
                   "justifyContent": "center",
                   "alignItems": "center",
                   "children": [
@@ -4718,7 +4731,7 @@
           "width": "fill_container",
           "height": "fill_container",
           "fill": "$felt",
-          "cornerRadius": 24,
+          "cornerRadius": 16,
           "stroke": "$line",
           "strokeWidth": 1,
           "layout": "vertical",
@@ -5360,7 +5373,7 @@
               "width": "fill_container",
               "height": "fill_container",
               "fill": "$felt",
-              "cornerRadius": 24,
+              "cornerRadius": 16,
               "stroke": "$line",
               "strokeWidth": 1,
               "layout": "vertical",
@@ -12103,7 +12116,7 @@
           "width": "fill_container",
           "height": "fill_container",
           "fill": "$felt",
-          "cornerRadius": 24,
+          "cornerRadius": 16,
           "stroke": "$line",
           "strokeWidth": 1,
           "layout": "vertical",
@@ -12745,7 +12758,7 @@
               "width": "fill_container",
               "height": "fill_container",
               "fill": "$felt",
-              "cornerRadius": 24,
+              "cornerRadius": 16,
               "stroke": "$line",
               "strokeWidth": 1,
               "layout": "vertical",
@@ -75995,7 +76008,7 @@
               "width": "fill_container",
               "height": "fill_container",
               "fill": "$felt",
-              "cornerRadius": 24,
+              "cornerRadius": 16,
               "stroke": "$line",
               "strokeWidth": 1,
               "layout": "vertical",
@@ -77155,6 +77168,4720 @@
               "fill": "$blue-ink"
             }
           }
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "A59UTs",
+      "x": 4700,
+      "y": -1759,
+      "name": "Shell / bar",
+      "reusable": true,
+      "width": 1440,
+      "height": 72,
+      "fill": "$bg",
+      "stroke": "$line",
+      "strokeWidth": {
+        "bottom": 2
+      },
+      "strokeAlignment": "inner",
+      "gap": 24,
+      "padding": [
+        0,
+        24
+      ],
+      "justifyContent": "space_between",
+      "alignItems": "center",
+      "children": [
+        {
+          "type": "frame",
+          "id": "oB3Z3",
+          "name": "Left",
+          "width": 300,
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "NGEHE",
+              "name": "GameOn",
+              "gap": 11,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "CSqES",
+                  "name": "Logo / key",
+                  "clip": true,
+                  "width": 40,
+                  "height": 40,
+                  "fill": "$green-d",
+                  "cornerRadius": 8.75,
+                  "layout": "none",
+                  "children": [
+                    {
+                      "type": "rectangle",
+                      "cornerRadius": 8.75,
+                      "id": "AvYSZ",
+                      "x": 0,
+                      "y": 0,
+                      "name": "Face",
+                      "fill": "$green",
+                      "width": 40,
+                      "height": 37.65625
+                    },
+                    {
+                      "type": "path",
+                      "id": "P6gQk",
+                      "x": 0,
+                      "y": 0,
+                      "name": "Glyph shade",
+                      "geometry": "M382.39 353.43a168 168 0 1 1 0-206.86 30 30 0 0 1-47.28 36.94 108 108 0 1 0 0 132.98 30 30 0 0 1 47.28 36.94z m-126.39-133.43h144a30 30 0 0 1 0 60h-144a30 30 0 0 1 0-60z",
+                      "viewBox": [
+                        0,
+                        0,
+                        512,
+                        512
+                      ],
+                      "fill": "$green-d",
+                      "width": 40,
+                      "height": 40
+                    },
+                    {
+                      "type": "path",
+                      "id": "ymAe5",
+                      "x": 0,
+                      "y": 0,
+                      "name": "Glyph",
+                      "geometry": "M382.39 341.43a168 168 0 1 1 0-206.86 30 30 0 0 1-47.28 36.94 108 108 0 1 0 0 132.98 30 30 0 0 1 47.28 36.94z m-126.39-133.43h144a30 30 0 0 1 0 60h-144a30 30 0 0 1 0-60z",
+                      "viewBox": [
+                        0,
+                        0,
+                        512,
+                        512
+                      ],
+                      "fill": "$white",
+                      "width": 40,
+                      "height": 40
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "n52oPc",
+                  "name": "Logo / wordmark",
+                  "width": 122.74002751031638,
+                  "height": 22,
+                  "layout": "none",
+                  "children": [
+                    {
+                      "type": "path",
+                      "id": "x8SKtF",
+                      "x": 0,
+                      "y": 0,
+                      "name": "Game",
+                      "geometry": "M37.8 72.7q-12.1 0-20.55-4.5-8.45-4.5-12.85-12.6-4.4-8.1-4.4-18.9 0-8.4 2.65-15.15 2.65-6.75 7.65-11.6 5-4.85 12.25-7.4 7.25-2.55 16.45-2.55 5 0 10.2 0.95 5.2 0.95 10.2 3.55 2.6 1.2 3.55 3.35 0.95 2.15 0.6 4.5-0.35 2.35-1.7 4.3-1.35 1.95-3.65 2.6-2.3 0.65-5.2-0.65-3-1.4-6.5-2.15-3.5-0.75-7.4-0.75-6.7 0-11.15 2.4-4.45 2.4-6.65 7.1-2.2 4.7-2.2 11.5 0 10.2 5 15.4 5 5.2 14.8 5.2 3 0 6.6-0.6 1.8-0.3 3.7-0.8v-11.1h-7q-3.4 0-5.25-1.7-1.85-1.7-1.85-4.8 0-3.1 1.85-4.75 1.85-1.65 5.25-1.65h14.8q3.5 0 5.35 1.85 1.85 1.85 1.85 5.35v22.1q0 3-1.25 5.1-1.25 2.1-3.95 3-4.7 1.6-10.2 2.5-5.5 0.9-11 0.9z m53.8 0q-5.7 0-10.05-2.1-4.35-2.1-6.8-5.75-2.45-3.65-2.45-8.35 0-5.4 2.8-8.5 2.8-3.1 9-4.45 6.2-1.35 16.5-1.35h3.8v-1.4q0-3.6-1.85-5.1-1.85-1.5-6.35-1.5-2.4 0-5.4 0.55-3 0.55-6.7 1.95-2.7 1-4.6 0.3-1.9-0.7-2.95-2.4-1.05-1.7-1-3.7 0.05-2 1.3-3.8 1.25-1.8 3.85-2.8 4.8-1.8 8.85-2.4 4.05-0.6 7.45-0.6 8.2 0 13.55 2.35 5.35 2.35 8 7.2 2.65 4.85 2.65 12.45v20.2q0 4.4-2.1 6.7-2.1 2.3-6.1 2.3-4.1 0-6.2-2.3-1.9-2-2.2-5.6-0.6 1.8-1.7 3.2-1.8 2.3-4.7 3.6-2.9 1.3-6.6 1.3z m12.8-22.1h-3.8q-3.9 0-6.45 0.55-2.55 0.55-3.75 1.7-1.2 1.15-1.2 2.95 0 2.3 1.65 3.8 1.65 1.5 4.75 1.5 2.5 0 4.45-1.1 1.95-1.1 3.15-3.05 1.2-1.95 1.2-4.55z m35.1 21.9q-4.2 0-6.5-2.3-2.3-2.3-2.3-6.7v-33.1q0-4.3 2.25-6.6 2.25-2.3 6.45-2.3 4.2 0 6.4 2.3 1.9 1.9 2.1 5.3 2-3.1 5.3-5.2 4.1-2.6 9.8-2.6 5.4 0 9.3 2.6 3.2 2.2 4.9 6.3 2.3-3.8 6.1-6.1 4.6-2.8 10.2-2.8 5.8 0 9.5 2.25 3.7 2.25 5.55 7 1.85 4.75 1.85 11.95v21q0 4.4-2.35 6.7-2.35 2.3-6.65 2.3-4.2 0-6.5-2.3-2.3-2.3-2.3-6.7v-20.5q0-4.3-1.3-6.2-1.3-1.9-4.3-1.9-3.7 0-5.65 2.6-1.95 2.6-1.95 7.4v18.6q0 4.4-2.3 6.7-2.3 2.3-6.6 2.3-4.3 0-6.6-2.3-2.3-2.3-2.3-6.7v-20.5q0-4.3-1.3-6.2-1.3-1.9-4.3-1.9-3.6 0-5.55 2.6-1.95 2.6-1.95 7.4v18.6q0 9-9 9z m107.2 0.2q-9 0-15.55-3.15-6.55-3.15-10.05-8.95-3.5-5.8-3.5-13.7 0-7.6 3.35-13.35 3.35-5.75 9.2-9 5.85-3.25 13.35-3.25 5.5 0 10 1.75 4.5 1.75 7.7 5.1 3.2 3.35 4.85 8.05 1.65 4.7 1.65 10.5 0 2-1.1 2.95-1.1 0.95-3.5 0.95h-28.5q0.7 3.9 2.9 5.9 3.1 3.1 9.7 3.1 2.2 0 5.05-0.55 2.85-0.55 5.45-1.55 2.6-1 4.5-0.35 1.9 0.65 2.95 2.2 1.05 1.55 1.15 3.5 0.1 1.95-0.9 3.8-1 1.85-3.3 2.85-3.5 1.6-7.45 2.4-3.95 0.8-7.95 0.8z m-12.2-30.5h18.6q-0.2-2.8-1-4.7-1-2.3-2.95-3.5-1.95-1.2-4.85-1.2-3.1 0-5.35 1.45-2.25 1.45-3.45 4.25-0.7 1.6-1 3.7z",
+                      "viewBox": [
+                        0,
+                        0,
+                        405.6,
+                        72.7
+                      ],
+                      "fill": "$fg",
+                      "width": 122.74002751031638,
+                      "height": 22
+                    },
+                    {
+                      "type": "path",
+                      "id": "bkVT2",
+                      "x": 0,
+                      "y": 0,
+                      "name": "On",
+                      "geometry": "M310.4 72.7q-10.7 0-18.8-4.55-8.1-4.55-12.55-12.75-4.45-8.2-4.45-19.1 0-8.2 2.55-14.9 2.55-6.7 7.3-11.5 4.75-4.8 11.35-7.35 6.6-2.55 14.6-2.55 10.7 0 18.75 4.5 8.05 4.5 12.55 12.65 4.5 8.15 4.5 19.15 0 8.2-2.55 14.9-2.55 6.7-7.3 11.55-4.75 4.85-11.35 7.4-6.6 2.55-14.6 2.55z m0-15.4q5.3 0 9-2.5 3.7-2.5 5.7-7.2 2-4.7 2-11.3 0-9.9-4.4-15.4-4.4-5.5-12.3-5.5-5.2 0-8.95 2.45-3.75 2.45-5.75 7.1-2 4.65-2 11.35 0 9.9 4.4 15.45 4.4 5.55 12.3 5.55z m53.5 15.2q-4.2 0-6.5-2.3-2.3-2.3-2.3-6.7v-33.1q0-4.3 2.25-6.6 2.25-2.3 6.45-2.3 4.2 0 6.4 2.3 1.9 2 2.2 5.4 2.2-3.4 5.8-5.4 4.4-2.5 10.1-2.5 5.9 0 9.7 2.25 3.8 2.25 5.7 7 1.9 4.75 1.9 11.95v21q0 4.4-2.3 6.7-2.3 2.3-6.6 2.3-4.3 0-6.6-2.3-2.3-2.3-2.3-6.7v-20.3q0-4.5-1.55-6.4-1.55-1.9-4.55-1.9-4 0-6.4 2.55-2.4 2.55-2.4 6.85v19.2q0 9-9 9z",
+                      "viewBox": [
+                        0,
+                        0,
+                        405.6,
+                        72.7
+                      ],
+                      "fill": "$green",
+                      "width": 122.74002751031638,
+                      "height": 22
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "TSzuU",
+          "name": "Middle",
+          "width": "fill_container",
+          "gap": 12,
+          "justifyContent": "center",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "PaOJV",
+              "name": "Game name",
+              "fill": "$fg",
+              "content": "Game",
+              "lineHeight": 1.2,
+              "fontFamily": "$f-ui",
+              "fontSize": 20,
+              "fontWeight": "800"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "rdIRA",
+          "name": "Right",
+          "width": 300,
+          "gap": 12,
+          "padding": [
+            0,
+            0,
+            4,
+            0
+          ],
+          "justifyContent": "end",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "sQCvY",
+              "name": "Ghost",
+              "context": "button",
+              "height": 44,
+              "fill": "$bg",
+              "cornerRadius": 16,
+              "stroke": "$line",
+              "strokeWidth": 2,
+              "strokeAlignment": "inner",
+              "effect": {
+                "type": "shadow",
+                "shadowType": "outer",
+                "color": "$line",
+                "offset": {
+                  "x": 0,
+                  "y": 4
+                }
+              },
+              "layout": "vertical",
+              "padding": [
+                0,
+                18
+              ],
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "vOjJ6",
+                  "name": "Label",
+                  "fill": "$blue-ink",
+                  "content": "GAMES",
+                  "lineHeight": 1.4,
+                  "textAlign": "center",
+                  "fontFamily": "$f-ui",
+                  "fontSize": 15,
+                  "fontWeight": "800",
+                  "letterSpacing": 1.05
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "fHMx1",
+              "name": "Icon button",
+              "width": 44,
+              "height": 44,
+              "fill": "$bg",
+              "cornerRadius": 16,
+              "stroke": "$line",
+              "strokeWidth": 2,
+              "strokeAlignment": "inner",
+              "effect": {
+                "type": "shadow",
+                "shadowType": "outer",
+                "color": "$line",
+                "offset": {
+                  "x": 0,
+                  "y": 4
+                }
+              },
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon",
+                  "id": "hUXKx",
+                  "name": "Glyph",
+                  "width": 20,
+                  "height": 20,
+                  "icon": "menu",
+                  "library": "lucide",
+                  "fill": "$fg"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "q0JWt",
+      "x": 0,
+      "y": -1759,
+      "name": "Shell · Ocho · 1440 · light",
+      "theme": {
+        "mode": "light"
+      },
+      "clip": true,
+      "width": 1440,
+      "height": 900,
+      "fill": "$bg",
+      "layout": "vertical",
+      "children": [
+        {
+          "id": "y54oMo",
+          "type": "ref",
+          "ref": "A59UTs",
+          "name": "Shell",
+          "width": "fill_container",
+          "descendants": {
+            "TSzuU": {
+              "type": "frame",
+              "id": "uiXn0",
+              "name": "Middle",
+              "width": "fill_container",
+              "gap": 12,
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "X2naBN",
+                  "name": "Game name",
+                  "fill": "$fg",
+                  "content": "Ocho",
+                  "lineHeight": 1.2,
+                  "fontFamily": "$f-ui",
+                  "fontSize": 20,
+                  "fontWeight": "800"
+                },
+                {
+                  "type": "frame",
+                  "id": "ACKly",
+                  "name": "Pill · Hand 2",
+                  "fill": "$soft",
+                  "cornerRadius": 999,
+                  "padding": [
+                    4,
+                    12
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "I2VxmO",
+                      "name": "Label",
+                      "fill": "$muted",
+                      "content": "Hand 2",
+                      "lineHeight": 1.4,
+                      "fontFamily": "$f-ui",
+                      "fontSize": 13,
+                      "fontWeight": "900"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "A4pzU",
+                  "name": "Pill · Your turn",
+                  "fill": "$gold",
+                  "cornerRadius": 999,
+                  "padding": [
+                    4,
+                    12
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "CUqLy",
+                      "name": "Label",
+                      "fill": "$gold-ink",
+                      "content": "Your turn",
+                      "lineHeight": 1.4,
+                      "fontFamily": "$f-ui",
+                      "fontSize": 13,
+                      "fontWeight": "900"
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        },
+        {
+          "type": "frame",
+          "id": "Jj9qE",
+          "name": "Stage",
+          "width": "fill_container",
+          "height": "fill_container",
+          "padding": 24,
+          "children": [
+            {
+              "type": "frame",
+              "id": "pPwW0",
+              "name": "Felt stage",
+              "width": "fill_container",
+              "height": "fill_container",
+              "fill": "$felt",
+              "cornerRadius": 16,
+              "stroke": "$line",
+              "strokeWidth": 2,
+              "strokeAlignment": "inner",
+              "layout": "vertical",
+              "gap": 16,
+              "padding": 24,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "AoQzJ",
+                  "name": "Top seats",
+                  "width": "fill_container",
+                  "gap": 24,
+                  "padding": [
+                    0,
+                    0,
+                    4,
+                    0
+                  ],
+                  "justifyContent": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "SP4DD",
+                      "name": "Seat · Cleo",
+                      "width": 184,
+                      "fill": "$card",
+                      "cornerRadius": 16,
+                      "stroke": "$line",
+                      "strokeWidth": 2,
+                      "strokeAlignment": "inner",
+                      "effect": {
+                        "type": "shadow",
+                        "shadowType": "outer",
+                        "color": "$line",
+                        "offset": {
+                          "x": 0,
+                          "y": 4
+                        }
+                      },
+                      "gap": 10,
+                      "padding": [
+                        10,
+                        14
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "x1nDIT",
+                          "name": "Avatar",
+                          "width": 36,
+                          "height": 36,
+                          "fill": "$blue",
+                          "cornerRadius": 18,
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "hbEOH",
+                              "name": "Initial",
+                              "fill": "$white",
+                              "content": "C",
+                              "fontFamily": "$f-ui",
+                              "fontSize": 16,
+                              "fontWeight": "900"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "rgmJl",
+                          "name": "Who",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "QWS81",
+                              "name": "Name",
+                              "fill": "$fg",
+                              "content": "Cleo",
+                              "lineHeight": 1.3,
+                              "fontFamily": "$f-ui",
+                              "fontSize": 15,
+                              "fontWeight": "800"
+                            },
+                            {
+                              "type": "text",
+                              "id": "QwoeV",
+                              "name": "Cards",
+                              "fill": "$muted",
+                              "content": "6 cards",
+                              "lineHeight": 1.3,
+                              "fontFamily": "$f-ui",
+                              "fontSize": 12,
+                              "fontWeight": "800"
+                            }
+                          ]
+                        },
+                        {
+                          "id": "SnFZV",
+                          "type": "ref",
+                          "ref": "wMgza",
+                          "name": "Hand",
+                          "descendants": {
+                            "g4ZuG": {
+                              "content": "6"
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "V1epRV",
+                      "name": "Seat · Dev",
+                      "width": 184,
+                      "fill": "$card",
+                      "cornerRadius": 16,
+                      "stroke": "$line",
+                      "strokeWidth": 2,
+                      "strokeAlignment": "inner",
+                      "effect": {
+                        "type": "shadow",
+                        "shadowType": "outer",
+                        "color": "$line",
+                        "offset": {
+                          "x": 0,
+                          "y": 4
+                        }
+                      },
+                      "gap": 10,
+                      "padding": [
+                        10,
+                        14
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "dZLE7",
+                          "name": "Avatar",
+                          "width": 36,
+                          "height": 36,
+                          "fill": "$green",
+                          "cornerRadius": 18,
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "siZIA",
+                              "name": "Initial",
+                              "fill": "$white",
+                              "content": "D",
+                              "fontFamily": "$f-ui",
+                              "fontSize": 16,
+                              "fontWeight": "900"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "b5D9XA",
+                          "name": "Who",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "mtYjH",
+                              "name": "Name",
+                              "fill": "$fg",
+                              "content": "Dev",
+                              "lineHeight": 1.3,
+                              "fontFamily": "$f-ui",
+                              "fontSize": 15,
+                              "fontWeight": "800"
+                            },
+                            {
+                              "type": "text",
+                              "id": "uENxu",
+                              "name": "Cards",
+                              "fill": "$muted",
+                              "content": "7 cards",
+                              "lineHeight": 1.3,
+                              "fontFamily": "$f-ui",
+                              "fontSize": 12,
+                              "fontWeight": "800"
+                            }
+                          ]
+                        },
+                        {
+                          "id": "u37oQD",
+                          "type": "ref",
+                          "ref": "wMgza",
+                          "name": "Hand",
+                          "descendants": {
+                            "g4ZuG": {
+                              "content": "7"
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "KVWCm",
+                      "name": "Seat · Eli",
+                      "width": 184,
+                      "fill": "$card",
+                      "cornerRadius": 16,
+                      "stroke": "$line",
+                      "strokeWidth": 2,
+                      "strokeAlignment": "inner",
+                      "effect": {
+                        "type": "shadow",
+                        "shadowType": "outer",
+                        "color": "$line",
+                        "offset": {
+                          "x": 0,
+                          "y": 4
+                        }
+                      },
+                      "gap": 10,
+                      "padding": [
+                        10,
+                        14
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "LYIBd",
+                          "name": "Avatar",
+                          "width": 36,
+                          "height": 36,
+                          "fill": "$red",
+                          "cornerRadius": 18,
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "NluIE",
+                              "name": "Initial",
+                              "fill": "$white",
+                              "content": "E",
+                              "fontFamily": "$f-ui",
+                              "fontSize": 16,
+                              "fontWeight": "900"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "a2fa2",
+                          "name": "Who",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "l0wk5h",
+                              "name": "Name",
+                              "fill": "$fg",
+                              "content": "Eli",
+                              "lineHeight": 1.3,
+                              "fontFamily": "$f-ui",
+                              "fontSize": 15,
+                              "fontWeight": "800"
+                            },
+                            {
+                              "type": "text",
+                              "id": "p5TLrv",
+                              "name": "Cards",
+                              "fill": "$muted",
+                              "content": "7 cards",
+                              "lineHeight": 1.3,
+                              "fontFamily": "$f-ui",
+                              "fontSize": 12,
+                              "fontWeight": "800"
+                            }
+                          ]
+                        },
+                        {
+                          "id": "yVPqU",
+                          "type": "ref",
+                          "ref": "wMgza",
+                          "name": "Hand",
+                          "descendants": {
+                            "g4ZuG": {
+                              "content": "7"
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "p1AWTx",
+                  "name": "Middle",
+                  "width": "fill_container",
+                  "height": "fill_container",
+                  "gap": 24,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "UnOOs",
+                      "name": "Left seats",
+                      "layout": "vertical",
+                      "gap": 20,
+                      "padding": [
+                        0,
+                        0,
+                        4,
+                        0
+                      ],
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "g42pZN",
+                          "name": "Seat · Ben",
+                          "width": 184,
+                          "fill": "$card",
+                          "cornerRadius": 16,
+                          "stroke": "$line",
+                          "strokeWidth": 2,
+                          "strokeAlignment": "inner",
+                          "effect": {
+                            "type": "shadow",
+                            "shadowType": "outer",
+                            "color": "$line",
+                            "offset": {
+                              "x": 0,
+                              "y": 4
+                            }
+                          },
+                          "gap": 10,
+                          "padding": [
+                            10,
+                            14
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "KH4pN",
+                              "name": "Avatar",
+                              "width": 36,
+                              "height": 36,
+                              "fill": "$orange",
+                              "cornerRadius": 18,
+                              "justifyContent": "center",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "T4AZU",
+                                  "name": "Initial",
+                                  "fill": "$white",
+                                  "content": "B",
+                                  "fontFamily": "$f-ui",
+                                  "fontSize": 16,
+                                  "fontWeight": "900"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "MYFCF",
+                              "name": "Who",
+                              "width": "fill_container",
+                              "layout": "vertical",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "CKLFl",
+                                  "name": "Name",
+                                  "fill": "$fg",
+                                  "content": "Ben",
+                                  "lineHeight": 1.3,
+                                  "fontFamily": "$f-ui",
+                                  "fontSize": 15,
+                                  "fontWeight": "800"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "n3Wv9a",
+                                  "name": "Cards",
+                                  "fill": "$muted",
+                                  "content": "7 cards",
+                                  "lineHeight": 1.3,
+                                  "fontFamily": "$f-ui",
+                                  "fontSize": 12,
+                                  "fontWeight": "800"
+                                }
+                              ]
+                            },
+                            {
+                              "id": "ztO2F",
+                              "type": "ref",
+                              "ref": "wMgza",
+                              "name": "Hand",
+                              "descendants": {
+                                "g4ZuG": {
+                                  "content": "7"
+                                }
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "LvLqS",
+                          "name": "Seat · Ana",
+                          "width": 184,
+                          "fill": "$card",
+                          "cornerRadius": 16,
+                          "stroke": "$line",
+                          "strokeWidth": 2,
+                          "strokeAlignment": "inner",
+                          "effect": {
+                            "type": "shadow",
+                            "shadowType": "outer",
+                            "color": "$line",
+                            "offset": {
+                              "x": 0,
+                              "y": 4
+                            }
+                          },
+                          "gap": 10,
+                          "padding": [
+                            10,
+                            14
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "dIOmV",
+                              "name": "Avatar",
+                              "width": 36,
+                              "height": 36,
+                              "fill": "$purple",
+                              "cornerRadius": 18,
+                              "justifyContent": "center",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "hRsjm",
+                                  "name": "Initial",
+                                  "fill": "$white",
+                                  "content": "A",
+                                  "fontFamily": "$f-ui",
+                                  "fontSize": 16,
+                                  "fontWeight": "900"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "cn5tB",
+                              "name": "Who",
+                              "width": "fill_container",
+                              "layout": "vertical",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "NccSU",
+                                  "name": "Name",
+                                  "fill": "$fg",
+                                  "content": "Ana",
+                                  "lineHeight": 1.3,
+                                  "fontFamily": "$f-ui",
+                                  "fontSize": 15,
+                                  "fontWeight": "800"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "FINoM",
+                                  "name": "Cards",
+                                  "fill": "$muted",
+                                  "content": "8 cards",
+                                  "lineHeight": 1.3,
+                                  "fontFamily": "$f-ui",
+                                  "fontSize": 12,
+                                  "fontWeight": "800"
+                                }
+                              ]
+                            },
+                            {
+                              "id": "i8fsT5",
+                              "type": "ref",
+                              "ref": "wMgza",
+                              "name": "Hand",
+                              "descendants": {
+                                "g4ZuG": {
+                                  "content": "8"
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "Bl2SR",
+                      "name": "Centre",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 16,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "pLKiw",
+                          "name": "Status",
+                          "gap": 8,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "id": "amzri",
+                              "type": "ref",
+                              "ref": "YO4ft",
+                              "name": "Match"
+                            },
+                            {
+                              "id": "rVbxX",
+                              "type": "ref",
+                              "ref": "GzIir",
+                              "name": "Direction"
+                            }
+                          ]
+                        },
+                        {
+                          "id": "gu6Fm",
+                          "type": "ref",
+                          "ref": "T74Xw",
+                          "name": "Piles",
+                          "descendants": {
+                            "DhKeY": {
+                              "content": "Draw · 41"
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "bIWwi",
+                      "name": "Right seats",
+                      "layout": "vertical",
+                      "gap": 20,
+                      "padding": [
+                        0,
+                        0,
+                        4,
+                        0
+                      ],
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "yW5me",
+                          "name": "Seat · Fay",
+                          "width": 184,
+                          "fill": "$card",
+                          "cornerRadius": 16,
+                          "stroke": "$line",
+                          "strokeWidth": 2,
+                          "strokeAlignment": "inner",
+                          "effect": {
+                            "type": "shadow",
+                            "shadowType": "outer",
+                            "color": "$line",
+                            "offset": {
+                              "x": 0,
+                              "y": 4
+                            }
+                          },
+                          "gap": 10,
+                          "padding": [
+                            10,
+                            14
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "y8TVpN",
+                              "name": "Avatar",
+                              "width": 36,
+                              "height": 36,
+                              "fill": "$purple",
+                              "cornerRadius": 18,
+                              "justifyContent": "center",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "SvOdM",
+                                  "name": "Initial",
+                                  "fill": "$white",
+                                  "content": "F",
+                                  "fontFamily": "$f-ui",
+                                  "fontSize": 16,
+                                  "fontWeight": "900"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "VURhH",
+                              "name": "Who",
+                              "width": "fill_container",
+                              "layout": "vertical",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "w3ipXO",
+                                  "name": "Name",
+                                  "fill": "$fg",
+                                  "content": "Fay",
+                                  "lineHeight": 1.3,
+                                  "fontFamily": "$f-ui",
+                                  "fontSize": 15,
+                                  "fontWeight": "800"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "AqF9f",
+                                  "name": "Cards",
+                                  "fill": "$muted",
+                                  "content": "7 cards",
+                                  "lineHeight": 1.3,
+                                  "fontFamily": "$f-ui",
+                                  "fontSize": 12,
+                                  "fontWeight": "800"
+                                }
+                              ]
+                            },
+                            {
+                              "id": "R0iRS",
+                              "type": "ref",
+                              "ref": "wMgza",
+                              "name": "Hand",
+                              "descendants": {
+                                "g4ZuG": {
+                                  "content": "7"
+                                }
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "cxyVc",
+                          "name": "Seat · Gus",
+                          "width": 184,
+                          "fill": "$card",
+                          "cornerRadius": 16,
+                          "stroke": "$line",
+                          "strokeWidth": 2,
+                          "strokeAlignment": "inner",
+                          "effect": {
+                            "type": "shadow",
+                            "shadowType": "outer",
+                            "color": "$line",
+                            "offset": {
+                              "x": 0,
+                              "y": 4
+                            }
+                          },
+                          "gap": 10,
+                          "padding": [
+                            10,
+                            14
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "jdR5A",
+                              "name": "Avatar",
+                              "width": 36,
+                              "height": 36,
+                              "fill": "$orange",
+                              "cornerRadius": 18,
+                              "justifyContent": "center",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "SikG7",
+                                  "name": "Initial",
+                                  "fill": "$white",
+                                  "content": "G",
+                                  "fontFamily": "$f-ui",
+                                  "fontSize": 16,
+                                  "fontWeight": "900"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "zn2va",
+                              "name": "Who",
+                              "width": "fill_container",
+                              "layout": "vertical",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "X79yRy",
+                                  "name": "Name",
+                                  "fill": "$fg",
+                                  "content": "Gus",
+                                  "lineHeight": 1.3,
+                                  "fontFamily": "$f-ui",
+                                  "fontSize": 15,
+                                  "fontWeight": "800"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "tu37f",
+                                  "name": "Cards",
+                                  "fill": "$muted",
+                                  "content": "6 cards",
+                                  "lineHeight": 1.3,
+                                  "fontFamily": "$f-ui",
+                                  "fontSize": 12,
+                                  "fontWeight": "800"
+                                }
+                              ]
+                            },
+                            {
+                              "id": "hnOqQ",
+                              "type": "ref",
+                              "ref": "wMgza",
+                              "name": "Hand",
+                              "descendants": {
+                                "g4ZuG": {
+                                  "content": "6"
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "XBAkD",
+                  "name": "Hand tray",
+                  "width": "fill_container",
+                  "fill": "$card",
+                  "cornerRadius": 16,
+                  "stroke": "$line",
+                  "strokeWidth": 2,
+                  "strokeAlignment": "inner",
+                  "effect": {
+                    "type": "shadow",
+                    "shadowType": "outer",
+                    "color": "$line",
+                    "offset": {
+                      "x": 0,
+                      "y": 4
+                    }
+                  },
+                  "layout": "vertical",
+                  "padding": [
+                    14,
+                    20,
+                    6,
+                    20
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "bwSRb",
+                      "name": "You",
+                      "width": "fill_container",
+                      "gap": 10,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "KXpfR",
+                          "name": "Avatar",
+                          "width": 28,
+                          "height": 28,
+                          "fill": "$blue",
+                          "cornerRadius": 14,
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "wAnQu",
+                              "name": "Initial",
+                              "fill": "$white",
+                              "content": "Y",
+                              "fontFamily": "$f-ui",
+                              "fontSize": 13,
+                              "fontWeight": "900"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "g5LGhl",
+                          "name": "Name",
+                          "fill": "$fg",
+                          "content": "You",
+                          "fontFamily": "$f-ui",
+                          "fontSize": 15,
+                          "fontWeight": "800"
+                        },
+                        {
+                          "type": "text",
+                          "id": "X4mjSw",
+                          "name": "Count",
+                          "fill": "$muted",
+                          "content": "8 cards",
+                          "fontFamily": "$f-ui",
+                          "fontSize": 13,
+                          "fontWeight": "800"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "dtMmp",
+                          "name": "Pill · Your turn",
+                          "fill": "$gold",
+                          "cornerRadius": 999,
+                          "padding": [
+                            4,
+                            12
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "R0Hq8",
+                              "name": "Label",
+                              "fill": "$gold-ink",
+                              "content": "Your turn",
+                              "lineHeight": 1.4,
+                              "fontFamily": "$f-ui",
+                              "fontSize": 13,
+                              "fontWeight": "900"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "id": "baSCE",
+                      "type": "ref",
+                      "ref": "QL3iF",
+                      "name": "Your Hand",
+                      "width": 390,
+                      "descendants": {
+                        "RbU0r": {
+                          "id": "yVUcj",
+                          "type": "ref",
+                          "ref": "DuAfD",
+                          "name": "Slot 1",
+                          "x": 32,
+                          "y": 37,
+                          "rotation": 8.8,
+                          "enabled": true,
+                          "opacity": 0.45,
+                          "fill": "$red",
+                          "descendants": {
+                            "kpVKo": {
+                              "fill": "$white",
+                              "content": "3"
+                            },
+                            "EvS58": {
+                              "fill": "$white",
+                              "content": "3"
+                            }
+                          }
+                        },
+                        "w6A65": {
+                          "id": "UuL46",
+                          "type": "ref",
+                          "ref": "DuAfD",
+                          "name": "Slot 2",
+                          "x": 70,
+                          "y": 31,
+                          "rotation": 6.3,
+                          "enabled": true,
+                          "opacity": 0.45,
+                          "fill": "$blue",
+                          "descendants": {
+                            "kpVKo": {
+                              "fill": "$white",
+                              "content": "7"
+                            },
+                            "EvS58": {
+                              "fill": "$white",
+                              "content": "7"
+                            }
+                          }
+                        },
+                        "ducSB": {
+                          "id": "T4VT2",
+                          "type": "ref",
+                          "ref": "fb0L6",
+                          "name": "Slot 3",
+                          "x": 108,
+                          "y": 26,
+                          "rotation": 3.8,
+                          "enabled": true,
+                          "opacity": 0.45,
+                          "fill": "$c-green",
+                          "descendants": {
+                            "n3MDeU": {
+                              "fill": "$white"
+                            },
+                            "piooH": {
+                              "fill": "$white"
+                            }
+                          }
+                        },
+                        "xdLQw": {
+                          "id": "i5ubYe",
+                          "type": "ref",
+                          "ref": "DuAfD",
+                          "name": "Slot 4",
+                          "x": 146,
+                          "y": 6,
+                          "rotation": 1.3,
+                          "enabled": true,
+                          "stroke": "$gold",
+                          "strokeWidth": 3,
+                          "fill": "$c-yellow",
+                          "descendants": {
+                            "kpVKo": {
+                              "fill": "$gold-ink",
+                              "content": "7"
+                            },
+                            "EvS58": {
+                              "fill": "$gold-ink",
+                              "content": "7"
+                            }
+                          }
+                        },
+                        "S0HKOU": {
+                          "id": "X9NlPg",
+                          "type": "ref",
+                          "ref": "wWrpA",
+                          "name": "Slot 5",
+                          "x": 184,
+                          "y": 24,
+                          "rotation": -1.2,
+                          "enabled": true,
+                          "opacity": 0.45,
+                          "fill": "$red",
+                          "descendants": {
+                            "W4cAbj": {
+                              "fill": "$white"
+                            },
+                            "iUZzn": {
+                              "fill": "$white"
+                            }
+                          }
+                        },
+                        "OXmah": {
+                          "id": "bPLro",
+                          "type": "ref",
+                          "ref": "sTG2w",
+                          "name": "Slot 6",
+                          "x": 222,
+                          "y": 26,
+                          "rotation": -3.7000000000000006,
+                          "enabled": true,
+                          "opacity": 0.45,
+                          "fill": "$blue",
+                          "descendants": {
+                            "dpC7M": {
+                              "fill": "$white"
+                            },
+                            "Wr5Qe": {
+                              "fill": "$white"
+                            }
+                          }
+                        },
+                        "KcjB0": {
+                          "id": "YV5b6",
+                          "type": "ref",
+                          "ref": "DuAfD",
+                          "name": "Slot 7",
+                          "x": 260,
+                          "y": 31,
+                          "rotation": -6.2,
+                          "enabled": true,
+                          "opacity": 0.45,
+                          "fill": "$c-green",
+                          "descendants": {
+                            "kpVKo": {
+                              "fill": "$white",
+                              "content": "5"
+                            },
+                            "EvS58": {
+                              "fill": "$white",
+                              "content": "5"
+                            }
+                          }
+                        },
+                        "V3Y8Pi": {
+                          "id": "U8Ee9n",
+                          "type": "ref",
+                          "ref": "DuAfD",
+                          "name": "Slot 8",
+                          "x": 298,
+                          "y": 37,
+                          "rotation": -8.7,
+                          "enabled": true,
+                          "opacity": 0.45,
+                          "fill": "$red",
+                          "descendants": {
+                            "kpVKo": {
+                              "fill": "$white",
+                              "content": "9"
+                            },
+                            "EvS58": {
+                              "fill": "$white",
+                              "content": "9"
+                            }
+                          }
+                        },
+                        "SRAov": {
+                          "enabled": false
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "por0O",
+      "x": 1540,
+      "y": -1759,
+      "name": "Shell · Ocho · 1440 · dark",
+      "theme": {
+        "mode": "dark"
+      },
+      "clip": true,
+      "width": 1440,
+      "height": 900,
+      "fill": "$bg",
+      "layout": "vertical",
+      "children": [
+        {
+          "id": "zot6w",
+          "type": "ref",
+          "ref": "A59UTs",
+          "name": "Shell",
+          "width": "fill_container",
+          "descendants": {
+            "TSzuU": {
+              "type": "frame",
+              "id": "janJZ",
+              "name": "Middle",
+              "width": "fill_container",
+              "gap": 12,
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "jIRMd",
+                  "name": "Game name",
+                  "fill": "$fg",
+                  "content": "Ocho",
+                  "lineHeight": 1.2,
+                  "fontFamily": "$f-ui",
+                  "fontSize": 20,
+                  "fontWeight": "800"
+                },
+                {
+                  "type": "frame",
+                  "id": "R9aa9",
+                  "name": "Pill · Hand 2",
+                  "fill": "$soft",
+                  "cornerRadius": 999,
+                  "padding": [
+                    4,
+                    12
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "ndoBj",
+                      "name": "Label",
+                      "fill": "$muted",
+                      "content": "Hand 2",
+                      "lineHeight": 1.4,
+                      "fontFamily": "$f-ui",
+                      "fontSize": 13,
+                      "fontWeight": "900"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "n8H1h2",
+                  "name": "Pill · Your turn",
+                  "fill": "$gold",
+                  "cornerRadius": 999,
+                  "padding": [
+                    4,
+                    12
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "YqFkZ",
+                      "name": "Label",
+                      "fill": "$gold-ink",
+                      "content": "Your turn",
+                      "lineHeight": 1.4,
+                      "fontFamily": "$f-ui",
+                      "fontSize": 13,
+                      "fontWeight": "900"
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        },
+        {
+          "type": "frame",
+          "id": "ZvHj4",
+          "name": "Stage",
+          "width": "fill_container",
+          "height": "fill_container",
+          "padding": 24,
+          "children": [
+            {
+              "type": "frame",
+              "id": "hglqL",
+              "name": "Felt stage",
+              "width": "fill_container",
+              "height": "fill_container",
+              "fill": "$felt",
+              "cornerRadius": 16,
+              "stroke": "$line",
+              "strokeWidth": 2,
+              "strokeAlignment": "inner",
+              "layout": "vertical",
+              "gap": 16,
+              "padding": 24,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "w53HkB",
+                  "name": "Top seats",
+                  "width": "fill_container",
+                  "gap": 24,
+                  "padding": [
+                    0,
+                    0,
+                    4,
+                    0
+                  ],
+                  "justifyContent": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "FV9fz",
+                      "name": "Seat · Cleo",
+                      "width": 184,
+                      "fill": "$card",
+                      "cornerRadius": 16,
+                      "stroke": "$line",
+                      "strokeWidth": 2,
+                      "strokeAlignment": "inner",
+                      "effect": {
+                        "type": "shadow",
+                        "shadowType": "outer",
+                        "color": "$line",
+                        "offset": {
+                          "x": 0,
+                          "y": 4
+                        }
+                      },
+                      "gap": 10,
+                      "padding": [
+                        10,
+                        14
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "Xyuoq",
+                          "name": "Avatar",
+                          "width": 36,
+                          "height": 36,
+                          "fill": "$blue",
+                          "cornerRadius": 18,
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "L3GAo",
+                              "name": "Initial",
+                              "fill": "$white",
+                              "content": "C",
+                              "fontFamily": "$f-ui",
+                              "fontSize": 16,
+                              "fontWeight": "900"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "pVhRg",
+                          "name": "Who",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "wHOQK",
+                              "name": "Name",
+                              "fill": "$fg",
+                              "content": "Cleo",
+                              "lineHeight": 1.3,
+                              "fontFamily": "$f-ui",
+                              "fontSize": 15,
+                              "fontWeight": "800"
+                            },
+                            {
+                              "type": "text",
+                              "id": "li9jC",
+                              "name": "Cards",
+                              "fill": "$muted",
+                              "content": "6 cards",
+                              "lineHeight": 1.3,
+                              "fontFamily": "$f-ui",
+                              "fontSize": 12,
+                              "fontWeight": "800"
+                            }
+                          ]
+                        },
+                        {
+                          "id": "SbFdz",
+                          "type": "ref",
+                          "ref": "wMgza",
+                          "name": "Hand",
+                          "descendants": {
+                            "g4ZuG": {
+                              "content": "6"
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "A0vE9m",
+                      "name": "Seat · Dev",
+                      "width": 184,
+                      "fill": "$card",
+                      "cornerRadius": 16,
+                      "stroke": "$line",
+                      "strokeWidth": 2,
+                      "strokeAlignment": "inner",
+                      "effect": {
+                        "type": "shadow",
+                        "shadowType": "outer",
+                        "color": "$line",
+                        "offset": {
+                          "x": 0,
+                          "y": 4
+                        }
+                      },
+                      "gap": 10,
+                      "padding": [
+                        10,
+                        14
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "EL1ya",
+                          "name": "Avatar",
+                          "width": 36,
+                          "height": 36,
+                          "fill": "$green",
+                          "cornerRadius": 18,
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "IbniY",
+                              "name": "Initial",
+                              "fill": "$white",
+                              "content": "D",
+                              "fontFamily": "$f-ui",
+                              "fontSize": 16,
+                              "fontWeight": "900"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "yQQjL",
+                          "name": "Who",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "sXK26",
+                              "name": "Name",
+                              "fill": "$fg",
+                              "content": "Dev",
+                              "lineHeight": 1.3,
+                              "fontFamily": "$f-ui",
+                              "fontSize": 15,
+                              "fontWeight": "800"
+                            },
+                            {
+                              "type": "text",
+                              "id": "RjSpd",
+                              "name": "Cards",
+                              "fill": "$muted",
+                              "content": "7 cards",
+                              "lineHeight": 1.3,
+                              "fontFamily": "$f-ui",
+                              "fontSize": 12,
+                              "fontWeight": "800"
+                            }
+                          ]
+                        },
+                        {
+                          "id": "Gve6A",
+                          "type": "ref",
+                          "ref": "wMgza",
+                          "name": "Hand",
+                          "descendants": {
+                            "g4ZuG": {
+                              "content": "7"
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "XYqkz",
+                      "name": "Seat · Eli",
+                      "width": 184,
+                      "fill": "$card",
+                      "cornerRadius": 16,
+                      "stroke": "$line",
+                      "strokeWidth": 2,
+                      "strokeAlignment": "inner",
+                      "effect": {
+                        "type": "shadow",
+                        "shadowType": "outer",
+                        "color": "$line",
+                        "offset": {
+                          "x": 0,
+                          "y": 4
+                        }
+                      },
+                      "gap": 10,
+                      "padding": [
+                        10,
+                        14
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "gL75Z",
+                          "name": "Avatar",
+                          "width": 36,
+                          "height": 36,
+                          "fill": "$red",
+                          "cornerRadius": 18,
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "m5iD2C",
+                              "name": "Initial",
+                              "fill": "$white",
+                              "content": "E",
+                              "fontFamily": "$f-ui",
+                              "fontSize": 16,
+                              "fontWeight": "900"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "t0Bg8",
+                          "name": "Who",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "R8dIU",
+                              "name": "Name",
+                              "fill": "$fg",
+                              "content": "Eli",
+                              "lineHeight": 1.3,
+                              "fontFamily": "$f-ui",
+                              "fontSize": 15,
+                              "fontWeight": "800"
+                            },
+                            {
+                              "type": "text",
+                              "id": "yJ8ke",
+                              "name": "Cards",
+                              "fill": "$muted",
+                              "content": "7 cards",
+                              "lineHeight": 1.3,
+                              "fontFamily": "$f-ui",
+                              "fontSize": 12,
+                              "fontWeight": "800"
+                            }
+                          ]
+                        },
+                        {
+                          "id": "Kzkoe",
+                          "type": "ref",
+                          "ref": "wMgza",
+                          "name": "Hand",
+                          "descendants": {
+                            "g4ZuG": {
+                              "content": "7"
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "MwEz5",
+                  "name": "Middle",
+                  "width": "fill_container",
+                  "height": "fill_container",
+                  "gap": 24,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "pUFZC",
+                      "name": "Left seats",
+                      "layout": "vertical",
+                      "gap": 20,
+                      "padding": [
+                        0,
+                        0,
+                        4,
+                        0
+                      ],
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "VJ5CW",
+                          "name": "Seat · Ben",
+                          "width": 184,
+                          "fill": "$card",
+                          "cornerRadius": 16,
+                          "stroke": "$line",
+                          "strokeWidth": 2,
+                          "strokeAlignment": "inner",
+                          "effect": {
+                            "type": "shadow",
+                            "shadowType": "outer",
+                            "color": "$line",
+                            "offset": {
+                              "x": 0,
+                              "y": 4
+                            }
+                          },
+                          "gap": 10,
+                          "padding": [
+                            10,
+                            14
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "QnmTY",
+                              "name": "Avatar",
+                              "width": 36,
+                              "height": 36,
+                              "fill": "$orange",
+                              "cornerRadius": 18,
+                              "justifyContent": "center",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "oovBc",
+                                  "name": "Initial",
+                                  "fill": "$white",
+                                  "content": "B",
+                                  "fontFamily": "$f-ui",
+                                  "fontSize": 16,
+                                  "fontWeight": "900"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "JtfJq",
+                              "name": "Who",
+                              "width": "fill_container",
+                              "layout": "vertical",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "lUvaF",
+                                  "name": "Name",
+                                  "fill": "$fg",
+                                  "content": "Ben",
+                                  "lineHeight": 1.3,
+                                  "fontFamily": "$f-ui",
+                                  "fontSize": 15,
+                                  "fontWeight": "800"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "IopVi",
+                                  "name": "Cards",
+                                  "fill": "$muted",
+                                  "content": "7 cards",
+                                  "lineHeight": 1.3,
+                                  "fontFamily": "$f-ui",
+                                  "fontSize": 12,
+                                  "fontWeight": "800"
+                                }
+                              ]
+                            },
+                            {
+                              "id": "UyC1h",
+                              "type": "ref",
+                              "ref": "wMgza",
+                              "name": "Hand",
+                              "descendants": {
+                                "g4ZuG": {
+                                  "content": "7"
+                                }
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "y6Cvm",
+                          "name": "Seat · Ana",
+                          "width": 184,
+                          "fill": "$card",
+                          "cornerRadius": 16,
+                          "stroke": "$line",
+                          "strokeWidth": 2,
+                          "strokeAlignment": "inner",
+                          "effect": {
+                            "type": "shadow",
+                            "shadowType": "outer",
+                            "color": "$line",
+                            "offset": {
+                              "x": 0,
+                              "y": 4
+                            }
+                          },
+                          "gap": 10,
+                          "padding": [
+                            10,
+                            14
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "yboNH",
+                              "name": "Avatar",
+                              "width": 36,
+                              "height": 36,
+                              "fill": "$purple",
+                              "cornerRadius": 18,
+                              "justifyContent": "center",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "tb4hO",
+                                  "name": "Initial",
+                                  "fill": "$white",
+                                  "content": "A",
+                                  "fontFamily": "$f-ui",
+                                  "fontSize": 16,
+                                  "fontWeight": "900"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "ncZBT",
+                              "name": "Who",
+                              "width": "fill_container",
+                              "layout": "vertical",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "BBMLa",
+                                  "name": "Name",
+                                  "fill": "$fg",
+                                  "content": "Ana",
+                                  "lineHeight": 1.3,
+                                  "fontFamily": "$f-ui",
+                                  "fontSize": 15,
+                                  "fontWeight": "800"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "ZnlKU",
+                                  "name": "Cards",
+                                  "fill": "$muted",
+                                  "content": "8 cards",
+                                  "lineHeight": 1.3,
+                                  "fontFamily": "$f-ui",
+                                  "fontSize": 12,
+                                  "fontWeight": "800"
+                                }
+                              ]
+                            },
+                            {
+                              "id": "tc5lD",
+                              "type": "ref",
+                              "ref": "wMgza",
+                              "name": "Hand",
+                              "descendants": {
+                                "g4ZuG": {
+                                  "content": "8"
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "ALoeA",
+                      "name": "Centre",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 16,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "R8Ea1",
+                          "name": "Status",
+                          "gap": 8,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "id": "En8f8",
+                              "type": "ref",
+                              "ref": "YO4ft",
+                              "name": "Match"
+                            },
+                            {
+                              "id": "Hb11T",
+                              "type": "ref",
+                              "ref": "GzIir",
+                              "name": "Direction"
+                            }
+                          ]
+                        },
+                        {
+                          "id": "eL6sK",
+                          "type": "ref",
+                          "ref": "T74Xw",
+                          "name": "Piles",
+                          "descendants": {
+                            "DhKeY": {
+                              "content": "Draw · 41"
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "yL8RK",
+                      "name": "Right seats",
+                      "layout": "vertical",
+                      "gap": 20,
+                      "padding": [
+                        0,
+                        0,
+                        4,
+                        0
+                      ],
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "odv1d",
+                          "name": "Seat · Fay",
+                          "width": 184,
+                          "fill": "$card",
+                          "cornerRadius": 16,
+                          "stroke": "$line",
+                          "strokeWidth": 2,
+                          "strokeAlignment": "inner",
+                          "effect": {
+                            "type": "shadow",
+                            "shadowType": "outer",
+                            "color": "$line",
+                            "offset": {
+                              "x": 0,
+                              "y": 4
+                            }
+                          },
+                          "gap": 10,
+                          "padding": [
+                            10,
+                            14
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "R18Dr",
+                              "name": "Avatar",
+                              "width": 36,
+                              "height": 36,
+                              "fill": "$purple",
+                              "cornerRadius": 18,
+                              "justifyContent": "center",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "sC1uH",
+                                  "name": "Initial",
+                                  "fill": "$white",
+                                  "content": "F",
+                                  "fontFamily": "$f-ui",
+                                  "fontSize": 16,
+                                  "fontWeight": "900"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "pIcQW",
+                              "name": "Who",
+                              "width": "fill_container",
+                              "layout": "vertical",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "loFSi",
+                                  "name": "Name",
+                                  "fill": "$fg",
+                                  "content": "Fay",
+                                  "lineHeight": 1.3,
+                                  "fontFamily": "$f-ui",
+                                  "fontSize": 15,
+                                  "fontWeight": "800"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "CRXK2",
+                                  "name": "Cards",
+                                  "fill": "$muted",
+                                  "content": "7 cards",
+                                  "lineHeight": 1.3,
+                                  "fontFamily": "$f-ui",
+                                  "fontSize": 12,
+                                  "fontWeight": "800"
+                                }
+                              ]
+                            },
+                            {
+                              "id": "mSJhk",
+                              "type": "ref",
+                              "ref": "wMgza",
+                              "name": "Hand",
+                              "descendants": {
+                                "g4ZuG": {
+                                  "content": "7"
+                                }
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "lAzKB",
+                          "name": "Seat · Gus",
+                          "width": 184,
+                          "fill": "$card",
+                          "cornerRadius": 16,
+                          "stroke": "$line",
+                          "strokeWidth": 2,
+                          "strokeAlignment": "inner",
+                          "effect": {
+                            "type": "shadow",
+                            "shadowType": "outer",
+                            "color": "$line",
+                            "offset": {
+                              "x": 0,
+                              "y": 4
+                            }
+                          },
+                          "gap": 10,
+                          "padding": [
+                            10,
+                            14
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "t9fMEd",
+                              "name": "Avatar",
+                              "width": 36,
+                              "height": 36,
+                              "fill": "$orange",
+                              "cornerRadius": 18,
+                              "justifyContent": "center",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "kadjg",
+                                  "name": "Initial",
+                                  "fill": "$white",
+                                  "content": "G",
+                                  "fontFamily": "$f-ui",
+                                  "fontSize": 16,
+                                  "fontWeight": "900"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "tL9na",
+                              "name": "Who",
+                              "width": "fill_container",
+                              "layout": "vertical",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "eFKJj",
+                                  "name": "Name",
+                                  "fill": "$fg",
+                                  "content": "Gus",
+                                  "lineHeight": 1.3,
+                                  "fontFamily": "$f-ui",
+                                  "fontSize": 15,
+                                  "fontWeight": "800"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "mCK9a",
+                                  "name": "Cards",
+                                  "fill": "$muted",
+                                  "content": "6 cards",
+                                  "lineHeight": 1.3,
+                                  "fontFamily": "$f-ui",
+                                  "fontSize": 12,
+                                  "fontWeight": "800"
+                                }
+                              ]
+                            },
+                            {
+                              "id": "Hnzzo",
+                              "type": "ref",
+                              "ref": "wMgza",
+                              "name": "Hand",
+                              "descendants": {
+                                "g4ZuG": {
+                                  "content": "6"
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "WW5jH",
+                  "name": "Hand tray",
+                  "width": "fill_container",
+                  "fill": "$card",
+                  "cornerRadius": 16,
+                  "stroke": "$line",
+                  "strokeWidth": 2,
+                  "strokeAlignment": "inner",
+                  "effect": {
+                    "type": "shadow",
+                    "shadowType": "outer",
+                    "color": "$line",
+                    "offset": {
+                      "x": 0,
+                      "y": 4
+                    }
+                  },
+                  "layout": "vertical",
+                  "padding": [
+                    14,
+                    20,
+                    6,
+                    20
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "kSH9l",
+                      "name": "You",
+                      "width": "fill_container",
+                      "gap": 10,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "a82hT",
+                          "name": "Avatar",
+                          "width": 28,
+                          "height": 28,
+                          "fill": "$blue",
+                          "cornerRadius": 14,
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "P6nx0O",
+                              "name": "Initial",
+                              "fill": "$white",
+                              "content": "Y",
+                              "fontFamily": "$f-ui",
+                              "fontSize": 13,
+                              "fontWeight": "900"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "CUep5",
+                          "name": "Name",
+                          "fill": "$fg",
+                          "content": "You",
+                          "fontFamily": "$f-ui",
+                          "fontSize": 15,
+                          "fontWeight": "800"
+                        },
+                        {
+                          "type": "text",
+                          "id": "gAFd7",
+                          "name": "Count",
+                          "fill": "$muted",
+                          "content": "8 cards",
+                          "fontFamily": "$f-ui",
+                          "fontSize": 13,
+                          "fontWeight": "800"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "Cu0Wh",
+                          "name": "Pill · Your turn",
+                          "fill": "$gold",
+                          "cornerRadius": 999,
+                          "padding": [
+                            4,
+                            12
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "i0EnHB",
+                              "name": "Label",
+                              "fill": "$gold-ink",
+                              "content": "Your turn",
+                              "lineHeight": 1.4,
+                              "fontFamily": "$f-ui",
+                              "fontSize": 13,
+                              "fontWeight": "900"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "id": "wyYzb",
+                      "type": "ref",
+                      "ref": "QL3iF",
+                      "name": "Your Hand",
+                      "width": 390,
+                      "descendants": {
+                        "RbU0r": {
+                          "id": "T8rXnk",
+                          "type": "ref",
+                          "ref": "DuAfD",
+                          "name": "Slot 1",
+                          "x": 32,
+                          "y": 37,
+                          "rotation": 8.8,
+                          "enabled": true,
+                          "opacity": 0.45,
+                          "fill": "$red",
+                          "descendants": {
+                            "kpVKo": {
+                              "fill": "$white",
+                              "content": "3"
+                            },
+                            "EvS58": {
+                              "fill": "$white",
+                              "content": "3"
+                            }
+                          }
+                        },
+                        "w6A65": {
+                          "id": "K7WSuP",
+                          "type": "ref",
+                          "ref": "DuAfD",
+                          "name": "Slot 2",
+                          "x": 70,
+                          "y": 31,
+                          "rotation": 6.3,
+                          "enabled": true,
+                          "opacity": 0.45,
+                          "fill": "$blue",
+                          "descendants": {
+                            "kpVKo": {
+                              "fill": "$white",
+                              "content": "7"
+                            },
+                            "EvS58": {
+                              "fill": "$white",
+                              "content": "7"
+                            }
+                          }
+                        },
+                        "ducSB": {
+                          "id": "t7s4V2",
+                          "type": "ref",
+                          "ref": "fb0L6",
+                          "name": "Slot 3",
+                          "x": 108,
+                          "y": 26,
+                          "rotation": 3.8,
+                          "enabled": true,
+                          "opacity": 0.45,
+                          "fill": "$c-green",
+                          "descendants": {
+                            "n3MDeU": {
+                              "fill": "$white"
+                            },
+                            "piooH": {
+                              "fill": "$white"
+                            }
+                          }
+                        },
+                        "xdLQw": {
+                          "id": "nKm79",
+                          "type": "ref",
+                          "ref": "DuAfD",
+                          "name": "Slot 4",
+                          "x": 146,
+                          "y": 6,
+                          "rotation": 1.3,
+                          "enabled": true,
+                          "stroke": "$gold",
+                          "strokeWidth": 3,
+                          "fill": "$c-yellow",
+                          "descendants": {
+                            "kpVKo": {
+                              "fill": "$gold-ink",
+                              "content": "7"
+                            },
+                            "EvS58": {
+                              "fill": "$gold-ink",
+                              "content": "7"
+                            }
+                          }
+                        },
+                        "S0HKOU": {
+                          "id": "WoGl2",
+                          "type": "ref",
+                          "ref": "wWrpA",
+                          "name": "Slot 5",
+                          "x": 184,
+                          "y": 24,
+                          "rotation": -1.2,
+                          "enabled": true,
+                          "opacity": 0.45,
+                          "fill": "$red",
+                          "descendants": {
+                            "W4cAbj": {
+                              "fill": "$white"
+                            },
+                            "iUZzn": {
+                              "fill": "$white"
+                            }
+                          }
+                        },
+                        "OXmah": {
+                          "id": "o75dq",
+                          "type": "ref",
+                          "ref": "sTG2w",
+                          "name": "Slot 6",
+                          "x": 222,
+                          "y": 26,
+                          "rotation": -3.7000000000000006,
+                          "enabled": true,
+                          "opacity": 0.45,
+                          "fill": "$blue",
+                          "descendants": {
+                            "dpC7M": {
+                              "fill": "$white"
+                            },
+                            "Wr5Qe": {
+                              "fill": "$white"
+                            }
+                          }
+                        },
+                        "KcjB0": {
+                          "id": "LXW5R",
+                          "type": "ref",
+                          "ref": "DuAfD",
+                          "name": "Slot 7",
+                          "x": 260,
+                          "y": 31,
+                          "rotation": -6.2,
+                          "enabled": true,
+                          "opacity": 0.45,
+                          "fill": "$c-green",
+                          "descendants": {
+                            "kpVKo": {
+                              "fill": "$white",
+                              "content": "5"
+                            },
+                            "EvS58": {
+                              "fill": "$white",
+                              "content": "5"
+                            }
+                          }
+                        },
+                        "V3Y8Pi": {
+                          "id": "nT1KG",
+                          "type": "ref",
+                          "ref": "DuAfD",
+                          "name": "Slot 8",
+                          "x": 298,
+                          "y": 37,
+                          "rotation": -8.7,
+                          "enabled": true,
+                          "opacity": 0.45,
+                          "fill": "$red",
+                          "descendants": {
+                            "kpVKo": {
+                              "fill": "$white",
+                              "content": "9"
+                            },
+                            "EvS58": {
+                              "fill": "$white",
+                              "content": "9"
+                            }
+                          }
+                        },
+                        "SRAov": {
+                          "enabled": false
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "Ypymg",
+      "x": 3080,
+      "y": -1759,
+      "name": "Shell · Ocho · 390 · light",
+      "theme": {
+        "mode": "light"
+      },
+      "clip": true,
+      "width": 390,
+      "height": 844,
+      "fill": "$bg",
+      "layout": "vertical",
+      "children": [
+        {
+          "id": "kxKUM",
+          "type": "ref",
+          "ref": "A59UTs",
+          "name": "Shell",
+          "width": "fill_container",
+          "padding": [
+            0,
+            16
+          ],
+          "gap": 12,
+          "descendants": {
+            "oB3Z3": {
+              "width": "fit_content"
+            },
+            "TSzuU": {
+              "enabled": false
+            },
+            "rdIRA": {
+              "width": "fit_content",
+              "gap": 10
+            },
+            "sQCvY": {
+              "padding": [
+                0,
+                14
+              ]
+            }
+          }
+        },
+        {
+          "type": "frame",
+          "id": "LicWW",
+          "name": "Context strip",
+          "width": "fill_container",
+          "height": 48,
+          "gap": 10,
+          "padding": [
+            0,
+            16
+          ],
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "Vdu7d",
+              "name": "Game name",
+              "fill": "$fg",
+              "content": "Ocho",
+              "lineHeight": 1.2,
+              "fontFamily": "$f-ui",
+              "fontSize": 18,
+              "fontWeight": "800"
+            },
+            {
+              "type": "frame",
+              "id": "foUIh",
+              "name": "Pill · Hand 2",
+              "fill": "$soft",
+              "cornerRadius": 999,
+              "padding": [
+                4,
+                12
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "V9ULJ",
+                  "name": "Label",
+                  "fill": "$muted",
+                  "content": "Hand 2",
+                  "lineHeight": 1.4,
+                  "fontFamily": "$f-ui",
+                  "fontSize": 13,
+                  "fontWeight": "900"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "MyijV",
+              "name": "Pill · Your turn",
+              "fill": "$gold",
+              "cornerRadius": 999,
+              "padding": [
+                4,
+                12
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "XbN3D",
+                  "name": "Label",
+                  "fill": "$gold-ink",
+                  "content": "Your turn",
+                  "lineHeight": 1.4,
+                  "fontFamily": "$f-ui",
+                  "fontSize": 13,
+                  "fontWeight": "900"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "T9v3N",
+          "name": "Stage",
+          "width": "fill_container",
+          "height": "fill_container",
+          "padding": [
+            0,
+            16,
+            16,
+            16
+          ],
+          "children": [
+            {
+              "type": "frame",
+              "id": "Xq4DM",
+              "name": "Felt stage",
+              "width": "fill_container",
+              "height": "fill_container",
+              "fill": "$felt",
+              "cornerRadius": 16,
+              "stroke": "$line",
+              "strokeWidth": 2,
+              "strokeAlignment": "inner",
+              "layout": "vertical",
+              "gap": 10,
+              "padding": 12,
+              "justifyContent": "space_between",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "PUu4v",
+                  "name": "Top seats",
+                  "width": "fill_container",
+                  "gap": 8,
+                  "padding": [
+                    0,
+                    0,
+                    4,
+                    0
+                  ],
+                  "justifyContent": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "qnGHu",
+                      "name": "Seat · Cleo",
+                      "width": 84,
+                      "fill": "$card",
+                      "cornerRadius": 16,
+                      "stroke": "$line",
+                      "strokeWidth": 2,
+                      "strokeAlignment": "inner",
+                      "effect": {
+                        "type": "shadow",
+                        "shadowType": "outer",
+                        "color": "$line",
+                        "offset": {
+                          "x": 0,
+                          "y": 4
+                        }
+                      },
+                      "layout": "vertical",
+                      "gap": 3,
+                      "padding": [
+                        8,
+                        4
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "GNO4o",
+                          "name": "Avatar",
+                          "width": 32,
+                          "height": 32,
+                          "fill": "$blue",
+                          "cornerRadius": 16,
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "hkNxP",
+                              "name": "Initial",
+                              "fill": "$white",
+                              "content": "C",
+                              "fontFamily": "$f-ui",
+                              "fontSize": 14,
+                              "fontWeight": "900"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "W8FXex",
+                          "name": "Name",
+                          "fill": "$fg",
+                          "content": "Cleo",
+                          "fontFamily": "$f-ui",
+                          "fontSize": 12,
+                          "fontWeight": "800"
+                        },
+                        {
+                          "id": "x52GcC",
+                          "type": "ref",
+                          "ref": "wMgza",
+                          "name": "Hand",
+                          "descendants": {
+                            "g4ZuG": {
+                              "content": "6"
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "mwkhL",
+                      "name": "Seat · Dev",
+                      "width": 84,
+                      "fill": "$card",
+                      "cornerRadius": 16,
+                      "stroke": "$line",
+                      "strokeWidth": 2,
+                      "strokeAlignment": "inner",
+                      "effect": {
+                        "type": "shadow",
+                        "shadowType": "outer",
+                        "color": "$line",
+                        "offset": {
+                          "x": 0,
+                          "y": 4
+                        }
+                      },
+                      "layout": "vertical",
+                      "gap": 3,
+                      "padding": [
+                        8,
+                        4
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "ruDEg",
+                          "name": "Avatar",
+                          "width": 32,
+                          "height": 32,
+                          "fill": "$green",
+                          "cornerRadius": 16,
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "w90Qnz",
+                              "name": "Initial",
+                              "fill": "$white",
+                              "content": "D",
+                              "fontFamily": "$f-ui",
+                              "fontSize": 14,
+                              "fontWeight": "900"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "NLovH",
+                          "name": "Name",
+                          "fill": "$fg",
+                          "content": "Dev",
+                          "fontFamily": "$f-ui",
+                          "fontSize": 12,
+                          "fontWeight": "800"
+                        },
+                        {
+                          "id": "CkOrw",
+                          "type": "ref",
+                          "ref": "wMgza",
+                          "name": "Hand",
+                          "descendants": {
+                            "g4ZuG": {
+                              "content": "7"
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "EbBS9",
+                      "name": "Seat · Eli",
+                      "width": 84,
+                      "fill": "$card",
+                      "cornerRadius": 16,
+                      "stroke": "$line",
+                      "strokeWidth": 2,
+                      "strokeAlignment": "inner",
+                      "effect": {
+                        "type": "shadow",
+                        "shadowType": "outer",
+                        "color": "$line",
+                        "offset": {
+                          "x": 0,
+                          "y": 4
+                        }
+                      },
+                      "layout": "vertical",
+                      "gap": 3,
+                      "padding": [
+                        8,
+                        4
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "LcBE3",
+                          "name": "Avatar",
+                          "width": 32,
+                          "height": 32,
+                          "fill": "$red",
+                          "cornerRadius": 16,
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "T7qjTe",
+                              "name": "Initial",
+                              "fill": "$white",
+                              "content": "E",
+                              "fontFamily": "$f-ui",
+                              "fontSize": 14,
+                              "fontWeight": "900"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "iwT44",
+                          "name": "Name",
+                          "fill": "$fg",
+                          "content": "Eli",
+                          "fontFamily": "$f-ui",
+                          "fontSize": 12,
+                          "fontWeight": "800"
+                        },
+                        {
+                          "id": "K58I1u",
+                          "type": "ref",
+                          "ref": "wMgza",
+                          "name": "Hand",
+                          "descendants": {
+                            "g4ZuG": {
+                              "content": "7"
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "d3H8F",
+                  "name": "Middle",
+                  "width": "fill_container",
+                  "gap": 6,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "ru2Yg",
+                      "name": "Left seats",
+                      "layout": "vertical",
+                      "gap": 10,
+                      "padding": [
+                        0,
+                        0,
+                        4,
+                        0
+                      ],
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "t9X15x",
+                          "name": "Seat · Ben",
+                          "width": 84,
+                          "fill": "$card",
+                          "cornerRadius": 16,
+                          "stroke": "$line",
+                          "strokeWidth": 2,
+                          "strokeAlignment": "inner",
+                          "effect": {
+                            "type": "shadow",
+                            "shadowType": "outer",
+                            "color": "$line",
+                            "offset": {
+                              "x": 0,
+                              "y": 4
+                            }
+                          },
+                          "layout": "vertical",
+                          "gap": 3,
+                          "padding": [
+                            8,
+                            4
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "z4AaW",
+                              "name": "Avatar",
+                              "width": 32,
+                              "height": 32,
+                              "fill": "$orange",
+                              "cornerRadius": 16,
+                              "justifyContent": "center",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "dl6od",
+                                  "name": "Initial",
+                                  "fill": "$white",
+                                  "content": "B",
+                                  "fontFamily": "$f-ui",
+                                  "fontSize": 14,
+                                  "fontWeight": "900"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "text",
+                              "id": "VnZ1j",
+                              "name": "Name",
+                              "fill": "$fg",
+                              "content": "Ben",
+                              "fontFamily": "$f-ui",
+                              "fontSize": 12,
+                              "fontWeight": "800"
+                            },
+                            {
+                              "id": "n95oi",
+                              "type": "ref",
+                              "ref": "wMgza",
+                              "name": "Hand",
+                              "descendants": {
+                                "g4ZuG": {
+                                  "content": "7"
+                                }
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "WfVfc",
+                          "name": "Seat · Ana",
+                          "width": 84,
+                          "fill": "$card",
+                          "cornerRadius": 16,
+                          "stroke": "$line",
+                          "strokeWidth": 2,
+                          "strokeAlignment": "inner",
+                          "effect": {
+                            "type": "shadow",
+                            "shadowType": "outer",
+                            "color": "$line",
+                            "offset": {
+                              "x": 0,
+                              "y": 4
+                            }
+                          },
+                          "layout": "vertical",
+                          "gap": 3,
+                          "padding": [
+                            8,
+                            4
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "ofNHc",
+                              "name": "Avatar",
+                              "width": 32,
+                              "height": 32,
+                              "fill": "$purple",
+                              "cornerRadius": 16,
+                              "justifyContent": "center",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "L00Fm1",
+                                  "name": "Initial",
+                                  "fill": "$white",
+                                  "content": "A",
+                                  "fontFamily": "$f-ui",
+                                  "fontSize": 14,
+                                  "fontWeight": "900"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "text",
+                              "id": "Scxih",
+                              "name": "Name",
+                              "fill": "$fg",
+                              "content": "Ana",
+                              "fontFamily": "$f-ui",
+                              "fontSize": 12,
+                              "fontWeight": "800"
+                            },
+                            {
+                              "id": "St9CG",
+                              "type": "ref",
+                              "ref": "wMgza",
+                              "name": "Hand",
+                              "descendants": {
+                                "g4ZuG": {
+                                  "content": "8"
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "AiS48",
+                      "name": "Centre",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 10,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "id": "mHPqE",
+                          "type": "ref",
+                          "ref": "YO4ft",
+                          "name": "Match"
+                        },
+                        {
+                          "id": "z35xL",
+                          "type": "ref",
+                          "ref": "T74Xw",
+                          "name": "Piles",
+                          "gap": 12,
+                          "descendants": {
+                            "DhKeY": {
+                              "content": "Draw · 41"
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "QFvAK",
+                      "name": "Right seats",
+                      "layout": "vertical",
+                      "gap": 10,
+                      "padding": [
+                        0,
+                        0,
+                        4,
+                        0
+                      ],
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "rUuGq",
+                          "name": "Seat · Fay",
+                          "width": 84,
+                          "fill": "$card",
+                          "cornerRadius": 16,
+                          "stroke": "$line",
+                          "strokeWidth": 2,
+                          "strokeAlignment": "inner",
+                          "effect": {
+                            "type": "shadow",
+                            "shadowType": "outer",
+                            "color": "$line",
+                            "offset": {
+                              "x": 0,
+                              "y": 4
+                            }
+                          },
+                          "layout": "vertical",
+                          "gap": 3,
+                          "padding": [
+                            8,
+                            4
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "WrRGL",
+                              "name": "Avatar",
+                              "width": 32,
+                              "height": 32,
+                              "fill": "$purple",
+                              "cornerRadius": 16,
+                              "justifyContent": "center",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "V7spC",
+                                  "name": "Initial",
+                                  "fill": "$white",
+                                  "content": "F",
+                                  "fontFamily": "$f-ui",
+                                  "fontSize": 14,
+                                  "fontWeight": "900"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "text",
+                              "id": "HSOHY",
+                              "name": "Name",
+                              "fill": "$fg",
+                              "content": "Fay",
+                              "fontFamily": "$f-ui",
+                              "fontSize": 12,
+                              "fontWeight": "800"
+                            },
+                            {
+                              "id": "lbIKi",
+                              "type": "ref",
+                              "ref": "wMgza",
+                              "name": "Hand",
+                              "descendants": {
+                                "g4ZuG": {
+                                  "content": "7"
+                                }
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "XoYb0",
+                          "name": "Seat · Gus",
+                          "width": 84,
+                          "fill": "$card",
+                          "cornerRadius": 16,
+                          "stroke": "$line",
+                          "strokeWidth": 2,
+                          "strokeAlignment": "inner",
+                          "effect": {
+                            "type": "shadow",
+                            "shadowType": "outer",
+                            "color": "$line",
+                            "offset": {
+                              "x": 0,
+                              "y": 4
+                            }
+                          },
+                          "layout": "vertical",
+                          "gap": 3,
+                          "padding": [
+                            8,
+                            4
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "s86Z8i",
+                              "name": "Avatar",
+                              "width": 32,
+                              "height": 32,
+                              "fill": "$orange",
+                              "cornerRadius": 16,
+                              "justifyContent": "center",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "kSE3Y",
+                                  "name": "Initial",
+                                  "fill": "$white",
+                                  "content": "G",
+                                  "fontFamily": "$f-ui",
+                                  "fontSize": 14,
+                                  "fontWeight": "900"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "text",
+                              "id": "G2n2A",
+                              "name": "Name",
+                              "fill": "$fg",
+                              "content": "Gus",
+                              "fontFamily": "$f-ui",
+                              "fontSize": 12,
+                              "fontWeight": "800"
+                            },
+                            {
+                              "id": "xUC8B",
+                              "type": "ref",
+                              "ref": "wMgza",
+                              "name": "Hand",
+                              "descendants": {
+                                "g4ZuG": {
+                                  "content": "6"
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "k6Rxb",
+                  "name": "Hand tray",
+                  "clip": true,
+                  "width": "fill_container",
+                  "fill": "$card",
+                  "cornerRadius": 16,
+                  "stroke": "$line",
+                  "strokeWidth": 2,
+                  "strokeAlignment": "inner",
+                  "effect": {
+                    "type": "shadow",
+                    "shadowType": "outer",
+                    "color": "$line",
+                    "offset": {
+                      "x": 0,
+                      "y": 4
+                    }
+                  },
+                  "layout": "vertical",
+                  "padding": [
+                    12,
+                    0,
+                    0,
+                    0
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "p2Q63N",
+                      "name": "You",
+                      "width": "fill_container",
+                      "gap": 8,
+                      "padding": [
+                        0,
+                        14
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "EVyoK",
+                          "name": "Avatar",
+                          "width": 28,
+                          "height": 28,
+                          "fill": "$blue",
+                          "cornerRadius": 14,
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "cCJem",
+                              "name": "Initial",
+                              "fill": "$white",
+                              "content": "Y",
+                              "fontFamily": "$f-ui",
+                              "fontSize": 13,
+                              "fontWeight": "900"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "TEvdE",
+                          "name": "Name",
+                          "fill": "$fg",
+                          "content": "You",
+                          "fontFamily": "$f-ui",
+                          "fontSize": 15,
+                          "fontWeight": "800"
+                        },
+                        {
+                          "type": "text",
+                          "id": "y4AVY",
+                          "name": "Count",
+                          "fill": "$muted",
+                          "content": "8 cards",
+                          "fontFamily": "$f-ui",
+                          "fontSize": 13,
+                          "fontWeight": "800"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "pfQa6",
+                          "name": "Pill · Your turn",
+                          "fill": "$gold",
+                          "cornerRadius": 999,
+                          "padding": [
+                            4,
+                            12
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "Z4fwU",
+                              "name": "Label",
+                              "fill": "$gold-ink",
+                              "content": "Your turn",
+                              "lineHeight": 1.4,
+                              "fontFamily": "$f-ui",
+                              "fontSize": 13,
+                              "fontWeight": "900"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "u37rS",
+                      "name": "Hand window",
+                      "clip": true,
+                      "width": "fill_container",
+                      "height": 140,
+                      "justifyContent": "center",
+                      "children": [
+                        {
+                          "id": "laemr",
+                          "type": "ref",
+                          "ref": "QL3iF",
+                          "name": "Your Hand",
+                          "width": 390,
+                          "descendants": {
+                            "RbU0r": {
+                              "id": "hb1FG",
+                              "type": "ref",
+                              "ref": "DuAfD",
+                              "name": "Slot 1",
+                              "x": 32,
+                              "y": 37,
+                              "rotation": 8.8,
+                              "enabled": true,
+                              "opacity": 0.45,
+                              "fill": "$red",
+                              "descendants": {
+                                "kpVKo": {
+                                  "fill": "$white",
+                                  "content": "3"
+                                },
+                                "EvS58": {
+                                  "fill": "$white",
+                                  "content": "3"
+                                }
+                              }
+                            },
+                            "w6A65": {
+                              "id": "Dr7Lv",
+                              "type": "ref",
+                              "ref": "DuAfD",
+                              "name": "Slot 2",
+                              "x": 70,
+                              "y": 31,
+                              "rotation": 6.3,
+                              "enabled": true,
+                              "opacity": 0.45,
+                              "fill": "$blue",
+                              "descendants": {
+                                "kpVKo": {
+                                  "fill": "$white",
+                                  "content": "7"
+                                },
+                                "EvS58": {
+                                  "fill": "$white",
+                                  "content": "7"
+                                }
+                              }
+                            },
+                            "ducSB": {
+                              "id": "Y6zFD",
+                              "type": "ref",
+                              "ref": "fb0L6",
+                              "name": "Slot 3",
+                              "x": 108,
+                              "y": 26,
+                              "rotation": 3.8,
+                              "enabled": true,
+                              "opacity": 0.45,
+                              "fill": "$c-green",
+                              "descendants": {
+                                "n3MDeU": {
+                                  "fill": "$white"
+                                },
+                                "piooH": {
+                                  "fill": "$white"
+                                }
+                              }
+                            },
+                            "xdLQw": {
+                              "id": "xrraN",
+                              "type": "ref",
+                              "ref": "DuAfD",
+                              "name": "Slot 4",
+                              "x": 146,
+                              "y": 6,
+                              "rotation": 1.3,
+                              "enabled": true,
+                              "stroke": "$gold",
+                              "strokeWidth": 3,
+                              "fill": "$c-yellow",
+                              "descendants": {
+                                "kpVKo": {
+                                  "fill": "$gold-ink",
+                                  "content": "7"
+                                },
+                                "EvS58": {
+                                  "fill": "$gold-ink",
+                                  "content": "7"
+                                }
+                              }
+                            },
+                            "S0HKOU": {
+                              "id": "YwevB",
+                              "type": "ref",
+                              "ref": "wWrpA",
+                              "name": "Slot 5",
+                              "x": 184,
+                              "y": 24,
+                              "rotation": -1.2,
+                              "enabled": true,
+                              "opacity": 0.45,
+                              "fill": "$red",
+                              "descendants": {
+                                "W4cAbj": {
+                                  "fill": "$white"
+                                },
+                                "iUZzn": {
+                                  "fill": "$white"
+                                }
+                              }
+                            },
+                            "OXmah": {
+                              "id": "C7saMd",
+                              "type": "ref",
+                              "ref": "sTG2w",
+                              "name": "Slot 6",
+                              "x": 222,
+                              "y": 26,
+                              "rotation": -3.7000000000000006,
+                              "enabled": true,
+                              "opacity": 0.45,
+                              "fill": "$blue",
+                              "descendants": {
+                                "dpC7M": {
+                                  "fill": "$white"
+                                },
+                                "Wr5Qe": {
+                                  "fill": "$white"
+                                }
+                              }
+                            },
+                            "KcjB0": {
+                              "id": "RH3Qj",
+                              "type": "ref",
+                              "ref": "DuAfD",
+                              "name": "Slot 7",
+                              "x": 260,
+                              "y": 31,
+                              "rotation": -6.2,
+                              "enabled": true,
+                              "opacity": 0.45,
+                              "fill": "$c-green",
+                              "descendants": {
+                                "kpVKo": {
+                                  "fill": "$white",
+                                  "content": "5"
+                                },
+                                "EvS58": {
+                                  "fill": "$white",
+                                  "content": "5"
+                                }
+                              }
+                            },
+                            "V3Y8Pi": {
+                              "id": "Qf97M",
+                              "type": "ref",
+                              "ref": "DuAfD",
+                              "name": "Slot 8",
+                              "x": 298,
+                              "y": 37,
+                              "rotation": -8.7,
+                              "enabled": true,
+                              "opacity": 0.45,
+                              "fill": "$red",
+                              "descendants": {
+                                "kpVKo": {
+                                  "fill": "$white",
+                                  "content": "9"
+                                },
+                                "EvS58": {
+                                  "fill": "$white",
+                                  "content": "9"
+                                }
+                              }
+                            },
+                            "SRAov": {
+                              "enabled": false
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "p5A2f",
+      "x": 3570,
+      "y": -1759,
+      "name": "Shell · Ocho · 390 · dark",
+      "theme": {
+        "mode": "dark"
+      },
+      "clip": true,
+      "width": 390,
+      "height": 844,
+      "fill": "$bg",
+      "layout": "vertical",
+      "children": [
+        {
+          "id": "R8PsA",
+          "type": "ref",
+          "ref": "A59UTs",
+          "name": "Shell",
+          "width": "fill_container",
+          "padding": [
+            0,
+            16
+          ],
+          "gap": 12,
+          "descendants": {
+            "oB3Z3": {
+              "width": "fit_content"
+            },
+            "TSzuU": {
+              "enabled": false
+            },
+            "rdIRA": {
+              "width": "fit_content",
+              "gap": 10
+            },
+            "sQCvY": {
+              "padding": [
+                0,
+                14
+              ]
+            }
+          }
+        },
+        {
+          "type": "frame",
+          "id": "mP5KO",
+          "name": "Context strip",
+          "width": "fill_container",
+          "height": 48,
+          "gap": 10,
+          "padding": [
+            0,
+            16
+          ],
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "r4qk0G",
+              "name": "Game name",
+              "fill": "$fg",
+              "content": "Ocho",
+              "lineHeight": 1.2,
+              "fontFamily": "$f-ui",
+              "fontSize": 18,
+              "fontWeight": "800"
+            },
+            {
+              "type": "frame",
+              "id": "BpKQM",
+              "name": "Pill · Hand 2",
+              "fill": "$soft",
+              "cornerRadius": 999,
+              "padding": [
+                4,
+                12
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "fgb61",
+                  "name": "Label",
+                  "fill": "$muted",
+                  "content": "Hand 2",
+                  "lineHeight": 1.4,
+                  "fontFamily": "$f-ui",
+                  "fontSize": 13,
+                  "fontWeight": "900"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "L2EJ5",
+              "name": "Pill · Your turn",
+              "fill": "$gold",
+              "cornerRadius": 999,
+              "padding": [
+                4,
+                12
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "Q8mga",
+                  "name": "Label",
+                  "fill": "$gold-ink",
+                  "content": "Your turn",
+                  "lineHeight": 1.4,
+                  "fontFamily": "$f-ui",
+                  "fontSize": 13,
+                  "fontWeight": "900"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "BlhtD",
+          "name": "Stage",
+          "width": "fill_container",
+          "height": "fill_container",
+          "padding": [
+            0,
+            16,
+            16,
+            16
+          ],
+          "children": [
+            {
+              "type": "frame",
+              "id": "G4lv2u",
+              "name": "Felt stage",
+              "width": "fill_container",
+              "height": "fill_container",
+              "fill": "$felt",
+              "cornerRadius": 16,
+              "stroke": "$line",
+              "strokeWidth": 2,
+              "strokeAlignment": "inner",
+              "layout": "vertical",
+              "gap": 10,
+              "padding": 12,
+              "justifyContent": "space_between",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "zK9C3",
+                  "name": "Top seats",
+                  "width": "fill_container",
+                  "gap": 8,
+                  "padding": [
+                    0,
+                    0,
+                    4,
+                    0
+                  ],
+                  "justifyContent": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "EFc5N",
+                      "name": "Seat · Cleo",
+                      "width": 84,
+                      "fill": "$card",
+                      "cornerRadius": 16,
+                      "stroke": "$line",
+                      "strokeWidth": 2,
+                      "strokeAlignment": "inner",
+                      "effect": {
+                        "type": "shadow",
+                        "shadowType": "outer",
+                        "color": "$line",
+                        "offset": {
+                          "x": 0,
+                          "y": 4
+                        }
+                      },
+                      "layout": "vertical",
+                      "gap": 3,
+                      "padding": [
+                        8,
+                        4
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "UOonF",
+                          "name": "Avatar",
+                          "width": 32,
+                          "height": 32,
+                          "fill": "$blue",
+                          "cornerRadius": 16,
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "Fn33B",
+                              "name": "Initial",
+                              "fill": "$white",
+                              "content": "C",
+                              "fontFamily": "$f-ui",
+                              "fontSize": 14,
+                              "fontWeight": "900"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "c0XUfY",
+                          "name": "Name",
+                          "fill": "$fg",
+                          "content": "Cleo",
+                          "fontFamily": "$f-ui",
+                          "fontSize": 12,
+                          "fontWeight": "800"
+                        },
+                        {
+                          "id": "BR9F2",
+                          "type": "ref",
+                          "ref": "wMgza",
+                          "name": "Hand",
+                          "descendants": {
+                            "g4ZuG": {
+                              "content": "6"
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "O1YyHF",
+                      "name": "Seat · Dev",
+                      "width": 84,
+                      "fill": "$card",
+                      "cornerRadius": 16,
+                      "stroke": "$line",
+                      "strokeWidth": 2,
+                      "strokeAlignment": "inner",
+                      "effect": {
+                        "type": "shadow",
+                        "shadowType": "outer",
+                        "color": "$line",
+                        "offset": {
+                          "x": 0,
+                          "y": 4
+                        }
+                      },
+                      "layout": "vertical",
+                      "gap": 3,
+                      "padding": [
+                        8,
+                        4
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "nYeoc",
+                          "name": "Avatar",
+                          "width": 32,
+                          "height": 32,
+                          "fill": "$green",
+                          "cornerRadius": 16,
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "yvZCl",
+                              "name": "Initial",
+                              "fill": "$white",
+                              "content": "D",
+                              "fontFamily": "$f-ui",
+                              "fontSize": 14,
+                              "fontWeight": "900"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "k3h6w",
+                          "name": "Name",
+                          "fill": "$fg",
+                          "content": "Dev",
+                          "fontFamily": "$f-ui",
+                          "fontSize": 12,
+                          "fontWeight": "800"
+                        },
+                        {
+                          "id": "veJcF",
+                          "type": "ref",
+                          "ref": "wMgza",
+                          "name": "Hand",
+                          "descendants": {
+                            "g4ZuG": {
+                              "content": "7"
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "Z22BW",
+                      "name": "Seat · Eli",
+                      "width": 84,
+                      "fill": "$card",
+                      "cornerRadius": 16,
+                      "stroke": "$line",
+                      "strokeWidth": 2,
+                      "strokeAlignment": "inner",
+                      "effect": {
+                        "type": "shadow",
+                        "shadowType": "outer",
+                        "color": "$line",
+                        "offset": {
+                          "x": 0,
+                          "y": 4
+                        }
+                      },
+                      "layout": "vertical",
+                      "gap": 3,
+                      "padding": [
+                        8,
+                        4
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "oDjkP",
+                          "name": "Avatar",
+                          "width": 32,
+                          "height": 32,
+                          "fill": "$red",
+                          "cornerRadius": 16,
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "Do2t2",
+                              "name": "Initial",
+                              "fill": "$white",
+                              "content": "E",
+                              "fontFamily": "$f-ui",
+                              "fontSize": 14,
+                              "fontWeight": "900"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "J1HW37",
+                          "name": "Name",
+                          "fill": "$fg",
+                          "content": "Eli",
+                          "fontFamily": "$f-ui",
+                          "fontSize": 12,
+                          "fontWeight": "800"
+                        },
+                        {
+                          "id": "tsxO3",
+                          "type": "ref",
+                          "ref": "wMgza",
+                          "name": "Hand",
+                          "descendants": {
+                            "g4ZuG": {
+                              "content": "7"
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "kp0YW",
+                  "name": "Middle",
+                  "width": "fill_container",
+                  "gap": 6,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "fR3zc",
+                      "name": "Left seats",
+                      "layout": "vertical",
+                      "gap": 10,
+                      "padding": [
+                        0,
+                        0,
+                        4,
+                        0
+                      ],
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "WhPXZ",
+                          "name": "Seat · Ben",
+                          "width": 84,
+                          "fill": "$card",
+                          "cornerRadius": 16,
+                          "stroke": "$line",
+                          "strokeWidth": 2,
+                          "strokeAlignment": "inner",
+                          "effect": {
+                            "type": "shadow",
+                            "shadowType": "outer",
+                            "color": "$line",
+                            "offset": {
+                              "x": 0,
+                              "y": 4
+                            }
+                          },
+                          "layout": "vertical",
+                          "gap": 3,
+                          "padding": [
+                            8,
+                            4
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "x8Wnja",
+                              "name": "Avatar",
+                              "width": 32,
+                              "height": 32,
+                              "fill": "$orange",
+                              "cornerRadius": 16,
+                              "justifyContent": "center",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "Y52PYw",
+                                  "name": "Initial",
+                                  "fill": "$white",
+                                  "content": "B",
+                                  "fontFamily": "$f-ui",
+                                  "fontSize": 14,
+                                  "fontWeight": "900"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "text",
+                              "id": "L7UZt",
+                              "name": "Name",
+                              "fill": "$fg",
+                              "content": "Ben",
+                              "fontFamily": "$f-ui",
+                              "fontSize": 12,
+                              "fontWeight": "800"
+                            },
+                            {
+                              "id": "hsBtb",
+                              "type": "ref",
+                              "ref": "wMgza",
+                              "name": "Hand",
+                              "descendants": {
+                                "g4ZuG": {
+                                  "content": "7"
+                                }
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "LpGYY",
+                          "name": "Seat · Ana",
+                          "width": 84,
+                          "fill": "$card",
+                          "cornerRadius": 16,
+                          "stroke": "$line",
+                          "strokeWidth": 2,
+                          "strokeAlignment": "inner",
+                          "effect": {
+                            "type": "shadow",
+                            "shadowType": "outer",
+                            "color": "$line",
+                            "offset": {
+                              "x": 0,
+                              "y": 4
+                            }
+                          },
+                          "layout": "vertical",
+                          "gap": 3,
+                          "padding": [
+                            8,
+                            4
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "X0ypAw",
+                              "name": "Avatar",
+                              "width": 32,
+                              "height": 32,
+                              "fill": "$purple",
+                              "cornerRadius": 16,
+                              "justifyContent": "center",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "Gjaj5",
+                                  "name": "Initial",
+                                  "fill": "$white",
+                                  "content": "A",
+                                  "fontFamily": "$f-ui",
+                                  "fontSize": 14,
+                                  "fontWeight": "900"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "text",
+                              "id": "wBicH",
+                              "name": "Name",
+                              "fill": "$fg",
+                              "content": "Ana",
+                              "fontFamily": "$f-ui",
+                              "fontSize": 12,
+                              "fontWeight": "800"
+                            },
+                            {
+                              "id": "B8IDti",
+                              "type": "ref",
+                              "ref": "wMgza",
+                              "name": "Hand",
+                              "descendants": {
+                                "g4ZuG": {
+                                  "content": "8"
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "plhlq",
+                      "name": "Centre",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 10,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "id": "tWtMn",
+                          "type": "ref",
+                          "ref": "YO4ft",
+                          "name": "Match"
+                        },
+                        {
+                          "id": "Wzo3J",
+                          "type": "ref",
+                          "ref": "T74Xw",
+                          "name": "Piles",
+                          "gap": 12,
+                          "descendants": {
+                            "DhKeY": {
+                              "content": "Draw · 41"
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "ehyyi",
+                      "name": "Right seats",
+                      "layout": "vertical",
+                      "gap": 10,
+                      "padding": [
+                        0,
+                        0,
+                        4,
+                        0
+                      ],
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "eRTSf",
+                          "name": "Seat · Fay",
+                          "width": 84,
+                          "fill": "$card",
+                          "cornerRadius": 16,
+                          "stroke": "$line",
+                          "strokeWidth": 2,
+                          "strokeAlignment": "inner",
+                          "effect": {
+                            "type": "shadow",
+                            "shadowType": "outer",
+                            "color": "$line",
+                            "offset": {
+                              "x": 0,
+                              "y": 4
+                            }
+                          },
+                          "layout": "vertical",
+                          "gap": 3,
+                          "padding": [
+                            8,
+                            4
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "bh8uG",
+                              "name": "Avatar",
+                              "width": 32,
+                              "height": 32,
+                              "fill": "$purple",
+                              "cornerRadius": 16,
+                              "justifyContent": "center",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "eaMkJ",
+                                  "name": "Initial",
+                                  "fill": "$white",
+                                  "content": "F",
+                                  "fontFamily": "$f-ui",
+                                  "fontSize": 14,
+                                  "fontWeight": "900"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "text",
+                              "id": "pMnIQ",
+                              "name": "Name",
+                              "fill": "$fg",
+                              "content": "Fay",
+                              "fontFamily": "$f-ui",
+                              "fontSize": 12,
+                              "fontWeight": "800"
+                            },
+                            {
+                              "id": "wOQ4a",
+                              "type": "ref",
+                              "ref": "wMgza",
+                              "name": "Hand",
+                              "descendants": {
+                                "g4ZuG": {
+                                  "content": "7"
+                                }
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "lFBgh",
+                          "name": "Seat · Gus",
+                          "width": 84,
+                          "fill": "$card",
+                          "cornerRadius": 16,
+                          "stroke": "$line",
+                          "strokeWidth": 2,
+                          "strokeAlignment": "inner",
+                          "effect": {
+                            "type": "shadow",
+                            "shadowType": "outer",
+                            "color": "$line",
+                            "offset": {
+                              "x": 0,
+                              "y": 4
+                            }
+                          },
+                          "layout": "vertical",
+                          "gap": 3,
+                          "padding": [
+                            8,
+                            4
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "XFr2D",
+                              "name": "Avatar",
+                              "width": 32,
+                              "height": 32,
+                              "fill": "$orange",
+                              "cornerRadius": 16,
+                              "justifyContent": "center",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "w95Og",
+                                  "name": "Initial",
+                                  "fill": "$white",
+                                  "content": "G",
+                                  "fontFamily": "$f-ui",
+                                  "fontSize": 14,
+                                  "fontWeight": "900"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "text",
+                              "id": "fE5lZ",
+                              "name": "Name",
+                              "fill": "$fg",
+                              "content": "Gus",
+                              "fontFamily": "$f-ui",
+                              "fontSize": 12,
+                              "fontWeight": "800"
+                            },
+                            {
+                              "id": "C4mEsi",
+                              "type": "ref",
+                              "ref": "wMgza",
+                              "name": "Hand",
+                              "descendants": {
+                                "g4ZuG": {
+                                  "content": "6"
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "sevM7",
+                  "name": "Hand tray",
+                  "clip": true,
+                  "width": "fill_container",
+                  "fill": "$card",
+                  "cornerRadius": 16,
+                  "stroke": "$line",
+                  "strokeWidth": 2,
+                  "strokeAlignment": "inner",
+                  "effect": {
+                    "type": "shadow",
+                    "shadowType": "outer",
+                    "color": "$line",
+                    "offset": {
+                      "x": 0,
+                      "y": 4
+                    }
+                  },
+                  "layout": "vertical",
+                  "padding": [
+                    12,
+                    0,
+                    0,
+                    0
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "XOHSv",
+                      "name": "You",
+                      "width": "fill_container",
+                      "gap": 8,
+                      "padding": [
+                        0,
+                        14
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "i1Uzo8",
+                          "name": "Avatar",
+                          "width": 28,
+                          "height": 28,
+                          "fill": "$blue",
+                          "cornerRadius": 14,
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "QP6uh",
+                              "name": "Initial",
+                              "fill": "$white",
+                              "content": "Y",
+                              "fontFamily": "$f-ui",
+                              "fontSize": 13,
+                              "fontWeight": "900"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "m7IpS",
+                          "name": "Name",
+                          "fill": "$fg",
+                          "content": "You",
+                          "fontFamily": "$f-ui",
+                          "fontSize": 15,
+                          "fontWeight": "800"
+                        },
+                        {
+                          "type": "text",
+                          "id": "E3Y3EI",
+                          "name": "Count",
+                          "fill": "$muted",
+                          "content": "8 cards",
+                          "fontFamily": "$f-ui",
+                          "fontSize": 13,
+                          "fontWeight": "800"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "g8GFS",
+                          "name": "Pill · Your turn",
+                          "fill": "$gold",
+                          "cornerRadius": 999,
+                          "padding": [
+                            4,
+                            12
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "VDTFn",
+                              "name": "Label",
+                              "fill": "$gold-ink",
+                              "content": "Your turn",
+                              "lineHeight": 1.4,
+                              "fontFamily": "$f-ui",
+                              "fontSize": 13,
+                              "fontWeight": "900"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "ERcMZ",
+                      "name": "Hand window",
+                      "clip": true,
+                      "width": "fill_container",
+                      "height": 140,
+                      "justifyContent": "center",
+                      "children": [
+                        {
+                          "id": "EBbTe",
+                          "type": "ref",
+                          "ref": "QL3iF",
+                          "name": "Your Hand",
+                          "width": 390,
+                          "descendants": {
+                            "RbU0r": {
+                              "id": "BhJXv",
+                              "type": "ref",
+                              "ref": "DuAfD",
+                              "name": "Slot 1",
+                              "x": 32,
+                              "y": 37,
+                              "rotation": 8.8,
+                              "enabled": true,
+                              "opacity": 0.45,
+                              "fill": "$red",
+                              "descendants": {
+                                "kpVKo": {
+                                  "fill": "$white",
+                                  "content": "3"
+                                },
+                                "EvS58": {
+                                  "fill": "$white",
+                                  "content": "3"
+                                }
+                              }
+                            },
+                            "w6A65": {
+                              "id": "XDJg7",
+                              "type": "ref",
+                              "ref": "DuAfD",
+                              "name": "Slot 2",
+                              "x": 70,
+                              "y": 31,
+                              "rotation": 6.3,
+                              "enabled": true,
+                              "opacity": 0.45,
+                              "fill": "$blue",
+                              "descendants": {
+                                "kpVKo": {
+                                  "fill": "$white",
+                                  "content": "7"
+                                },
+                                "EvS58": {
+                                  "fill": "$white",
+                                  "content": "7"
+                                }
+                              }
+                            },
+                            "ducSB": {
+                              "id": "pqKnE",
+                              "type": "ref",
+                              "ref": "fb0L6",
+                              "name": "Slot 3",
+                              "x": 108,
+                              "y": 26,
+                              "rotation": 3.8,
+                              "enabled": true,
+                              "opacity": 0.45,
+                              "fill": "$c-green",
+                              "descendants": {
+                                "n3MDeU": {
+                                  "fill": "$white"
+                                },
+                                "piooH": {
+                                  "fill": "$white"
+                                }
+                              }
+                            },
+                            "xdLQw": {
+                              "id": "o3o5B",
+                              "type": "ref",
+                              "ref": "DuAfD",
+                              "name": "Slot 4",
+                              "x": 146,
+                              "y": 6,
+                              "rotation": 1.3,
+                              "enabled": true,
+                              "stroke": "$gold",
+                              "strokeWidth": 3,
+                              "fill": "$c-yellow",
+                              "descendants": {
+                                "kpVKo": {
+                                  "fill": "$gold-ink",
+                                  "content": "7"
+                                },
+                                "EvS58": {
+                                  "fill": "$gold-ink",
+                                  "content": "7"
+                                }
+                              }
+                            },
+                            "S0HKOU": {
+                              "id": "CpH3D",
+                              "type": "ref",
+                              "ref": "wWrpA",
+                              "name": "Slot 5",
+                              "x": 184,
+                              "y": 24,
+                              "rotation": -1.2,
+                              "enabled": true,
+                              "opacity": 0.45,
+                              "fill": "$red",
+                              "descendants": {
+                                "W4cAbj": {
+                                  "fill": "$white"
+                                },
+                                "iUZzn": {
+                                  "fill": "$white"
+                                }
+                              }
+                            },
+                            "OXmah": {
+                              "id": "wV6M1",
+                              "type": "ref",
+                              "ref": "sTG2w",
+                              "name": "Slot 6",
+                              "x": 222,
+                              "y": 26,
+                              "rotation": -3.7000000000000006,
+                              "enabled": true,
+                              "opacity": 0.45,
+                              "fill": "$blue",
+                              "descendants": {
+                                "dpC7M": {
+                                  "fill": "$white"
+                                },
+                                "Wr5Qe": {
+                                  "fill": "$white"
+                                }
+                              }
+                            },
+                            "KcjB0": {
+                              "id": "f3mQ6G",
+                              "type": "ref",
+                              "ref": "DuAfD",
+                              "name": "Slot 7",
+                              "x": 260,
+                              "y": 31,
+                              "rotation": -6.2,
+                              "enabled": true,
+                              "opacity": 0.45,
+                              "fill": "$c-green",
+                              "descendants": {
+                                "kpVKo": {
+                                  "fill": "$white",
+                                  "content": "5"
+                                },
+                                "EvS58": {
+                                  "fill": "$white",
+                                  "content": "5"
+                                }
+                              }
+                            },
+                            "V3Y8Pi": {
+                              "id": "Nhccg",
+                              "type": "ref",
+                              "ref": "DuAfD",
+                              "name": "Slot 8",
+                              "x": 298,
+                              "y": 37,
+                              "rotation": -8.7,
+                              "enabled": true,
+                              "opacity": 0.45,
+                              "fill": "$red",
+                              "descendants": {
+                                "kpVKo": {
+                                  "fill": "$white",
+                                  "content": "9"
+                                },
+                                "EvS58": {
+                                  "fill": "$white",
+                                  "content": "9"
+                                }
+                              }
+                            },
+                            "SRAov": {
+                              "enabled": false
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
         }
       ]
     }
