@@ -5,7 +5,9 @@
    the next one; what changed is what moves. The new view is already on the page when its motion
    starts: a flight is a copy of a card over the table, and the card it lands as is only held
    transparent until then. Every button works at once, a view that arrives mid-flight cancels the
-   flight, and with reduced motion (or no Web Animations) nothing travels. */
+   flight, and with reduced motion (or no Web Animations) nothing travels. The one flight a view does
+   not cancel is the card you just played: it leaves your hand on the tap, the view that confirms it
+   lets it land, and a later seat's card waits for it. */
 import type { Card, View } from './wire';
 
 /** What moved between two views, by the page's reckoning. */
@@ -94,6 +96,8 @@ export class TableMotion {
   private timers: number[] = [];
   private hand = new Map<number, Box>();
   private settled = 0;
+  /** The card you played, in flight from your hand: no view cancels it. */
+  private yours: { running: Animation[]; ghosts: HTMLElement[]; lands: number } | null = null;
   last: View | null = null;
 
   constructor(
@@ -101,8 +105,14 @@ export class TableMotion {
     private layer: HTMLElement,
   ) {}
 
-  /** Cancels whatever still moves: every card shows where the last view put it. */
+  /** Cancels whatever still moves, your own card too: every card shows where the last view put it. */
   stop(): void {
+    this.cancel();
+    this.ground();
+  }
+
+  /** Cancels what the last view started, and leaves your card in flight. */
+  private cancel(): void {
     for (const a of this.running) a.cancel();
     for (const g of this.ghosts) g.remove();
     for (const t of this.timers) clearTimeout(t);
@@ -112,6 +122,21 @@ export class TableMotion {
     this.ghosts = [];
     this.ticking.clear();
     this.settled = 0;
+  }
+
+  /** Cancels the flight of the card you played. */
+  private ground(): void {
+    if (!this.yours) return;
+    for (const a of this.yours.running) a.cancel();
+    for (const g of this.yours.ghosts) g.remove();
+    this.yours = null;
+  }
+
+  /** Milliseconds until the card you played lands, or 0 when it has. */
+  private yoursIn(): number {
+    const ms = this.yours ? this.yours.lands - performance.now() : 0;
+    if (ms <= 0) this.yours = null;
+    return Math.max(0, ms);
   }
 
   /** Milliseconds until what was started last has landed. */
@@ -315,16 +340,36 @@ export class TableMotion {
     return halves.length > 0 ? 680 : 0;
   }
 
+  /** You played a card: the discard already shows it, and it flies there from `from`, its place in
+      your hand before it was hidden. */
+  playFrom(from: Box | null): void {
+    this.ground();
+    if (!from || !moving()) return;
+    const top = this.discard();
+    const b = this.box(top);
+    if (!top || !b) return;
+    const running = this.running;
+    const ghosts = this.ghosts;
+    this.running = [];
+    this.ghosts = [];
+    const at = this.fly(top, from, b, 0);
+    if (at > 0) this.hold(top, at);
+    this.yours = { running: this.running, ghosts: this.ghosts, lands: performance.now() + at };
+    this.running = running;
+    this.ghosts = ghosts;
+    this.settled = Math.max(this.settled, this.yours.lands);
+  }
+
   /** The discard already shows `top`, so the next view must not fly that card again. */
   acceptPlayed(top: Card): void {
     if (this.last) this.last = { ...this.last, top };
   }
 
   /** Moves the page from `prev` to `view`, which is already drawn. */
-  view(view: View, launched: { id: number; box: Box } | null): void {
+  view(view: View): void {
     const prev = this.last;
     this.last = view;
-    this.stop();
+    this.cancel();
     const was = new Map(this.hand);
     this.remember();
     if (!moving()) return;
@@ -332,6 +377,7 @@ export class TableMotion {
     let end = 0;
 
     if (c.deal) {
+      this.ground();
       let t = this.shuffle();
       const rounds = Math.max(view.hand.length, ...c.drawn.map((d) => d.n));
       const order = [...c.drawn.map((d) => d.seat), view.you];
@@ -365,16 +411,18 @@ export class TableMotion {
     if (c.played) {
       const top = this.discard();
       const b = this.box(top);
+      // Your card in flight lands first; a seat's card that came after it leaves when it has.
+      const wait = this.yoursIn();
       if (top && b) {
         let at = 0;
         if (c.played.from === 'you') {
-          const from = launched?.id === c.played.card.id ? launched.box : (was.get(c.played.card.id) ?? null);
-          if (from) at = this.fly(top, from, b, 0);
+          const from = was.get(c.played.card.id) ?? null;
+          if (from && wait === 0) at = this.fly(top, from, b, 0);
         } else {
           const back = this.seatBack(c.played.from);
           const a = this.box(back);
           const pile = this.pileTop();
-          if (a && pile) at = this.fly(pile, a, b, 0, top);
+          if (a && pile) at = this.fly(pile, a, b, wait, top);
         }
         if (at > 0) this.hold(top, at);
         end = at;
@@ -430,7 +478,7 @@ export class TableMotion {
           }),
         );
     }
-    this.settled = performance.now() + end;
+    this.settled = performance.now() + Math.max(end, this.yoursIn());
   }
 
   /** The colour card grows out of `from` into its place, after whatever is still landing. */

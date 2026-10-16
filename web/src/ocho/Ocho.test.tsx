@@ -12,6 +12,7 @@ import { MockServer } from '../net/mock/server';
 import type { Me } from '../protocol/generated';
 import { Sound } from '../sound/sound';
 import { OchoClient } from './client';
+import { TableMotion } from './motion';
 import { aLobby, aView, card, fakeOcho } from './fake';
 import type { FakeOcho } from './fake';
 import { OchoPage, OchoRules } from './Ocho';
@@ -280,6 +281,61 @@ describe('the table', () => {
     expect(sent()).toEqual([{ t: 'ocho.play', card: 11 }]);
     expect($('[data-oc="discard"] .oc-corner')?.textContent).toBe('7');
     expect($('[data-card="11"]')?.classList.contains('oc-away')).toBe(true);
+  });
+
+  it('flies a played card from its place in the hand, and the view that confirms it lets it land', async () => {
+    // A browser that animates, with every hand card 100px further right by its id.
+    const flights: { el: Element; anim: { cancel: () => void } }[] = [];
+    Object.defineProperty(Element.prototype, 'animate', {
+      configurable: true,
+      value(this: Element) {
+        const anim = { cancel: vi.fn(), finished: new Promise<void>(() => {}) };
+        flights.push({ el: this, anim });
+        return anim;
+      },
+    });
+    vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function (this: Element) {
+      const id = Number(this.closest<HTMLElement>('[data-card]')?.dataset.card ?? 0);
+      return new DOMRect(id * 100, 0, 50, 70);
+    });
+    vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(50);
+    vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(70);
+    try {
+      await atTable(aView());
+      const playFrom = vi.spyOn(TableMotion.prototype, 'playFrom');
+      const cardPlays = (): number => play.mock.calls.filter(([name]) => name === 'cardPlay').length;
+      flights.length = 0;
+      await press('Yellow 7');
+      await press('Yellow 7');
+      expect(playFrom).toHaveBeenCalledTimes(1);
+      expect(playFrom).toHaveBeenCalledWith({ x: 1100, y: 0, w: 50, h: 70 });
+      const ghosts = (): typeof flights => flights.filter((f) => f.el.classList.contains('oc-ghost'));
+      expect(ghosts()).toHaveLength(1);
+      expect(ghosts()[0]?.el.isConnected).toBe(true);
+      expect(cardPlays()).toBe(1);
+
+      await answer();
+      const counts = aView().counts.map((n, s) => (s === 0 ? n - 1 : n));
+      await push({
+        t: 'ocho.view',
+        view: aView({
+          hand: aView().hand.filter((c) => c.id !== 11),
+          counts,
+          top: card(11, 'yellow', { number: 7 }),
+          symbol: { number: 7 },
+          turn: 1,
+          must: 'none',
+          legal: [],
+        }),
+      });
+      // The same card: no second flight, and the first one is still in the air.
+      expect(ghosts()).toHaveLength(1);
+      expect(ghosts()[0]?.anim.cancel).not.toHaveBeenCalled();
+      expect(ghosts()[0]?.el.isConnected).toBe(true);
+      expect(cardPlays()).toBe(1);
+    } finally {
+      Reflect.deleteProperty(Element.prototype, 'animate');
+    }
   });
 
   it('grows a wild into the colour card and sends the quadrant pressed with the card', async () => {

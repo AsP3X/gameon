@@ -678,7 +678,7 @@ function Table({
   const [menu, setMenu] = useState(false);
   const [picked, setPicked] = useState<number | null>(null);
   const [wild, setWild] = useState<number | null>(null);
-  /** A wild sent with its colour: it has left the hand, and flies when the view comes back. */
+  /** A wild sent with its colour: it has left the hand, and stays out until the view comes back. */
   const [sent, setSent] = useState<number | null>(null);
   /** The card just chosen. It is the discard until the server's view says the same. */
   const [pending, setPending] = useState<Card | null>(null);
@@ -701,7 +701,8 @@ function Table({
   const namerCard = useRef<HTMLDivElement>(null);
   const namerDim = useRef<HTMLSpanElement>(null);
   const motion = useRef<TableMotion | null>(null);
-  const launched = useRef<{ id: number; box: Box } | null>(null);
+  /** The card just played and where it sat in the hand: it flies from there once it is the discard. */
+  const launched = useRef<{ id: number; box: Box | null } | null>(null);
   const settle = useRef<{ selector: string; box: Box } | null>(null);
   const pendingRef = useRef(pending);
   pendingRef.current = pending;
@@ -727,9 +728,14 @@ function Table({
   useLayoutEffect(() => {
     const held = pendingRef.current;
     if (held && view.top.id === held.id) motion.current?.acceptPlayed(view.top);
-    motion.current?.view(view, launched.current);
-    launched.current = null;
+    motion.current?.view(view);
   }, [view]);
+  useLayoutEffect(() => {
+    const l = launched.current;
+    if (!pending || l?.id !== pending.id) return;
+    launched.current = null;
+    motion.current?.playFrom(l.box);
+  }, [pending]);
 
   const naming = wild != null ? (view.hand.find((c) => c.id === wild) ?? null) : null;
   const opening = view.must === 'chooseColor' && !shut && !busy;
@@ -771,7 +777,7 @@ function Table({
     const box = namerBox();
     if (wild != null) {
       const card = wild;
-      if (box) launched.current = { id: card, box };
+      launched.current = { id: card, box: motion.current?.handBox(card) ?? null };
       const chosen = view.hand.find((c) => c.id === card);
       if (chosen) {
         setPending(chosen);
@@ -782,6 +788,7 @@ function Table({
       void send({ t: 'ocho.play', card, color }).then((r) => {
         if (!r.ok) {
           launched.current = null;
+          motion.current?.stop();
           setSent(null);
           setPending(null);
           sounds.refused();
@@ -799,10 +806,13 @@ function Table({
   const play = (card: Card): void => {
     if (isWild(card)) setWild(card.id);
     else {
+      launched.current = { id: card.id, box: motion.current?.handBox(card.id) ?? null };
       setPending(card);
       sounds.played(card, view.you);
       void send({ t: 'ocho.play', card: card.id }).then((r) => {
         if (!r.ok) {
+          launched.current = null;
+          motion.current?.stop();
           setPending(null);
           sounds.refused();
         }
