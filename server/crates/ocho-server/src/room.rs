@@ -36,6 +36,8 @@ struct Socket {
 struct Inner {
     sockets: HashMap<String, Socket>,
     next_socket: u64,
+    /// Next [`Lobby::opened`], so the public list can be oldest first.
+    next_opened: u64,
     lobbies: HashMap<String, Lobby>,
     codes: HashMap<String, String>,
     seated: HashMap<String, String>,
@@ -48,6 +50,10 @@ struct Lobby {
     players: u8,
     teams: bool,
     first_to_500: bool,
+    /// Listed for anyone looking for a game. A friends table is false.
+    open: bool,
+    /// When the table was opened. The public list sorts by this, oldest first.
+    opened: u64,
     /// Set when the host asked for bots. Every other seat is one.
     bots: Option<BotLevel>,
     /// Hand number a bot is waiting to deal, so a second pause does not deal twice.
@@ -106,7 +112,7 @@ pub enum ClientMsg {
         /// Correlation id.
         id: u64,
     },
-    /// Open a private table.
+    /// Open a table. `open` lists it. Absent means a friends table.
     #[serde(rename = "ocho.create")]
     Create {
         /// Correlation id.
@@ -118,9 +124,12 @@ pub enum ClientMsg {
         /// `one` or `to500`.
         #[serde(rename = "match")]
         match_kind: MatchKind,
-        /// Fill every seat but the host with a bot of this level. Absent means a friends table.
+        /// Fill every seat but the host with a bot of this level. Absent means people fill the seats.
         #[serde(default)]
         bots: Option<BotLevel>,
+        /// List the table for anyone looking for a game. Absent means private.
+        #[serde(default)]
+        open: bool,
     },
     /// Join with a code.
     #[serde(rename = "ocho.join")]
@@ -129,6 +138,20 @@ pub enum ClientMsg {
         id: u64,
         /// Six-character code.
         code: String,
+    },
+    /// The waiting public tables.
+    #[serde(rename = "ocho.tables")]
+    Tables {
+        /// Correlation id.
+        id: u64,
+    },
+    /// Sit at a public table by its lobby id. A private id is not a table.
+    #[serde(rename = "ocho.joinOpen")]
+    JoinOpen {
+        /// Correlation id.
+        id: u64,
+        /// Lobby id from `ocho.tables`. Not a join code.
+        lobby: String,
     },
     /// Leave the lobby or the table.
     #[serde(rename = "ocho.leave")]
@@ -211,7 +234,7 @@ pub enum ClientMsg {
 }
 
 /// `one` or `to500`.
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum MatchKind {
     /// The match is a single hand.
@@ -252,6 +275,31 @@ pub enum ServerMsg {
         /// The per-seat view.
         view: PlayerView,
     },
+    /// Waiting public tables, for the player who asked.
+    #[serde(rename = "ocho.tables")]
+    Tables {
+        /// Oldest first. No join code, and no private table.
+        tables: Vec<OpenTable>,
+    },
+}
+
+/// One waiting public table. The join code is not here.
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct OpenTable {
+    /// Lobby id. `ocho.joinOpen` sits here.
+    pub id: String,
+    /// The host's display name.
+    pub host_name: String,
+    /// Seats the table will deal.
+    pub players: u8,
+    /// Who has sat down, people and bots.
+    pub seated: u8,
+    /// 2v2.
+    pub teams: bool,
+    /// `one` or `to500`.
+    #[serde(rename = "match")]
+    pub match_kind: MatchKind,
 }
 
 /// What every member of a lobby can see.
@@ -319,6 +367,7 @@ impl Room {
             inner: Mutex::new(Inner {
                 sockets: HashMap::new(),
                 next_socket: 0,
+                next_opened: 0,
                 lobbies: HashMap::new(),
                 codes: HashMap::new(),
                 seated: HashMap::new(),
@@ -419,6 +468,8 @@ impl Room {
 struct StepOk {
     re: u64,
     lobby: Option<LobbyView>,
+    /// Waiting public tables, when this command asked for them.
+    tables: Option<Vec<OpenTable>>,
     publish: bool,
     /// A bot went out on this hand and should deal after [`BOT_DEAL_PAUSE`].
     bot_deal: Option<u32>,
@@ -430,10 +481,21 @@ fn done(re: u64, lobby: Option<LobbyView>, publish: bool) -> StepOk {
     StepOk {
         re,
         lobby,
+        tables: None,
         publish,
         bot_deal: None,
         bot_play: None,
     }
+}
+
+/// What `ocho.create` asked to open.
+#[derive(Clone, Copy)]
+struct NewTable {
+    players: u8,
+    teams: bool,
+    match_kind: MatchKind,
+    bots: Option<BotLevel>,
+    open: bool,
 }
 
 type StepErr = (u64, &'static str, &'static str);
@@ -459,19 +521,11 @@ fn hello(inner: &Inner, user: &str, id: u64) -> StepOk {
     done(id, Some(lobby_view(lobby)), started)
 }
 
-fn create(
-    inner: &mut Inner,
-    user: &User,
-    id: u64,
-    players: u8,
-    teams: bool,
-    first_to_500: bool,
-    bots: Option<BotLevel>,
-) -> Result<StepOk, StepErr> {
+fn create(inner: &mut Inner, user: &User, id: u64, table: NewTable) -> Result<StepOk, StepErr> {
     if inner.seated.contains_key(&user.id) {
         return Err((id, "ALREADY_SEATED", "You are already at a table."));
     }
-    if !(2..=8).contains(&players) || (teams && players != 4) {
+    if !(2..=8).contains(&table.players) || (table.teams && table.players != 4) {
         return Err((
             id,
             "VALIDATION",
@@ -487,10 +541,10 @@ fn create(
         bot: None,
     }];
     // Human: One person, and a bot in every other seat. Those seats are already ready.
-    // Agent: WRITES members for seats 1..players. Does not insert bot ids into seated.
-    if let Some(level) = bots {
+    // Agent: WRITES members for seats 1..table.players. Does not insert bot ids into seated.
+    if let Some(level) = table.bots {
         let mut names = vec![user.name.clone()];
-        for seat in 1..players {
+        for seat in 1..table.players {
             let name = bot_name(&names);
             names.push(name.clone());
             members.push(Member {
@@ -501,14 +555,18 @@ fn create(
             });
         }
     }
+    let opened = inner.next_opened;
+    inner.next_opened = inner.next_opened.saturating_add(1);
     let lobby = Lobby {
         id: lobby_id.clone(),
         code: code.clone(),
         host: user.id.clone(),
-        players,
-        teams,
-        first_to_500,
-        bots,
+        players: table.players,
+        teams: table.teams,
+        first_to_500: matches!(table.match_kind, MatchKind::To500),
+        open: table.open,
+        opened,
+        bots: table.bots,
         bot_deal: None,
         bot_seq: 0,
         members,
@@ -534,15 +592,83 @@ fn join(inner: &mut Inner, user: &User, id: u64, code: &str) -> Result<StepOk, S
     if lobby.table.is_some() || lobby.members.len() >= usize::from(lobby.players) {
         return Err((id, "LOBBY_FULL", "That table is full."));
     }
+    sit(lobby, user);
+    inner.seated.insert(user.id.clone(), lobby_id);
+    let view = lobby_view(lobby);
+    Ok(done(id, Some(view), false))
+}
+
+// Human: A public table can be sat by its id. A private id answers as if no such table exists, so the id does not confirm a friends table.
+// Agent: READS lobbies.open, table, members; WRITES one member and seated; RETURNS NOT_FOUND for a private or missing id, LOBBY_FULL when dealt or full; never returns the code.
+fn join_open(inner: &mut Inner, user: &User, id: u64, lobby_id: &str) -> Result<StepOk, StepErr> {
+    if inner.seated.contains_key(&user.id) {
+        return Err((id, "ALREADY_SEATED", "You are already at a table."));
+    }
+    let Some(lobby) = inner.lobbies.get_mut(lobby_id) else {
+        return Err((id, "NOT_FOUND", "That table is gone."));
+    };
+    if !lobby.open {
+        return Err((id, "NOT_FOUND", "That table is gone."));
+    }
+    if lobby.table.is_some() || lobby.members.len() >= usize::from(lobby.players) {
+        return Err((id, "LOBBY_FULL", "That table is full."));
+    }
+    sit(lobby, user);
+    inner.seated.insert(user.id.clone(), lobby_id.to_owned());
+    let view = lobby_view(lobby);
+    Ok(done(id, Some(view), false))
+}
+
+fn sit(lobby: &mut Lobby, user: &User) {
     lobby.members.push(Member {
         user: user.id.clone(),
         name: user.name.clone(),
         ready: false,
         bot: None,
     });
-    inner.seated.insert(user.id.clone(), lobby_id);
-    let view = lobby_view(lobby);
-    Ok(done(id, Some(view), false))
+}
+
+// Human: Anyone looking for a game sees waiting public tables, oldest first, including full ones. A friends table and every join code stay off this list. A dealt hand leaves it.
+// Agent: READS lobbies.open, opened, table, members; RETURNS OpenTable without code; skips a lobby whose host member is gone.
+fn listed(inner: &Inner) -> Vec<OpenTable> {
+    let mut rows: Vec<&Lobby> = inner
+        .lobbies
+        .values()
+        .filter(|lobby| lobby.open && lobby.table.is_none())
+        .collect();
+    rows.sort_by_key(|lobby| lobby.opened);
+    rows.into_iter().filter_map(open_row).collect()
+}
+
+fn open_row(lobby: &Lobby) -> Option<OpenTable> {
+    let host = lobby
+        .members
+        .iter()
+        .find(|member| member.user == lobby.host)?;
+    let seated = u8::try_from(lobby.members.len()).ok()?;
+    Some(OpenTable {
+        id: lobby.id.clone(),
+        host_name: host.name.clone(),
+        players: lobby.players,
+        seated,
+        teams: lobby.teams,
+        match_kind: if lobby.first_to_500 {
+            MatchKind::To500
+        } else {
+            MatchKind::One
+        },
+    })
+}
+
+fn list_open(inner: &Inner, id: u64) -> StepOk {
+    StepOk {
+        re: id,
+        lobby: None,
+        tables: Some(listed(inner)),
+        publish: false,
+        bot_deal: None,
+        bot_play: None,
+    }
 }
 
 fn leave(inner: &mut Inner, user: &User, id: u64) -> Result<StepOk, StepErr> {
@@ -927,6 +1053,7 @@ impl Room {
                     (
                         step.re,
                         step.lobby,
+                        step.tables,
                         sockets,
                         step.publish,
                         step.bot_deal,
@@ -937,6 +1064,7 @@ impl Room {
                 Err((re, code, message)) => (
                     re,
                     None,
+                    None,
                     Vec::new(),
                     false,
                     None,
@@ -945,10 +1073,13 @@ impl Room {
                 ),
             }
         };
-        let (re, lobby, sockets, publish, bot_deal, bot_play, err) = views;
+        let (re, lobby, tables, sockets, publish, bot_deal, bot_play, err) = views;
         if let Some(err) = err {
             self.send(&user.id, &err).await;
             return;
+        }
+        if let Some(tables) = tables {
+            self.send(&user.id, &ServerMsg::Tables { tables }).await;
         }
         self.send(&user.id, &ServerMsg::Ok { re }).await;
         if let Some(lobby) = lobby {
@@ -1113,16 +1244,22 @@ fn dispatch(inner: &mut Inner, user: &User, msg: ClientMsg) -> Result<StepOk, St
             teams,
             match_kind,
             bots,
+            open,
         } => create(
             inner,
             user,
             id,
-            players,
-            teams,
-            matches!(match_kind, MatchKind::To500),
-            bots,
+            NewTable {
+                players,
+                teams,
+                match_kind,
+                bots,
+                open,
+            },
         ),
         ClientMsg::Join { id, code } => join(inner, user, id, &code),
+        ClientMsg::Tables { id } => Ok(list_open(inner, id)),
+        ClientMsg::JoinOpen { id, lobby } => join_open(inner, user, id, &lobby),
         ClientMsg::Leave { id } => leave(inner, user, id),
         ClientMsg::Ready { id, ready } => set_ready(inner, user, id, ready),
         ClientMsg::Start { id } => start(inner, user, id),
@@ -1196,8 +1333,9 @@ fn bot_name(used: &[String]) -> String {
 #[cfg(test)]
 mod tests {
     use super::{
-        Inner, Socket, Table, User, act, add_bot, bots_until_a_player, create, detach_socket,
-        hello, join, leave, remove_bot, set_bots, set_ready, start,
+        ClientMsg, Inner, MatchKind, NewTable, ServerMsg, Socket, Table, User, act, add_bot,
+        bots_until_a_player, create, detach_socket, hello, join, join_open, leave, list_open,
+        remove_bot, set_bots, set_ready, start,
     };
     use ocho_engine::{BotLevel, Color, Game, Intent, Kind, Must, Phase};
     use std::collections::HashMap;
@@ -1207,9 +1345,20 @@ mod tests {
         Inner {
             sockets: HashMap::new(),
             next_socket: 0,
+            next_opened: 0,
             lobbies: HashMap::new(),
             codes: HashMap::new(),
             seated: HashMap::new(),
+        }
+    }
+
+    fn closed(players: u8, bots: Option<BotLevel>) -> NewTable {
+        NewTable {
+            players,
+            teams: false,
+            match_kind: MatchKind::One,
+            bots,
+            open: false,
         }
     }
 
@@ -1232,7 +1381,7 @@ mod tests {
     #[test]
     fn hello_repeats_a_lobby_that_has_not_dealt() {
         let mut inner = empty();
-        create(&mut inner, &user("host"), 1, 2, false, false, None).expect("create");
+        create(&mut inner, &user("host"), 1, closed(2, None)).expect("create");
         let step = hello(&inner, "host", 2);
         assert!(step.lobby.is_some());
         assert!(!step.publish);
@@ -1267,7 +1416,7 @@ mod tests {
     fn leave_refuses_a_live_hand() {
         let mut inner = empty();
         let host = user("host");
-        create(&mut inner, &host, 1, 2, false, false, None).expect("create");
+        create(&mut inner, &host, 1, closed(2, None)).expect("create");
         let lobby_id = inner.seated[&host.id].clone();
         inner.lobbies.get_mut(&lobby_id).expect("lobby").table = Some(Table {
             game: Game::create(2, false, true, &mut Seq(0)).expect("game"),
@@ -1283,8 +1432,19 @@ mod tests {
     fn bots_fill_every_other_seat_and_play_up_to_the_host() {
         let mut inner = empty();
         let host = user("host");
-        let step =
-            create(&mut inner, &host, 1, 4, true, true, Some(BotLevel::Hard)).expect("create");
+        let step = create(
+            &mut inner,
+            &host,
+            1,
+            NewTable {
+                players: 4,
+                teams: true,
+                match_kind: MatchKind::To500,
+                bots: Some(BotLevel::Hard),
+                open: false,
+            },
+        )
+        .expect("create");
         let lobby = step.lobby.expect("lobby");
         assert_eq!(lobby.bots, Some(BotLevel::Hard));
         assert_eq!(lobby.members.len(), 4);
@@ -1312,7 +1472,7 @@ mod tests {
     fn leaving_a_bot_table_drops_it_when_no_person_remains() {
         let mut inner = empty();
         let host = user("host");
-        create(&mut inner, &host, 1, 3, false, false, Some(BotLevel::Easy)).expect("create");
+        create(&mut inner, &host, 1, closed(3, Some(BotLevel::Easy))).expect("create");
         leave(&mut inner, &host, 2).expect("leave");
         assert!(inner.seated.is_empty());
         assert!(inner.lobbies.is_empty());
@@ -1322,7 +1482,7 @@ mod tests {
     fn the_host_adds_and_removes_bots_and_sets_their_skill() {
         let mut inner = empty();
         let host = user("host");
-        let step = create(&mut inner, &host, 1, 4, false, false, None).expect("create");
+        let step = create(&mut inner, &host, 1, closed(4, None)).expect("create");
         let lobby = step.lobby.expect("lobby");
         assert_eq!(lobby.members.len(), 1);
         assert!(lobby.bots.is_none());
@@ -1363,7 +1523,7 @@ mod tests {
     fn a_play_stays_on_the_discard_until_the_bot_is_due() {
         let mut inner = empty();
         let host = user("host");
-        create(&mut inner, &host, 1, 2, false, false, Some(BotLevel::Easy)).expect("create");
+        create(&mut inner, &host, 1, closed(2, Some(BotLevel::Easy))).expect("create");
         let lobby_id = inner.seated[&host.id].clone();
         let bots = vec![None, Some(BotLevel::Easy)];
         let mut dealt = None;
@@ -1422,5 +1582,100 @@ mod tests {
                 assert_eq!(view.turn, 0);
             }
         }
+    }
+
+    #[test]
+    fn create_without_open_stays_private() {
+        let msg: ClientMsg = serde_json::from_str(
+            r#"{"t":"ocho.create","id":1,"players":4,"teams":false,"match":"one"}"#,
+        )
+        .expect("parse");
+        let ClientMsg::Create { open, .. } = msg else {
+            panic!("create");
+        };
+        assert!(!open);
+        let mut inner = empty();
+        create(&mut inner, &user("host"), 1, closed(4, None)).expect("create");
+        let step = list_open(&inner, 2);
+        assert_eq!(step.tables.expect("tables").len(), 0);
+    }
+
+    #[test]
+    fn a_public_table_is_listed_without_its_code_and_can_be_sat() {
+        let mut inner = empty();
+        let first = create(
+            &mut inner,
+            &user("Anne"),
+            1,
+            NewTable {
+                players: 4,
+                teams: false,
+                match_kind: MatchKind::One,
+                bots: None,
+                open: true,
+            },
+        )
+        .expect("create");
+        let private = create(&mut inner, &user("friend"), 2, closed(2, None)).expect("private");
+        let second = create(
+            &mut inner,
+            &user("later"),
+            3,
+            NewTable {
+                players: 4,
+                teams: true,
+                match_kind: MatchKind::To500,
+                bots: None,
+                open: true,
+            },
+        )
+        .expect("second");
+        let rows = list_open(&inner, 4).tables.expect("tables");
+        let anne = first.lobby.expect("lobby").id;
+        let later = second.lobby.expect("lobby").id;
+        assert_eq!(rows.len(), 2);
+        assert_eq!(rows[0].id, anne);
+        assert_eq!(rows[0].host_name, "Anne");
+        assert_eq!(rows[0].players, 4);
+        assert_eq!(rows[0].seated, 1);
+        assert!(!rows[0].teams);
+        assert_eq!(rows[0].match_kind, MatchKind::One);
+        assert_eq!(rows[1].id, later);
+        assert!(rows[1].teams);
+        assert_eq!(rows[1].match_kind, MatchKind::To500);
+        let secret = private.lobby.expect("private").code;
+        let text = serde_json::to_string(&ServerMsg::Tables { tables: rows }).expect("json");
+        assert!(text.contains("\"t\":\"ocho.tables\""));
+        assert!(!text.contains("\"code\""));
+        assert!(!text.contains(&secret));
+        let hidden = inner.codes[&secret].clone();
+        let err = join_open(&mut inner, &user("guest"), 5, &hidden);
+        assert!(matches!(err, Err((_, "NOT_FOUND", _))));
+        assert!(!inner.seated.contains_key("guest"));
+        let err = join_open(&mut inner, &user("guest"), 6, "missing");
+        assert!(matches!(err, Err((_, "NOT_FOUND", _))));
+        let sat = join_open(&mut inner, &user("guest"), 7, &anne).expect("sit");
+        let lobby = sat.lobby.expect("lobby");
+        assert_eq!(lobby.members.len(), 2);
+        assert!(join(&mut inner, &user("bycode"), 8, &lobby.code).is_ok());
+        for (n, name) in ["p1", "p2", "p3"].into_iter().enumerate() {
+            join_open(
+                &mut inner,
+                &user(name),
+                20 + u64::try_from(n).expect("seat"),
+                &later,
+            )
+            .expect("fill");
+        }
+        let err = join_open(&mut inner, &user("extra"), 30, &later);
+        assert!(matches!(err, Err((_, "LOBBY_FULL", _))));
+        inner.lobbies.get_mut(&anne).expect("row").table = Some(Table {
+            game: Game::create(4, false, false, &mut Seq(1)).expect("game"),
+            seats: vec!["Anne".to_owned()],
+            bots: vec![None],
+        });
+        let waiting = list_open(&inner, 31).tables.expect("tables");
+        assert!(waiting.iter().all(|row| row.id != anne));
+        assert!(waiting.iter().any(|row| row.id == later && row.seated == 4));
     }
 }
