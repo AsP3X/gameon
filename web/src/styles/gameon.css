@@ -2968,12 +2968,6 @@ html:has(.go-sheet[open]) {
     align-items: center;
     padding: 24px;
   }
-  /* The Ocho form keeps to the window's height: the two choices side by side. */
-  .go-finder-pair {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 16px;
-  }
   /* One card that keeps to the window. It does not scroll: the list scrolls in the left column, and
      the right column only when the window is shorter than the form. */
   .go-finder .go-sheet-panel {
@@ -3023,7 +3017,9 @@ html:has(.go-sheet[open]) {
     min-height: 0;
     overflow-y: auto;
     overscroll-behavior: contain;
-    padding: 0 6px 6px 24px;
+    /* Room on the right for the end stops of the players, which reach 8px past the track, and
+       below for the last button's lip; with their focus rings, so nothing scrolls sideways. */
+    padding: 0 16px 10px 24px;
     border-top: 0;
     border-left: 2px solid var(--line);
   }
