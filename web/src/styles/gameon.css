@@ -2518,6 +2518,19 @@ html:has(.go-sheet[open]) {
   color: var(--fg);
   font-family: var(--f-ui);
 }
+/* The browser's own modal rule is more specific than one class: it caps the dialog's size, gives it
+   a margin and a border, and lets it scroll. The dialog is the whole window, and only its panel
+   scrolls. */
+.go-sheet:modal {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  border: 0;
+  overflow: hidden;
+}
 .go-sheet[open] {
   display: flex;
   flex-direction: column;
@@ -2526,7 +2539,10 @@ html:has(.go-sheet[open]) {
 .go-sheet::backdrop {
   background: color-mix(in srgb, var(--c-black) 60%, transparent);
 }
+/* Positioned, so that what is hidden for all but a screen reader scrolls with it and does not reach
+   past it. */
 .go-sheet-panel {
+  position: relative;
   max-height: 80dvh;
   display: flex;
   flex-direction: column;
@@ -2572,7 +2588,14 @@ html:has(.go-sheet[open]) {
   padding-top: 8px;
   border-top: 2px solid var(--line);
 }
-/* The open games: the search and the chips, the list, and the way to open a table. */
+/* The open games: the search and the chips, the list, and the way to open a table. On a phone they
+   are one column; a wide window sets the way to open a table beside the rest. */
+.go-finder-body,
+.go-finder-find {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
 .go-finder-tools {
   display: flex;
   flex-direction: column;
@@ -2951,14 +2974,61 @@ html:has(.go-sheet[open]) {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 16px;
   }
+  /* One card that keeps to the window. It does not scroll: the list scrolls in the left column, and
+     the right column only when the window is shorter than the form. */
   .go-finder .go-sheet-panel {
-    width: 100%;
-    max-width: 560px;
+    width: min(960px, calc(100% - 48px));
     max-height: calc(100dvh - 48px);
+    overflow: hidden;
     padding: 16px 24px 24px;
     border: 2px solid var(--line);
     border-radius: 16px;
     box-shadow: 0 4px 0 var(--line);
+  }
+  .go-finder[open] .go-sheet-panel {
+    animation: none;
+  }
+  .go-finder .go-finder-body {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: minmax(0, 1fr);
+    gap: 24px;
+    flex: 1;
+    min-height: 0;
+  }
+  .go-finder-find {
+    min-height: 0;
+  }
+  .go-finder-find > * {
+    flex: none;
+  }
+  .go-finder .go-finder-find .go-tables {
+    display: flex;
+    flex-direction: column;
+    flex: 0 1 auto;
+    min-height: 0;
+  }
+  .go-finder .go-tables > * {
+    flex: none;
+  }
+  .go-finder .go-tables > ul {
+    position: relative;
+    flex: 0 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+  .go-finder-new {
+    position: relative;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 0 6px 6px 24px;
+    border-top: 0;
+    border-left: 2px solid var(--line);
+  }
+  .go-finder-new > * {
+    flex: none;
   }
   .go-lib-seat .go-seat {
     padding: 16px;

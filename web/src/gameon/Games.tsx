@@ -466,129 +466,131 @@ function Finder(props: FinderProps) {
     ochoFailed = ocho === 'failed';
 
   return (
-    <>
-      <div className="go-finder-tools">
-        <label className="go-finder-search">
-          <Icon name="search" />
-          <span className="go-sr">Search tables</span>
-          <input
-            ref={props.search}
-            type="search"
-            placeholder="A name or a game"
-            autoComplete="off"
-            spellCheck={false}
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
-        </label>
-        <div className="go-finder-chips" role="group" aria-label="Game">
-          {FILTERS.map((f) => (
-            <button key={f.value} type="button" aria-pressed={filter === f.value} onClick={() => setFilter(f.value)}>
-              {f.label}
-            </button>
-          ))}
+    <div className="go-finder-body">
+      <div className="go-finder-find">
+        <div className="go-finder-tools">
+          <label className="go-finder-search">
+            <Icon name="search" />
+            <span className="go-sr">Search tables</span>
+            <input
+              ref={props.search}
+              type="search"
+              placeholder="A name or a game"
+              autoComplete="off"
+              spellCheck={false}
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+            />
+          </label>
+          <div className="go-finder-chips" role="group" aria-label="Game">
+            {FILTERS.map((f) => (
+              <button key={f.value} type="button" aria-pressed={filter === f.value} onClick={() => setFilter(f.value)}>
+                {f.label}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
-      <section className="go-tables" aria-labelledby={`${ids}-title`}>
-        <div className="go-tables-head">
-          <h3 id={`${ids}-title`}>Tables with a free seat</h3>
-          {!loading && <span className="pill green">{rows.length}</span>}
-        </div>
-        {props.refused && (
-          <p className="alert go-tables-refused" role="alert">
-            {props.refused}
-          </p>
-        )}
-        {shown.length > 0 && (
-          <ul>
-            {shown.map((row) => {
-              const format = `${ids}-format-${row.key}`,
-                title = `${ids}-table-${row.key}`;
-              return (
-                <li key={row.key}>
-                  <span
-                    className={row.color ? 'avatar' : 'avatar plain'}
-                    style={row.color ? { background: row.color } : undefined}
-                    aria-hidden="true"
-                  >
-                    {initialOf(row.host)}
-                  </span>
-                  <span className="go-table-text">
-                    <span className="go-sr">{GAME_NAME[row.game]}: </span>
-                    <span className="pill format" id={format}>
-                      {row.pill}
+        <section className="go-tables" aria-labelledby={`${ids}-title`}>
+          <div className="go-tables-head">
+            <h3 id={`${ids}-title`}>Tables with a free seat</h3>
+            {!loading && <span className="pill green">{rows.length}</span>}
+          </div>
+          {props.refused && (
+            <p className="alert go-tables-refused" role="alert">
+              {props.refused}
+            </p>
+          )}
+          {shown.length > 0 && (
+            <ul>
+              {shown.map((row) => {
+                const format = `${ids}-format-${row.key}`,
+                  title = `${ids}-table-${row.key}`;
+                return (
+                  <li key={row.key}>
+                    <span
+                      className={row.color ? 'avatar' : 'avatar plain'}
+                      style={row.color ? { background: row.color } : undefined}
+                      aria-hidden="true"
+                    >
+                      {initialOf(row.host)}
                     </span>
-                    <b id={title}>{row.title}</b>
-                  </span>
-                  <button
-                    type="button"
-                    className="btn ghost go-btn small"
-                    aria-describedby={`${format} ${title}`}
-                    disabled={row.game === 'ocho' && props.busy}
-                    onClick={row.join}
-                  >
-                    Join
-                  </button>
-                  <span className="go-table-more">
-                    <small>{row.lines[0]}</small>
-                    <small>{row.lines[1]}</small>
-                  </span>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-        {rows.length > 0 && shown.length === 0 && (
-          <div className="go-tables-note">
-            <p>No table matches that.</p>
-          </div>
-        )}
-        {loading && (
-          <div className="go-tables-wait" role="status" aria-label="Looking for open games">
-            <span></span>
-            <span></span>
-          </div>
-        )}
-        {skFailed && ochoFailed ? (
-          <div className="go-tables-note">
-            <p className="alert" role="alert">
-              The tables could not be loaded.
-            </p>
-            <button
-              type="button"
-              className="btn ghost go-btn full"
-              onClick={() => {
-                props.onAgainSk();
-                props.onAgainOcho();
-              }}
-            >
-              Try again
-            </button>
-          </div>
-        ) : skFailed || ochoFailed ? (
-          <div className="go-tables-note">
-            <p className="alert" role="alert">
-              {skFailed ? 'Skull King’s tables could not be loaded.' : 'Ocho’s tables could not be loaded.'}
-            </p>
-            <button
-              type="button"
-              className="btn ghost go-btn full"
-              onClick={skFailed ? props.onAgainSk : props.onAgainOcho}
-            >
-              Try again
-            </button>
-          </div>
-        ) : !loading && rows.length === 0 ? (
-          <div className="go-tables-note">
-            <p>No open tables right now. Open one and others can sit down.</p>
-          </div>
-        ) : null}
-        <p className="go-tables-foot">
-          <Link to={AT.join} className="go-text-link">
-            Join with a code
-          </Link>
-        </p>
-      </section>
+                    <span className="go-table-text">
+                      <span className="go-sr">{GAME_NAME[row.game]}: </span>
+                      <span className="pill format" id={format}>
+                        {row.pill}
+                      </span>
+                      <b id={title}>{row.title}</b>
+                    </span>
+                    <button
+                      type="button"
+                      className="btn ghost go-btn small"
+                      aria-describedby={`${format} ${title}`}
+                      disabled={row.game === 'ocho' && props.busy}
+                      onClick={row.join}
+                    >
+                      Join
+                    </button>
+                    <span className="go-table-more">
+                      <small>{row.lines[0]}</small>
+                      <small>{row.lines[1]}</small>
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+          {rows.length > 0 && shown.length === 0 && (
+            <div className="go-tables-note">
+              <p>No table matches that.</p>
+            </div>
+          )}
+          {loading && (
+            <div className="go-tables-wait" role="status" aria-label="Looking for open games">
+              <span></span>
+              <span></span>
+            </div>
+          )}
+          {skFailed && ochoFailed ? (
+            <div className="go-tables-note">
+              <p className="alert" role="alert">
+                The tables could not be loaded.
+              </p>
+              <button
+                type="button"
+                className="btn ghost go-btn full"
+                onClick={() => {
+                  props.onAgainSk();
+                  props.onAgainOcho();
+                }}
+              >
+                Try again
+              </button>
+            </div>
+          ) : skFailed || ochoFailed ? (
+            <div className="go-tables-note">
+              <p className="alert" role="alert">
+                {skFailed ? 'Skull King’s tables could not be loaded.' : 'Ocho’s tables could not be loaded.'}
+              </p>
+              <button
+                type="button"
+                className="btn ghost go-btn full"
+                onClick={skFailed ? props.onAgainSk : props.onAgainOcho}
+              >
+                Try again
+              </button>
+            </div>
+          ) : !loading && rows.length === 0 ? (
+            <div className="go-tables-note">
+              <p>No open tables right now. Open one and others can sit down.</p>
+            </div>
+          ) : null}
+          <p className="go-tables-foot">
+            <Link to={AT.join} className="go-text-link">
+              Join with a code
+            </Link>
+          </p>
+        </section>
+      </div>
       <section className="go-finder-new" aria-labelledby={`${ids}-new`}>
         <h3 id={`${ids}-new`} className="go-sr">
           Open a table
@@ -598,7 +600,7 @@ function Finder(props: FinderProps) {
         </Link>
         <NewOcho link={link} busy={props.busy} error={props.failed} onOpen={props.onOpenOcho} />
       </section>
-    </>
+    </div>
   );
 }
 
