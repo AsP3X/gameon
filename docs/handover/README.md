@@ -25,6 +25,7 @@ Nothing in this folder, unless the owner names that file in the current request.
 | `198` | Withdrawn by `199`. `M5myF` is the PLAY button in the phone nav, not a section. |
 | `199` | Closed. `M5myF` and `vMRbF` say Games. The three-button menu is gone. `design/gameon.pen` is 7,806,381 bytes, written 2026-10-17 20:59. |
 | `200` | Drawn in the open Pen document, not on disk. The four Games frames are the library. The file on disk is still 7,444,055 bytes, written 2026-10-17 21:00. |
+| `201` | Closed. The Games library is in the app, commit `ab63b50`. `vp test`: 848 passed. The pen file was not saved. |
 
 `171` was never written. Leave that gap.
 
