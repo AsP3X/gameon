@@ -20,6 +20,7 @@ Nothing in this folder, unless the owner names that file in the current request.
 | `193` | Closed as a prompt. Phone landing proposal, already exported. The owner has not accepted it. |
 | `194` | Withdrawn. `195` replaced it. Running it would turn the desktop landing frames into a phone page. |
 | `195` | Closed as a prompt. Desktop landing proposal, already exported. The owner has not accepted it. |
+| `196` | Drawn in the open Pen document, not on disk. The phone bars of `z8V6wL` and `h6hTpa` show Games, then PLAY. The file is still 7,838,095 bytes, written 2026-10-17 20:41. |
 
 `171` was never written. Leave that gap.
 
