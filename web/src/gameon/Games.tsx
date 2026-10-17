@@ -331,22 +331,24 @@ function NewOcho(props: {
   const [to500, setTo500] = useState(false);
   return (
     <div className="go-finder-ocho">
-      <div className="go-finder-field">
+      <div className="go-finder-field go-finder-players">
         <h4>Players</h4>
         <Stepper value={teams ? 4 : players} locked={teams} onChange={setPlayers} />
       </div>
-      <div className="go-finder-field">
-        <h4>Table</h4>
-        <div className="oc-choices">
-          <ChoiceButton label="Free-for-all" sub="2 to 8 players" on={!teams} onPick={() => setTeams(false)} />
-          <ChoiceButton label="Teams" sub="2v2 only" on={teams} onPick={() => setTeams(true)} />
+      <div className="go-finder-pair">
+        <div className="go-finder-field">
+          <h4>Table</h4>
+          <div className="oc-choices">
+            <ChoiceButton label="Free-for-all" sub="2 to 8 players" on={!teams} onPick={() => setTeams(false)} />
+            <ChoiceButton label="Teams" sub="2v2 only" on={teams} onPick={() => setTeams(true)} />
+          </div>
         </div>
-      </div>
-      <div className="go-finder-field">
-        <h4>Match</h4>
-        <div className="oc-choices">
-          <ChoiceButton label="One hand" on={!to500} onPick={() => setTo500(false)} />
-          <ChoiceButton label="First to 500" on={to500} onPick={() => setTo500(true)} />
+        <div className="go-finder-field">
+          <h4>Match</h4>
+          <div className="oc-choices">
+            <ChoiceButton label="One hand" on={!to500} onPick={() => setTo500(false)} />
+            <ChoiceButton label="First to 500" on={to500} onPick={() => setTo500(true)} />
+          </div>
         </div>
       </div>
       {props.error && (
@@ -533,7 +535,9 @@ function Finder(props: FinderProps) {
         </p>
       </section>
       <section className="go-finder-new" aria-labelledby={`${ids}-new`}>
-        <h3 id={`${ids}-new`}>Open a table</h3>
+        <h3 id={`${ids}-new`} className="go-sr">
+          Open a table
+        </h3>
         <Link to={AT.newPublicTable} className="btn ghost go-btn full">
           Open a Skull King table
         </Link>
@@ -708,11 +712,13 @@ export function Games({ online, ocho, who, seated, season, onJoin }: GamesProps)
             {tablesHere && (
               <section className="go-lib-find" aria-labelledby="go-find-title">
                 <h2 id="go-find-title">Open games</h2>
-                <p>Skull King and Ocho, in one list.</p>
-                <button type="button" className="btn go-btn" onClick={openFinder}>
-                  <Icon name="search" />
-                  Look for open games
-                </button>
+                <div className="go-lib-find-card">
+                  <p>Skull King and Ocho, in one list.</p>
+                  <button type="button" className="btn go-btn" onClick={openFinder}>
+                    <Icon name="search" />
+                    Look for open games
+                  </button>
+                </div>
               </section>
             )}
             <section className="go-lib-seat" aria-labelledby="go-seat-title">

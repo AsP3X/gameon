@@ -2652,7 +2652,8 @@ html:has(.go-sheet[open]) {
   font-size: 18px;
   font-weight: 900;
 }
-.go-finder-ocho {
+.go-finder-ocho,
+.go-finder-pair {
   display: flex;
   flex-direction: column;
   gap: 14px;
@@ -2781,6 +2782,11 @@ html:has(.go-sheet[open]) {
   .go-lib-find {
     display: flex;
     flex-direction: column;
+    gap: 12px;
+  }
+  .go-lib-find-card {
+    display: flex;
+    flex-direction: column;
     align-items: flex-start;
     gap: 12px;
     padding: 20px;
@@ -2810,6 +2816,17 @@ html:has(.go-sheet[open]) {
     justify-content: center;
     align-items: center;
     padding: 24px;
+  }
+  /* The Ocho form keeps to the window's height: the number beside its label, the two choices side by side. */
+  .go-finder-players {
+    flex-direction: row;
+    align-items: center;
+    gap: 16px;
+  }
+  .go-finder-pair {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
   }
   .go-finder .go-sheet-panel {
     width: 100%;

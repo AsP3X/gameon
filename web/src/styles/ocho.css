@@ -399,6 +399,12 @@
 .oc-choice.oc-on small {
   color: var(--blue-ink);
 }
+/* Games' open-games dialog puts two choices in half its width on a wide window. */
+@media (min-width: 1000px) {
+  .go-finder-pair .oc-choice {
+    padding-inline: 12px;
+  }
+}
 .oc-note {
   display: flex;
   align-items: center;
