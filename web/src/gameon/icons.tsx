@@ -10,6 +10,12 @@
 import type { ReactNode } from 'react';
 
 const SHAPES = {
+  search: (
+    <>
+      <circle cx="11" cy="11" r="8" />
+      <path d="m21 21-4.34-4.34" />
+    </>
+  ),
   bot: (
     <>
       <path d="M12 8V4H8" />

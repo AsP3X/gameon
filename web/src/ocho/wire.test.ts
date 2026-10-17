@@ -52,6 +52,27 @@ describe("Ocho's wire", () => {
     ).toBeNull();
   });
 
+  it('reads the public tables, an empty list too, and drops a row that lacks what a row carries', () => {
+    const anne = { id: 'l7', hostName: 'Anne', players: 4, seated: 1, teams: false, match: 'one' };
+    const full = { id: 'l8', hostName: '<b>Teo</b>', players: 4, seated: 4, teams: true, match: 'to500' };
+    expect(parseFrame(frame({ t: 'ocho.tables', tables: [anne, { ...full, extra: 1 }] }))).toEqual({
+      t: 'ocho.tables',
+      tables: [anne, full],
+    });
+    expect(parseFrame(frame({ t: 'ocho.tables', tables: [] }))).toEqual({ t: 'ocho.tables', tables: [] });
+    for (const key of ['id', 'hostName', 'players', 'seated', 'teams', 'match']) {
+      const row: Record<string, unknown> = { ...anne };
+      delete row[key];
+      expect(parseFrame(frame({ t: 'ocho.tables', tables: [row] }))).toBeNull();
+    }
+    expect(parseFrame(frame({ t: 'ocho.tables', tables: [{ ...anne, match: 'to100' }] }))).toBeNull();
+    expect(parseFrame(frame({ t: 'ocho.tables', tables: [{ ...anne, seated: '1' }] }))).toBeNull();
+    expect(parseFrame(frame({ t: 'ocho.tables' }))).toBeNull();
+    // A lobby does not say whether it is public: one without `open` reads as it always did.
+    expect(parseFrame(frame({ t: 'ocho.lobby', lobby: aLobby() }))).toEqual({ t: 'ocho.lobby', lobby: aLobby() });
+    expect(parseFrame(frame({ t: 'ocho.lobbies', tables: [] }))).toBeNull();
+  });
+
   it("names cards and the match the way the table's frames do", () => {
     expect(cardName(card(1, 'yellow', { number: 7 }))).toBe('Yellow 7');
     expect(cardName(card(2, 'blue', 'draw2'))).toBe('Blue Draw 2');

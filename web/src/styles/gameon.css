@@ -882,7 +882,7 @@
   padding: 10px 16px;
   background: var(--soft);
 }
-.go-tables h2 {
+.go-tables h3 {
   font-size: 12px;
   font-weight: 900;
   letter-spacing: 0.085em;
@@ -940,8 +940,13 @@
   gap: 12px;
   padding: 18px 16px;
 }
-#gameon .go-tables-note .alert {
+#gameon .go-tables-note .alert,
+#gameon .go-tables-refused {
   color: var(--red-ink);
+}
+.go-tables-refused {
+  padding: 12px 16px;
+  border-top: 2px solid var(--line);
 }
 /* Two rows that are not there yet: an avatar and two lines each. */
 .go-tables-wait span {
@@ -2560,27 +2565,112 @@ html:has(.go-sheet[open]) {
   outline: 3px solid var(--blue);
   outline-offset: 2px;
 }
-/* The tables' list is what scrolls, inside the sheet. */
-.go-sheet-panel > .go-tables {
-  flex: 0 1 auto;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-}
-.go-sheet-panel > .go-tables ul {
-  min-height: 0;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-}
-.go-sheet-panel > .go-tables .go-tables-foot {
-  flex: none;
-}
 .go-sheet-links {
   display: flex;
   flex-wrap: wrap;
   gap: 0 20px;
   padding-top: 8px;
   border-top: 2px solid var(--line);
+}
+/* The open games: the search and the chips, the list, and the way to open a table. */
+.go-finder-tools {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.go-finder-search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  padding-inline: 14px;
+  border: 2px solid var(--line);
+  border-radius: 12px;
+  background: var(--soft);
+  color: var(--muted);
+}
+.go-finder-search:focus-within {
+  border-color: var(--blue);
+  background: var(--bg);
+}
+.go-finder-search .go-icon {
+  flex: none;
+  width: 20px;
+  height: 20px;
+}
+#gameon .go-finder-search input {
+  flex: 1;
+  min-width: 0;
+  min-height: 44px;
+  border: 0;
+  outline: none;
+  background: none;
+  font: inherit;
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--fg);
+}
+.go-finder-search input::placeholder {
+  color: var(--muted);
+  opacity: 1;
+}
+.go-finder-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.go-finder-chips button {
+  min-height: 44px;
+  padding: 0 18px;
+  border: 2px solid var(--line);
+  border-radius: 99px;
+  background: var(--bg);
+  font-size: 14px;
+  font-weight: 900;
+  color: var(--muted);
+}
+.go-finder-chips button[aria-pressed='true'] {
+  border-color: var(--green-bg);
+  background: var(--green-bg);
+  color: var(--green-ink);
+}
+.go-finder-chips button:focus-visible {
+  outline: 3px solid var(--blue);
+  outline-offset: 2px;
+}
+.go-finder .go-tables {
+  box-shadow: none;
+}
+.go-finder-new {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-top: 16px;
+  border-top: 2px solid var(--line);
+}
+.go-finder-new h3 {
+  font-size: 18px;
+  font-weight: 900;
+}
+.go-finder-ocho {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.go-finder-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.go-finder-field h4 {
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+#gameon .go-finder-ocho .alert {
+  color: var(--red-ink);
 }
 @media (prefers-reduced-motion: no-preference) {
   .go-sheet[open] .go-sheet-panel {
@@ -2681,92 +2771,54 @@ html:has(.go-sheet[open]) {
     gap: 12px;
   }
   .go-lib-seat h2,
-  .go-lib-tables h2 {
+  .go-lib-find h2 {
     font-size: 24px;
     font-weight: 800;
     line-height: 1.2;
-    letter-spacing: 0;
-    text-transform: none;
     color: var(--fg);
   }
-  .go-lib-tables {
+  /* The way to the open games: a short panel where the list was. */
+  .go-lib-find {
     display: flex;
     flex-direction: column;
+    align-items: flex-start;
     gap: 12px;
-    overflow: visible;
-    border: 0;
-    border-radius: 0;
-    box-shadow: none;
-  }
-  .go-lib-tables .go-tables-head {
-    justify-content: flex-start;
-    min-height: 0;
-    padding: 0;
-    background: none;
-  }
-  .go-lib-tables ul {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-  }
-  /* A row: what the table plays and its name, its rounds and seats, and Join. */
-  #gameon .go-lib-tables li {
-    min-height: 72px;
-    grid-template-columns: minmax(0, 1fr) auto auto;
-    grid-template-areas: 'text more join';
-    gap: 16px;
-    padding: 10px 12px 10px 16px;
+    padding: 20px;
     border: 2px solid var(--line);
     border-radius: 16px;
+    background: var(--bg);
     box-shadow: 0 4px 0 var(--line);
   }
-  .go-lib-tables .go-table-text {
-    grid-area: text;
-    display: flex;
+  .go-lib-find p {
+    font-size: 16px;
+    color: var(--muted);
+  }
+  #gameon .go-lib-find .go-btn {
+    display: inline-flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
+    min-height: 52px;
+    padding-inline: 24px;
+    font-size: 16px;
   }
-  .go-lib-tables .go-table-text .pill {
-    flex: none;
-    margin: 0;
+  .go-lib-find .go-icon {
+    width: 20px;
+    height: 20px;
   }
-  .go-lib-tables .go-table-more {
-    grid-area: more;
-    text-align: right;
+  /* The open games, in the middle of the window rather than rising from its foot. */
+  .go-finder[open] {
+    justify-content: center;
+    align-items: center;
+    padding: 24px;
   }
-  .go-lib-tables .go-table-more small {
-    font-size: 14px;
-    font-weight: 700;
-  }
-  .go-lib-tables li .go-btn {
-    grid-area: join;
-  }
-  .go-lib-tables .go-tables-foot {
-    justify-content: flex-start;
-    gap: 0 24px;
-    min-height: 0;
-    padding: 0;
-    border: 0;
-  }
-  .go-lib-tables .go-tables-note {
-    padding: 18px 16px;
+  .go-finder .go-sheet-panel {
+    width: 100%;
+    max-width: 560px;
+    max-height: calc(100dvh - 48px);
+    padding: 16px 24px 24px;
     border: 2px solid var(--line);
     border-radius: 16px;
     box-shadow: 0 4px 0 var(--line);
-  }
-  .go-lib-tables .go-tables-note .go-btn {
-    align-self: flex-start;
-    width: auto;
-  }
-  .go-lib-tables .go-tables-wait {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-  }
-  .go-lib-tables .go-tables-wait span {
-    height: 72px;
-    border: 2px solid var(--line);
-    border-radius: 16px;
   }
   .go-lib-seat .go-seat {
     padding: 16px;

@@ -1,16 +1,24 @@
 /* Games: the library. The two live games are the page, each with its own Play, and above them the
-   way back into a game that is still open. On a wide window the public tables that have room and
-   the player's seat sit under the games, and what is coming under those. On a phone the games
-   scroll above a bar whose two buttons open the tables and the player's seat as sheets.
+   way back into a game that is still open. On a wide window the way to the open games and the
+   player's seat sit under the games, and what is coming under those. On a phone the games scroll
+   above a bar whose two buttons open the open games and the player's seat.
+
+   The open games are one dialog for both widths: Skull King's public tables and Ocho's, in one list,
+   and the way to open a table of either. Nothing is listed on the page itself.
 
    A player who comes here is on their way in, so a browser without a session gets a guest here, as
-   it does when it connects. Everything about the player and the tables is what the server said
-   (`Me`, `GET /lobbies`). The game saved on this device is read from where the renderer keeps it.
-   Sitting down at a table is not done here: the online screens do it. */
-import { useEffect, useId, useRef, useState } from 'react';
-import type { ReactNode, RefObject } from 'react';
+   it does when it connects. Everything about the player and the tables is what the servers said
+   (`Me`, `GET /lobbies`, `ocho.tables`). Ocho's socket is opened only when the dialog is. The game
+   saved on this device is read from where the renderer keeps it. Sitting down at a Skull King table
+   is not done here: the online screens do it. An Ocho table is sat down at by its lobby id, and
+   Ocho's page takes it from there. */
+import { useContext, useEffect, useId, useRef, useState, useSyncExternalStore } from 'react';
+import type { MouseEvent, ReactNode, RefObject } from 'react';
 import type { Online } from '../net/online';
-import type { Format, LobbyId, LobbySummary, Me, Season } from '../protocol/generated';
+import type { OchoClient, OchoLink } from '../ocho/client';
+import { ChoiceButton, Stepper } from '../ocho/Ocho';
+import type { OpenTable } from '../ocho/wire';
+import type { LobbyId, LobbySummary, Me, Season } from '../protocol/generated';
 import { initialOf } from '../online/parts';
 import { describeRow } from '../online/settings';
 import { AT } from '../router/addresses';
@@ -18,29 +26,18 @@ import { cssColor, whole } from '../tableview/dom';
 import { CardFan, OchoFan } from './art';
 import { showsOcho, showsSkullKing, soonOn } from './catalog';
 import type { Shelf } from './catalog';
-import { FootLinks, Footer, Link, Nav, useTitle, useWide } from './Frame';
+import { FootLinks, Footer, GoContext, Link, Nav, useTitle, useWide } from './Frame';
 import type { Who } from './Frame';
 import { Icon } from './icons';
 import { DOORS, Shelves } from './Landing';
 import { savedGame, savedTitle } from './saved';
 import type { SavedGame } from './saved';
 
-/** How many open tables the page shows. The rest are behind "All public tables". */
-const TABLES_SHOWN = 6;
-
-/**
- * The open tables the page shows, in the server's order: the first of each length of game, so that
- * none of the five is missing while it has a table with room, and then the others for as long as
- * there are places left. The length is the row's own (`settings.format`), not its place in the list.
- */
-function shown(open: LobbySummary[]): LobbySummary[] {
-  const first = new Map<Format, LobbySummary>();
-  for (const lobby of open) if (!first.has(lobby.settings.format)) first.set(lobby.settings.format, lobby);
-  let rest = TABLES_SHOWN - first.size;
-  return open.filter((lobby) => first.get(lobby.settings.format) === lobby || rest-- > 0);
-}
-
-type Tables = { state: 'loading' } | { state: 'failed' } | { state: 'ready'; open: LobbySummary[] };
+type Load = 'loading' | 'failed' | 'ready';
+/** Skull King's public tables with a free seat, kept while they are read again. */
+type SkTables = { state: Load; open: LobbySummary[] };
+type Game = 'sk' | 'ocho';
+const GAME_NAME: Record<Game, string> = { sk: 'Skull King', ocho: 'Ocho' };
 
 /** A game that is not over: what it is, how far it got, and where it goes on. */
 interface Resume {
@@ -126,106 +123,6 @@ function Jump({ resume }: { resume: Resume }) {
   );
 }
 
-/**
- * The public tables with room, as a list. On the page each row is what the table plays and its name;
- * in the phone's sheet, which is narrower, each row has its host too.
- */
-function OpenTables({
-  tables,
-  onJoin,
-  onAgain,
-  hosts,
-}: {
-  tables: Tables;
-  onJoin: (id: LobbyId) => void;
-  onAgain: () => void;
-  hosts: boolean;
-}) {
-  const ids = useId();
-  return (
-    <section className={hosts ? 'go-tables' : 'go-tables go-lib-tables'} aria-labelledby={`${ids}-title`}>
-      <div className={hosts ? 'go-tables-head go-sr' : 'go-tables-head'}>
-        <h2 id={`${ids}-title`}>Open tables · Skull King</h2>
-        {tables.state === 'ready' && <span className="pill green">{tables.open.length}</span>}
-      </div>
-      {tables.state === 'loading' ? (
-        <div className="go-tables-wait" role="status" aria-label="Looking for open tables">
-          <span></span>
-          <span></span>
-        </div>
-      ) : tables.state === 'failed' ? (
-        <div className="go-tables-note">
-          <p className="alert" role="alert">
-            The tables could not be loaded.
-          </p>
-          <button type="button" className="btn ghost go-btn full" onClick={onAgain}>
-            Try again
-          </button>
-        </div>
-      ) : tables.open.length === 0 ? (
-        <div className="go-tables-note">
-          <p>No open tables right now. Open one and others can sit down.</p>
-          <Link to={AT.newPublicTable} className="btn ghost go-btn full">
-            Create a table
-          </Link>
-        </div>
-      ) : (
-        <>
-          <ul>
-            {shown(tables.open).map((lobby, i) => {
-              const row = describeRow(lobby),
-                format = `${ids}-format-${i}`,
-                title = `${ids}-table-${i}`;
-              return (
-                <li key={lobby.id}>
-                  {hosts && (
-                    // The host's colour when the server sent one. No other is put in its place.
-                    <span
-                      className={lobby.hostColor ? 'avatar' : 'avatar plain'}
-                      style={lobby.hostColor ? { background: cssColor(lobby.hostColor) } : undefined}
-                      aria-hidden="true"
-                    >
-                      {initialOf(lobby.hostName)}
-                    </span>
-                  )}
-                  <span className="go-table-text">
-                    <span className="pill format" id={format}>
-                      {row.format}
-                    </span>
-                    {/* A row without its host's colour has no host: the server's name for it is the whole title. */}
-                    <b id={title}>{row.title}</b>
-                  </span>
-                  <button
-                    type="button"
-                    className="btn ghost go-btn small"
-                    aria-describedby={`${format} ${title}`}
-                    onClick={() => onJoin(lobby.id)}
-                  >
-                    Join
-                  </button>
-                  <span className="go-table-more">
-                    <small>{row.rounds}</small>
-                    <small>{row.seats}</small>
-                  </span>
-                </li>
-              );
-            })}
-          </ul>
-          <p className="go-tables-foot">
-            <Link to={AT.publicTables} className="go-text-link">
-              All public tables
-              <Icon name="chevronRight" />
-            </Link>
-            <Link to={AT.join} className="go-text-link">
-              Join with a code
-            </Link>
-          </p>
-        </>
-      )}
-    </section>
-  );
-}
-
 /** The player's own seat: who they are here, and where they stand in ranked. */
 function YourSeat({ me, season }: { me: Me; season: Season | null | undefined }) {
   const rating = me.rating;
@@ -302,24 +199,37 @@ function Coming({ shelf }: { shelf: Shelf }) {
   );
 }
 
-type SheetName = 'tables' | 'you';
-
 /**
- * A sheet on a phone: a native modal dialog over the page. Escape, the close button and a tap on
- * the scrim close it, and the button that opened it has the keyboard again.
+ * A dialog over the page: a native modal one. On a phone it is a sheet that rises from the bottom
+ * edge; the open games are a panel in the middle of a wide window. Escape, the close button and a
+ * click on the scrim close it, and the button that opened it has the keyboard again.
  */
-function Sheet({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
+function Sheet({
+  title,
+  onClose,
+  children,
+  className,
+  first,
+}: {
+  title: string;
+  onClose: () => void;
+  children: ReactNode;
+  className?: string;
+  /** What has the keyboard when it opens. */
+  first?: RefObject<HTMLElement | null>;
+}) {
   const dialog = useRef<HTMLDialogElement>(null);
   const titleId = useId();
   useEffect(() => {
     // Opened once. React's second mount in development finds it open already.
     if (dialog.current && !dialog.current.open) dialog.current.showModal();
-  }, []);
+    first?.current?.focus();
+  }, [first]);
   const close = (): void => dialog.current?.close();
   return (
     <dialog
       ref={dialog}
-      className="go-sheet"
+      className={className ? `go-sheet ${className}` : 'go-sheet'}
       aria-labelledby={titleId}
       onClose={onClose}
       onKeyDown={(e) => {
@@ -328,7 +238,7 @@ function Sheet({ title, onClose, children }: { title: string; onClose: () => voi
         close();
       }}
       onClick={(e) => {
-        // The dialog itself is the scrim: the sheet is a child of it.
+        // The dialog itself is the scrim: the panel is a child of it.
         if (e.target === e.currentTarget) close();
       }}
     >
@@ -345,60 +255,427 @@ function Sheet({ title, onClose, children }: { title: string; onClose: () => voi
   );
 }
 
+/** One open table of either game, as the dialog lists it. */
+interface Row {
+  key: string;
+  game: Game;
+  /** The name the search also finds the row by: its host's. */
+  host: string;
+  /** What the table plays: a Skull King length of game, or Ocho. */
+  pill: string;
+  title: string;
+  /** The rounds or the kind of match, then the seats. */
+  lines: [string, string];
+  /** The host's colour, as the server sent it. Null when it sent none: no colour is made up. */
+  color: string | null;
+  join: () => void;
+}
+
+function skRow(lobby: LobbySummary, onJoin: (id: LobbyId) => void): Row {
+  const row = describeRow(lobby);
+  return {
+    key: `sk-${lobby.id}`,
+    game: 'sk',
+    host: lobby.hostName,
+    pill: row.format,
+    // A row without its host's colour has no host: the server's name for it is the whole title.
+    title: row.title,
+    lines: [row.rounds, row.seats],
+    color: lobby.hostColor ? cssColor(lobby.hostColor) : null,
+    join: () => onJoin(lobby.id),
+  };
+}
+
+function ochoRow(table: OpenTable, onJoin: (id: string) => void): Row {
+  return {
+    key: `ocho-${table.id}`,
+    game: 'ocho',
+    host: table.hostName,
+    pill: 'Ocho',
+    title: `${table.hostName}’s table`,
+    lines: [
+      `${table.teams ? 'Teams' : 'Free-for-all'} · ${table.match === 'to500' ? 'First to 500' : 'One hand'}`,
+      `${table.seated} of ${table.players} seats`,
+    ],
+    // Ocho sends no colours.
+    color: null,
+    join: () => onJoin(table.id),
+  };
+}
+
+/** Whether a row is one the search asks for: by its host, its game, or anything the row says. */
+function matches(row: Row, query: string): boolean {
+  const q = query.trim().toLowerCase();
+  if (!q) return true;
+  return [row.host, GAME_NAME[row.game], row.pill, row.title, ...row.lines].some((text) =>
+    text.toLowerCase().includes(q),
+  );
+}
+
+type Filter = 'all' | Game;
+const FILTERS: { value: Filter; label: string }[] = [
+  { value: 'all', label: 'All' },
+  { value: 'sk', label: 'Skull King' },
+  { value: 'ocho', label: 'Ocho' },
+];
+
+/** Ocho's short form: the choices of Ocho's own sit-down, for a table anybody may join. */
+function NewOcho(props: {
+  link: OchoLink;
+  busy: boolean;
+  error: string | null;
+  onOpen: (players: number, teams: boolean, to500: boolean) => void;
+}) {
+  const [players, setPlayers] = useState(4);
+  const [teams, setTeams] = useState(false);
+  const [to500, setTo500] = useState(false);
+  return (
+    <div className="go-finder-ocho">
+      <div className="go-finder-field">
+        <h4>Players</h4>
+        <Stepper value={teams ? 4 : players} locked={teams} onChange={setPlayers} />
+      </div>
+      <div className="go-finder-field">
+        <h4>Table</h4>
+        <div className="oc-choices">
+          <ChoiceButton label="Free-for-all" sub="2 to 8 players" on={!teams} onPick={() => setTeams(false)} />
+          <ChoiceButton label="Teams" sub="2v2 only" on={teams} onPick={() => setTeams(true)} />
+        </div>
+      </div>
+      <div className="go-finder-field">
+        <h4>Match</h4>
+        <div className="oc-choices">
+          <ChoiceButton label="One hand" on={!to500} onPick={() => setTo500(false)} />
+          <ChoiceButton label="First to 500" on={to500} onPick={() => setTo500(true)} />
+        </div>
+      </div>
+      {props.error && (
+        <p className="alert" role="alert">
+          {props.error}
+        </p>
+      )}
+      <button
+        type="button"
+        className="btn go-btn full"
+        disabled={props.link !== 'online' || props.busy}
+        onClick={() => props.onOpen(teams ? 4 : players, teams, to500)}
+      >
+        Open an Ocho table
+      </button>
+    </div>
+  );
+}
+
+interface FinderProps {
+  sk: SkTables;
+  ochoTables: OpenTable[] | null;
+  ochoLoad: Load;
+  link: OchoLink;
+  busy: boolean;
+  /** Why the last Join at an Ocho table did not seat the player. */
+  refused: string | null;
+  /** Why the last Ocho table could not be opened. */
+  failed: string | null;
+  onJoinSk: (id: LobbyId) => void;
+  onJoinOcho: (id: string) => void;
+  onAgainSk: () => void;
+  onAgainOcho: () => void;
+  onOpenOcho: (players: number, teams: boolean, to500: boolean) => void;
+  search: RefObject<HTMLInputElement | null>;
+}
+
+/**
+ * The open games: a search and the games' chips over one list of both games' tables that have a
+ * free seat, Skull King's first, each in its server's order. The chips and the search hide rows and
+ * never reorder them. Under the list, the way to open a table of either game. One game late or
+ * failing leaves the other's rows where they are.
+ */
+function Finder(props: FinderProps) {
+  const { sk, ochoTables, link } = props;
+  const ids = useId();
+  const [filter, setFilter] = useState<Filter>('all');
+  const [query, setQuery] = useState('');
+  // A socket that is down is a list that failed, however long it takes to come back.
+  const ocho: Load = link === 'offline' ? 'failed' : props.ochoLoad;
+  const rows: Row[] = [
+    ...sk.open.map((lobby) => skRow(lobby, props.onJoinSk)),
+    ...(ochoTables ?? [])
+      .filter((table) => table.seated < table.players)
+      .map((table) => ochoRow(table, props.onJoinOcho)),
+  ];
+  const shown = rows.filter((row) => (filter === 'all' || row.game === filter) && matches(row, query));
+  const loading = sk.state === 'loading' || ocho === 'loading';
+  const skFailed = sk.state === 'failed',
+    ochoFailed = ocho === 'failed';
+
+  return (
+    <>
+      <div className="go-finder-tools">
+        <label className="go-finder-search">
+          <Icon name="search" />
+          <span className="go-sr">Search tables</span>
+          <input
+            ref={props.search}
+            type="search"
+            placeholder="A name or a game"
+            autoComplete="off"
+            spellCheck={false}
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+        </label>
+        <div className="go-finder-chips" role="group" aria-label="Game">
+          {FILTERS.map((f) => (
+            <button key={f.value} type="button" aria-pressed={filter === f.value} onClick={() => setFilter(f.value)}>
+              {f.label}
+            </button>
+          ))}
+        </div>
+      </div>
+      <section className="go-tables" aria-labelledby={`${ids}-title`}>
+        <div className="go-tables-head">
+          <h3 id={`${ids}-title`}>Tables with a free seat</h3>
+          {!loading && <span className="pill green">{rows.length}</span>}
+        </div>
+        {props.refused && (
+          <p className="alert go-tables-refused" role="alert">
+            {props.refused}
+          </p>
+        )}
+        {shown.length > 0 && (
+          <ul>
+            {shown.map((row) => {
+              const format = `${ids}-format-${row.key}`,
+                title = `${ids}-table-${row.key}`;
+              return (
+                <li key={row.key}>
+                  <span
+                    className={row.color ? 'avatar' : 'avatar plain'}
+                    style={row.color ? { background: row.color } : undefined}
+                    aria-hidden="true"
+                  >
+                    {initialOf(row.host)}
+                  </span>
+                  <span className="go-table-text">
+                    <span className="go-sr">{GAME_NAME[row.game]}: </span>
+                    <span className="pill format" id={format}>
+                      {row.pill}
+                    </span>
+                    <b id={title}>{row.title}</b>
+                  </span>
+                  <button
+                    type="button"
+                    className="btn ghost go-btn small"
+                    aria-describedby={`${format} ${title}`}
+                    disabled={row.game === 'ocho' && props.busy}
+                    onClick={row.join}
+                  >
+                    Join
+                  </button>
+                  <span className="go-table-more">
+                    <small>{row.lines[0]}</small>
+                    <small>{row.lines[1]}</small>
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+        {rows.length > 0 && shown.length === 0 && (
+          <div className="go-tables-note">
+            <p>No table matches that.</p>
+          </div>
+        )}
+        {loading && (
+          <div className="go-tables-wait" role="status" aria-label="Looking for open games">
+            <span></span>
+            <span></span>
+          </div>
+        )}
+        {skFailed && ochoFailed ? (
+          <div className="go-tables-note">
+            <p className="alert" role="alert">
+              The tables could not be loaded.
+            </p>
+            <button
+              type="button"
+              className="btn ghost go-btn full"
+              onClick={() => {
+                props.onAgainSk();
+                props.onAgainOcho();
+              }}
+            >
+              Try again
+            </button>
+          </div>
+        ) : skFailed || ochoFailed ? (
+          <div className="go-tables-note">
+            <p className="alert" role="alert">
+              {skFailed ? 'Skull King’s tables could not be loaded.' : 'Ocho’s tables could not be loaded.'}
+            </p>
+            <button
+              type="button"
+              className="btn ghost go-btn full"
+              onClick={skFailed ? props.onAgainSk : props.onAgainOcho}
+            >
+              Try again
+            </button>
+          </div>
+        ) : !loading && rows.length === 0 ? (
+          <div className="go-tables-note">
+            <p>No open tables right now. Open one and others can sit down.</p>
+          </div>
+        ) : null}
+        <p className="go-tables-foot">
+          <Link to={AT.join} className="go-text-link">
+            Join with a code
+          </Link>
+        </p>
+      </section>
+      <section className="go-finder-new" aria-labelledby={`${ids}-new`}>
+        <h3 id={`${ids}-new`}>Open a table</h3>
+        <Link to={AT.newPublicTable} className="btn ghost go-btn full">
+          Open a Skull King table
+        </Link>
+        <NewOcho link={link} busy={props.busy} error={props.failed} onOpen={props.onOpenOcho} />
+      </section>
+    </>
+  );
+}
+
 export interface GamesProps {
   online: Online;
+  /** Ocho's connection, kept by the page. Games opens it only when the open games are looked at. */
+  ocho: OchoClient;
   who: Who;
   /** The player sits in a lobby on the connection this page still has. */
   seated: boolean;
   season: Season | null | undefined;
-  /** Sit down at one of the open tables. */
+  /** Sit down at one of Skull King's open tables. */
   onJoin: (id: LobbyId) => void;
 }
 
-export function Games({ online, who, seated, season, onJoin }: GamesProps) {
+/** What the page says when an Ocho table could not be sat down at. */
+const joinRefusal = (code: string, message: string): string =>
+  code === 'NOT_FOUND' ? 'That table is gone.' : code === 'LOBBY_FULL' ? 'That table is full.' : message;
+
+export function Games({ online, ocho, who, seated, season, onJoin }: GamesProps) {
   const title = useTitle('GameOn · Games');
   const wide = useWide();
+  const go = useContext(GoContext);
   const [shelf, setShelf] = useState<Shelf>('all');
-  const [tables, setTables] = useState<Tables>({ state: 'loading' });
-  const [round, setRound] = useState(0);
   const [saved] = useState(savedGame);
-  const [sheet, setSheet] = useState<SheetName | null>(null);
-  const openers: Record<SheetName, RefObject<HTMLButtonElement | null>> = {
-    tables: useRef<HTMLButtonElement>(null),
-    you: useRef<HTMLButtonElement>(null),
-  };
+  const [you, setYou] = useState(false);
+  const [finder, setFinder] = useState(false);
+  const [sk, setSk] = useState<SkTables>({ state: 'loading', open: [] });
+  const [skRound, setSkRound] = useState(0);
+  const [ochoLoad, setOchoLoad] = useState<Load>('loading');
+  const [ochoRound, setOchoRound] = useState(0);
+  const [busy, setBusy] = useState(false);
+  const [refused, setRefused] = useState<string | null>(null);
+  const [failed, setFailed] = useState<string | null>(null);
+  const ochoState = useSyncExternalStore(ocho.subscribe, ocho.getState);
+  const youOpener = useRef<HTMLButtonElement>(null);
+  const finderOpener = useRef<HTMLElement | null>(null);
+  const search = useRef<HTMLInputElement>(null);
   const me = who.is === 'player' ? who.me : null,
     session = me != null,
     resume = resumeOf(me, seated, saved),
-    // The sheets are a phone's: a window that grows wide closes the one that is open.
-    open = wide ? null : sheet;
+    link = ochoState.link,
+    // The You sheet is a phone's: a window that grows wide closes it. The open games stay open.
+    youOpen = !wide && you;
 
-  // The list needs a session, and is read once: nothing pushes changes to it.
+  // Skull King's list needs a session, and is read each time the dialog opens: nothing pushes changes to it.
   useEffect(() => {
-    if (!session) return;
+    if (!finder || !session) return;
     let stale = false;
     void online.publicLobbies().then((r) => {
       if (stale) return;
-      setTables(
+      setSk((was) =>
         r.ok
           ? { state: 'ready', open: r.value.filter((lobby) => lobby.players < lobby.settings.maxPlayers) }
-          : { state: 'failed' },
+          : { state: 'failed', open: was.open },
       );
     });
     return () => {
       stale = true;
     };
-  }, [online, session, round]);
+  }, [online, session, finder, skRound]);
 
-  const again = (): void => {
-    setTables({ state: 'loading' });
-    setRound((n) => n + 1);
+  // Ocho's socket needs the session the frame has made sure of, and is not opened before the dialog is.
+  useEffect(() => {
+    if (finder && session) ocho.open();
+  }, [ocho, finder, session]);
+
+  // Ocho's list is asked for once the socket is up, and again each time it comes back.
+  useEffect(() => {
+    if (!finder || link !== 'online') return;
+    let stale = false;
+    void ocho.send({ t: 'ocho.tables' }).then((r) => {
+      if (!stale) setOchoLoad(r.ok ? 'ready' : 'failed');
+    });
+    return () => {
+      stale = true;
+    };
+  }, [ocho, finder, link, ochoRound]);
+
+  const againSk = (): void => {
+    setSk((was) => ({ state: 'loading', open: was.open }));
+    setSkRound((n) => n + 1);
   };
-  const closeSheet = (): void => {
-    const was = sheet;
-    setSheet(null);
-    if (was) openers[was].current?.focus();
+  const againOcho = (): void => {
+    setOchoLoad('loading');
+    // A socket that is down is tried again now, not at the end of its wait.
+    if (link === 'offline') {
+      ocho.close();
+      ocho.open();
+    }
+    setOchoRound((n) => n + 1);
   };
+  const openFinder = (e: MouseEvent<HTMLElement>): void => {
+    finderOpener.current = e.currentTarget;
+    setRefused(null);
+    setFailed(null);
+    setSk((was) => ({ state: 'loading', open: was.open }));
+    setOchoLoad('loading');
+    setFinder(true);
+  };
+  const closeFinder = (): void => {
+    setFinder(false);
+    finderOpener.current?.focus();
+  };
+  const closeYou = (): void => {
+    const was = you;
+    setYou(false);
+    if (was) youOpener.current?.focus();
+  };
+
+  const joinOcho = async (id: string): Promise<void> => {
+    setBusy(true);
+    setRefused(null);
+    const r = await ocho.send({ t: 'ocho.joinOpen', lobby: id });
+    setBusy(false);
+    if (r.ok) {
+      go(AT.ocho);
+      return;
+    }
+    setRefused(joinRefusal(r.code, r.message));
+    // The table went or filled up: the list is read again.
+    if (r.code === 'NOT_FOUND' || r.code === 'LOBBY_FULL') againOcho();
+  };
+  const openOcho = async (players: number, teams: boolean, to500: boolean): Promise<void> => {
+    setBusy(true);
+    setFailed(null);
+    const made = await ocho.send({ t: 'ocho.create', players, teams, match: to500 ? 'to500' : 'one', open: true });
+    const ready = made.ok ? await ocho.send({ t: 'ocho.ready', ready: true }) : made;
+    setBusy(false);
+    if (!ready.ok) {
+      setFailed(ready.message);
+      return;
+    }
+    go(AT.ocho);
+  };
+
   const tablesHere = who.is !== 'unknown';
   const seat = me ? (
     <YourSeat me={me} season={season} />
@@ -428,7 +705,16 @@ export function Games({ online, who, seated, season, onJoin }: GamesProps) {
           {resume && <Jump resume={resume} />}
           <LiveGames shelf={shelf} />
           <div className="go-lib-cols wide-only">
-            {tablesHere && <OpenTables tables={tables} onJoin={onJoin} onAgain={again} hosts={false} />}
+            {tablesHere && (
+              <section className="go-lib-find" aria-labelledby="go-find-title">
+                <h2 id="go-find-title">Open games</h2>
+                <p>Skull King and Ocho, in one list.</p>
+                <button type="button" className="btn go-btn" onClick={openFinder}>
+                  <Icon name="search" />
+                  Look for open games
+                </button>
+              </section>
+            )}
             <section className="go-lib-seat" aria-labelledby="go-seat-title">
               <h2 id="go-seat-title">Your seat</h2>
               {seat}
@@ -439,30 +725,39 @@ export function Games({ online, who, seated, season, onJoin }: GamesProps) {
       </main>
       <Footer page="games" who={who} />
       <div className="go-lib-bar narrow-only">
-        <button type="button" className="go-bar-btn" ref={openers.tables} onClick={() => setSheet('tables')}>
-          <Icon name="grid" />
-          Tables
-        </button>
-        <button type="button" className="go-bar-btn" ref={openers.you} onClick={() => setSheet('you')}>
+        {tablesHere && (
+          <button type="button" className="go-bar-btn" onClick={openFinder}>
+            <Icon name="grid" />
+            Tables
+          </button>
+        )}
+        <button type="button" className="go-bar-btn" ref={youOpener} onClick={() => setYou(true)}>
           <Icon name="users" />
           You
         </button>
       </div>
 
-      {open === 'tables' && (
-        <Sheet title="Open tables" onClose={closeSheet}>
-          {tablesHere ? (
-            <OpenTables tables={tables} onJoin={onJoin} onAgain={again} hosts />
-          ) : (
-            <p className="go-banner">
-              <Icon name="wifiOff" />
-              Not connected. Trying again…
-            </p>
-          )}
+      {finder && tablesHere && (
+        <Sheet title="Open games" onClose={closeFinder} className="go-finder" first={search}>
+          <Finder
+            sk={sk}
+            ochoTables={ochoState.tables}
+            ochoLoad={ochoLoad}
+            link={link}
+            busy={busy}
+            refused={refused}
+            failed={failed}
+            onJoinSk={onJoin}
+            onJoinOcho={(id) => void joinOcho(id)}
+            onAgainSk={againSk}
+            onAgainOcho={againOcho}
+            onOpenOcho={(players, teams, to500) => void openOcho(players, teams, to500)}
+            search={search}
+          />
         </Sheet>
       )}
-      {open === 'you' && (
-        <Sheet title="You" onClose={closeSheet}>
+      {youOpen && (
+        <Sheet title="You" onClose={closeYou}>
           {seat}
           <nav className="go-sheet-links" aria-label="More of GameOn">
             <FootLinks page="games" />

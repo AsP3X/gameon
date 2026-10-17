@@ -15,6 +15,9 @@ import type { RawClient } from '../net/mock/raw';
 import { MockServer, STANDARD } from '../net/mock/server';
 import { Online } from '../net/online';
 import { SocketClient } from '../net/socket';
+import { OchoClient } from '../ocho/client';
+import { aLobby, fakeOcho } from '../ocho/fake';
+import type { FakeOcho } from '../ocho/fake';
 import type { GameSettings, LadderEntry, LobbySummary, Me, ServerConfig } from '../protocol/generated';
 import { isFrame, routeOf } from '../router/addresses';
 import { memoryPlaces } from '../router/places';
@@ -42,6 +45,8 @@ let places: MemoryPlaces;
 let server: MockServer;
 /** The browser the page runs in: the tests ask the server about its session through the same cookie jar. */
 let page: Backend;
+/** Ocho's server, as the page reaches it: nothing answers until a test pushes a frame. */
+let ochoServer: FakeOcho;
 
 const $ = (selector: string): HTMLElement | null => document.querySelector<HTMLElement>(selector);
 const texts = (selector: string): string[] =>
@@ -70,12 +75,38 @@ function phone(): void {
   vi.stubGlobal('matchMedia', (query: string) => ({ matches: !query.includes('min-width'), media: query }));
 }
 /** Open one of the sheets of a phone's Games by its button in the bar, and give back the dialog. */
-async function sheet(label: 'Tables' | 'You'): Promise<HTMLDialogElement> {
+async function sheet(label: 'Tables' | 'You' | 'Look for open games'): Promise<HTMLDialogElement> {
   await press(label);
   const dialog = document.querySelector<HTMLDialogElement>('dialog.go-sheet');
   if (!dialog?.open) throw new Error(`The ${label} sheet did not open`);
   return dialog;
 }
+/** Answer the page's last `ocho.tables` with these rows, before its `ok`, as Ocho's server does. */
+async function ochoLists(tables: unknown[]): Promise<void> {
+  const asked = ochoServer.sent.filter((frame) => frame.t === 'ocho.tables').at(-1);
+  if (!asked) throw new Error('The page did not ask Ocho for its tables');
+  await act(async () => {
+    ochoServer.push({ t: 'ocho.tables', tables });
+    ochoServer.push({ t: 'ok', re: asked.id });
+    await vi.advanceTimersByTimeAsync(0);
+  });
+}
+/**
+ * Open the open games, by the button a wide window has or by the phone bar's Tables, and give back
+ * the dialog. Ocho lists `ocho` unless it is null: then it has not answered.
+ */
+async function openGames(ocho: unknown[] | null = []): Promise<HTMLDialogElement> {
+  const wide = matchMedia('(min-width: 1000px)').matches;
+  const dialog = await sheet(wide ? 'Look for open games' : 'Tables');
+  await settle();
+  if (ocho) await ochoLists(ocho);
+  return dialog;
+}
+/** What each row of the open games says: what it plays, its title, and its two lines. */
+const rowsOf = (within: ParentNode): (string | null)[][] =>
+  Array.from(within.querySelectorAll('.go-tables li'), (row) =>
+    Array.from(row.querySelectorAll('.pill, b, small'), (c) => c.textContent),
+  );
 const follow = (label: string): Promise<void> => clickOn(link(label));
 const press = (label: string): Promise<void> => clickOn(button(label));
 async function type(selector: string, value: string): Promise<void> {
@@ -103,7 +134,7 @@ async function openAt(at: string): Promise<void> {
   await act(async () => {
     root?.render(
       <StrictMode>
-        <App backend={page} places={places} />
+        <App backend={page} places={places} ochoSocket={ochoServer.transport} />
       </StrictMode>,
     );
     await vi.advanceTimersByTimeAsync(0);
@@ -153,7 +184,7 @@ const cannedOnline = (answers: Answers): Online =>
     ),
   );
 /** The frame alone, with addresses of its own. An address that is not the frame's is written out. */
-function Frame({ online, at }: { online: Online; at: string }) {
+function Frame({ online, ocho, at }: { online: Online; ocho: OchoClient; at: string }) {
   const state = useSyncExternalStore(online.subscribe, online.getState);
   const [router] = useState(() => createRouter(memoryPlaces(at)));
   const path = useSyncExternalStore(router.subscribe, router.getPath);
@@ -168,13 +199,14 @@ function Frame({ online, at }: { online: Online; at: string }) {
       up={router.up}
       back={router.back}
       onJoin={() => {}}
+      ocho={ocho}
     />
   );
 }
 async function openFrame(answers: Answers, at: string): Promise<void> {
   root = createRoot(host);
   await act(async () => {
-    root?.render(<Frame online={cannedOnline(answers)} at={at} />);
+    root?.render(<Frame online={cannedOnline(answers)} ocho={new OchoClient(ochoServer.transport)} at={at} />);
     await vi.advanceTimersByTimeAsync(0);
   });
   await settle();
@@ -207,6 +239,7 @@ beforeEach(() => {
     bot: { minMs: 20, maxMs: 40 },
   });
   page = server.browser();
+  ochoServer = fakeOcho();
 });
 
 afterEach(() => {
@@ -417,6 +450,23 @@ describe('the landing', () => {
 });
 
 describe('Games', () => {
+  /** A table the server keeps open, which nobody hosts yet: no colour, nobody seated. */
+  const house = (format: GameSettings['format']): LobbySummary => ({
+    id: `house-${format}`,
+    hostName: 'Open table',
+    settings: { ...STANDARD, format },
+    players: 0,
+  });
+  const mira: LobbySummary = { id: 'lobby-1', hostName: 'Mira', hostColor: '#ce82ff', settings: SETTINGS, players: 1 };
+  const MIRA = ['Swift', 'Mira’s table', '5 rounds · 5 cards each', '1 of 3 seats'];
+  /** Anne's public Ocho table, as `ocho.tables` lists it, and its row. */
+  const anneOcho = { id: 'o1', hostName: 'Anne', players: 4, seated: 1, teams: false, match: 'one' };
+  const ANNE_OCHO = ['Ocho', 'Anne’s table', 'Free-for-all · One hand', '1 of 4 seats'];
+  const listing = async (lobbies: LobbySummary[]): Promise<void> => {
+    const guest = await aGuest();
+    await openFrame({ 'POST /auth/guest': () => ok(guest), 'GET /lobbies': () => ok({ lobbies }) }, '/games');
+  };
+
   it('makes a guest of a browser nobody knew, and says who they are', async () => {
     phone();
     await openAt('/games');
@@ -438,7 +488,7 @@ describe('Games', () => {
     expect($('.go-banner')).toBeNull();
   });
 
-  it('lays the page out as a library: the heading and the shelf, the games, the tables and the seat, and what is coming', async () => {
+  it('lays the page out as a library: the heading and the shelf, the games, the way to the open games and the seat, and what is coming', async () => {
     await openAt('/games');
     const lib = $('.go-lib');
     // The heading is on the screen, and the shelf beside it, All picked.
@@ -446,15 +496,22 @@ describe('Games', () => {
     expect(texts('.go-lib-head .go-shelves button')).toEqual(['All', 'Cards', 'Board', 'Dice']);
     expect(button('All').getAttribute('aria-pressed')).toBe('true');
     expect(lib?.querySelectorAll('.go-lib-games > .go-lib-game')).toHaveLength(2);
-    // The open tables and the seat are a wide window's. A phone has them in its sheets.
-    expect(lib?.querySelector('.go-lib-cols.wide-only .go-tables')).not.toBeNull();
+    // The way to the open games and the seat are a wide window's. A phone has them in its bar.
+    const find = lib?.querySelector('.go-lib-cols.wide-only .go-lib-find');
+    expect(find?.querySelector('h2')?.textContent).toBe('Open games');
+    expect(find?.querySelector('p')?.textContent).toBe('Skull King and Ocho, in one list.');
+    expect(find?.querySelector('button')?.textContent).toBe('Look for open games');
     expect(lib?.querySelector('.go-lib-cols .go-lib-seat h2')?.textContent).toBe('Your seat');
+    // The page lists no table, and no dialog is open.
+    expect($('.go-tables, .go-tables li, dialog')).toBeNull();
     // What is coming is on both. No felt and no seat marks are left.
     expect(lib?.querySelector('.go-coming')?.closest('.wide-only')).toBeNull();
     expect($('.go-floor, .go-felt-table, .go-seat-mark')).toBeNull();
     // The bar is a phone's, with no Play in it. The footer is a wide window's.
     expect(texts('.go-lib-bar.narrow-only button')).toEqual(['Tables', 'You']);
     expect($('.go-foot')?.classList.contains('wide-only')).toBe(true);
+    // Ocho's socket waits for the dialog.
+    expect(ochoServer.opened).toBe(0);
   });
 
   it('starts either live game from its row, and Back is Games again', async () => {
@@ -495,11 +552,16 @@ describe('Games', () => {
     expect($('#gameon h1')?.textContent).toBe('Games');
   });
 
-  it('says so when no table is open, and offers to open one', async () => {
+  it('says so when no table is open, and offers to open one of either game', async () => {
     await openAt('/games');
-    expect($('.go-tables-head .pill')?.textContent).toBe('0');
-    expect($('.go-tables-note p')?.textContent).toBe('No open tables right now. Open one and others can sit down.');
-    expect(link('Create a table').getAttribute('href')).toBe('/skull-king/online/public/new');
+    const dialog = await openGames();
+    expect(dialog.querySelector('.go-tables-head .pill')?.textContent).toBe('0');
+    expect(dialog.querySelector('.go-tables-note p')?.textContent).toBe(
+      'No open tables right now. Open one and others can sit down.',
+    );
+    expect(dialog.querySelector('.go-tables li')).toBeNull();
+    expect(link('Open a Skull King table').getAttribute('href')).toBe('/skull-king/online/public/new');
+    expect(button('Open an Ocho table').disabled).toBe(false);
   });
 
   it('lists the public tables that have room, and sits down at one through the public list', async () => {
@@ -516,26 +578,22 @@ describe('Games', () => {
     await settle();
 
     await openAt('/games');
-    expect($('.go-tables-head .pill')?.textContent).toBe('1');
-    expect(texts('.go-table-text b')).toEqual(['<i>Mary</i>’s table']);
-    // What the table plays leads the row, by its short name, then its rounds and its seats.
-    expect(texts('.go-table-text .pill')).toEqual(['Swift']);
-    expect(texts('.go-table-more small')).toEqual(['5 rounds · 5 cards each', '1 of 3 seats']);
-    // On the page it is a row of the list, with no host's avatar: that is the sheet's.
-    expect($('.go-lib-tables li')).not.toBeNull();
-    expect($('.go-lib-tables li .avatar')).toBeNull();
-    expect(link('All public tables').getAttribute('href')).toBe('/skull-king/online/public');
-    expect(link('Join with a code').getAttribute('href')).toBe('/skull-king/online/join');
-
-    // The phone's sheet lists it with its host: the avatar is the host's own colour, as the server sent it.
-    const dialog = await sheet('Tables');
-    expect(dialog.querySelector('.go-sheet-head h2')?.textContent).toBe('Open tables');
+    // The page lists nothing. The phone bar's Tables opens the dialog.
+    expect($('.go-tables')).toBeNull();
+    const dialog = await openGames();
+    expect(dialog.querySelector('.go-sheet-head h2')?.textContent).toBe('Open games');
+    expect(dialog.querySelector('.go-tables-head .pill')?.textContent).toBe('1');
+    // What the table plays leads the row, by its short name, then its title, its rounds and its seats.
+    expect(rowsOf(dialog)).toEqual([['Swift', '<i>Mary</i>’s table', '5 rounds · 5 cards each', '1 of 3 seats']]);
+    // The avatar is the host's own colour, as the server sent it.
     expect(dialog.querySelector<HTMLElement>('.go-tables li .avatar')?.className).toBe('avatar');
     expect(dialog.querySelector<HTMLElement>('.go-tables li .avatar')?.style.background).toBe('rgb(206, 130, 255)');
+    // A code, and the way to open a table. The whole public list is not linked from Games.
     expect(Array.from(dialog.querySelectorAll('a'), (a) => a.getAttribute('href'))).toEqual([
-      '/skull-king/online/public',
       '/skull-king/online/join',
+      '/skull-king/online/public/new',
     ]);
+    expect($('#gameon a[href="/skull-king/online/public"]')).toBeNull();
 
     // Games has no connection. The public list makes one and asks for the seat.
     await clickOn(dialog.querySelector<HTMLButtonElement>('.go-tables li button') ?? host);
@@ -555,6 +613,7 @@ describe('Games', () => {
     open.socket.send({ t: 'lobby.create', visibility: 'public', settings: { ...SETTINGS, maxPlayers: 2 } });
     await settle();
     await openAt('/games');
+    await openGames();
     open.socket.send({ t: 'lobby.addBot' });
     await settle();
     await press('Join');
@@ -563,7 +622,7 @@ describe('Games', () => {
     expect($('#online [role="alert"]')?.textContent).toBe('That table is full.');
   });
 
-  it('says the tables could not be loaded, and reads them again when asked', async () => {
+  it("says Skull King's tables could not be loaded, keeps Ocho's, and reads Skull King's again when asked", async () => {
     phone();
     const guest = await aGuest();
     let broken = true;
@@ -577,64 +636,114 @@ describe('Games', () => {
       },
       '/games',
     );
-    expect($('.go-tables [role="alert"]')?.textContent).toBe('The tables could not be loaded.');
+    const dialog = await openGames([anneOcho]);
+    expect(dialog.querySelector('.go-tables [role="alert"]')?.textContent).toBe(
+      'Skull King’s tables could not be loaded.',
+    );
+    expect(rowsOf(dialog)).toEqual([ANNE_OCHO]);
+    const asked = ochoServer.sent.length;
     broken = false;
     await press('Try again');
     await settle();
-    expect(texts('.go-table-text b')).toEqual(['Teo']);
-    expect(texts('.go-table-more small')).toEqual(['5 rounds · 5 cards each', '2 of 3 seats']);
+    // Only Skull King's list is read again.
+    expect(ochoServer.sent).toHaveLength(asked);
+    expect(dialog.querySelector('[role="alert"]')).toBeNull();
+    expect(rowsOf(dialog)).toEqual([['Swift', 'Teo', '5 rounds · 5 cards each', '2 of 3 seats'], ANNE_OCHO]);
     // This row came without a host's colour, as a table nobody hosts does: the name the server gave
     // it is the whole title, the avatar is plain, and no colour is made up for it.
-    const dialog = await sheet('Tables');
     expect(dialog.querySelector('.go-tables li .avatar')?.className).toBe('avatar plain');
     expect(dialog.querySelector('.go-tables li .avatar')?.getAttribute('style')).toBeNull();
   });
 
-  /** A table the server keeps open, which nobody hosts yet: no colour, nobody seated. */
-  const house = (format: GameSettings['format']): LobbySummary => ({
-    id: `house-${format}`,
-    hostName: 'Open table',
-    settings: { ...STANDARD, format },
-    players: 0,
+  it("says Ocho's tables could not be loaded, keeps Skull King's, and asks Ocho again when asked", async () => {
+    await listing([mira]);
+    const dialog = await openGames(null);
+    // Ocho has not answered: the rows in hand are there, and the dialog says it is still looking.
+    expect(rowsOf(dialog)).toEqual([MIRA]);
+    expect(dialog.querySelector('[role="status"]')?.getAttribute('aria-label')).toBe('Looking for open games');
+    expect(dialog.querySelector('.go-tables-head .pill')).toBeNull();
+    await act(async () => {
+      ochoServer.err('INTERNAL', 'Something went wrong.');
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(dialog.querySelector('[role="status"]')).toBeNull();
+    expect(dialog.querySelector('[role="alert"]')?.textContent).toBe('Ocho’s tables could not be loaded.');
+    expect(rowsOf(dialog)).toEqual([MIRA]);
+    expect(dialog.querySelector('.go-tables-head .pill')?.textContent).toBe('1');
+    await press('Try again');
+    expect(ochoServer.sent.filter((frame) => frame.t === 'ocho.tables')).toHaveLength(2);
+    await ochoLists([anneOcho]);
+    expect(dialog.querySelector('[role="alert"]')).toBeNull();
+    expect(rowsOf(dialog)).toEqual([MIRA, ANNE_OCHO]);
+
+    // A socket that drops is a list that failed too, and Skull King's rows stay.
+    await act(async () => {
+      ochoServer.drop();
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(dialog.querySelector('[role="alert"]')?.textContent).toBe('Ocho’s tables could not be loaded.');
+    expect(rowsOf(dialog)[0]).toEqual(MIRA);
+    // Try again does not wait out the socket's backoff: it connects now, and asks once it is up.
+    await press('Try again');
+    await settle();
+    expect(ochoServer.opened).toBe(2);
+    await ochoLists([]);
+    expect(dialog.querySelector('[role="alert"]')).toBeNull();
+    expect(rowsOf(dialog)).toEqual([MIRA]);
   });
-  const mira: LobbySummary = { id: 'lobby-1', hostName: 'Mira', hostColor: '#ce82ff', settings: SETTINGS, players: 1 };
-  const listing = async (lobbies: LobbySummary[]): Promise<void> => {
+
+  it('says the tables could not be loaded when neither game answers, and asks both again', async () => {
     const guest = await aGuest();
-    await openFrame({ 'POST /auth/guest': () => ok(guest), 'GET /lobbies': () => ok({ lobbies }) }, '/games');
-  };
+    let broken = true;
+    await openFrame(
+      {
+        'POST /auth/guest': () => ok(guest),
+        'GET /lobbies': () => (broken ? refused(500, 'INTERNAL') : ok({ lobbies: [mira] })),
+      },
+      '/games',
+    );
+    const dialog = await openGames(null);
+    await act(async () => {
+      ochoServer.err('INTERNAL', 'Something went wrong.');
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(texts('dialog [role="alert"]')).toEqual(['The tables could not be loaded.']);
+    broken = false;
+    await press('Try again');
+    await settle();
+    expect(ochoServer.sent.filter((frame) => frame.t === 'ocho.tables')).toHaveLength(2);
+    await ochoLists([anneOcho]);
+    expect(dialog.querySelector('[role="alert"]')).toBeNull();
+    expect(rowsOf(dialog)).toEqual([MIRA, ANNE_OCHO]);
+  });
 
   it("lists the server's own open tables, one for each length of game, and a player's as one more", async () => {
     phone();
     await listing([house('classic'), house('brawl'), house('swift'), house('even'), house('whirl'), mira]);
-    expect($('.go-tables-head .pill')?.textContent).toBe('6');
-    expect(
-      Array.from(document.querySelectorAll('.go-tables li'), (row) =>
-        Array.from(row.querySelectorAll('.pill, b, small'), (c) => c.textContent),
-      ),
-    ).toEqual([
+    const dialog = await openGames();
+    expect(dialog.querySelector('.go-tables-head .pill')?.textContent).toBe('6');
+    expect(rowsOf(dialog)).toEqual([
       ['Classic', 'Open table', '10 rounds · 1 to 10 cards', '0 of 4 seats'],
       ['Brawl', 'Open table', '5 rounds · 6 to 10 cards', '0 of 4 seats'],
       ['Swift', 'Open table', '5 rounds · 5 cards each', '0 of 4 seats'],
       ['Even', 'Open table', '10 rounds · 2, 4, 6, 8, 10 twice', '0 of 4 seats'],
       ['Whirl', 'Open table', '10 rounds · 9, 7, 5, 3, 1 twice', '0 of 4 seats'],
-      ['Swift', 'Mira’s table', '5 rounds · 5 cards each', '1 of 3 seats'],
+      MIRA,
     ]);
     // Each can be sat down at, and Join is told apart by what the table plays: five rows have the same title.
-    const joins = (within: ParentNode): (string | null | undefined)[][] =>
-      Array.from(within.querySelectorAll('.go-tables li button'), (join) =>
+    expect(
+      Array.from(dialog.querySelectorAll('.go-tables li button'), (join) =>
         (join.getAttribute('aria-describedby') ?? '').split(' ').map((id) => document.getElementById(id)?.textContent),
-      );
-    const told = [
+      ),
+    ).toEqual([
       ['Classic', 'Open table'],
       ['Brawl', 'Open table'],
       ['Swift', 'Open table'],
       ['Even', 'Open table'],
       ['Whirl', 'Open table'],
       ['Swift', 'Mira’s table'],
-    ];
-    expect(joins(document)).toEqual(told);
-    // In the phone's sheet, a table nobody hosts has the plain avatar: no colour is made up for it.
-    const dialog = await sheet('Tables');
+    ]);
+    // A table nobody hosts has the plain avatar: no colour is made up for it.
     expect(Array.from(dialog.querySelectorAll('.go-tables li .avatar'), (a) => a.className)).toEqual([
       'avatar plain',
       'avatar plain',
@@ -643,10 +752,9 @@ describe('Games', () => {
       'avatar plain',
       'avatar',
     ]);
-    expect(joins(dialog)).toEqual(told);
   });
 
-  it('leaves out none of the lengths of game, wherever its table is in the list and whoever hosts it', async () => {
+  it('lists every table that has a seat, in the order the server sent them, however long the list', async () => {
     const hosted = (n: number, format: GameSettings['format']): LobbySummary => ({
       id: `lobby-${n}`,
       hostName: `Pirate ${n}`,
@@ -667,11 +775,13 @@ describe('Games', () => {
       hosted(5, 'even'),
       hosted(6, 'brawl'),
       house('classic'),
+      { ...house('swift'), id: 'house-full', players: 4 },
     ]);
-    expect($('.go-tables-head .pill')?.textContent).toBe('11');
-    // The five lengths, and one table more: the rest are behind "All public tables".
+    const dialog = await openGames();
+    // The full one is not a row, and is not counted. None of the others is left out.
+    expect(dialog.querySelector('.go-tables-head .pill')?.textContent).toBe('11');
     expect(
-      Array.from(document.querySelectorAll('.go-table-text'), (row) =>
+      Array.from(dialog.querySelectorAll('.go-table-text'), (row) =>
         Array.from(row.querySelectorAll('.pill, b'), (c) => c.textContent),
       ),
     ).toEqual([
@@ -680,8 +790,189 @@ describe('Games', () => {
       ['Even', 'Anne’s table'],
       ['Whirl', 'Open table'],
       ['Swift', 'Pirate 1’s table'],
+      ['Swift', 'Pirate 2’s table'],
+      ['Brawl', 'Pirate 3’s table'],
+      ['Whirl', 'Pirate 4’s table'],
+      ['Even', 'Pirate 5’s table'],
+      ['Brawl', 'Pirate 6’s table'],
       ['Classic', 'Open table'],
     ]);
+  });
+
+  it("lists Ocho's tables after Skull King's, and filters and searches them without asking again", async () => {
+    await listing([mira]);
+    const dialog = await openGames([
+      anneOcho,
+      { id: 'o2', hostName: 'Ben', players: 4, seated: 4, teams: true, match: 'to500' },
+      { id: 'o3', hostName: 'Cleo', players: 4, seated: 2, teams: true, match: 'to500' },
+    ]);
+    // Ben's table is full: it is not a row and not counted.
+    expect(dialog.querySelector('.go-tables-head .pill')?.textContent).toBe('3');
+    const cleo = ['Ocho', 'Cleo’s table', 'Teams · First to 500', '2 of 4 seats'];
+    expect(rowsOf(dialog)).toEqual([MIRA, ANNE_OCHO, cleo]);
+    // Ocho sends no colour: the avatar is plain, the host's initial, and no colour is made up.
+    const avatars = Array.from(dialog.querySelectorAll<HTMLElement>('.go-tables li .avatar'));
+    expect(avatars.map((a) => [a.className, a.textContent, a.getAttribute('style')])).toEqual([
+      ['avatar', 'M', 'background: rgb(206, 130, 255);'],
+      ['avatar plain', 'A', null],
+      ['avatar plain', 'C', null],
+    ]);
+    // The search has the keyboard when the dialog opens.
+    const search = dialog.querySelector<HTMLInputElement>('input[type="search"]');
+    expect(document.activeElement).toBe(search);
+    expect(search?.closest('label')?.textContent).toBe('Search tables');
+    expect(search?.placeholder).toBe('A name or a game');
+
+    // The chips hide rows, All first.
+    const chip = (label: string): HTMLButtonElement =>
+      Array.from(dialog.querySelectorAll<HTMLButtonElement>('.go-finder-chips button')).find(
+        (b) => b.textContent === label,
+      ) ?? (host as unknown as HTMLButtonElement);
+    expect(Array.from(dialog.querySelectorAll('.go-finder-chips button'), (b) => b.textContent)).toEqual([
+      'All',
+      'Skull King',
+      'Ocho',
+    ]);
+    expect(chip('All').getAttribute('aria-pressed')).toBe('true');
+    const asked = ochoServer.sent.length;
+    await clickOn(chip('Ocho'));
+    expect(chip('Ocho').getAttribute('aria-pressed')).toBe('true');
+    expect(rowsOf(dialog)).toEqual([ANNE_OCHO, cleo]);
+    await clickOn(chip('Skull King'));
+    expect(rowsOf(dialog)).toEqual([MIRA]);
+    await clickOn(chip('All'));
+    expect(rowsOf(dialog)).toEqual([MIRA, ANNE_OCHO, cleo]);
+
+    // The search finds a host, a game, and what a row says, whatever the case.
+    await type('dialog input[type="search"]', 'ANNE');
+    expect(rowsOf(dialog)).toEqual([ANNE_OCHO]);
+    await type('dialog input[type="search"]', 'skull king');
+    expect(rowsOf(dialog)).toEqual([MIRA]);
+    await type('dialog input[type="search"]', 'ocho');
+    expect(rowsOf(dialog)).toEqual([ANNE_OCHO, cleo]);
+    await type('dialog input[type="search"]', 'first to 500');
+    expect(rowsOf(dialog)).toEqual([cleo]);
+    await clickOn(chip('Skull King'));
+    expect(rowsOf(dialog)).toEqual([]);
+    expect(dialog.querySelector('.go-tables-note p')?.textContent).toBe('No table matches that.');
+    // The count is the tables with a seat, whatever is hidden.
+    expect(dialog.querySelector('.go-tables-head .pill')?.textContent).toBe('3');
+    // Nothing was asked of the server for any of it.
+    expect(ochoServer.sent).toHaveLength(asked);
+  });
+
+  it('shows only the Ocho tables the server listed: a table the player sits at privately is not one', async () => {
+    await listing([]);
+    const dialog = await openGames([anneOcho]);
+    // The account is at a private table: the lobby frame says so, and it is not listed.
+    await act(async () => {
+      ochoServer.push({ t: 'ocho.lobby', lobby: { ...aLobby({}, 1, 4), id: 'private-1' } });
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(rowsOf(dialog)).toEqual([ANNE_OCHO]);
+    await ochoLists([]);
+    expect(rowsOf(dialog)).toEqual([]);
+    expect(dialog.querySelector('.go-tables-note p')?.textContent).toBe(
+      'No open tables right now. Open one and others can sit down.',
+    );
+  });
+
+  it("sits down at an Ocho table by its lobby id, and goes to Ocho's table", async () => {
+    await openAt('/games');
+    const dialog = await openGames([anneOcho]);
+    await clickOn(dialog.querySelector<HTMLButtonElement>('.go-tables li button') ?? host);
+    // No code: the lobby id is all the page sends.
+    expect(ochoServer.sent.at(-1)).toEqual({ t: 'ocho.joinOpen', lobby: 'o1', id: ochoServer.sent.at(-1)?.id });
+    await act(async () => {
+      ochoServer.ok();
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(places.entries()).toEqual({ paths: ['/games', '/games/ocho'], at: 1 });
+    expect($('dialog')).toBeNull();
+  });
+
+  it('says why an Ocho table could not be sat down at, and asks for the list again', async () => {
+    await listing([]);
+    const dialog = await openGames([anneOcho]);
+    const join = async (code: string, message: string): Promise<void> => {
+      await clickOn(dialog.querySelector<HTMLButtonElement>('.go-tables li button') ?? host);
+      await act(async () => {
+        ochoServer.err(code, message);
+        await vi.advanceTimersByTimeAsync(0);
+      });
+    };
+    await join('LOBBY_FULL', 'That table is full.');
+    expect(dialog.querySelector('.go-tables-refused')?.textContent).toBe('That table is full.');
+    expect(ochoServer.sent.at(-1)).toMatchObject({ t: 'ocho.tables' });
+    await ochoLists([anneOcho]);
+    await join('NOT_FOUND', 'That table is gone.');
+    expect(dialog.querySelector('.go-tables-refused')?.textContent).toBe('That table is gone.');
+    expect(ochoServer.sent.at(-1)).toMatchObject({ t: 'ocho.tables' });
+    await ochoLists([]);
+    expect(rowsOf(dialog)).toEqual([]);
+    expect($('#left')).toBeNull();
+  });
+
+  it('opens a public Ocho table from the dialog: no bots, ready, and on to the table', async () => {
+    await openAt('/games');
+    const dialog = await openGames([]);
+    const form = dialog.querySelector('.go-finder-ocho');
+    expect(Array.from(form?.querySelectorAll('h4') ?? [], (h) => h.textContent)).toEqual(['Players', 'Table', 'Match']);
+    expect(form?.querySelector('output')?.textContent).toBe('4');
+    await clickOn($('dialog [aria-label="One player more"]') ?? host);
+    await press('First to 500');
+    await press('Open an Ocho table');
+    expect(ochoServer.sent.at(-1)).toEqual({
+      t: 'ocho.create',
+      players: 5,
+      teams: false,
+      match: 'to500',
+      open: true,
+      id: ochoServer.sent.at(-1)?.id,
+    });
+    // While it is sent, it cannot be sent again.
+    expect(button('Open an Ocho table').disabled).toBe(true);
+    await act(async () => {
+      ochoServer.ok();
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(ochoServer.sent.at(-1)).toMatchObject({ t: 'ocho.ready', ready: true });
+    await act(async () => {
+      ochoServer.ok();
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(places.entries()).toEqual({ paths: ['/games', '/games/ocho'], at: 1 });
+  });
+
+  it('says why an Ocho table could not be opened, stays, and locks Teams at four', async () => {
+    await listing([]);
+    const dialog = await openGames([]);
+    await press('Teams2v2 only');
+    expect(dialog.querySelector('.go-finder-ocho output')?.textContent).toBe('4');
+    expect($('dialog [aria-label="One player more"]')?.hasAttribute('disabled')).toBe(true);
+    await press('Open an Ocho table');
+    expect(ochoServer.sent.at(-1)).toMatchObject({
+      t: 'ocho.create',
+      players: 4,
+      teams: true,
+      match: 'one',
+      open: true,
+    });
+    expect(ochoServer.sent.at(-1)).not.toHaveProperty('bots');
+    await act(async () => {
+      ochoServer.err('ALREADY_SEATED', 'You are already at a table.');
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(dialog.querySelector('.go-finder-ocho [role="alert"]')?.textContent).toBe('You are already at a table.');
+    expect(ochoServer.sent.filter((frame) => frame.t === 'ocho.ready')).toEqual([]);
+    expect($('#left')).toBeNull();
+    expect($('dialog')).not.toBeNull();
+    // A link that is down cannot open one.
+    await act(async () => {
+      ochoServer.drop();
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(button('Open an Ocho table').disabled).toBe(true);
   });
 
   it('offers Ocho in the row under Skull King, live, and not among what is coming', async () => {
@@ -821,13 +1112,14 @@ describe('Games', () => {
     expect(link('Find a ranked game').getAttribute('href')).toBe('/skull-king/ranked');
   });
 
-  it('opens the tables from the phone bar as a dialog, and Escape, the close button and the scrim close it', async () => {
+  it('opens the open games from the phone bar as a dialog, and Escape, the close button and the scrim close it', async () => {
     phone();
     await openAt('/games');
     expect($('dialog')).toBeNull();
     const opener = button('Tables');
     act(() => opener.focus());
     let dialog = await sheet('Tables');
+    expect(dialog.classList.contains('go-finder')).toBe(true);
     expect(dialog.getAttribute('aria-labelledby')).toBe(dialog.querySelector('h2')?.id);
     expect($('.go-lib-games')).not.toBeNull();
 
@@ -844,8 +1136,16 @@ describe('Games', () => {
     dialog = await sheet('Tables');
     await clickOn(dialog.querySelector<HTMLButtonElement>('.go-sheet-close') ?? host);
     expect($('dialog')).toBeNull();
+    expect(document.activeElement).toBe(opener);
 
-    // A tap on the scrim is a click on the dialog itself. One on the sheet leaves it open.
+    // A tap on the scrim is a click on the dialog itself. One on the panel leaves it open.
+    dialog = await sheet('Tables');
+    await clickOn(dialog.querySelector<HTMLElement>('.go-sheet-panel') ?? host);
+    expect($('dialog')).not.toBeNull();
+    await clickOn(dialog);
+    expect($('dialog')).toBeNull();
+    expect(document.activeElement).toBe(opener);
+
     dialog = await sheet('You');
     await clickOn(dialog.querySelector<HTMLElement>('.go-sheet-panel') ?? host);
     expect($('dialog')).not.toBeNull();
@@ -865,10 +1165,45 @@ describe('Games', () => {
     expect(places.entries()).toEqual({ paths: ['/games', '/games/ocho'], at: 1 });
   });
 
-  it('uses no dialog on a wide window', async () => {
+  it('keeps the You sheet closed on a wide window, and opens the open games from its button', async () => {
     await openAt('/games');
-    await press('Tables');
+    await press('You');
     expect($('dialog')).toBeNull();
+    const opener = button('Look for open games');
+    act(() => opener.focus());
+    const dialog = await openGames();
+    expect(dialog.classList.contains('go-finder')).toBe(true);
+    expect(dialog.querySelector('.go-sheet-head h2')?.textContent).toBe('Open games');
+    expect(ochoServer.opened).toBe(1);
+    await clickOn(dialog);
+    expect($('dialog')).toBeNull();
+    expect(document.activeElement).toBe(opener);
+  });
+
+  it('closes the You sheet when the window grows wide, and leaves the open games open', async () => {
+    let wide = false;
+    const changed = new Set<() => void>();
+    vi.stubGlobal('matchMedia', (query: string) => ({
+      matches: query.includes('min-width') ? wide : true,
+      media: query,
+      addEventListener: (_: string, fn: () => void) => changed.add(fn),
+      removeEventListener: (_: string, fn: () => void) => changed.delete(fn),
+    }));
+    const grow = async (to: boolean): Promise<void> => {
+      wide = to;
+      await act(async () => {
+        for (const fn of changed) fn();
+        await vi.advanceTimersByTimeAsync(0);
+      });
+    };
+    await openAt('/games');
+    await sheet('You');
+    await grow(true);
+    expect($('dialog')).toBeNull();
+    await grow(false);
+    await sheet('Tables');
+    await grow(true);
+    expect($('dialog.go-finder')).not.toBeNull();
   });
 
   it('says it is not connected when the server cannot be asked, and asks again by itself', async () => {
@@ -883,7 +1218,9 @@ describe('Games', () => {
     );
     expect($('.go-banner')?.textContent).toBe('Not connected. Trying again…');
     expect($('.go-banner')?.getAttribute('role')).toBe('status');
-    expect($('.go-tables')).toBeNull();
+    // There is no way to the tables, on either width.
+    expect($('.go-lib-find')).toBeNull();
+    expect(texts('.go-lib-bar button')).toEqual(['You']);
     // What needs no server is there all the same.
     expect($('#go-sk-title')).not.toBeNull();
 
@@ -891,7 +1228,8 @@ describe('Games', () => {
     await settle(RETRY_MS);
     expect($('.go-banner')).toBeNull();
     expect($('.go-lib-seat .go-seat-who small')?.textContent).toBe('Playing as a guest');
-    expect($('.go-tables')).not.toBeNull();
+    expect($('.go-lib-find')).not.toBeNull();
+    expect(texts('.go-lib-bar button')).toEqual(['Tables', 'You']);
   });
 });
 

@@ -71,7 +71,7 @@ export function GameOn({ online, state, route, go, up, back, onJoin, ocho: given
         ) : route.page === 'ochoRules' ? (
           <OchoRules />
         ) : route.page === 'games' ? (
-          <Games online={online} who={who} seated={state.lobby != null} season={season} onJoin={onJoin} />
+          <Games online={online} ocho={ocho} who={who} seated={state.lobby != null} season={season} onJoin={onJoin} />
         ) : route.page === 'signUp' ? (
           <SignUp
             who={who}

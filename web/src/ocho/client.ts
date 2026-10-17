@@ -6,7 +6,7 @@
    Nothing is decided on this side: an intent goes out, and the next `ocho.view` is the answer. */
 import type { Transport, Wire } from '../net/socket';
 import { parseFrame } from './wire';
-import type { Intent, Lobby, View } from './wire';
+import type { Intent, Lobby, OpenTable, View } from './wire';
 
 /** idle: not asked to connect. connecting: the first attempt. online: open. offline: lost, trying again. */
 export type OchoLink = 'idle' | 'connecting' | 'online' | 'offline';
@@ -15,6 +15,8 @@ export interface OchoState {
   link: OchoLink;
   lobby: Lobby | null;
   view: View | null;
+  /** The public tables the server last listed. Null until it has listed them once. */
+  tables: OpenTable[] | null;
 }
 
 /** `OFFLINE` is this client's own: there was no socket to send on, or it closed before the answer. */
@@ -30,7 +32,7 @@ export class OchoClient {
   private readonly transport: Transport;
   private readonly listeners = new Set<Listener>();
   private readonly pending = new Map<number, (result: OchoResult) => void>();
-  private state: OchoState = { link: 'idle', lobby: null, view: null };
+  private state: OchoState = { link: 'idle', lobby: null, view: null, tables: null };
   private wire: Wire | null = null;
   private attempt = 0;
   private failures = 0;
@@ -74,7 +76,7 @@ export class OchoClient {
     if (this.state.link !== 'idle') this.set({ link: 'idle' });
   }
 
-  /** Forget the lobby and the table on this page: the player has left them. */
+  /** Forget the lobby and the table on this page: the player has left them. The public list stays. */
   forget(): void {
     this.set({ lobby: null, view: null });
   }
@@ -147,6 +149,9 @@ export class OchoClient {
       case 'ocho.lobby':
         // A lobby that has not dealt has no table: a view from an earlier one is not this one's.
         this.set(frame.lobby.started ? { lobby: frame.lobby } : { lobby: frame.lobby, view: null });
+        return;
+      case 'ocho.tables':
+        this.set({ tables: frame.tables });
         return;
       case 'ocho.view':
         this.set({ view: frame.view });

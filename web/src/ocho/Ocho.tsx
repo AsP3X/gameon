@@ -87,7 +87,16 @@ function Offline({ who, link }: { who: Who; link: string }) {
 
 /* ---------- sit down ---------- */
 
-function Stepper({ value, locked, onChange }: { value: number; locked: boolean; onChange: (n: number) => void }) {
+/** The number of players, 2 to 8, or locked at 4 for teams. Games' Ocho form uses it too. */
+export function Stepper({
+  value,
+  locked,
+  onChange,
+}: {
+  value: number;
+  locked: boolean;
+  onChange: (n: number) => void;
+}) {
   return (
     <div className="oc-stepper">
       <button
@@ -119,7 +128,7 @@ function Stepper({ value, locked, onChange }: { value: number; locked: boolean; 
   );
 }
 
-function ChoiceButton(props: { label: string; sub?: string; on: boolean; onPick: () => void }) {
+export function ChoiceButton(props: { label: string; sub?: string; on: boolean; onPick: () => void }) {
   return (
     <button
       type="button"

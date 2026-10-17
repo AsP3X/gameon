@@ -2,7 +2,7 @@
    `skt-protocol`, so there is nothing generated for it: these types follow the server's serde
    shapes (server/crates/ocho-server/src/room.rs, server/crates/ocho-engine/src/game.rs).
 
-   A frame from the server is checked before the page uses it. A frame that is not one of the four
+   A frame from the server is checked before the page uses it. A frame that is not one of the five
    kinds, or that lacks what its kind must carry, is dropped: the page draws only what it can read. */
 
 export type Color = 'red' | 'blue' | 'green' | 'yellow';
@@ -89,6 +89,21 @@ export interface Lobby {
   started: boolean;
 }
 
+/** How long a match runs: one hand, or until somebody has 500. */
+export type Match = 'one' | 'to500';
+const MATCHES: Match[] = ['one', 'to500'];
+
+/** A public table still waiting for its players, as `ocho.tables` lists it. It has no join code. */
+export interface OpenTable {
+  /** The lobby id: what `ocho.joinOpen` sits down at. */
+  id: string;
+  hostName: string;
+  players: number;
+  seated: number;
+  teams: boolean;
+  match: Match;
+}
+
 export type ErrorCode =
   | 'NOT_YOUR_TURN'
   | 'ILLEGAL_MOVE'
@@ -107,12 +122,15 @@ export type ServerFrame =
   | { t: 'ok'; re: number }
   | { t: 'err'; re: number; code: string; message: string }
   | { t: 'ocho.lobby'; lobby: Lobby }
+  | { t: 'ocho.tables'; tables: OpenTable[] }
   | { t: 'ocho.view'; view: View };
 
 /** A frame to the server, without its correlation id. */
 export type Intent =
-  | { t: 'ocho.create'; players: number; teams: boolean; match: 'one' | 'to500'; bots?: BotLevel }
+  | { t: 'ocho.create'; players: number; teams: boolean; match: Match; bots?: BotLevel; open?: boolean }
   | { t: 'ocho.join'; code: string }
+  | { t: 'ocho.tables' }
+  | { t: 'ocho.joinOpen'; lobby: string }
   | { t: 'ocho.leave' }
   | { t: 'ocho.ready'; ready: boolean }
   | { t: 'ocho.start' }
@@ -280,6 +298,34 @@ export function parseLobby(v: unknown): Lobby | null {
   };
 }
 
+/** The public tables, or null when one row lacks what a row must carry. */
+export function parseTables(v: unknown): OpenTable[] | null {
+  if (!Array.isArray(v)) return null;
+  const out: OpenTable[] = [];
+  for (const row of v) {
+    if (!isObj(row)) return null;
+    const match = MATCHES.find((m) => m === row.match);
+    if (
+      match === undefined ||
+      !isStr(row.id) ||
+      !isStr(row.hostName) ||
+      !isInt(row.players) ||
+      !isInt(row.seated) ||
+      !isBool(row.teams)
+    )
+      return null;
+    out.push({
+      id: row.id,
+      hostName: row.hostName,
+      players: row.players,
+      seated: row.seated,
+      teams: row.teams,
+      match,
+    });
+  }
+  return out;
+}
+
 /** One text frame from the server, or null when it is not one the page can read. */
 export function parseFrame(data: unknown): ServerFrame | null {
   if (typeof data !== 'string') return null;
@@ -300,6 +346,10 @@ export function parseFrame(data: unknown): ServerFrame | null {
     case 'ocho.lobby': {
       const lobby = parseLobby(v.lobby);
       return lobby && { t: 'ocho.lobby', lobby };
+    }
+    case 'ocho.tables': {
+      const tables = parseTables(v.tables);
+      return tables && { t: 'ocho.tables', tables };
     }
     case 'ocho.view': {
       const view = parseView(v.view);

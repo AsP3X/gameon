@@ -46,6 +46,31 @@ describe('the Ocho connection', () => {
     expect(ocho.getState().lobby).toBeNull();
   });
 
+  it('keeps the public tables the server listed before its answer, and forgetting a table keeps them', async () => {
+    const fake = fakeOcho();
+    const ocho = new OchoClient(fake.transport);
+    expect(ocho.getState().tables).toBeNull();
+    ocho.open();
+    await tick();
+    const anne = { id: 'l7', hostName: 'Anne', players: 4, seated: 1, teams: false, match: 'one' };
+    const asked = ocho.send({ t: 'ocho.tables' });
+    expect(fake.sent[1]).toEqual({ t: 'ocho.tables', id: 2 });
+    fake.push({ t: 'ocho.tables', tables: [anne] });
+    fake.push({ t: 'ok', re: 2 });
+    expect(await asked).toEqual({ ok: true });
+    expect(ocho.getState().tables).toEqual([anne]);
+    ocho.forget();
+    expect(ocho.getState().tables).toEqual([anne]);
+    // An empty list is an answer too.
+    fake.push({ t: 'ocho.tables', tables: [] });
+    expect(ocho.getState().tables).toEqual([]);
+    // Sitting down at a listed table sends its lobby id, and nothing else of the page's own.
+    void ocho.send({ t: 'ocho.joinOpen', lobby: 'l7' });
+    expect(fake.sent[2]).toEqual({ t: 'ocho.joinOpen', lobby: 'l7', id: 3 });
+    void ocho.send({ t: 'ocho.create', players: 4, teams: false, match: 'one', open: true });
+    expect(fake.sent[3]).toEqual({ t: 'ocho.create', players: 4, teams: false, match: 'one', open: true, id: 4 });
+  });
+
   it('answers what was waiting when the socket drops, and connects again with backoff', async () => {
     const fake = fakeOcho();
     const ocho = new OchoClient(fake.transport);
