@@ -13,10 +13,10 @@
    is not done here: the online screens do it. An Ocho table is sat down at by its lobby id, and
    Ocho's page takes it from there. */
 import { useContext, useEffect, useId, useRef, useState, useSyncExternalStore } from 'react';
-import type { MouseEvent, ReactNode, RefObject } from 'react';
+import type { CSSProperties, MouseEvent, ReactNode, RefObject } from 'react';
 import type { Online } from '../net/online';
 import type { OchoClient, OchoLink } from '../ocho/client';
-import { ChoiceButton, Stepper } from '../ocho/Ocho';
+import { ChoiceButton } from '../ocho/Ocho';
 import type { OpenTable } from '../ocho/wire';
 import type { LobbyId, LobbySummary, Me, Season } from '../protocol/generated';
 import { initialOf } from '../online/parts';
@@ -319,6 +319,64 @@ const FILTERS: { value: Filter; label: string }[] = [
   { value: 'ocho', label: 'Ocho' },
 ];
 
+type Vars = CSSProperties & Record<`--${string}`, string | number>;
+
+const FEWEST = 2;
+const MOST = 8;
+const STOPS = Array.from({ length: MOST - FEWEST + 1 }, (_, i) => FEWEST + i);
+
+/**
+ * How many sit at a new Ocho table: a range from two to eight, the number it is set to beside its
+ * heading, and a button for every stop under the track. Teams holds it at four.
+ */
+function PlayerSlider({ value, locked, onChange }: { value: number; locked: boolean; onChange: (n: number) => void }) {
+  const ids = useId();
+  const share = (value - FEWEST) / (MOST - FEWEST);
+  return (
+    <div className="go-finder-field go-players">
+      <div className="go-players-head">
+        <h4 id={`${ids}-head`}>Players</h4>
+        <output htmlFor={`${ids}-range`} aria-live="polite">
+          {value}
+        </output>
+      </div>
+      <div className="go-players-track" style={{ '--go-share': share } as Vars}>
+        <span className="go-players-fill" aria-hidden="true" />
+        <input
+          id={`${ids}-range`}
+          type="range"
+          min={FEWEST}
+          max={MOST}
+          step={1}
+          value={value}
+          disabled={locked}
+          aria-labelledby={`${ids}-head`}
+          onChange={(e) => onChange(Number(e.currentTarget.value))}
+        />
+      </div>
+      <div className="go-players-stops">
+        {STOPS.map((n) => (
+          <button
+            key={n}
+            type="button"
+            aria-label={`${n} players`}
+            aria-pressed={n === value}
+            disabled={locked}
+            style={{ '--go-at': (n - FEWEST) / (MOST - FEWEST) } as Vars}
+            onClick={() => onChange(n)}
+          >
+            {n}
+          </button>
+        ))}
+      </div>
+      <span className="go-players-caption">
+        {locked && <Icon name="lock" />}
+        {locked ? 'Teams is 2v2 · 4 players' : '2 to 8 players'}
+      </span>
+    </div>
+  );
+}
+
 /** Ocho's short form: the choices of Ocho's own sit-down, for a table anybody may join. */
 function NewOcho(props: {
   link: OchoLink;
@@ -331,10 +389,7 @@ function NewOcho(props: {
   const [to500, setTo500] = useState(false);
   return (
     <div className="go-finder-ocho">
-      <div className="go-finder-field go-finder-players">
-        <h4>Players</h4>
-        <Stepper value={teams ? 4 : players} locked={teams} onChange={setPlayers} />
-      </div>
+      <PlayerSlider value={teams ? 4 : players} locked={teams} onChange={setPlayers} />
       <div className="go-finder-pair">
         <div className="go-finder-field">
           <h4>Table</h4>

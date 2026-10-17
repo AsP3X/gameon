@@ -2670,10 +2670,138 @@ html:has(.go-sheet[open]) {
   text-transform: uppercase;
   color: var(--muted);
 }
+/* How many sit at a new Ocho table: the number beside the heading, a track from two to eight with
+   the thumb on it, and a button for every stop under it. The thumb's centre runs from 14px in to
+   14px short of the end, so the fill and the stops are laid on that same run. */
+.go-players-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.go-players-head output {
+  font-size: 26px;
+  font-weight: 900;
+  line-height: 1;
+  color: var(--fg);
+}
+.go-players-track {
+  position: relative;
+  height: 44px;
+}
+.go-players-track::before,
+.go-players-fill {
+  content: '';
+  position: absolute;
+  top: 18px;
+  left: 0;
+  height: 8px;
+  border-radius: 99px;
+  pointer-events: none;
+}
+.go-players-track::before {
+  right: 0;
+  background: var(--soft);
+}
+.go-players-fill {
+  width: calc(14px + var(--go-share) * (100% - 28px));
+  background: var(--green);
+}
+#gameon .go-players-track input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 44px;
+  margin: 0;
+  appearance: none;
+  background: none;
+  cursor: pointer;
+}
+#gameon .go-players-track input:disabled {
+  cursor: default;
+}
+#gameon .go-players-track input:focus-visible {
+  outline: none;
+}
+.go-players-track input::-webkit-slider-runnable-track {
+  height: 44px;
+  background: none;
+}
+.go-players-track input::-moz-range-track {
+  height: 44px;
+  background: none;
+}
+.go-players-track input::-webkit-slider-thumb {
+  appearance: none;
+  width: 28px;
+  height: 28px;
+  margin-top: 8px;
+  border: 2px solid var(--line);
+  border-radius: 50%;
+  background: var(--bg);
+  box-shadow: 0 2px 0 var(--line);
+}
+.go-players-track input::-moz-range-thumb {
+  width: 28px;
+  height: 28px;
+  border: 2px solid var(--line);
+  border-radius: 50%;
+  background: var(--bg);
+  box-shadow: 0 2px 0 var(--line);
+}
+.go-players-track input:focus-visible::-webkit-slider-thumb {
+  outline: 3px solid var(--blue);
+  outline-offset: 2px;
+}
+.go-players-track input:focus-visible::-moz-range-thumb {
+  outline: 3px solid var(--blue);
+  outline-offset: 2px;
+}
+.go-players-stops {
+  position: relative;
+  height: 44px;
+  margin-top: -8px;
+}
+#gameon .go-players-stops button {
+  position: absolute;
+  top: 0;
+  left: calc(14px + var(--go-at) * (100% - 28px));
+  min-width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 12px;
+  background: none;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--muted);
+  transform: translateX(-50%);
+}
+#gameon .go-players-stops button[aria-pressed='true'] {
+  font-weight: 800;
+  color: var(--fg);
+}
+#gameon .go-players-stops button:disabled {
+  cursor: default;
+}
+.go-players-caption {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  color: var(--muted);
+}
+.go-players-caption .go-icon {
+  width: 16px;
+  height: 16px;
+}
 #gameon .go-finder-ocho .alert {
   color: var(--red-ink);
 }
 @media (prefers-reduced-motion: no-preference) {
+  .go-players-fill {
+    transition: width 160ms var(--ease-out);
+  }
   .go-sheet[open] .go-sheet-panel {
     animation: go-sheet-up 220ms var(--ease-out);
   }
@@ -2817,12 +2945,7 @@ html:has(.go-sheet[open]) {
     align-items: center;
     padding: 24px;
   }
-  /* The Ocho form keeps to the window's height: the number beside its label, the two choices side by side. */
-  .go-finder-players {
-    flex-direction: row;
-    align-items: center;
-    gap: 16px;
-  }
+  /* The Ocho form keeps to the window's height: the two choices side by side. */
   .go-finder-pair {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));

@@ -919,7 +919,18 @@ describe('Games', () => {
     const form = dialog.querySelector('.go-finder-ocho');
     expect(Array.from(form?.querySelectorAll('h4') ?? [], (h) => h.textContent)).toEqual(['Players', 'Table', 'Match']);
     expect(form?.querySelector('output')?.textContent).toBe('4');
-    await clickOn($('dialog [aria-label="One player more"]') ?? host);
+    const range = form?.querySelector<HTMLInputElement>('input[type="range"]');
+    expect([range?.min, range?.max, range?.step, range?.value]).toEqual(['2', '8', '1', '4']);
+    const named = document.getElementById(range?.getAttribute('aria-labelledby') ?? '');
+    expect(named?.textContent).toBe('Players');
+    expect($('dialog [aria-label="One player more"]')).toBeNull();
+    // Every stop sets the count, and the current one says so.
+    await clickOn($('dialog [aria-label="7 players"]') ?? host);
+    expect(form?.querySelector('output')?.textContent).toBe('7');
+    expect($('dialog [aria-label="7 players"]')?.getAttribute('aria-pressed')).toBe('true');
+    await type('dialog input[type="range"]', '5');
+    expect(form?.querySelector('output')?.textContent).toBe('5');
+    expect(form?.querySelector('.go-players-caption')?.textContent).toBe('2 to 8 players');
     await press('First to 500');
     await press('Open an Ocho table');
     expect(ochoServer.sent.at(-1)).toEqual({
@@ -949,7 +960,12 @@ describe('Games', () => {
     const dialog = await openGames([]);
     await press('Teams2v2 only');
     expect(dialog.querySelector('.go-finder-ocho output')?.textContent).toBe('4');
-    expect($('dialog [aria-label="One player more"]')?.hasAttribute('disabled')).toBe(true);
+    const range = dialog.querySelector<HTMLInputElement>('.go-finder-ocho input[type="range"]');
+    expect([range?.disabled, range?.value]).toEqual([true, '4']);
+    const stops = Array.from(dialog.querySelectorAll<HTMLButtonElement>('.go-players-stops button'));
+    expect(stops.map((stop) => stop.textContent)).toEqual(['2', '3', '4', '5', '6', '7', '8']);
+    expect(stops.every((stop) => stop.disabled)).toBe(true);
+    expect(dialog.querySelector('.go-players-caption')?.textContent).toBe('Teams is 2v2 · 4 players');
     await press('Open an Ocho table');
     expect(ochoServer.sent.at(-1)).toMatchObject({
       t: 'ocho.create',
