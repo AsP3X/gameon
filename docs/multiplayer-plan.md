@@ -5,7 +5,8 @@ randoms), casual and ranked play, and a Rust server that is the only authority.
 
 - Rules for agents: `AGENTS.md` and `docs/agent-rules/`.
 - Wire contract: `docs/protocol.md`. Engine port: `docs/engine-conformance.md`.
-- Handovers between Claude (web) and Grok (server): `docs/handover/`.
+- Handovers between Claude (web) and Grok (server): `docs/handover/`. The log's
+  [README](handover/README.md) says which files are closed. A file there is a record, not a queue.
 
 ---
 
@@ -189,7 +190,8 @@ queue, and why casual with friends is unrated.
 ## 5. Phases
 
 Each phase has a Claude track and a Grok track that run in parallel, and one gate that both must
-pass together. Every work package ends with a handover (`ownership-and-handover.md`).
+pass together. A handover is written only when the other agent has a task
+(`ownership-and-handover.md`). The initiator runs that agent's CLI with the file as the prompt.
 
 ### Phase 0 — Foundations
 

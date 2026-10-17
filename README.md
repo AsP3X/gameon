@@ -535,8 +535,9 @@ the same piece of work, using the tokens of `web/src/styles/tokens.css`
 
 ## Working on it with AI agents
 
-This repository is built by two coding agents that never see each other's sessions. The owner
-carries the work between them by copy and paste.
+This repository is built by two coding agents that never see each other's sessions. When one
+agent has a task for the other, the initiator writes a handover and runs that agent's CLI.
+The owner does not paste the prompt.
 
 | Agent | Owns | Never edits |
 | ----- | ---- | ----------- |
@@ -549,67 +550,36 @@ carries the work between them by copy and paste.
 
 ### The loop
 
+The handover file is the prompt and the record. The commands are in
+[agent routing](docs/agent-rules/agent-routing.md). A finished task does not get another file.
+
 ```mermaid
 sequenceDiagram
   actor O as Owner
-  participant C as Claude (web)
+  participant I as Initiator
   participant R as Repository (dev)
-  participant G as Grok (server)
-  O->>C: Paste the newest handover addressed to Claude
-  C->>R: Work in web/, run the gate, commit
-  C->>R: Write docs/handover/NNN-claude-to-grok-slug.md
-  C-->>O: Print the same handover in one code block
-  O->>G: Paste it
-  G->>R: Work in server/, run the gate, commit
-  G->>R: Write docs/handover/NNN-grok-to-claude-slug.md
-  G-->>O: Print the same handover in one code block
-  Note over O,G: Repeat. The handover is the only channel between the agents.
+  participant E as The other agent's CLI
+  O->>I: Ask for the work
+  I->>R: Do the part it owns, then write docs/handover/NNN-….md only if the other agent has a task
+  I->>E: Run that CLI with the file as the prompt
+  E->>R: Do that task, run the gate, commit its own paths
+  E-->>I: CLI result. A return file only if the initiator still has a task
 ```
 
-### Continuing the work, step by step
+### Continuing the work
 
-1. **Be on `dev` with a clean view of the tree.**
+1. **Be on `dev`.**
    ```bash
    git switch dev
    git status --short
    ```
-2. **Find where things stand.** The newest files in `docs/handover/` are the current state. Each
-   one names the commit, what the gate printed, what is not done and the next task.
-   ```bash
-   ls docs/handover | tail -5
-   ```
-3. **Open the agent in the repository root.** Claude Code reads `CLAUDE.md`, which loads
-   `AGENTS.md` and every rule file. Any other agent is pointed at `AGENTS.md`.
-4. **Paste the handover as the first message**, or give a task of your own (templates below).
-5. **Let it finish the package.** It stays in its own paths, runs its gate, commits on `dev` with a
-   prefixed message, and ends with a new handover, written to `docs/handover/` and printed in a
-   code block.
-6. **Paste that block into the other agent.** Push when you decide to. Agents do not push.
-
-### Prompts that work
-
-Continue from a handover:
-
-```text
-Read AGENTS.md and docs/handover/<newest file addressed to you>, then do the task in it.
-```
-
-Start a new piece of work:
-
-```text
-You are Claude, working on Skull King Tavern. Read AGENTS.md first.
-Task: <what should change, and where the player sees it>.
-Done when: vp check, vp test and vp build pass, and <the behaviour you want to see>.
-End with a handover for Grok.
-```
-
-Ask for something that crosses the line between the two:
-
-```text
-The ladder should show <new thing>. Read docs/protocol.md §4 first. Change what is yours,
-and put what you need from the other agent in the handover as a request, with the exact
-message, field and error code.
-```
+2. **Read the log, not the newest file.** [`docs/handover/README.md`](docs/handover/README.md)
+   says which files are closed. A file there is not work to do unless you name that file.
+3. **Open the agent in the repository root** and give it the task. Claude Code reads
+   `CLAUDE.md`. Any other agent is pointed at `AGENTS.md`.
+4. **Let it finish.** It stays in its own paths, runs its gate, and commits on `dev`. If the
+   other agent has a task, it writes the handover and runs that CLI. It does not print the
+   prompt for you to paste. Push when you decide to. Agents do not push.
 
 ### What the rules guarantee
 
@@ -619,7 +589,8 @@ Every rule is one file in [`docs/agent-rules/`](docs/agent-rules/), indexed in
 | Rule | In one line |
 | ---- | ----------- |
 | [Server authority](docs/agent-rules/server-authority.md) | The server decides and hides. The client sends intents and renders what it is given. |
-| [Ownership and handover](docs/agent-rules/ownership-and-handover.md) | Stay in your own paths. End every package with a paste-ready handover. |
+| [Ownership and handover](docs/agent-rules/ownership-and-handover.md) | Stay in your own paths. A handover is the CLI prompt, and only when the other agent has a task. |
+| [Agent routing](docs/agent-rules/agent-routing.md) | UI goes to Claude through the local CLI. Non-UI code goes to Grok the same way. |
 | [Protocol contract](docs/agent-rules/protocol-contract.md) | The doc, the Rust types, the generated TypeScript and the samples change together. |
 | [Design sync](docs/agent-rules/design-sync.md) | Every visible change also lands in the `.pen` design. |
 | [No deprecated APIs](docs/agent-rules/no-deprecated-apis.md) | Replace them. Never suppress the warning. |
@@ -675,7 +646,7 @@ Commit messages begin with exactly one of `ADD:`, `TASK:`, `FIX:`, `BUGFIX:`, `D
 | [`docs/engine-conformance.md`](docs/engine-conformance.md) | How the Rust engine is held to the reference: fixtures, views, events, rejections. |
 | [`docs/security-review.md`](docs/security-review.md) | The pre-launch review against the server-authority rule. |
 | [`docs/agent-rules/`](docs/agent-rules/) | The rules, one per file. |
-| [`docs/handover/`](docs/handover/) | The numbered log of every package handed between the agents. |
+| [`docs/handover/`](docs/handover/) | The numbered record of tasks handed between the agents. [`README`](docs/handover/README.md) says which are closed. |
 | [`web/README.md`](web/README.md) | The client in depth: addresses, screens, online behaviour, sound. |
 | [`web/e2e/README.md`](web/e2e/README.md) | The browser scripts and what they run against. |
 | [`.env.example`](.env.example) | Every configuration key, with comments. |
