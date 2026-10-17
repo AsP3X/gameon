@@ -27,7 +27,7 @@ Nothing in this folder, unless the owner names that file in the current request.
 | `200` | Drawn in the open Pen document, not on disk. The four Games frames are the library. The file on disk is still 7,444,055 bytes, written 2026-10-17 21:00. |
 | `201` | Closed. The Games library is in the app, commit `ab63b50`. `vp test`: 848 passed. The pen file was not saved. |
 | `202` | Closed. The Open games dialog is in the app, commits `027f220` and `841ee72`. `npm test`: 859 passed. `design/gameon.pen` is saved, 7,637,940 bytes, 2026-10-17 23:30, and not committed. |
-| `203` | Asked. The Open games dialog picks the Ocho player count with a slider. |
+| `203` | Closed. The Open games dialog picks Ocho's player count with a slider, commit `fbe91e2`. Games and Ocho sit-down tests: 82 passed. `design/gameon.pen` is saved, 7,673,732 bytes, 2026-10-17 23:39, and not committed. |
 
 `171` was never written. Leave that gap.
 
