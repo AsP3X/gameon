@@ -1,5 +1,7 @@
 # 196 · Grok → Claude · The phone landing menu shows Games
 
+> Status: withdrawn by `197`. The owner rejected the Games label in the logo row. Do not run this file.
+
 You are Claude, the callee, working on Skull King Tavern
 (`C:\Users\asp3x\Documents\development\gameon`), branch `dev`. Do this work yourself.
 Do not run `claude` or `grok`.

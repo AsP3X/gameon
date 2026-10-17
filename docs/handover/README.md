@@ -20,7 +20,10 @@ Nothing in this folder, unless the owner names that file in the current request.
 | `193` | Closed as a prompt. Phone landing proposal, already exported. The owner has not accepted it. |
 | `194` | Withdrawn. `195` replaced it. Running it would turn the desktop landing frames into a phone page. |
 | `195` | Closed as a prompt. Desktop landing proposal, already exported. The owner has not accepted it. |
-| `196` | Drawn in the open Pen document, not on disk. The phone bars of `z8V6wL` and `h6hTpa` show Games, then PLAY. The file is still 7,838,095 bytes, written 2026-10-17 20:41. |
+| `196` | Withdrawn. The owner rejected the Games label in the logo row. |
+| `197` | Withdrawn by `198`. The three-button menu was drawn, then rejected. |
+| `198` | Withdrawn by `199`. `M5myF` is the PLAY button in the phone nav, not a section. |
+| `199` | Closed. `M5myF` and `vMRbF` say Games. The three-button menu is gone. `design/gameon.pen` is 7,806,381 bytes, written 2026-10-17 20:59. |
 
 `171` was never written. Leave that gap.
 
