@@ -5,8 +5,10 @@ queue. A file here is not work to do.
 
 The rule is [ownership and handover](../agent-rules/ownership-and-handover.md). The initiator
 writes a file only when the other agent has a task, then runs that agent's CLI with the file
-as the prompt. When the task is finished, the file stays and the CLI result is the report.
-Nobody pastes a handover.
+as the prompt. When the task is finished, the initiator marks it closed in the table below.
+The file stays, and the CLI result is the report. A file that a later prompt replaces is
+marked withdrawn before that CLI runs. Nobody pastes a handover. Closed and withdrawn files
+stay in this folder until the owner names a deletion.
 
 ## What to run
 
@@ -19,10 +21,11 @@ Nothing in this folder, unless the owner names that file in the current request.
 | `194` | Withdrawn. `195` replaced it. Running it would turn the desktop landing frames into a phone page. |
 | `195` | Closed as a prompt. Desktop landing proposal, already exported. The owner has not accepted it. |
 
-`171` was never written. Do not fill that gap.
+`171` was never written. Leave that gap.
 
-The next number is **196**. It is one higher than the highest prefix on disk. Do not reuse a
-number, including these pairs, which were taken twice:
+Take the next number from the directory, as the handover rule says. It is one higher than the
+highest prefix on disk, including untracked files. Do not reuse a number, including these
+pairs, which were taken twice:
 
 `009`, `061`, `071`, `074`, `126`, `127`, `134`, `147`, `148`, `149`, `151`.
 

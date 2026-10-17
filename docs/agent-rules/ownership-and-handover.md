@@ -38,9 +38,16 @@ They are not a handover, and the other CLI is not started. A callee does the sam
 return handover only when the initiator still has a task. The CLI result is the report when
 the callee's work is done.
 
+## The number
+
+`NNN` is one higher than the highest prefix already on disk under `docs/handover/`, including
+untracked files. Look at the directory. Do not fill a gap. Do not reuse a number, even when
+two old files already share one. If the number you were about to take is taken, take the next
+one before the CLI runs.
+
 ## The handover prompt
 
-Write it to `docs/handover/NNN-<from>-to-<to>-<slug>.md` (`NNN` is the next free number), then
+Write it to `docs/handover/NNN-<from>-to-<to>-<slug>.md`, then
 run the other agent's CLI with that file as the prompt. Do not print it for the owner to paste.
 It must work for a reader who has seen nothing but the repo:
 
@@ -64,6 +71,22 @@ The commands, and when you may do the other agent's work yourself, are in
 [agent routing](agent-routing.md). Before `claude` runs, `claude auth status` must report
 `loggedIn: true`. If it does not, tell the owner to run `claude auth login`. Do not paste the
 handover. If this run still cannot sign in, that is the "not available" exception in that rule.
+
+## Closing the log
+
+`docs/handover/README.md` is the index. A file in `docs/handover/` is a record. Nothing there
+is work to do unless the owner names that file.
+
+- When the callee exits and the task is finished, mark that handover closed in the index
+  before you tell the owner it is done. One line: the number, and that it is closed.
+- When a new handover replaces one that has not been run, mark the earlier file withdrawn
+  in the same edit, before the CLI runs. Name the file that replaced it, in the index and
+  in one line at the top of the earlier file.
+- A closed or withdrawn file stays. Do not delete it, and do not move it, unless the owner
+  names that action.
+- The callee does not close the initiator's file. The initiator updates the index after
+  reading the CLI result. A return handover, when one was required, is closed the same way
+  once that remaining task is finished.
 
 ## Reporting UI the other agent cannot draw
 

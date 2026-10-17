@@ -589,7 +589,7 @@ Every rule is one file in [`docs/agent-rules/`](docs/agent-rules/), indexed in
 | Rule | In one line |
 | ---- | ----------- |
 | [Server authority](docs/agent-rules/server-authority.md) | The server decides and hides. The client sends intents and renders what it is given. |
-| [Ownership and handover](docs/agent-rules/ownership-and-handover.md) | Stay in your own paths. A handover is the CLI prompt, and only when the other agent has a task. |
+| [Ownership and handover](docs/agent-rules/ownership-and-handover.md) | Stay in your own paths. A handover is the CLI prompt, and only when the other agent has a task. Close it in the log when it is done. |
 | [Agent routing](docs/agent-rules/agent-routing.md) | UI goes to Claude through the local CLI. Non-UI code goes to Grok the same way. |
 | [Protocol contract](docs/agent-rules/protocol-contract.md) | The doc, the Rust types, the generated TypeScript and the samples change together. |
 | [Design sync](docs/agent-rules/design-sync.md) | Every visible change also lands in the `.pen` design. |

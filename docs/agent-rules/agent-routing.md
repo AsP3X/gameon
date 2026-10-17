@@ -181,4 +181,7 @@ finish only the remainder under that exception.
 - The work is finished when the gates that apply have run
   ([definition of done](definition-of-done.md)). A return handover is on disk only when one
   agent still has a task for the other.
+- Mark that handover closed in `docs/handover/README.md`
+  ([ownership and handover](ownership-and-handover.md)). Do this after you have read the CLI
+  result, and before you tell the owner the task is done.
 - Tell the owner which agent did which part, and what the gates printed.

@@ -25,9 +25,11 @@ exact command or decision that unblocks it.
    ([design sync](design-sync.md)).
 10. **No deprecated APIs, no data loss** — ([deprecated](no-deprecated-apis.md),
     [data safety](data-safety.md)).
-11. **Handover** — when the other agent had a task, the initiator wrote the prompt and ran that
-    agent's local CLI ([ownership and handover](ownership-and-handover.md),
-    [agent routing](agent-routing.md)). No task means no handover file and no CLI call.
+11. **Handover** — when the other agent had a task, the initiator wrote the prompt, ran that
+    agent's local CLI, and marked the file closed in `docs/handover/README.md`
+    ([ownership and handover](ownership-and-handover.md),
+    [agent routing](agent-routing.md)). A replacement withdrew the earlier file before the CLI
+    ran. No task means no handover file and no CLI call.
 12. **Routing** — UI and client work was done by Claude, and non-UI code by Grok, each through
     that agent's local CLI. A fallback names the exception and quotes the CLI's output.
 
