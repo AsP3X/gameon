@@ -1,7 +1,7 @@
-/* Games: one felt floor. The table in the middle of it is the way back into a game that is still
-   open, or the two live games to start. Beside it are the public tables that have room, and along
-   its bottom edge the player and the two ways to play. On a phone it is one screen: the table, and
-   a bar whose three buttons open the tables, the player's seat and Play as sheets.
+/* Games: the library. The two live games are the page, each with its own Play, and above them the
+   way back into a game that is still open. On a wide window the public tables that have room and
+   the player's seat sit under the games, and what is coming under those. On a phone the games
+   scroll above a bar whose two buttons open the tables and the player's seat as sheets.
 
    A player who comes here is on their way in, so a browser without a session gets a guest here, as
    it does when it connects. Everything about the player and the tables is what the server said
@@ -15,21 +15,21 @@ import { initialOf } from '../online/parts';
 import { describeRow } from '../online/settings';
 import { AT } from '../router/addresses';
 import { cssColor, whole } from '../tableview/dom';
-import { CardFan, OchoFan, OchoKey, SkullKingKey, TableCards } from './art';
+import { CardFan, OchoFan } from './art';
 import { showsOcho, showsSkullKing, soonOn } from './catalog';
 import type { Shelf } from './catalog';
-import { accountOf, FootLinks, Footer, Link, Nav, useTitle, useWide } from './Frame';
+import { FootLinks, Footer, Link, Nav, useTitle, useWide } from './Frame';
 import type { Who } from './Frame';
 import { Icon } from './icons';
 import { DOORS, Shelves } from './Landing';
 import { savedGame, savedTitle } from './saved';
 import type { SavedGame } from './saved';
 
-/** How many open tables the floor shows. The rest are behind "All public tables". */
+/** How many open tables the page shows. The rest are behind "All public tables". */
 const TABLES_SHOWN = 6;
 
 /**
- * The open tables the floor shows, in the server's order: the first of each length of game, so that
+ * The open tables the page shows, in the server's order: the first of each length of game, so that
  * none of the five is missing while it has a table with room, and then the others for as long as
  * there are places left. The length is the row's own (`settings.format`), not its place in the list.
  */
@@ -69,105 +69,82 @@ function resumeOf(me: Me | null, seated: boolean, saved: SavedGame | null): Resu
   return null;
 }
 
-/**
- * The table in the middle of the floor. With a game to go back to, it is that game, with a few of
- * its cards on the cloth. Without one, it offers the live games the shelf shows. Four seats are
- * marked round it. The near one is the player's, and says so when they have an account.
- */
-function FeltTable({ resume, you, shelf }: { resume: Resume | null; you: boolean; shelf: Shelf }) {
+/** The live games the shelf shows, one row each: its art, its name and line, how to play it, and Play. */
+function LiveGames({ shelf }: { shelf: Shelf }) {
   const live = DOORS.filter((door) => (door.to === AT.ocho ? showsOcho(shelf) : showsSkullKing(shelf)));
+  if (live.length === 0) return <p className="go-start-none">No live game on this shelf yet. These are on the way.</p>;
   return (
-    <section className={resume ? 'go-felt-table go-jump' : 'go-felt-table'} aria-labelledby="go-felt-title">
-      {resume && <TableCards />}
-      <span className="go-seat-mark top" aria-hidden="true"></span>
-      <span className="go-seat-mark left" aria-hidden="true"></span>
-      <span className="go-seat-mark right" aria-hidden="true"></span>
-      <span className="go-seat-mark you" aria-hidden="true">
-        <span></span>
-        {you && <small>You</small>}
-      </span>
-      {resume ? (
-        <div className="go-jump-text">
-          <h2 id="go-felt-title">
-            <span className="go-sr">Jump back in: </span>Skull King
-          </h2>
-          <b>{resume.mode}</b>
-          <span>{resume.line}</span>
-          <Link to={resume.to} className="btn go-btn">
-            Continue
-          </Link>
-        </div>
-      ) : (
-        <div className="go-start">
-          <h2 id="go-felt-title" className="go-sr">
-            Start a game
-          </h2>
-          {live.length === 0 ? (
-            <p className="go-start-none">No live game on this shelf yet. These are on the way.</p>
-          ) : (
-            <ul>
-              {live.map((door) => {
-                const ocho = door.to === AT.ocho,
-                  name = ocho ? 'go-ocho-title' : 'go-sk-title';
-                return (
-                  <li key={door.id} className="go-start-game" aria-labelledby={name}>
-                    <span className="go-start-art">{ocho ? <OchoFan /> : <CardFan trio />}</span>
-                    <span className="go-start-name">
-                      {ocho ? <OchoKey /> : <SkullKingKey />}
-                      <b id={name}>{door.name}</b>
-                    </span>
-                    <p>{door.line}</p>
-                    <Link to={door.to} className="btn go-btn" label={`Play ${door.name}`}>
-                      Play
-                    </Link>
-                    <Link
-                      to={ocho ? AT.ochoRules : AT.howToPlay}
-                      className="go-text-link"
-                      label={ocho ? 'How to play Ocho' : undefined}
-                    >
-                      How to play
-                    </Link>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </div>
-      )}
+    <ul className="go-lib-games">
+      {live.map((door) => {
+        const ocho = door.to === AT.ocho,
+          name = ocho ? 'go-ocho-title' : 'go-sk-title';
+        return (
+          <li key={door.id} className="go-lib-game" aria-labelledby={name}>
+            <span className={ocho ? 'go-lib-art ocho' : 'go-lib-art sk'}>{ocho ? <OchoFan /> : <CardFan trio />}</span>
+            <div className="go-lib-text">
+              {ocho ? (
+                <h2 id={name}>{door.name}</h2>
+              ) : (
+                <h2 id={name} className="logo">
+                  {door.logo}
+                </h2>
+              )}
+              <p>{door.line}</p>
+              <Link
+                to={ocho ? AT.ochoRules : AT.howToPlay}
+                className="go-text-link wide-only"
+                label={ocho ? 'How to play Ocho' : undefined}
+              >
+                How to play
+              </Link>
+            </div>
+            <Link to={door.to} className="btn go-btn go-lib-play">
+              Play {door.name}
+            </Link>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+/** The way back into a game that is not over: what it is, how far it got, and Continue. */
+function Jump({ resume }: { resume: Resume }) {
+  return (
+    <section className="go-jump" aria-labelledby="go-jump-title">
+      <div className="go-jump-text">
+        <h2 id="go-jump-title">
+          <span className="go-sr">Jump back in: </span>Skull King
+        </h2>
+        <b>{resume.mode}</b>
+        <span>{resume.line}</span>
+      </div>
+      <Link to={resume.to} className="btn go-btn">
+        Continue
+      </Link>
     </section>
   );
 }
 
-/** The seat marks of a table: one for each place, filled for the ones taken. */
-function Seats({ lobby }: { lobby: LobbySummary }) {
-  return (
-    <span className="go-tile-seats" aria-hidden="true">
-      {Array.from({ length: lobby.settings.maxPlayers }, (_, seat) => (
-        <span key={seat} className={seat < lobby.players ? 'on' : undefined}></span>
-      ))}
-    </span>
-  );
-}
-
 /**
- * The public tables with room. On the floor they are small tables of their own. In the phone's sheet
- * they are a list, each row with its host.
+ * The public tables with room, as a list. On the page each row is what the table plays and its name;
+ * in the phone's sheet, which is narrower, each row has its host too.
  */
 function OpenTables({
   tables,
   onJoin,
   onAgain,
-  tiles,
+  hosts,
 }: {
   tables: Tables;
   onJoin: (id: LobbyId) => void;
   onAgain: () => void;
-  tiles: boolean;
+  hosts: boolean;
 }) {
   const ids = useId();
   return (
-    <section className={tiles ? 'go-tables go-tiles' : 'go-tables'} aria-labelledby={`${ids}-title`}>
-      <div className={tiles ? 'go-tables-head' : 'go-tables-head go-sr'}>
+    <section className={hosts ? 'go-tables' : 'go-tables go-lib-tables'} aria-labelledby={`${ids}-title`}>
+      <div className={hosts ? 'go-tables-head go-sr' : 'go-tables-head'}>
         <h2 id={`${ids}-title`}>Open tables · Skull King</h2>
         {tables.state === 'ready' && <span className="pill green">{tables.open.length}</span>}
       </div>
@@ -201,9 +178,7 @@ function OpenTables({
                 title = `${ids}-table-${i}`;
               return (
                 <li key={lobby.id}>
-                  {tiles ? (
-                    <Seats lobby={lobby} />
-                  ) : (
+                  {hosts && (
                     // The host's colour when the server sent one. No other is put in its place.
                     <span
                       className={lobby.hostColor ? 'avatar' : 'avatar plain'}
@@ -313,7 +288,7 @@ function Coming({ shelf }: { shelf: Shelf }) {
     <p className="go-coming">
       <span>
         <b id="go-soon-title">Coming soon</b>
-        {' · '}
+        <span className="go-coming-sep"> · </span>
         <span className="go-coming-names">
           {soonOn(shelf)
             .map((game) => game.name)
@@ -327,10 +302,10 @@ function Coming({ shelf }: { shelf: Shelf }) {
   );
 }
 
-type SheetName = 'tables' | 'you' | 'play';
+type SheetName = 'tables' | 'you';
 
 /**
- * A sheet on a phone: a native modal dialog over the floor. Escape, the close button and a tap on
+ * A sheet on a phone: a native modal dialog over the page. Escape, the close button and a tap on
  * the scrim close it, and the button that opened it has the keyboard again.
  */
 function Sheet({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
@@ -370,34 +345,6 @@ function Sheet({ title, onClose, children }: { title: string; onClose: () => voi
   );
 }
 
-/** The player along the bottom edge of the floor: name, tier and rating. A guest has the way to sign in. */
-function BarPlayer({ account }: { account: Me | null }) {
-  if (!account)
-    return (
-      <Link to={AT.signIn} className="btn ghost go-btn go-bar-sign">
-        Sign in
-      </Link>
-    );
-  const rating = account.rating;
-  return (
-    <div className="go-bar-player">
-      <span className="avatar" style={{ background: cssColor(account.user.color) }} aria-hidden="true">
-        {initialOf(account.user.name)}
-      </span>
-      <span className="go-bar-name">
-        <b>{account.user.name}</b>
-        <small>{rating?.tier ?? account.username}</small>
-      </span>
-      {rating && (
-        <span className="go-bar-rating">
-          <b>{whole(rating.value)}</b>
-          <small>rating</small>
-        </span>
-      )}
-    </div>
-  );
-}
-
 export interface GamesProps {
   online: Online;
   who: Who;
@@ -419,13 +366,10 @@ export function Games({ online, who, seated, season, onJoin }: GamesProps) {
   const openers: Record<SheetName, RefObject<HTMLButtonElement | null>> = {
     tables: useRef<HTMLButtonElement>(null),
     you: useRef<HTMLButtonElement>(null),
-    play: useRef<HTMLButtonElement>(null),
   };
   const me = who.is === 'player' ? who.me : null,
-    account = accountOf(who),
     session = me != null,
     resume = resumeOf(me, seated, saved),
-    live = DOORS.filter((door) => (door.to === AT.ocho ? showsOcho(shelf) : showsSkullKing(shelf))),
     // The sheets are a phone's: a window that grows wide closes the one that is open.
     open = wide ? null : sheet;
 
@@ -456,70 +400,59 @@ export function Games({ online, who, seated, season, onJoin }: GamesProps) {
     if (was) openers[was].current?.focus();
   };
   const tablesHere = who.is !== 'unknown';
+  const seat = me ? (
+    <YourSeat me={me} season={season} />
+  ) : (
+    <Link to={AT.signIn} className="btn ghost go-btn full">
+      Sign in
+    </Link>
+  );
 
   return (
     <>
       <Nav page="games" who={who} />
       <main className="go-games go-wide">
-        <h1 className="go-sr" tabIndex={-1} ref={title}>
-          Games
-        </h1>
-        <div className="go-floor">
+        <div className="go-in go-lib">
           {who.is === 'unknown' && (
             <p className="go-banner" role="status">
               <Icon name="wifiOff" />
               Not connected. Trying again…
             </p>
           )}
-          <div className="go-floor-play">
-            <FeltTable resume={resume} you={account != null} shelf={shelf} />
-          </div>
-          <div className="go-floor-side wide-only">
+          <div className="go-lib-head">
+            <h1 tabIndex={-1} ref={title}>
+              Games
+            </h1>
             <Shelves shelf={shelf} onPick={setShelf} />
-            {tablesHere && <OpenTables tables={tables} onJoin={onJoin} onAgain={again} tiles />}
           </div>
-          <div className="go-floor-bar">
-            <div className="wide-only go-bar-wide">
-              <BarPlayer account={account} />
-              <span className="go-bar-play">
-                {live.map((door) => (
-                  <Link key={door.id} to={door.to} className="btn go-btn">
-                    Play {door.name}
-                  </Link>
-                ))}
-              </span>
-            </div>
-            <div className="narrow-only go-bar-narrow">
-              <button type="button" className="go-bar-btn" ref={openers.tables} onClick={() => setSheet('tables')}>
-                <Icon name="grid" />
-                Tables
-              </button>
-              <button type="button" className="go-bar-btn" ref={openers.you} onClick={() => setSheet('you')}>
-                <Icon name="users" />
-                You
-              </button>
-              <button
-                type="button"
-                className="btn go-btn go-bar-btn"
-                ref={openers.play}
-                onClick={() => setSheet('play')}
-              >
-                Play
-              </button>
-            </div>
+          {resume && <Jump resume={resume} />}
+          <LiveGames shelf={shelf} />
+          <div className="go-lib-cols wide-only">
+            {tablesHere && <OpenTables tables={tables} onJoin={onJoin} onAgain={again} hosts={false} />}
+            <section className="go-lib-seat" aria-labelledby="go-seat-title">
+              <h2 id="go-seat-title">Your seat</h2>
+              {seat}
+            </section>
           </div>
-        </div>
-        <div className="go-in wide-only">
           <Coming shelf={shelf} />
         </div>
       </main>
       <Footer page="games" who={who} />
+      <div className="go-lib-bar narrow-only">
+        <button type="button" className="go-bar-btn" ref={openers.tables} onClick={() => setSheet('tables')}>
+          <Icon name="grid" />
+          Tables
+        </button>
+        <button type="button" className="go-bar-btn" ref={openers.you} onClick={() => setSheet('you')}>
+          <Icon name="users" />
+          You
+        </button>
+      </div>
 
       {open === 'tables' && (
         <Sheet title="Open tables" onClose={closeSheet}>
-          <Shelves shelf={shelf} onPick={setShelf} />
           {tablesHere ? (
-            <OpenTables tables={tables} onJoin={onJoin} onAgain={again} tiles={false} />
+            <OpenTables tables={tables} onJoin={onJoin} onAgain={again} hosts />
           ) : (
             <p className="go-banner">
               <Icon name="wifiOff" />
@@ -530,32 +463,10 @@ export function Games({ online, who, seated, season, onJoin }: GamesProps) {
       )}
       {open === 'you' && (
         <Sheet title="You" onClose={closeSheet}>
-          {me ? (
-            <YourSeat me={me} season={season} />
-          ) : (
-            <Link to={AT.signIn} className="btn ghost go-btn full">
-              Sign in
-            </Link>
-          )}
-          <Coming shelf={shelf} />
+          {seat}
           <nav className="go-sheet-links" aria-label="More of GameOn">
             <FootLinks page="games" />
           </nav>
-        </Sheet>
-      )}
-      {open === 'play' && (
-        <Sheet title="Play" onClose={closeSheet}>
-          {live.length === 0 && <p className="go-sub">No live game on this shelf yet.</p>}
-          <ul className="go-sheet-play">
-            {live.map((door) => (
-              <li key={door.id}>
-                <Link to={door.to} className="btn go-btn full">
-                  Play {door.name}
-                </Link>
-                <p>{door.line}</p>
-              </li>
-            ))}
-          </ul>
         </Sheet>
       )}
     </>

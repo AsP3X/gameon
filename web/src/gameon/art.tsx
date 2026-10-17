@@ -59,11 +59,6 @@ export function Mascot() {
   return <span className="go-mascot" aria-hidden="true" dangerouslySetInnerHTML={{ __html: MASCOT }} />;
 }
 
-/** Skull King's own key: the mascot on green. */
-export function SkullKingKey() {
-  return <span className="go-key sk green" aria-hidden="true" dangerouslySetInnerHTML={{ __html: MASCOT }} />;
-}
-
 const FAN: FaceCard[] = [
   { kind: 'sk' },
   { kind: 'mermaid' },
@@ -85,18 +80,6 @@ export function CardFan({ trio = false }: { trio?: boolean }) {
       dangerouslySetInnerHTML={{ __html: trio ? TRIO_HTML : FAN_HTML }}
     />
   );
-}
-
-const SCATTER_HTML = html([
-  { kind: 'sk' },
-  { kind: 'pirate' },
-  { kind: 'num', suit: 'black', rank: 14 },
-  { kind: 'num', suit: 'yellow', rank: 14 },
-]);
-
-/** Four cards of Skull King lying on a table, one by each corner. Decoration, as the hand is. */
-export function TableCards() {
-  return <div className="go-felt-cards" aria-hidden="true" dangerouslySetInnerHTML={{ __html: SCATTER_HTML }} />;
 }
 
 /** A few of Ocho's cards, fanned, with its back in front. Decoration: the text beside says what the game is. */

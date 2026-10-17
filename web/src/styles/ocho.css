@@ -192,16 +192,21 @@
 .go-door .oc-fan > .oc-card + .oc-card {
   margin-left: calc(var(--oc-fan-w) * -0.3);
 }
-/* Ocho on Games' table, beside Skull King's hand. */
-.go-start-art .oc-fan {
-  --oc-fan-w: clamp(40px, 9cqi, 88px);
-  padding-block: calc(var(--oc-fan-w) * 0.16);
+/* Ocho in its well in Games, beside Skull King's hand. */
+.go-lib-art .oc-fan {
+  --oc-fan-w: 50px;
+  padding-block: 0;
 }
-.go-start-art .oc-fan > .oc-card {
+.go-lib-art .oc-fan > .oc-card {
   --w: var(--oc-fan-w);
 }
-.go-start-art .oc-fan > .oc-card + .oc-card {
+.go-lib-art .oc-fan > .oc-card + .oc-card {
   margin-left: calc(var(--oc-fan-w) * -0.3);
+}
+@media (min-width: 1000px) {
+  .go-lib-art .oc-fan {
+    --oc-fan-w: 24px;
+  }
 }
 .go-key.oc-key {
   background: var(--c-black);
