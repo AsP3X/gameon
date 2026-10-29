@@ -1,0 +1,220 @@
+# orbit.toml — how orbit sets up, builds and runs Game On (format: orbit/docs/orbit-toml.md).
+# It reproduces ./deploy.sh: the same .env keys and defaults, compose files, per-container networks and
+# logging, storage guards, backup and reset. Nothing secret is stored here.
+version = 1
+name = "Game On"
+kind = "compose"
+description = "Skull King and Ocho game servers, the web client and Postgres"
+
+[checks]
+files = [
+  "docker-compose.yml", "docker-compose.local.yml", "docker-compose.npm.yml", "docker-compose.data-dir.yml",
+  ".env.example", "server/Dockerfile", "deploy/web/Dockerfile", "deploy/nginx/nginx.conf.template",
+]
+
+# ── reach ───────────────────────────────────────────────────────────────────
+
+[settings.PROXY_MODE]
+ask = "How will people reach it?"
+help = "npm joins the external proxy-network and publishes no host ports"
+type = "choice"
+choices = ["local", "npm"]
+labels = { local = "Ports on this machine", npm = "Nginx Proxy Manager" }
+aliases = { external = "npm", proxy = "npm" }
+default = "local"
+
+[settings.WEB_PORT]
+ask = "Web port"
+type = "port"
+default = "8081"
+distinct = ["API_PORT", "POSTGRES_PORT"]
+when = "PROXY_MODE == 'local'"
+
+[settings.API_PORT]
+ask = "API port"
+type = "port"
+default = "8080"
+distinct = ["WEB_PORT", "POSTGRES_PORT"]
+when = "PROXY_MODE == 'local'"
+
+[settings.POSTGRES_PORT]
+ask = "Postgres port"
+type = "port"
+default = "5432"
+distinct = ["WEB_PORT", "API_PORT"]
+when = "PROXY_MODE == 'local'"
+
+[settings.SKT_PUBLIC_ORIGIN]
+ask = "Public origin"
+help = "only when the page is not served from localhost; no path, e.g. https://tavern.example"
+type = "url"
+no_path = true
+
+[settings.SKT_SECURE_COOKIE]
+ask = "Secure cookie (https)"
+type = "bool"
+true_value = "1"
+false_value = ""
+
+[settings.SKT_TRUSTED_PROXIES]
+ask = "Trusted proxies"
+help = "empty: the Docker bridge"
+
+# ── database ────────────────────────────────────────────────────────────────
+
+[settings.POSTGRES_USER]
+default = "skt"
+locked_when = "data:database"
+
+[settings.POSTGRES_DB]
+default = "skt"
+locked_when = "data:database"
+
+# Postgres keeps the password it was created with, so it is locked once the database exists.
+[settings.POSTGRES_PASSWORD]
+ask = "Database password"
+default = "skt"
+min_len = 1
+max_len = 128
+forbid = " @:/?#$\"'`\\"
+locked_when = "data:database"
+
+# The host-side URL for tools on this machine; compose builds the containers' own.
+[settings.DATABASE_URL]
+derive = "postgres://${POSTGRES_USER:-skt}:${POSTGRES_PASSWORD}@127.0.0.1:${POSTGRES_PORT:-5432}/${POSTGRES_DB:-skt}"
+
+[settings.SKT_DATA_DIR]
+ask = "Data folder"
+help = "empty: the Docker volume skt_pg_data. A folder (e.g. ./data) keeps the database there"
+type = "path"
+
+# ── networks per container (comma-separated; skt-internal is always first) ──
+
+[settings.SKT_NETWORKS_POSTGRES]
+ask = "Networks: postgres"
+default = "skt-internal"
+omit_default = true
+
+[settings.SKT_NETWORKS_API]
+ask = "Networks: api"
+default = [
+  { when = "PROXY_MODE == 'npm'", value = "skt-internal,proxy-network" },
+  { value = "skt-internal" },
+]
+omit_default = true
+
+[settings.SKT_NETWORKS_WEB]
+ask = "Networks: web"
+default = [
+  { when = "PROXY_MODE == 'npm'", value = "skt-internal,proxy-network" },
+  { value = "skt-internal" },
+]
+omit_default = true
+
+# ── logging ─────────────────────────────────────────────────────────────────
+
+[settings.RUST_LOG]
+ask = "API log level"
+help = "error, warn, info, debug, trace, off, or a filter such as skt_server=debug"
+default = "info"
+
+[settings.SKT_LOG_POSTGRES]
+ask = "Postgres log level"
+type = "choice"
+choices = ["panic", "fatal", "log", "error", "warning", "notice", "info", "debug1", "debug2", "debug3", "debug4", "debug5"]
+default = "warning"
+omit_default = true
+
+[settings.SKT_LOG_WEB]
+ask = "Web log level"
+type = "choice"
+choices = ["emerg", "alert", "crit", "error", "warn", "notice", "info", "debug"]
+default = "notice"
+omit_default = true
+
+[settings.SKT_LOG_SIZE_POSTGRES]
+default = "10m"
+omit_default = true
+[settings.SKT_LOG_FILES_POSTGRES]
+type = "number"
+min = 1
+max = 50
+default = "3"
+omit_default = true
+[settings.SKT_LOG_SIZE_API]
+default = "10m"
+omit_default = true
+[settings.SKT_LOG_FILES_API]
+type = "number"
+min = 1
+max = 50
+default = "3"
+omit_default = true
+[settings.SKT_LOG_SIZE_WEB]
+default = "10m"
+omit_default = true
+[settings.SKT_LOG_FILES_WEB]
+type = "number"
+min = 1
+max = 50
+default = "3"
+omit_default = true
+
+# ── compose ─────────────────────────────────────────────────────────────────
+
+[compose]
+files = ["docker-compose.yml"]
+overlays = [
+  { file = "docker-compose.npm.yml", when = "PROXY_MODE == 'npm'" },
+  { file = "docker-compose.local.yml", when = "PROXY_MODE == 'local'" },
+  { file = "docker-compose.data-dir.yml", when = "SKT_DATA_DIR" },
+]
+# deploy.sh starts without --wait: depends_on/healthchecks order the services.
+wait = false
+
+# Passed last: each list replaces the service's networks; every name but skt-internal is external
+# and created when missing.
+[compose.attach]
+file = ".deploy/networks.yml"
+internal = ["skt-internal"]
+services = { postgres = "${SKT_NETWORKS_POSTGRES}", api = "${SKT_NETWORKS_API}", web = "${SKT_NETWORKS_WEB}" }
+
+[[storage]]
+name = "database"
+service = "postgres"
+mount = "/var/lib/postgresql/data"
+volume = "skt_pg_data"
+volume_name = "skt_pg_data"
+folder_setting = "SKT_DATA_DIR"
+folder = "${SKT_DATA_DIR}/database"
+# The data-dir overlay sets PGDATA to …/pgdata inside the mounted folder.
+folder_subdir = "pgdata"
+has_data = "PG_VERSION"
+helper_image = "postgres:16-alpine"
+
+[[backup]]
+kind = "pg_dump"
+service = "postgres"
+user = "${POSTGRES_USER:-skt}"
+db = "${POSTGRES_DB:-skt}"
+to = "backups/skt-${now}.sql"
+
+[[diagnose]]
+match = "port is already allocated"
+hint = "WEB_PORT, API_PORT or POSTGRES_PORT is taken: run Setup and pick free ports."
+[[diagnose]]
+match = "password authentication failed"
+logs = "api"
+hint = "The database keeps the password it was created with; Setup keeps it locked for that reason."
+
+# ── what orbit shows ────────────────────────────────────────────────────────
+
+[show]
+urls = [
+  { label = "Web", url = "http://localhost:${WEB_PORT:-8081}", when = "PROXY_MODE == 'local'" },
+  { label = "API", url = "http://localhost:${API_PORT:-8080}/api/v1", when = "PROXY_MODE == 'local'" },
+  { label = "Origin", url = "${SKT_PUBLIC_ORIGIN}", when = "SKT_PUBLIC_ORIGIN" },
+]
+notes = [
+  { text = "Nginx Proxy Manager: point the site to http://gameon-web:80 (API http://gameon-api:8080/api/v1)", when = "PROXY_MODE == 'npm'" },
+]
